@@ -1,0 +1,405 @@
+{
+  "run_id": "b5a88c47-51ca-4576-b343-906835301466",
+  "workflow_name": "saas_pipeline_velocity",
+  "tenant_id": "cccb65f3-1e5f-4537-ac14-0dfadf89e76d",
+  "tenant_name": "OpsGrid Development",
+  "status": "completed",
+  "completed_at": "2026-03-29T17:35:07.020571",
+  "llm_stats": {
+    "total_tokens_in": 81738,
+    "total_tokens_out": 6933,
+    "total_cost_usd": 0.130251,
+    "total_calls": 14,
+    "cache_hits": 0,
+    "optimization_level": 1,
+    "by_agent": {
+      "research_agent": {
+        "calls": 2,
+        "tokens_in": 4584,
+        "tokens_out": 2393,
+        "cost_usd": 0.004137,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "tool_result_compressor": {
+        "calls": 1,
+        "tokens_in": 3298,
+        "tokens_out": 2093,
+        "cost_usd": 0.003441,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "hyde_rag": {
+        "calls": 2,
+        "tokens_in": 690,
+        "tokens_out": 381,
+        "cost_usd": 0.0006490000000000001,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "reasoning_agent": {
+        "calls": 1,
+        "tokens_in": 1946,
+        "tokens_out": 261,
+        "cost_usd": 0.009753,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "drafting_agent": {
+        "calls": 4,
+        "tokens_in": 32068,
+        "tokens_out": 252,
+        "cost_usd": 0.099984,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "verification_agent": {
+        "calls": 3,
+        "tokens_in": 38529,
+        "tokens_out": 1529,
+        "cost_usd": 0.011543999999999999,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "memory_agent": {
+        "calls": 1,
+        "tokens_in": 623,
+        "tokens_out": 24,
+        "cost_usd": 0.000743,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      }
+    },
+    "recent_calls": [
+      {
+        "call_id": "4450af9d",
+        "agent": "hyde_rag",
+        "model": "claude-haiku-4-5-20251001",
+        "tokens_in": 345,
+        "tokens_out": 178,
+        "cost": "$0.00031",
+        "ms": 3020,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "6acdc39c",
+        "agent": "reasoning_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 1946,
+        "tokens_out": 261,
+        "cost": "$0.00975",
+        "ms": 109542,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "e3c9ec28",
+        "agent": "drafting_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 8531,
+        "tokens_out": 92,
+        "cost": "$0.02697",
+        "ms": 5283,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "03e6890d",
+        "agent": "drafting_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 7434,
+        "tokens_out": 22,
+        "cost": "$0.02263",
+        "ms": 9956,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "6d973933",
+        "agent": "drafting_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 8531,
+        "tokens_out": 85,
+        "cost": "$0.02687",
+        "ms": 2546,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "3af1d50c",
+        "agent": "drafting_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 7572,
+        "tokens_out": 53,
+        "cost": "$0.02351",
+        "ms": 23454,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "184d1a0f",
+        "agent": "verification_agent",
+        "model": "claude-haiku-4-5-20251001",
+        "tokens_in": 10497,
+        "tokens_out": 23,
+        "cost": "$0.00265",
+        "ms": 5472,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "65a6d51c",
+        "agent": "verification_agent",
+        "model": "claude-haiku-4-5-20251001",
+        "tokens_in": 13663,
+        "tokens_out": 575,
+        "cost": "$0.00413",
+        "ms": 5611,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "3e5fd98b",
+        "agent": "verification_agent",
+        "model": "claude-haiku-4-5-20251001",
+        "tokens_in": 14369,
+        "tokens_out": 931,
+        "cost": "$0.00476",
+        "ms": 6390,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "e5916b93",
+        "agent": "memory_agent",
+        "model": "anthropic/claude-haiku-4-5-20251001",
+        "tokens_in": 623,
+        "tokens_out": 24,
+        "cost": "$0.00074",
+        "ms": 5553,
+        "ok": true,
+        "cached": false
+      }
+    ]
+  },
+  "outcome": {
+    "status": "completed",
+    "nodes_completed": 6,
+    "total_tokens_in": 81738,
+    "total_tokens_out": 6933,
+    "total_cost_usd": 0.130251,
+    "cache_hits": 0,
+    "optimization_level": 1,
+    "by_agent": {
+      "research_agent": {
+        "calls": 2,
+        "tokens_in": 4584,
+        "tokens_out": 2393,
+        "cost_usd": 0.004137,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "tool_result_compressor": {
+        "calls": 1,
+        "tokens_in": 3298,
+        "tokens_out": 2093,
+        "cost_usd": 0.003441,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "hyde_rag": {
+        "calls": 2,
+        "tokens_in": 690,
+        "tokens_out": 381,
+        "cost_usd": 0.0006490000000000001,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "reasoning_agent": {
+        "calls": 1,
+        "tokens_in": 1946,
+        "tokens_out": 261,
+        "cost_usd": 0.009753,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "drafting_agent": {
+        "calls": 4,
+        "tokens_in": 32068,
+        "tokens_out": 252,
+        "cost_usd": 0.099984,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "verification_agent": {
+        "calls": 3,
+        "tokens_in": 38529,
+        "tokens_out": 1529,
+        "cost_usd": 0.011543999999999999,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "memory_agent": {
+        "calls": 1,
+        "tokens_in": 623,
+        "tokens_out": 24,
+        "cost_usd": 0.000743,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      }
+    },
+    "completed_at": "2026-03-29T17:35:06.759760",
+    "agent_runs": [
+      {
+        "node_id": "research",
+        "agent_type": "research_agent",
+        "status": "success",
+        "confidence": 0.95,
+        "tokens_in": 4584,
+        "tokens_out": 2393,
+        "cost_usd": 0.004137,
+        "model_used": "claude-haiku-4-5-20251001",
+        "duration_ms": 30861,
+        "error": null,
+        "completed_at": "2026-03-29T17:32:06.052233",
+        "tools_used": [
+          "product_api_deals",
+          "get_activity_log"
+        ],
+        "node_description": "Fetch open deals, stage progression, and last activity dates"
+      },
+      {
+        "node_id": "reasoning",
+        "agent_type": "reasoning_agent",
+        "status": "success",
+        "confidence": 0.8,
+        "tokens_in": 1946,
+        "tokens_out": 261,
+        "cost_usd": 0.009753,
+        "model_used": "anthropic/claude-sonnet-4-6",
+        "duration_ms": 109548,
+        "error": null,
+        "completed_at": "2026-03-29T17:34:02.092467",
+        "tools_used": [],
+        "node_description": "Identify stalled deals, calculate velocity scores, recommend interventions"
+      },
+      {
+        "node_id": "drafting",
+        "agent_type": "drafting_agent",
+        "status": "success",
+        "confidence": 0.85,
+        "tokens_in": 16103,
+        "tokens_out": 138,
+        "cost_usd": 0.050379,
+        "model_used": "anthropic/claude-sonnet-4-6",
+        "duration_ms": 41327,
+        "error": null,
+        "completed_at": "2026-03-29T17:34:43.461589",
+        "tools_used": [
+          "get_communication_history"
+        ],
+        "node_description": "Write personalized re-engagement emails for stalled deals"
+      },
+      {
+        "node_id": "verification",
+        "agent_type": "verification_agent",
+        "status": "success",
+        "confidence": 0.65,
+        "tokens_in": 38529,
+        "tokens_out": 1529,
+        "cost_usd": 0.011543999999999999,
+        "model_used": "claude-haiku-4-5-20251001",
+        "duration_ms": 17591,
+        "error": null,
+        "completed_at": "2026-03-29T17:35:01.080053",
+        "tools_used": [
+          "get_communication_history"
+        ],
+        "node_description": "Check factual accuracy, no duplicates, appropriate tone",
+        "_prosecutor_issues": 18,
+        "_judge_verdict": "FAIL",
+        "_prosecutor_faults": [
+          "RULE 1: Draft 1 (SpanConnect negotiation) - recipient_email is empty string",
+          "RULE 1: Draft 1 (SpanConnect negotiation) - recipient_name is empty string",
+          "RULE 1: Draft 2 (CoreHQ urgent check-in) - recipient_email is empty string",
+          "RULE 1: Draft 2 (CoreHQ urgent check-in) - recipient_name is empty string",
+          "RULE 1: Draft 3 (CoreAnalytics negotiation) - recipient_email is empty string",
+          "RULE 1: Draft 3 (CoreAnalytics negotiation) - recipient_name is empty string",
+          "RULE 1: Draft 4 (SwiftSuite proposal) - recipient_email is empty string",
+          "RULE 1: Draft 4 (SwiftSuite proposal) - recipient_name is empty string",
+          "RULE 1: Draft 5 (PeakIO negotiation) - recipient_email is empty string",
+          "RULE 1: Draft 5 (PeakIO negotiation) - recipient_name is empty string",
+          "RULE 6: Draft 1 (SpanConnect) - sales_rep_name is empty string",
+          "RULE 6: Draft 2 (CoreHQ) - sales_rep_name is empty string",
+          "RULE 6: Draft 3 (CoreAnalytics) - sales_rep_name is empty string",
+          "RULE 6: Draft 4 (SwiftSuite) - sales_rep_name is empty string",
+          "RULE 6: Draft 5 (PeakIO) - sales_rep_name is empty string",
+          "RULE 4: Draft 2 (CoreHQ) - Body states 'discovery' stage but research data shows deal is in 'discovery' stage with days_in_stage=19, not matching the 'critical_stall' outreach_type urgency level appropriately given the impossible 37-day close timeline from discovery",
+          "RULE 4: Draft 1 (SpanConnect) - Body references '23 days into the negotiation stage' which matches research data (days_in_stage: 23), but exec brief states '$100K deal' while body does not explicitly confirm deal value for context",
+          "RULE 5: All five drafts lack explicit deal value references in body text, making it difficult for recipients to understand financial context of urgency"
+        ]
+      },
+      {
+        "node_id": "memory",
+        "agent_type": "memory_agent",
+        "status": "success",
+        "confidence": 1.0,
+        "tokens_in": 623,
+        "tokens_out": 24,
+        "cost_usd": 0.000743,
+        "model_used": "anthropic/claude-haiku-4-5-20251001",
+        "duration_ms": 5644,
+        "error": null,
+        "completed_at": "2026-03-29T17:35:06.749645",
+        "tools_used": [
+          "db_update_pattern"
+        ],
+        "node_description": "Store deal velocity and intervention patterns",
+        "delta_analysis": {
+          "comparison_to_historical": {
+            "past_situation_1": {
+              "similarity": "43%",
+              "delta": "CRITICAL REGRESSION: Past Situation #1 also had workflow skipped (zero interventions) despite detecting 5 critical accounts. Current run repeats this failure pattern with no data ingestion attempted. Risk: Undetected critical pipeline stalls accumulating.",
+              "recommendation": "Verify workflow trigger conditions and data pipeline connectivity. Current skip state mirrors intervention failure from baseline run."
+            },
+            "past_situation_2": {
+              "similarity": "34%",
+              "delta": "DIVERGENCE: Past Situation #2 achieved positive outcome by processing 5/19 accounts and identifying $17.3K MRR at risk despite data gaps. Current run shows zero processing vs. partial processing in historical case. Data enrichment queue may be blocking execution.",
+              "recommendation": "Investigate whether current run is waiting on data enrichment (like Situation #2) or experiencing a hard failure."
+            }
+          },
+          "critical_gaps": [
+            "No deal data ingested - cannot assess stage bottlenecks",
+            "No rep performance metrics extracted",
+            "No stall/reengagement patterns detected",
+            "No close date urgency analysis possible",
+            "Skipped state matches failure mode from Past Situation #1"
+          ],
+          "action_required": "MANUAL ESCALATION - Workflow execution blocked. Recommend: (1) Verify data pipeline status, (2) Check workflow trigger conditions, (3) Review logs for skip reason, (4) Compare to Past Situation #1 failure root cause."
+        },
+        "delta_vs_history": "no_history",
+        "delta_trend": "insufficient_data"
+      }
+    ],
+    "situation_summary": "",
+    "urgency": "",
+    "reasoning_confidence": null,
+    "memory_summary": "WORKFLOW SKIPPED - No deals processed. Zero stall events detected. Zero interventions queued.",
+    "delta_analysis": {
+      "comparison_to_historical": {
+        "past_situation_1": {
+          "similarity": "43%",
+          "delta": "CRITICAL REGRESSION: Past Situation #1 also had workflow skipped (zero interventions) despite detecting 5 critical accounts. Current run repeats this failure pattern with no data ingestion attempted. Risk: Undetected critical pipeline stalls accumulating.",
+          "recommendation": "Verify workflow trigger conditions and data pipeline connectivity. Current skip state mirrors intervention failure from baseline run."
+        },
+        "past_situation_2": {
+          "similarity": "34%",
+          "delta": "DIVERGENCE: Past Situation #2 achieved positive outcome by processing 5/19 accounts and identifying $17.3K MRR at risk despite data gaps. Current run shows zero processing vs. partial processing in historical case. Data enrichment queue may be blocking execution.",
+          "recommendation": "Investigate whether current run is waiting on data enrichment (like Situation #2) or experiencing a hard failure."
+        }
+      },
+      "critical_gaps": [
+        "No deal data ingested - cannot assess stage bottlenecks",
+        "No rep performance metrics extracted",
+        "No stall/reengagement patterns detected",
+        "No close date urgency analysis possible",
+        "Skipped state matches failure mode from Past Situation #1"
+      ],
+      "action_required": "MANUAL ESCALATION - Workflow execution blocked. Recommend: (1) Verify data pipeline status, (2) Check workflow trigger conditions, (3) Review logs for skip reason, (4) Compare to Past Situation #1 failure root cause."
+    },
+    "actions_summary": [],
+    "verification_summary": {
+      "passed": false,
+      "approved_count": 0,
+      "rejected_count": 5,
+      "prosecutor_issues": 18
+    }
+  }
+}

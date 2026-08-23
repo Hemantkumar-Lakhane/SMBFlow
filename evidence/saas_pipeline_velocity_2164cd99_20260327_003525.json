@@ -1,0 +1,162 @@
+{
+  "run_id": "2164cd99-1b98-4e5e-a321-443dc3200e80",
+  "workflow_name": "saas_pipeline_velocity",
+  "tenant_id": "81128e4c-c41e-4694-b9c6-03181d5842df",
+  "tenant_name": "opsgrid",
+  "status": "stopped",
+  "completed_at": "2026-03-27T00:35:25.665741",
+  "llm_stats": {
+    "total_tokens_in": 22238,
+    "total_tokens_out": 14613,
+    "total_cost_usd": 0.233079,
+    "total_calls": 11,
+    "cache_hits": 0,
+    "optimization_level": 0,
+    "by_agent": {
+      "research_agent": {
+        "calls": 4,
+        "tokens_in": 12517,
+        "tokens_out": 3415,
+        "cost_usd": 0.07871,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "hyde_rag": {
+        "calls": 3,
+        "tokens_in": 792,
+        "tokens_out": 689,
+        "cost_usd": 0.004237,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      },
+      "map_reduce_summarizer": {
+        "calls": 1,
+        "tokens_in": 2650,
+        "tokens_out": 2899,
+        "cost_usd": 0.017145,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      },
+      "reasoning_agent": {
+        "calls": 3,
+        "tokens_in": 6279,
+        "tokens_out": 7610,
+        "cost_usd": 0.132987,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      }
+    },
+    "recent_calls": [
+      {
+        "call_id": "bf2498c4",
+        "agent": "research_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost": "$0.00000",
+        "ms": 13866,
+        "ok": false,
+        "cached": false
+      },
+      {
+        "call_id": "164e9dea",
+        "agent": "research_agent",
+        "model": "groq/llama-3.3-70b-versatile",
+        "tokens_in": 3758,
+        "tokens_out": 71,
+        "cost": "$0.00227",
+        "ms": 877,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "8fda2681",
+        "agent": "research_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 7577,
+        "tokens_out": 3151,
+        "cost": "$0.07000",
+        "ms": 30666,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "16212109",
+        "agent": "hyde_rag",
+        "model": "anthropic/claude-haiku-4-5-20251001",
+        "tokens_in": 322,
+        "tokens_out": 251,
+        "cost": "$0.00158",
+        "ms": 3229,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "0dabc987",
+        "agent": "hyde_rag",
+        "model": "anthropic/claude-haiku-4-5-20251001",
+        "tokens_in": 322,
+        "tokens_out": 261,
+        "cost": "$0.00163",
+        "ms": 3591,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "264fd0bf",
+        "agent": "map_reduce_summarizer",
+        "model": "anthropic/claude-haiku-4-5-20251001",
+        "tokens_in": 2650,
+        "tokens_out": 2899,
+        "cost": "$0.01715",
+        "ms": 19769,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "fdcfb142",
+        "agent": "reasoning_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost": "$0.00000",
+        "ms": 60899,
+        "ok": false,
+        "cached": false
+      },
+      {
+        "call_id": "55b109f5",
+        "agent": "reasoning_agent",
+        "model": "groq/llama-3.3-70b-versatile",
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost": "$0.00000",
+        "ms": 91,
+        "ok": false,
+        "cached": false
+      },
+      {
+        "call_id": "f2977ff1",
+        "agent": "hyde_rag",
+        "model": "anthropic/claude-haiku-4-5-20251001",
+        "tokens_in": 148,
+        "tokens_out": 177,
+        "cost": "$0.00103",
+        "ms": 2730,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "5ed6da88",
+        "agent": "reasoning_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 6279,
+        "tokens_out": 7610,
+        "cost": "$0.13299",
+        "ms": 106358,
+        "ok": true,
+        "cached": false
+      }
+    ]
+  },
+  "outcome": {
+    "stopped_by": "admin",
+    "at_node": "drafting"
+  }
+}

@@ -1,0 +1,148 @@
+{
+  "run_id": "396fe18e-3d48-4937-aeab-9d8039acb523",
+  "workflow_name": "saas_churn_prevention",
+  "tenant_id": "ba8324fd-b436-4f52-883e-499e0aef09ae",
+  "tenant_name": "opsgrid",
+  "status": "failed",
+  "completed_at": "2026-03-27T17:47:05.032312",
+  "llm_stats": {
+    "total_tokens_in": 4119,
+    "total_tokens_out": 443,
+    "total_cost_usd": 0.0021,
+    "total_calls": 20,
+    "cache_hits": 0,
+    "optimization_level": 0,
+    "by_agent": {
+      "research_agent": {
+        "calls": 14,
+        "tokens_in": 3333,
+        "tokens_out": 81,
+        "cost_usd": 0.002031,
+        "last_model": "groq/llama-3.3-70b-versatile"
+      },
+      "hyde_rag": {
+        "calls": 6,
+        "tokens_in": 786,
+        "tokens_out": 362,
+        "cost_usd": 6.9e-05,
+        "last_model": "groq/llama-3.1-8b-instant"
+      }
+    },
+    "recent_calls": [
+      {
+        "call_id": "632b9456",
+        "agent": "research_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost": "$0.00000",
+        "ms": 404,
+        "ok": false,
+        "cached": false
+      },
+      {
+        "call_id": "e954a469",
+        "agent": "research_agent",
+        "model": "groq/llama-3.3-70b-versatile",
+        "tokens_in": 1111,
+        "tokens_out": 27,
+        "cost": "$0.00068",
+        "ms": 313,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "13694e6e",
+        "agent": "research_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost": "$0.00000",
+        "ms": 441,
+        "ok": false,
+        "cached": false
+      },
+      {
+        "call_id": "51f5ddb5",
+        "agent": "research_agent",
+        "model": "groq/llama-3.3-70b-versatile",
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost": "$0.00000",
+        "ms": 1357,
+        "ok": false,
+        "cached": false
+      },
+      {
+        "call_id": "0f2d281c",
+        "agent": "hyde_rag",
+        "model": "anthropic/claude-haiku-4-5-20251001",
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost": "$0.00000",
+        "ms": 413,
+        "ok": false,
+        "cached": false
+      },
+      {
+        "call_id": "11cc78f8",
+        "agent": "hyde_rag",
+        "model": "groq/llama-3.1-8b-instant",
+        "tokens_in": 262,
+        "tokens_out": 120,
+        "cost": "$0.00002",
+        "ms": 582,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "abee3c88",
+        "agent": "research_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost": "$0.00000",
+        "ms": 381,
+        "ok": false,
+        "cached": false
+      },
+      {
+        "call_id": "fb1344ba",
+        "agent": "research_agent",
+        "model": "groq/llama-3.3-70b-versatile",
+        "tokens_in": 1111,
+        "tokens_out": 27,
+        "cost": "$0.00068",
+        "ms": 855,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "67f39956",
+        "agent": "research_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost": "$0.00000",
+        "ms": 427,
+        "ok": false,
+        "cached": false
+      },
+      {
+        "call_id": "5d1cb5a7",
+        "agent": "research_agent",
+        "model": "groq/llama-3.3-70b-versatile",
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost": "$0.00000",
+        "ms": 270,
+        "ok": false,
+        "cached": false
+      }
+    ]
+  },
+  "outcome": {
+    "error": "All models failed for research_agent. Last: litellm.RateLimitError: RateLimitError: GroqException - {\"error\":{\"message\":\"Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01k3wmpshse0brgxz4bghwf0ef` service tier `on_demand` on tokens per minute (TPM): Limit 12000, Used 10325, Requested 4088. Please try again in 12.065s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing\",\"type\":\"tokens\",\"code\":\"rate_limit_exceeded\"}}\n",
+    "failed_node": "research"
+  }
+}

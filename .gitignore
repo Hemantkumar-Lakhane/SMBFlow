@@ -1,0 +1,16 @@
+# Logs
+logs/
+
+# Python virtual environment
+venv/
+
+# Environment files
+.env
+.env.example
+
+# Recordings
+epi-recordings/
+
+# Frontend dependencies
+frontend/node_modules/
+.dump_paths_to_txt.ps1

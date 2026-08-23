@@ -1,0 +1,148 @@
+{
+  "run_id": "47b58a02-c851-4732-8c71-0f49990f7124",
+  "workflow_name": "saas_churn_prevention",
+  "tenant_id": "a083411e-e988-4bfa-a029-dcfb582b094a",
+  "tenant_name": "OpsGrid Development",
+  "status": "failed",
+  "completed_at": "2026-03-28T15:12:22.400535",
+  "llm_stats": {
+    "total_tokens_in": 0,
+    "total_tokens_out": 0,
+    "total_cost_usd": 0.0,
+    "total_calls": 21,
+    "cache_hits": 0,
+    "optimization_level": 1,
+    "by_agent": {
+      "research_agent": {
+        "calls": 12,
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost_usd": 0.0,
+        "last_model": "openrouter/mistralai/mistral-small"
+      },
+      "hyde_rag": {
+        "calls": 9,
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost_usd": 0.0,
+        "last_model": "openrouter/mistralai/mistral-small"
+      }
+    },
+    "recent_calls": [
+      {
+        "call_id": "eb9bdb75",
+        "agent": "hyde_rag",
+        "model": "openrouter/mistralai/mistral-small",
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost": "$0.00000",
+        "ms": 119,
+        "ok": false,
+        "cached": false
+      },
+      {
+        "call_id": "9b6f7ce7",
+        "agent": "research_agent",
+        "model": "anthropic/claude-haiku-3-5-20241022",
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost": "$0.00000",
+        "ms": 327,
+        "ok": false,
+        "cached": false
+      },
+      {
+        "call_id": "25ec7501",
+        "agent": "research_agent",
+        "model": "anthropic/claude-3-haiku-20240307",
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost": "$0.00000",
+        "ms": 307,
+        "ok": false,
+        "cached": false
+      },
+      {
+        "call_id": "c1b9f8a4",
+        "agent": "research_agent",
+        "model": "openrouter/mistralai/mistral-small",
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost": "$0.00000",
+        "ms": 123,
+        "ok": false,
+        "cached": false
+      },
+      {
+        "call_id": "9a72a338",
+        "agent": "hyde_rag",
+        "model": "anthropic/claude-haiku-3-5-20241022",
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost": "$0.00000",
+        "ms": 333,
+        "ok": false,
+        "cached": false
+      },
+      {
+        "call_id": "c8987197",
+        "agent": "hyde_rag",
+        "model": "anthropic/claude-3-haiku-20240307",
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost": "$0.00000",
+        "ms": 318,
+        "ok": false,
+        "cached": false
+      },
+      {
+        "call_id": "2b9b41d3",
+        "agent": "hyde_rag",
+        "model": "openrouter/mistralai/mistral-small",
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost": "$0.00000",
+        "ms": 126,
+        "ok": false,
+        "cached": false
+      },
+      {
+        "call_id": "2c516c3b",
+        "agent": "research_agent",
+        "model": "anthropic/claude-haiku-3-5-20241022",
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost": "$0.00000",
+        "ms": 335,
+        "ok": false,
+        "cached": false
+      },
+      {
+        "call_id": "b353d34a",
+        "agent": "research_agent",
+        "model": "anthropic/claude-3-haiku-20240307",
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost": "$0.00000",
+        "ms": 328,
+        "ok": false,
+        "cached": false
+      },
+      {
+        "call_id": "90c1e259",
+        "agent": "research_agent",
+        "model": "openrouter/mistralai/mistral-small",
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost": "$0.00000",
+        "ms": 122,
+        "ok": false,
+        "cached": false
+      }
+    ]
+  },
+  "outcome": {
+    "error": "All models failed for research_agent. Last: litellm.AuthenticationError: AuthenticationError: OpenrouterException - {\"error\":{\"message\":\"No cookie auth credentials found\",\"code\":401}}",
+    "failed_node": "research"
+  }
+}

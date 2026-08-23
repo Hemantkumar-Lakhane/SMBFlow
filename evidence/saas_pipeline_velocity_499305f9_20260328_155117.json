@@ -1,0 +1,405 @@
+{
+  "run_id": "499305f9-a70b-4e64-9977-9c70e83fd93c",
+  "workflow_name": "saas_pipeline_velocity",
+  "tenant_id": "a083411e-e988-4bfa-a029-dcfb582b094a",
+  "tenant_name": "OpsGrid Development",
+  "status": "completed",
+  "completed_at": "2026-03-28T15:51:17.099567",
+  "llm_stats": {
+    "total_tokens_in": 83315,
+    "total_tokens_out": 11271,
+    "total_cost_usd": 0.21842,
+    "total_calls": 18,
+    "cache_hits": 0,
+    "optimization_level": 1,
+    "by_agent": {
+      "research_agent": {
+        "calls": 3,
+        "tokens_in": 10000,
+        "tokens_out": 3292,
+        "cost_usd": 0.07938,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "tool_result_compressor": {
+        "calls": 1,
+        "tokens_in": 3298,
+        "tokens_out": 2290,
+        "cost_usd": 0.003687,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "hyde_rag": {
+        "calls": 2,
+        "tokens_in": 642,
+        "tokens_out": 320,
+        "cost_usd": 0.000561,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "map_reduce_summarizer": {
+        "calls": 1,
+        "tokens_in": 2440,
+        "tokens_out": 1121,
+        "cost_usd": 0.002011,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "reasoning_agent": {
+        "calls": 1,
+        "tokens_in": 3562,
+        "tokens_out": 257,
+        "cost_usd": 0.014541,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "drafting_agent": {
+        "calls": 2,
+        "tokens_in": 16206,
+        "tokens_out": 250,
+        "cost_usd": 0.052368,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "verification_agent": {
+        "calls": 6,
+        "tokens_in": 46611,
+        "tokens_out": 3722,
+        "cost_usd": 0.065221,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      },
+      "memory_agent": {
+        "calls": 2,
+        "tokens_in": 556,
+        "tokens_out": 19,
+        "cost_usd": 0.000651,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      }
+    },
+    "recent_calls": [
+      {
+        "call_id": "5cc04643",
+        "agent": "drafting_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 8735,
+        "tokens_out": 100,
+        "cost": "$0.02771",
+        "ms": 4041,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "f55306d1",
+        "agent": "drafting_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 7471,
+        "tokens_out": 150,
+        "cost": "$0.02466",
+        "ms": 62949,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "c14bf817",
+        "agent": "verification_agent",
+        "model": "anthropic/claude-3-haiku-20240307",
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost": "$0.00000",
+        "ms": 768,
+        "ok": false,
+        "cached": false
+      },
+      {
+        "call_id": "71d5b930",
+        "agent": "verification_agent",
+        "model": "anthropic/claude-haiku-4-5-20251001",
+        "tokens_in": 12245,
+        "tokens_out": 55,
+        "cost": "$0.01252",
+        "ms": 11701,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "a73da9b3",
+        "agent": "verification_agent",
+        "model": "anthropic/claude-3-haiku-20240307",
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost": "$0.00000",
+        "ms": 347,
+        "ok": false,
+        "cached": false
+      },
+      {
+        "call_id": "6ab959b7",
+        "agent": "verification_agent",
+        "model": "anthropic/claude-haiku-4-5-20251001",
+        "tokens_in": 16525,
+        "tokens_out": 1017,
+        "cost": "$0.02161",
+        "ms": 5334,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "137972c7",
+        "agent": "verification_agent",
+        "model": "anthropic/claude-3-haiku-20240307",
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost": "$0.00000",
+        "ms": 366,
+        "ok": false,
+        "cached": false
+      },
+      {
+        "call_id": "89b8ddb5",
+        "agent": "verification_agent",
+        "model": "anthropic/claude-haiku-4-5-20251001",
+        "tokens_in": 17841,
+        "tokens_out": 2650,
+        "cost": "$0.03109",
+        "ms": 24363,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "63db1df1",
+        "agent": "memory_agent",
+        "model": "anthropic/claude-3-haiku-20240307",
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost": "$0.00000",
+        "ms": 620,
+        "ok": false,
+        "cached": false
+      },
+      {
+        "call_id": "66fb269c",
+        "agent": "memory_agent",
+        "model": "anthropic/claude-haiku-4-5-20251001",
+        "tokens_in": 556,
+        "tokens_out": 19,
+        "cost": "$0.00065",
+        "ms": 4096,
+        "ok": true,
+        "cached": false
+      }
+    ]
+  },
+  "outcome": {
+    "status": "completed",
+    "nodes_completed": 6,
+    "total_tokens_in": 83315,
+    "total_tokens_out": 11271,
+    "total_cost_usd": 0.21842,
+    "cache_hits": 0,
+    "optimization_level": 1,
+    "by_agent": {
+      "research_agent": {
+        "calls": 3,
+        "tokens_in": 10000,
+        "tokens_out": 3292,
+        "cost_usd": 0.07938,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "tool_result_compressor": {
+        "calls": 1,
+        "tokens_in": 3298,
+        "tokens_out": 2290,
+        "cost_usd": 0.003687,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "hyde_rag": {
+        "calls": 2,
+        "tokens_in": 642,
+        "tokens_out": 320,
+        "cost_usd": 0.000561,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "map_reduce_summarizer": {
+        "calls": 1,
+        "tokens_in": 2440,
+        "tokens_out": 1121,
+        "cost_usd": 0.002011,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "reasoning_agent": {
+        "calls": 1,
+        "tokens_in": 3562,
+        "tokens_out": 257,
+        "cost_usd": 0.014541,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "drafting_agent": {
+        "calls": 2,
+        "tokens_in": 16206,
+        "tokens_out": 250,
+        "cost_usd": 0.052368,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "verification_agent": {
+        "calls": 6,
+        "tokens_in": 46611,
+        "tokens_out": 3722,
+        "cost_usd": 0.065221,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      },
+      "memory_agent": {
+        "calls": 2,
+        "tokens_in": 556,
+        "tokens_out": 19,
+        "cost_usd": 0.000651,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      }
+    },
+    "completed_at": "2026-03-28T15:51:16.764358",
+    "agent_runs": [
+      {
+        "node_id": "research",
+        "agent_type": "research_agent",
+        "status": "success",
+        "confidence": 0.95,
+        "tokens_in": 10000,
+        "tokens_out": 3292,
+        "cost_usd": 0.07938,
+        "model_used": "anthropic/claude-sonnet-4-6",
+        "duration_ms": 52999,
+        "error": null,
+        "completed_at": "2026-03-28T15:47:20.912837",
+        "tools_used": [
+          "product_api_deals",
+          "get_activity_log"
+        ],
+        "node_description": "Fetch open deals, stage progression, and last activity dates"
+      },
+      {
+        "node_id": "reasoning",
+        "agent_type": "reasoning_agent",
+        "status": "success",
+        "confidence": 0.8,
+        "tokens_in": 3562,
+        "tokens_out": 257,
+        "cost_usd": 0.014541,
+        "model_used": "anthropic/claude-sonnet-4-6",
+        "duration_ms": 108187,
+        "error": null,
+        "completed_at": "2026-03-28T15:49:21.762315",
+        "tools_used": [],
+        "node_description": "Identify stalled deals, calculate velocity scores, recommend interventions"
+      },
+      {
+        "node_id": "drafting",
+        "agent_type": "drafting_agent",
+        "status": "success",
+        "confidence": 0.85,
+        "tokens_in": 16206,
+        "tokens_out": 250,
+        "cost_usd": 0.052368,
+        "model_used": "anthropic/claude-sonnet-4-6",
+        "duration_ms": 67010,
+        "error": null,
+        "completed_at": "2026-03-28T15:50:28.819001",
+        "tools_used": [
+          "get_communication_history"
+        ],
+        "node_description": "Write personalized re-engagement emails for stalled deals"
+      },
+      {
+        "node_id": "verification",
+        "agent_type": "verification_agent",
+        "status": "success",
+        "confidence": 0.65,
+        "tokens_in": 46611,
+        "tokens_out": 3722,
+        "cost_usd": 0.065221,
+        "model_used": "anthropic/claude-haiku-4-5-20251001",
+        "duration_ms": 43129,
+        "error": null,
+        "completed_at": "2026-03-28T15:51:11.968712",
+        "tools_used": [
+          "get_communication_history"
+        ],
+        "node_description": "Check factual accuracy, no duplicates, appropriate tone",
+        "_prosecutor_issues": 26,
+        "_judge_verdict": "FAIL",
+        "_prosecutor_faults": [
+          "RULE 5: Draft 1 (SpanConnect) - Sign-off name is 'Julia Okafor' but tone profile specifies sign_off_name should be 'OpsGrid Support Team'",
+          "RULE 5: Draft 2 (CoreAnalytics) - Sign-off name is 'Julia Okafor' but tone profile specifies sign_off_name should be 'OpsGrid Support Team'",
+          "RULE 5: Draft 3 (CoreHQ) - Sign-off name is 'Julia Okafor' but tone profile specifies sign_off_name should be 'OpsGrid Support Team'",
+          "RULE 5: Draft 4 (NovaCloud) - Sign-off name is 'Julia Okafor' but tone profile specifies sign_off_name should be 'OpsGrid Support Team'",
+          "RULE 5: Draft 5 (SwiftSuite) - Sign-off name is 'Tom Reyes' but tone profile specifies sign_off_name should be 'OpsGrid Support Team'",
+          "RULE 5: Draft 6 (PeakIO) - Sign-off name is 'Marcus Webb' but tone profile specifies sign_off_name should be 'OpsGrid Support Team'",
+          "RULE 5: Draft 7 (FluxTech) - Sign-off name is 'Marcus Webb' but tone profile specifies sign_off_name should be 'OpsGrid Support Team'",
+          "RULE 5: Draft 8 (WaveIO) - Sign-off name is 'Marcus Webb' but tone profile specifies sign_off_name should be 'OpsGrid Support Team'",
+          "RULE 5: Draft 9 (BrightLabs) - Sign-off name is 'Sarah Chen' but tone profile specifies sign_off_name should be 'OpsGrid Support Team'",
+          "RULE 5: Draft 10 (SwiftLabs) - Sign-off name is 'Derek Santos' but tone profile specifies sign_off_name should be 'OpsGrid Support Team'",
+          "RULE 5: Draft 11 (SwiftSolutions) - Sign-off name is 'Derek Santos' but tone profile specifies sign_off_name should be 'OpsGrid Support Team'",
+          "RULE 3: Draft 9 (BrightLabs) - Greeting is 'Hi,' with no recipient name; violates professional tone requirement for personalized sales communication",
+          "RULE 3: Draft 10 (SwiftLabs) - Greeting is 'Hi,' with no recipient name; violates professional tone requirement for personalized sales communication",
+          "RULE 4: Draft 3 (CoreHQ) - Research data shows deal is in 'discovery' stage at 10% probability with overdue close date (2026-05-05), yet draft tone is casual and non-urgent ('no pressure either way'), mismatching the critical risk context",
+          "RULE 4: Draft 4 (NovaCloud) - Research data shows 22 days stalled in proposal stage, but draft references 'a few weeks ago' which is vague and doesn't match the specific 22-day stall documented in research",
+          "RULE 4: Draft 9 (BrightLabs) - Research data shows deal is at 25% probability with 19 days post-demo, yet draft tone is generic and lacks urgency appropriate to the at-risk status and low probability",
+          "RULE 4: Draft 10 (SwiftLabs) - Research data shows deal is overdue (close date 2026-05-20 is past) and at 25% probability in demo stage for 18 days, yet draft tone is exploratory and non-urgent, mismatching the overdue status",
+          "RULE 3: Draft 1 (SpanConnect) - Tone is somewhat casual ('let's get this across the finish line') for a $100K critical stall deal that is 23 days overdue; should be more direct and urgent given CRITICAL risk level",
+          "RULE 3: Draft 3 (CoreHQ) - Phrase 'no pressure either way' is inappropriate for a $75K overdue deal at 10% probability; signals lack of conviction and urgency",
+          "RULE 4: Draft 2 (CoreAnalytics) - Research shows 18 days stalled, draft says 'about 18 days' which is accurate but the deal is in negotiation stage at 70% probability; draft should reference specific negotiation blockers or terms, not generic momentum language",
+          "RULE 4: Draft 6 (PeakIO) - Research shows deal is in negotiation stage at 70% probability with 18 days stalled, but draft asks 'What's the biggest open question on your side right now' which is discovery-stage language, not negotiation-stage language",
+          "RULE 3: Draft 4 (NovaCloud) - Tone is too passive ('Just circling back') for a $10K deal that has been stalled 22 days post-proposal; should be more direct about needing feedback",
+          "RULE 3: Draft 7 (FluxTech) - Phrase 'still on your team's radar?' is somewhat dismissive for a $10K proposal; could be perceived as low confidence in the deal",
+          "RULE 3: Draft 8 (WaveIO) - Phrase 'a quick check-in from Marcus' in subject line is overly casual and self-referential; should focus on value proposition or next steps",
+          "RULE 4: Draft 5 (SwiftSuite) - Research shows deal is at 45% probability (low for $75K), but draft does not acknowledge or address the low probability; tone assumes higher confidence than data supports",
+          "RULE 4: Draft 11 (SwiftSolutions) - Research shows deal is at 10% probability in discovery stage (very low for $75K), yet draft tone is exploratory and assumes deal viability; should be more direct about re-qualification given critical churn signal"
+        ]
+      },
+      {
+        "node_id": "memory",
+        "agent_type": "memory_agent",
+        "status": "success",
+        "confidence": 1.0,
+        "tokens_in": 556,
+        "tokens_out": 19,
+        "cost_usd": 0.000651,
+        "model_used": "anthropic/claude-haiku-4-5-20251001",
+        "duration_ms": 4761,
+        "error": null,
+        "completed_at": "2026-03-28T15:51:16.757000",
+        "tools_used": [
+          "db_update_pattern"
+        ],
+        "node_description": "Store deal velocity and intervention patterns",
+        "delta_analysis": {
+          "comparison_to_historical": "INCONCLUSIVE",
+          "reasoning": "Current workflow execution was skipped (no actions taken, empty reasoning/verification). Historical lesson #1 focused on account health/churn risk (customer success domain) rather than sales pipeline bottlenecks. No comparable pipeline stall data available for delta analysis.",
+          "data_gaps": [
+            "No deals processed in current run",
+            "No stage progression data captured",
+            "No rep performance metrics available",
+            "No stall/reengagement events logged"
+          ],
+          "recommendation": "Verify workflow trigger conditions. If sales pipeline analysis is intended, ensure deal data is being passed to extraction agent. Current skip state prevents pattern learning."
+        },
+        "delta_vs_history": "no_history",
+        "delta_trend": "insufficient_data"
+      }
+    ],
+    "situation_summary": "",
+    "urgency": "",
+    "reasoning_confidence": null,
+    "memory_summary": "WORKFLOW SKIPPED - No pipeline data processed. Unable to extract sales patterns.",
+    "delta_analysis": {
+      "comparison_to_historical": "INCONCLUSIVE",
+      "reasoning": "Current workflow execution was skipped (no actions taken, empty reasoning/verification). Historical lesson #1 focused on account health/churn risk (customer success domain) rather than sales pipeline bottlenecks. No comparable pipeline stall data available for delta analysis.",
+      "data_gaps": [
+        "No deals processed in current run",
+        "No stage progression data captured",
+        "No rep performance metrics available",
+        "No stall/reengagement events logged"
+      ],
+      "recommendation": "Verify workflow trigger conditions. If sales pipeline analysis is intended, ensure deal data is being passed to extraction agent. Current skip state prevents pattern learning."
+    },
+    "actions_summary": [],
+    "verification_summary": {
+      "passed": false,
+      "approved_count": 0,
+      "rejected_count": 11,
+      "prosecutor_issues": 26
+    }
+  }
+}

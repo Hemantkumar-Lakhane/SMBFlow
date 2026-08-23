@@ -1,0 +1,3441 @@
+[
+  {
+    "id": "18880eba-3f6d-4e01-b498-a6748e56e9e1",
+    "address": "4240 Willow Way",
+    "city": "Riverside",
+    "state": "OK",
+    "zip_code": "73402",
+    "property_type": "Single Family",
+    "bedrooms": 4,
+    "bathrooms": 2.5,
+    "sqft": 3185,
+    "original_price": 892000,
+    "price": 849000,
+    "price_per_sqft": 266.56,
+    "price_reductions": 1,
+    "days_on_market": 82,
+    "showing_count": 73,
+    "negative_feedback_count": 2,
+    "offers_received": 0,
+    "listing_agent": "Derek Santos",
+    "seller_email": "seller197@example.com",
+    "seller_name": "Linda Smith",
+    "list_date": "2026-02-11",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "open_house",
+        "comment": "Loved the backyard, submitting offer",
+        "date": "2026-03-25",
+        "price_concern": false
+      },
+      {
+        "type": "open_house",
+        "comment": "Kitchen needs updating, not worth the asking price",
+        "date": "2026-04-08",
+        "price_concern": true
+      },
+      {
+        "type": "showing",
+        "comment": "Price seems high for the area",
+        "date": "2026-04-09",
+        "price_concern": true
+      }
+    ],
+    "_risk_label": "stale"
+  },
+  {
+    "id": "ad34cefb-f8a4-4a01-8272-1cc4626d35e0",
+    "address": "1844 Pine Court",
+    "city": "Hillcrest",
+    "state": "OK",
+    "zip_code": "73405",
+    "property_type": "Townhouse",
+    "bedrooms": 2,
+    "bathrooms": 2.5,
+    "sqft": 3285,
+    "original_price": 891000,
+    "price": 891000,
+    "price_per_sqft": 271.23,
+    "price_reductions": 0,
+    "days_on_market": 19,
+    "showing_count": 16,
+    "negative_feedback_count": 0,
+    "offers_received": 3,
+    "listing_agent": "Marcus Webb",
+    "seller_email": "seller220@example.com",
+    "seller_name": "Robert Johnson",
+    "list_date": "2026-04-15",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "showing",
+        "comment": "Great layout, very interested",
+        "date": "2026-05-05",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "e46379cb-7829-4228-b66d-0eec83408685",
+    "address": "8109 Oak Street",
+    "city": "Hillcrest",
+    "state": "OK",
+    "zip_code": "73401",
+    "property_type": "Townhouse",
+    "bedrooms": 2,
+    "bathrooms": 1,
+    "sqft": 2888,
+    "original_price": 769000,
+    "price": 769000,
+    "price_per_sqft": 266.27,
+    "price_reductions": 0,
+    "days_on_market": 16,
+    "showing_count": 11,
+    "negative_feedback_count": 0,
+    "offers_received": 1,
+    "listing_agent": "Lisa Park",
+    "seller_email": "seller252@example.com",
+    "seller_name": "James Smith",
+    "list_date": "2026-04-20",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "showing",
+        "comment": "Great layout, very interested",
+        "date": "2026-04-29",
+        "price_concern": false
+      },
+      {
+        "type": "showing",
+        "comment": "Perfect location, needs consideration",
+        "date": "2026-04-21",
+        "price_concern": false
+      },
+      {
+        "type": "showing",
+        "comment": "Excellent condition for the price",
+        "date": "2026-04-30",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "56ae61e8-0871-40c6-8a0a-6367dda9e0e9",
+    "address": "8316 Ridgeline Court",
+    "city": "Hillcrest",
+    "state": "OK",
+    "zip_code": "73405",
+    "property_type": "Multi-Family",
+    "bedrooms": 4,
+    "bathrooms": 3,
+    "sqft": 1322,
+    "original_price": 258000,
+    "price": 258000,
+    "price_per_sqft": 195.16,
+    "price_reductions": 0,
+    "days_on_market": 16,
+    "showing_count": 12,
+    "negative_feedback_count": 0,
+    "offers_received": 0,
+    "listing_agent": "Angela Brooks",
+    "seller_email": "seller774@example.com",
+    "seller_name": "James Johnson",
+    "list_date": "2026-04-20",
+    "status": "active",
+    "showing_feedback": [],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "fe7afa6f-a6bd-4fa9-b79d-2d9b90114e76",
+    "address": "1461 Ridgeline Court",
+    "city": "Hillcrest",
+    "state": "OK",
+    "zip_code": "73402",
+    "property_type": "Multi-Family",
+    "bedrooms": 4,
+    "bathrooms": 2.5,
+    "sqft": 2900,
+    "original_price": 595000,
+    "price": 578000,
+    "price_per_sqft": 199.31,
+    "price_reductions": 2,
+    "days_on_market": 37,
+    "showing_count": 28,
+    "negative_feedback_count": 0,
+    "offers_received": 3,
+    "listing_agent": "Marcus Webb",
+    "seller_email": "seller616@example.com",
+    "seller_name": "Linda Garcia",
+    "list_date": "2026-03-29",
+    "status": "active",
+    "showing_feedback": [],
+    "_risk_label": "price_reduced"
+  },
+  {
+    "id": "757443f9-402c-49f6-a00e-66c19f46400c",
+    "address": "9305 Valley Road",
+    "city": "Lakewood",
+    "state": "OK",
+    "zip_code": "73401",
+    "property_type": "Single Family",
+    "bedrooms": 3,
+    "bathrooms": 1.5,
+    "sqft": 2372,
+    "original_price": 637000,
+    "price": 582000,
+    "price_per_sqft": 245.36,
+    "price_reductions": 1,
+    "days_on_market": 99,
+    "showing_count": 85,
+    "negative_feedback_count": 5,
+    "offers_received": 0,
+    "listing_agent": "Priya Nair",
+    "seller_email": "seller514@example.com",
+    "seller_name": "James Garcia",
+    "list_date": "2026-01-27",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "showing",
+        "comment": "Better value available in the neighborhood",
+        "date": "2026-02-07",
+        "price_concern": true
+      },
+      {
+        "type": "open_house",
+        "comment": "Kitchen needs updating, not worth the asking price",
+        "date": "2026-02-12",
+        "price_concern": true
+      },
+      {
+        "type": "showing",
+        "comment": "Better value available in the neighborhood",
+        "date": "2026-03-01",
+        "price_concern": true
+      },
+      {
+        "type": "open_house",
+        "comment": "Price seems high for the area",
+        "date": "2026-02-06",
+        "price_concern": true
+      },
+      {
+        "type": "showing",
+        "comment": "Price seems high for the area",
+        "date": "2026-03-10",
+        "price_concern": true
+      }
+    ],
+    "_risk_label": "stale"
+  },
+  {
+    "id": "b89df203-f1f2-4a06-873c-806694016b4b",
+    "address": "1895 Oak Street",
+    "city": "Hillcrest",
+    "state": "OK",
+    "zip_code": "73402",
+    "property_type": "Townhouse",
+    "bedrooms": 4,
+    "bathrooms": 1.5,
+    "sqft": 3123,
+    "original_price": 820000,
+    "price": 820000,
+    "price_per_sqft": 262.57,
+    "price_reductions": 0,
+    "days_on_market": 5,
+    "showing_count": 7,
+    "negative_feedback_count": 0,
+    "offers_received": 2,
+    "listing_agent": "Sarah Chen",
+    "seller_email": "seller758@example.com",
+    "seller_name": "Robert Garcia",
+    "list_date": "2026-04-29",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "open_house",
+        "comment": "Great layout, very interested",
+        "date": "2026-05-05",
+        "price_concern": false
+      },
+      {
+        "type": "showing",
+        "comment": "Excellent condition for the price",
+        "date": "2026-05-04",
+        "price_concern": false
+      },
+      {
+        "type": "open_house",
+        "comment": "Loved the backyard, submitting offer",
+        "date": "2026-05-03",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "5ca5df46-5449-46bc-b0af-91cecf15bd4c",
+    "address": "7133 Elm Drive",
+    "city": "Mapleton",
+    "state": "OK",
+    "zip_code": "73405",
+    "property_type": "Condo",
+    "bedrooms": 4,
+    "bathrooms": 2,
+    "sqft": 1824,
+    "original_price": 493000,
+    "price": 493000,
+    "price_per_sqft": 270.29,
+    "price_reductions": 0,
+    "days_on_market": 14,
+    "showing_count": 12,
+    "negative_feedback_count": 0,
+    "offers_received": 3,
+    "listing_agent": "Tom Reyes",
+    "seller_email": "seller997@example.com",
+    "seller_name": "James Johnson",
+    "list_date": "2026-04-21",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "open_house",
+        "comment": "Perfect location, needs consideration",
+        "date": "2026-05-02",
+        "price_concern": false
+      },
+      {
+        "type": "open_house",
+        "comment": "Great layout, very interested",
+        "date": "2026-05-02",
+        "price_concern": false
+      },
+      {
+        "type": "open_house",
+        "comment": "Perfect location, needs consideration",
+        "date": "2026-04-30",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "92540207-8465-4c4f-acba-c1cad51f52d3",
+    "address": "8977 Willow Way",
+    "city": "Hillcrest",
+    "state": "OK",
+    "zip_code": "73404",
+    "property_type": "Condo",
+    "bedrooms": 5,
+    "bathrooms": 2.5,
+    "sqft": 3170,
+    "original_price": 598000,
+    "price": 584000,
+    "price_per_sqft": 184.23,
+    "price_reductions": 2,
+    "days_on_market": 26,
+    "showing_count": 15,
+    "negative_feedback_count": 0,
+    "offers_received": 2,
+    "listing_agent": "Angela Brooks",
+    "seller_email": "seller194@example.com",
+    "seller_name": "Robert Smith",
+    "list_date": "2026-04-10",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "showing",
+        "comment": "Great layout, very interested",
+        "date": "2026-04-24",
+        "price_concern": false
+      },
+      {
+        "type": "open_house",
+        "comment": "Great layout, very interested",
+        "date": "2026-04-25",
+        "price_concern": false
+      },
+      {
+        "type": "showing",
+        "comment": "Loved the backyard, submitting offer",
+        "date": "2026-05-05",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "price_reduced"
+  },
+  {
+    "id": "04b26451-dcc7-4577-9b01-4af7727e66fb",
+    "address": "5493 Birch Boulevard",
+    "city": "Springfield",
+    "state": "OK",
+    "zip_code": "73404",
+    "property_type": "Multi-Family",
+    "bedrooms": 3,
+    "bathrooms": 1.5,
+    "sqft": 3301,
+    "original_price": 415000,
+    "price": 415000,
+    "price_per_sqft": 125.72,
+    "price_reductions": 0,
+    "days_on_market": 18,
+    "showing_count": 16,
+    "negative_feedback_count": 0,
+    "offers_received": 2,
+    "listing_agent": "Marcus Webb",
+    "seller_email": "seller630@example.com",
+    "seller_name": "Maria Johnson",
+    "list_date": "2026-04-16",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "showing",
+        "comment": "Great layout, very interested",
+        "date": "2026-05-06",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "0e0a6701-6ea8-473f-9dd4-6df9913e61a0",
+    "address": "616 Sunset Boulevard",
+    "city": "Mapleton",
+    "state": "OK",
+    "zip_code": "73402",
+    "property_type": "Condo",
+    "bedrooms": 4,
+    "bathrooms": 2,
+    "sqft": 2146,
+    "original_price": 276000,
+    "price": 247000,
+    "price_per_sqft": 115.1,
+    "price_reductions": 2,
+    "days_on_market": 67,
+    "showing_count": 49,
+    "negative_feedback_count": 4,
+    "offers_received": 0,
+    "listing_agent": "Lisa Park",
+    "seller_email": "seller145@example.com",
+    "seller_name": "James Johnson",
+    "list_date": "2026-02-28",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "showing",
+        "comment": "Buyer feels it's overpriced",
+        "date": "2026-03-06",
+        "price_concern": true
+      },
+      {
+        "type": "open_house",
+        "comment": "Better value available in the neighborhood",
+        "date": "2026-03-15",
+        "price_concern": true
+      },
+      {
+        "type": "showing",
+        "comment": "Priced above recent comps",
+        "date": "2026-04-15",
+        "price_concern": true
+      },
+      {
+        "type": "open_house",
+        "comment": "Excellent condition for the price",
+        "date": "2026-03-25",
+        "price_concern": false
+      },
+      {
+        "type": "open_house",
+        "comment": "Better value available in the neighborhood",
+        "date": "2026-03-27",
+        "price_concern": true
+      }
+    ],
+    "_risk_label": "stale"
+  },
+  {
+    "id": "50658018-861a-4747-9209-3299e178e73a",
+    "address": "9938 Valley Road",
+    "city": "Springfield",
+    "state": "OK",
+    "zip_code": "73404",
+    "property_type": "Condo",
+    "bedrooms": 5,
+    "bathrooms": 1.5,
+    "sqft": 3365,
+    "original_price": 666000,
+    "price": 666000,
+    "price_per_sqft": 197.92,
+    "price_reductions": 0,
+    "days_on_market": 10,
+    "showing_count": 9,
+    "negative_feedback_count": 0,
+    "offers_received": 0,
+    "listing_agent": "Marcus Webb",
+    "seller_email": "seller274@example.com",
+    "seller_name": "James Garcia",
+    "list_date": "2026-04-25",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "showing",
+        "comment": "Excellent condition for the price",
+        "date": "2026-04-29",
+        "price_concern": false
+      },
+      {
+        "type": "open_house",
+        "comment": "Perfect location, needs consideration",
+        "date": "2026-05-04",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "8a7b8df4-a469-47a2-b5ec-6716ade0f480",
+    "address": "4273 Walnut Road",
+    "city": "Hillcrest",
+    "state": "OK",
+    "zip_code": "73405",
+    "property_type": "Townhouse",
+    "bedrooms": 5,
+    "bathrooms": 3,
+    "sqft": 1292,
+    "original_price": 281000,
+    "price": 274000,
+    "price_per_sqft": 212.07,
+    "price_reductions": 1,
+    "days_on_market": 27,
+    "showing_count": 15,
+    "negative_feedback_count": 0,
+    "offers_received": 1,
+    "listing_agent": "Marcus Webb",
+    "seller_email": "seller522@example.com",
+    "seller_name": "Robert Johnson",
+    "list_date": "2026-04-08",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "open_house",
+        "comment": "Excellent condition for the price",
+        "date": "2026-05-06",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "price_reduced"
+  },
+  {
+    "id": "efcf9a95-e020-4047-9128-bfe3a7742ccd",
+    "address": "2947 Sunset Boulevard",
+    "city": "Springfield",
+    "state": "OK",
+    "zip_code": "73405",
+    "property_type": "Condo",
+    "bedrooms": 2,
+    "bathrooms": 1,
+    "sqft": 2684,
+    "original_price": 598000,
+    "price": 598000,
+    "price_per_sqft": 222.8,
+    "price_reductions": 0,
+    "days_on_market": 9,
+    "showing_count": 8,
+    "negative_feedback_count": 0,
+    "offers_received": 0,
+    "listing_agent": "Jake Morrison",
+    "seller_email": "seller240@example.com",
+    "seller_name": "Robert Garcia",
+    "list_date": "2026-04-27",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "showing",
+        "comment": "Great layout, very interested",
+        "date": "2026-05-02",
+        "price_concern": false
+      },
+      {
+        "type": "open_house",
+        "comment": "Excellent condition for the price",
+        "date": "2026-05-03",
+        "price_concern": false
+      },
+      {
+        "type": "open_house",
+        "comment": "Loved the backyard, submitting offer",
+        "date": "2026-04-28",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "6e89d384-7474-4aca-86f9-7d058b03f952",
+    "address": "7462 Pine Court",
+    "city": "Mapleton",
+    "state": "OK",
+    "zip_code": "73402",
+    "property_type": "Condo",
+    "bedrooms": 5,
+    "bathrooms": 1,
+    "sqft": 2280,
+    "original_price": 494000,
+    "price": 494000,
+    "price_per_sqft": 216.67,
+    "price_reductions": 0,
+    "days_on_market": 19,
+    "showing_count": 15,
+    "negative_feedback_count": 0,
+    "offers_received": 2,
+    "listing_agent": "Derek Santos",
+    "seller_email": "seller718@example.com",
+    "seller_name": "Maria Smith",
+    "list_date": "2026-04-16",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "showing",
+        "comment": "Loved the backyard, submitting offer",
+        "date": "2026-04-30",
+        "price_concern": false
+      },
+      {
+        "type": "showing",
+        "comment": "Great layout, very interested",
+        "date": "2026-04-19",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "903535c2-6fd0-495c-be03-fccbe7b82b28",
+    "address": "7522 Harbor View Drive",
+    "city": "Riverside",
+    "state": "OK",
+    "zip_code": "73401",
+    "property_type": "Single Family",
+    "bedrooms": 2,
+    "bathrooms": 2.5,
+    "sqft": 1998,
+    "original_price": 365000,
+    "price": 342000,
+    "price_per_sqft": 171.17,
+    "price_reductions": 2,
+    "days_on_market": 179,
+    "showing_count": 147,
+    "negative_feedback_count": 3,
+    "offers_received": 0,
+    "listing_agent": "Marcus Webb",
+    "seller_email": "seller397@example.com",
+    "seller_name": "Robert Smith",
+    "list_date": "2025-11-07",
+    "status": "sold",
+    "showing_feedback": [
+      {
+        "type": "showing",
+        "comment": "Needs too much work at this price point",
+        "date": "2026-01-10",
+        "price_concern": true
+      },
+      {
+        "type": "open_house",
+        "comment": "Priced above recent comps",
+        "date": "2025-11-14",
+        "price_concern": true
+      },
+      {
+        "type": "showing",
+        "comment": "Excellent condition for the price",
+        "date": "2026-04-22",
+        "price_concern": false
+      },
+      {
+        "type": "showing",
+        "comment": "Priced above recent comps",
+        "date": "2026-02-21",
+        "price_concern": true
+      },
+      {
+        "type": "showing",
+        "comment": "Perfect location, needs consideration",
+        "date": "2026-02-14",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "3932db3f-14f4-4ff1-acf2-2ed25b6cebfd",
+    "address": "4674 Willow Way",
+    "city": "Springfield",
+    "state": "OK",
+    "zip_code": "73402",
+    "property_type": "Multi-Family",
+    "bedrooms": 5,
+    "bathrooms": 1,
+    "sqft": 2305,
+    "original_price": 596000,
+    "price": 557000,
+    "price_per_sqft": 241.65,
+    "price_reductions": 2,
+    "days_on_market": 49,
+    "showing_count": 36,
+    "negative_feedback_count": 0,
+    "offers_received": 3,
+    "listing_agent": "Sarah Chen",
+    "seller_email": "seller620@example.com",
+    "seller_name": "Robert Smith",
+    "list_date": "2026-03-18",
+    "status": "sold",
+    "showing_feedback": [
+      {
+        "type": "showing",
+        "comment": "Perfect location, needs consideration",
+        "date": "2026-03-25",
+        "price_concern": false
+      },
+      {
+        "type": "open_house",
+        "comment": "Excellent condition for the price",
+        "date": "2026-03-28",
+        "price_concern": false
+      },
+      {
+        "type": "showing",
+        "comment": "Great layout, very interested",
+        "date": "2026-05-05",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "6c23d918-3ece-41dd-9dcb-d7fe36e6cbd4",
+    "address": "6528 Willow Way",
+    "city": "Hillcrest",
+    "state": "OK",
+    "zip_code": "73405",
+    "property_type": "Multi-Family",
+    "bedrooms": 2,
+    "bathrooms": 2.5,
+    "sqft": 3264,
+    "original_price": 613000,
+    "price": 613000,
+    "price_per_sqft": 187.81,
+    "price_reductions": 0,
+    "days_on_market": 9,
+    "showing_count": 4,
+    "negative_feedback_count": 0,
+    "offers_received": 1,
+    "listing_agent": "Tom Reyes",
+    "seller_email": "seller440@example.com",
+    "seller_name": "Maria Johnson",
+    "list_date": "2026-04-26",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "showing",
+        "comment": "Great layout, very interested",
+        "date": "2026-05-05",
+        "price_concern": false
+      },
+      {
+        "type": "open_house",
+        "comment": "Loved the backyard, submitting offer",
+        "date": "2026-05-01",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "5f39109e-84ed-4757-88a9-1138ecee4a1b",
+    "address": "5887 Cherry Path",
+    "city": "Springfield",
+    "state": "OK",
+    "zip_code": "73402",
+    "property_type": "Condo",
+    "bedrooms": 5,
+    "bathrooms": 2.5,
+    "sqft": 2551,
+    "original_price": 383000,
+    "price": 383000,
+    "price_per_sqft": 150.14,
+    "price_reductions": 0,
+    "days_on_market": 20,
+    "showing_count": 20,
+    "negative_feedback_count": 0,
+    "offers_received": 3,
+    "listing_agent": "Angela Brooks",
+    "seller_email": "seller213@example.com",
+    "seller_name": "James Johnson",
+    "list_date": "2026-04-15",
+    "status": "pending",
+    "showing_feedback": [
+      {
+        "type": "open_house",
+        "comment": "Loved the backyard, submitting offer",
+        "date": "2026-04-30",
+        "price_concern": false
+      },
+      {
+        "type": "showing",
+        "comment": "Perfect location, needs consideration",
+        "date": "2026-05-03",
+        "price_concern": false
+      },
+      {
+        "type": "showing",
+        "comment": "Excellent condition for the price",
+        "date": "2026-04-30",
+        "price_concern": false
+      },
+      {
+        "type": "showing",
+        "comment": "Perfect location, needs consideration",
+        "date": "2026-05-06",
+        "price_concern": false
+      },
+      {
+        "type": "open_house",
+        "comment": "Perfect location, needs consideration",
+        "date": "2026-04-20",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "6cb1f7c8-b62b-4b7b-87c1-4951983f56fc",
+    "address": "2723 Aspen Circle",
+    "city": "Lakewood",
+    "state": "OK",
+    "zip_code": "73401",
+    "property_type": "Single Family",
+    "bedrooms": 3,
+    "bathrooms": 2.5,
+    "sqft": 1394,
+    "original_price": 249000,
+    "price": 249000,
+    "price_per_sqft": 178.62,
+    "price_reductions": 0,
+    "days_on_market": 5,
+    "showing_count": 6,
+    "negative_feedback_count": 0,
+    "offers_received": 0,
+    "listing_agent": "Sarah Chen",
+    "seller_email": "seller772@example.com",
+    "seller_name": "Linda Garcia",
+    "list_date": "2026-04-29",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "showing",
+        "comment": "Loved the backyard, submitting offer",
+        "date": "2026-05-05",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "dc1660e2-c78d-4ecd-8f75-dba3cf48b4d3",
+    "address": "1962 Cedar Lane",
+    "city": "Springfield",
+    "state": "OK",
+    "zip_code": "73403",
+    "property_type": "Single Family",
+    "bedrooms": 2,
+    "bathrooms": 2,
+    "sqft": 2803,
+    "original_price": 521000,
+    "price": 479000,
+    "price_per_sqft": 170.89,
+    "price_reductions": 2,
+    "days_on_market": 160,
+    "showing_count": 128,
+    "negative_feedback_count": 4,
+    "offers_received": 0,
+    "listing_agent": "Marcus Webb",
+    "seller_email": "seller204@example.com",
+    "seller_name": "Maria Johnson",
+    "list_date": "2025-11-27",
+    "status": "pending",
+    "showing_feedback": [
+      {
+        "type": "open_house",
+        "comment": "Price seems high for the area",
+        "date": "2025-12-23",
+        "price_concern": true
+      },
+      {
+        "type": "showing",
+        "comment": "Kitchen needs updating, not worth the asking price",
+        "date": "2026-03-20",
+        "price_concern": true
+      },
+      {
+        "type": "open_house",
+        "comment": "Buyer feels it's overpriced",
+        "date": "2026-03-13",
+        "price_concern": true
+      },
+      {
+        "type": "showing",
+        "comment": "Priced above recent comps",
+        "date": "2026-03-17",
+        "price_concern": true
+      },
+      {
+        "type": "open_house",
+        "comment": "Great layout, very interested",
+        "date": "2026-01-18",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "38d48af5-26bb-459a-9b90-fedd91c3d0fa",
+    "address": "6229 Birch Boulevard",
+    "city": "Riverside",
+    "state": "OK",
+    "zip_code": "73403",
+    "property_type": "Townhouse",
+    "bedrooms": 4,
+    "bathrooms": 1,
+    "sqft": 1081,
+    "original_price": 237000,
+    "price": 237000,
+    "price_per_sqft": 219.24,
+    "price_reductions": 0,
+    "days_on_market": 3,
+    "showing_count": 6,
+    "negative_feedback_count": 0,
+    "offers_received": 2,
+    "listing_agent": "Marcus Webb",
+    "seller_email": "seller590@example.com",
+    "seller_name": "Maria Johnson",
+    "list_date": "2026-05-03",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "open_house",
+        "comment": "Loved the backyard, submitting offer",
+        "date": "2026-05-06",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "176bebde-cee3-47e9-a2cd-0652ee449d54",
+    "address": "7746 Birch Boulevard",
+    "city": "Mapleton",
+    "state": "OK",
+    "zip_code": "73401",
+    "property_type": "Multi-Family",
+    "bedrooms": 2,
+    "bathrooms": 2.5,
+    "sqft": 1611,
+    "original_price": 421000,
+    "price": 421000,
+    "price_per_sqft": 261.33,
+    "price_reductions": 0,
+    "days_on_market": 13,
+    "showing_count": 7,
+    "negative_feedback_count": 0,
+    "offers_received": 1,
+    "listing_agent": "Derek Santos",
+    "seller_email": "seller597@example.com",
+    "seller_name": "Robert Johnson",
+    "list_date": "2026-04-21",
+    "status": "sold",
+    "showing_feedback": [
+      {
+        "type": "open_house",
+        "comment": "Loved the backyard, submitting offer",
+        "date": "2026-04-30",
+        "price_concern": false
+      },
+      {
+        "type": "showing",
+        "comment": "Perfect location, needs consideration",
+        "date": "2026-05-01",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "e96356a1-3959-42c5-8a91-03fa46650c12",
+    "address": "476 Maple Avenue",
+    "city": "Lakewood",
+    "state": "OK",
+    "zip_code": "73405",
+    "property_type": "Condo",
+    "bedrooms": 3,
+    "bathrooms": 2.5,
+    "sqft": 3205,
+    "original_price": 711000,
+    "price": 711000,
+    "price_per_sqft": 221.84,
+    "price_reductions": 0,
+    "days_on_market": 5,
+    "showing_count": 3,
+    "negative_feedback_count": 0,
+    "offers_received": 3,
+    "listing_agent": "Angela Brooks",
+    "seller_email": "seller497@example.com",
+    "seller_name": "Robert Smith",
+    "list_date": "2026-04-29",
+    "status": "sold",
+    "showing_feedback": [
+      {
+        "type": "showing",
+        "comment": "Great layout, very interested",
+        "date": "2026-05-04",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "8ebb274e-6cb5-4bcb-8693-dde954063e2e",
+    "address": "6083 Cherry Path",
+    "city": "Riverside",
+    "state": "OK",
+    "zip_code": "73404",
+    "property_type": "Multi-Family",
+    "bedrooms": 2,
+    "bathrooms": 3,
+    "sqft": 2278,
+    "original_price": 278000,
+    "price": 269000,
+    "price_per_sqft": 118.09,
+    "price_reductions": 2,
+    "days_on_market": 60,
+    "showing_count": 45,
+    "negative_feedback_count": 0,
+    "offers_received": 3,
+    "listing_agent": "Jake Morrison",
+    "seller_email": "seller657@example.com",
+    "seller_name": "James Garcia",
+    "list_date": "2026-03-07",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "showing",
+        "comment": "Great layout, very interested",
+        "date": "2026-04-24",
+        "price_concern": false
+      },
+      {
+        "type": "open_house",
+        "comment": "Loved the backyard, submitting offer",
+        "date": "2026-03-23",
+        "price_concern": false
+      },
+      {
+        "type": "open_house",
+        "comment": "Great layout, very interested",
+        "date": "2026-03-10",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "price_reduced"
+  },
+  {
+    "id": "6adc3db6-375b-40ca-8145-d6ae2b497276",
+    "address": "3098 Sunset Boulevard",
+    "city": "Mapleton",
+    "state": "OK",
+    "zip_code": "73403",
+    "property_type": "Single Family",
+    "bedrooms": 4,
+    "bathrooms": 2,
+    "sqft": 2477,
+    "original_price": 672000,
+    "price": 645000,
+    "price_per_sqft": 260.4,
+    "price_reductions": 3,
+    "days_on_market": 127,
+    "showing_count": 101,
+    "negative_feedback_count": 5,
+    "offers_received": 0,
+    "listing_agent": "Tom Reyes",
+    "seller_email": "seller389@example.com",
+    "seller_name": "Linda Garcia",
+    "list_date": "2025-12-28",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "open_house",
+        "comment": "Price seems high for the area",
+        "date": "2026-02-28",
+        "price_concern": true
+      },
+      {
+        "type": "showing",
+        "comment": "Better value available in the neighborhood",
+        "date": "2026-02-20",
+        "price_concern": true
+      },
+      {
+        "type": "open_house",
+        "comment": "Buyer feels it's overpriced",
+        "date": "2026-04-09",
+        "price_concern": true
+      },
+      {
+        "type": "open_house",
+        "comment": "Price seems high for the area",
+        "date": "2026-03-07",
+        "price_concern": true
+      },
+      {
+        "type": "open_house",
+        "comment": "Needs too much work at this price point",
+        "date": "2026-02-20",
+        "price_concern": true
+      }
+    ],
+    "_risk_label": "stale"
+  },
+  {
+    "id": "8a482b91-ed14-470f-bc22-90a6bb68e04e",
+    "address": "3811 Pine Court",
+    "city": "Riverside",
+    "state": "OK",
+    "zip_code": "73403",
+    "property_type": "Single Family",
+    "bedrooms": 3,
+    "bathrooms": 1.5,
+    "sqft": 3455,
+    "original_price": 649000,
+    "price": 649000,
+    "price_per_sqft": 187.84,
+    "price_reductions": 0,
+    "days_on_market": 14,
+    "showing_count": 7,
+    "negative_feedback_count": 0,
+    "offers_received": 1,
+    "listing_agent": "Derek Santos",
+    "seller_email": "seller998@example.com",
+    "seller_name": "James Johnson",
+    "list_date": "2026-04-22",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "showing",
+        "comment": "Excellent condition for the price",
+        "date": "2026-04-27",
+        "price_concern": false
+      },
+      {
+        "type": "showing",
+        "comment": "Excellent condition for the price",
+        "date": "2026-05-06",
+        "price_concern": false
+      },
+      {
+        "type": "showing",
+        "comment": "Perfect location, needs consideration",
+        "date": "2026-05-03",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "9581b625-3d1e-4627-a344-f6d2bf4ea725",
+    "address": "4860 Willow Way",
+    "city": "Hillcrest",
+    "state": "OK",
+    "zip_code": "73403",
+    "property_type": "Condo",
+    "bedrooms": 2,
+    "bathrooms": 1.5,
+    "sqft": 1900,
+    "original_price": 481000,
+    "price": 481000,
+    "price_per_sqft": 253.16,
+    "price_reductions": 0,
+    "days_on_market": 15,
+    "showing_count": 14,
+    "negative_feedback_count": 0,
+    "offers_received": 1,
+    "listing_agent": "Priya Nair",
+    "seller_email": "seller664@example.com",
+    "seller_name": "Robert Garcia",
+    "list_date": "2026-04-19",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "showing",
+        "comment": "Great layout, very interested",
+        "date": "2026-05-01",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "a1a3da86-1602-4263-868d-6825b83cefd3",
+    "address": "1957 Ridgeline Court",
+    "city": "Hillcrest",
+    "state": "OK",
+    "zip_code": "73403",
+    "property_type": "Single Family",
+    "bedrooms": 4,
+    "bathrooms": 2.5,
+    "sqft": 939,
+    "original_price": 152000,
+    "price": 144000,
+    "price_per_sqft": 153.35,
+    "price_reductions": 2,
+    "days_on_market": 50,
+    "showing_count": 36,
+    "negative_feedback_count": 0,
+    "offers_received": 1,
+    "listing_agent": "Marcus Webb",
+    "seller_email": "seller589@example.com",
+    "seller_name": "James Smith",
+    "list_date": "2026-03-17",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "showing",
+        "comment": "Perfect location, needs consideration",
+        "date": "2026-05-05",
+        "price_concern": false
+      },
+      {
+        "type": "showing",
+        "comment": "Perfect location, needs consideration",
+        "date": "2026-04-03",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "price_reduced"
+  },
+  {
+    "id": "09ba3848-067a-4c2a-bc00-678c46fa0c30",
+    "address": "5029 Elm Drive",
+    "city": "Lakewood",
+    "state": "OK",
+    "zip_code": "73404",
+    "property_type": "Multi-Family",
+    "bedrooms": 2,
+    "bathrooms": 1,
+    "sqft": 1281,
+    "original_price": 331000,
+    "price": 331000,
+    "price_per_sqft": 258.39,
+    "price_reductions": 0,
+    "days_on_market": 7,
+    "showing_count": 0,
+    "negative_feedback_count": 0,
+    "offers_received": 2,
+    "listing_agent": "Jake Morrison",
+    "seller_email": "seller762@example.com",
+    "seller_name": "James Johnson",
+    "list_date": "2026-04-27",
+    "status": "active",
+    "showing_feedback": [],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "9008c217-7a5d-4e76-91f1-f5b587134bb1",
+    "address": "2224 Cherry Path",
+    "city": "Springfield",
+    "state": "OK",
+    "zip_code": "73401",
+    "property_type": "Single Family",
+    "bedrooms": 3,
+    "bathrooms": 2.5,
+    "sqft": 3066,
+    "original_price": 835000,
+    "price": 793000,
+    "price_per_sqft": 258.64,
+    "price_reductions": 3,
+    "days_on_market": 158,
+    "showing_count": 128,
+    "negative_feedback_count": 5,
+    "offers_received": 0,
+    "listing_agent": "Derek Santos",
+    "seller_email": "seller679@example.com",
+    "seller_name": "James Garcia",
+    "list_date": "2025-11-27",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "showing",
+        "comment": "Price seems high for the area",
+        "date": "2026-04-15",
+        "price_concern": true
+      },
+      {
+        "type": "showing",
+        "comment": "Perfect location, needs consideration",
+        "date": "2026-02-26",
+        "price_concern": false
+      },
+      {
+        "type": "open_house",
+        "comment": "Buyer feels it's overpriced",
+        "date": "2026-01-10",
+        "price_concern": true
+      },
+      {
+        "type": "open_house",
+        "comment": "Buyer feels it's overpriced",
+        "date": "2026-01-23",
+        "price_concern": true
+      },
+      {
+        "type": "showing",
+        "comment": "Priced above recent comps",
+        "date": "2026-01-10",
+        "price_concern": true
+      },
+      {
+        "type": "showing",
+        "comment": "Buyer feels it's overpriced",
+        "date": "2026-03-17",
+        "price_concern": true
+      }
+    ],
+    "_risk_label": "stale"
+  },
+  {
+    "id": "9f6ae46b-9d81-436f-9496-d95f6daa9318",
+    "address": "5314 Cherry Path",
+    "city": "Lakewood",
+    "state": "OK",
+    "zip_code": "73403",
+    "property_type": "Condo",
+    "bedrooms": 5,
+    "bathrooms": 3,
+    "sqft": 1333,
+    "original_price": 235000,
+    "price": 235000,
+    "price_per_sqft": 176.29,
+    "price_reductions": 0,
+    "days_on_market": 7,
+    "showing_count": 2,
+    "negative_feedback_count": 0,
+    "offers_received": 3,
+    "listing_agent": "Angela Brooks",
+    "seller_email": "seller951@example.com",
+    "seller_name": "Linda Smith",
+    "list_date": "2026-04-29",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "open_house",
+        "comment": "Great layout, very interested",
+        "date": "2026-04-30",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "2998e1c6-aa7f-42c5-ac06-45142cbb89e9",
+    "address": "4855 Harbor View Drive",
+    "city": "Springfield",
+    "state": "OK",
+    "zip_code": "73403",
+    "property_type": "Townhouse",
+    "bedrooms": 4,
+    "bathrooms": 2,
+    "sqft": 2431,
+    "original_price": 359000,
+    "price": 333000,
+    "price_per_sqft": 136.98,
+    "price_reductions": 1,
+    "days_on_market": 32,
+    "showing_count": 25,
+    "negative_feedback_count": 0,
+    "offers_received": 0,
+    "listing_agent": "Priya Nair",
+    "seller_email": "seller947@example.com",
+    "seller_name": "Robert Garcia",
+    "list_date": "2026-04-03",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "open_house",
+        "comment": "Loved the backyard, submitting offer",
+        "date": "2026-04-11",
+        "price_concern": false
+      },
+      {
+        "type": "open_house",
+        "comment": "Excellent condition for the price",
+        "date": "2026-04-12",
+        "price_concern": false
+      },
+      {
+        "type": "open_house",
+        "comment": "Perfect location, needs consideration",
+        "date": "2026-04-29",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "price_reduced"
+  },
+  {
+    "id": "e3c4504d-0ac5-456b-9a5e-8241ef39ed46",
+    "address": "4916 Oak Street",
+    "city": "Hillcrest",
+    "state": "OK",
+    "zip_code": "73402",
+    "property_type": "Single Family",
+    "bedrooms": 5,
+    "bathrooms": 1.5,
+    "sqft": 2773,
+    "original_price": 644000,
+    "price": 644000,
+    "price_per_sqft": 232.24,
+    "price_reductions": 0,
+    "days_on_market": 17,
+    "showing_count": 11,
+    "negative_feedback_count": 0,
+    "offers_received": 3,
+    "listing_agent": "Lisa Park",
+    "seller_email": "seller156@example.com",
+    "seller_name": "Maria Johnson",
+    "list_date": "2026-04-18",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "open_house",
+        "comment": "Great layout, very interested",
+        "date": "2026-04-19",
+        "price_concern": false
+      },
+      {
+        "type": "showing",
+        "comment": "Excellent condition for the price",
+        "date": "2026-04-20",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "79a3ff53-7cac-49db-ac31-61b515439ff4",
+    "address": "4639 Cedar Lane",
+    "city": "Riverside",
+    "state": "OK",
+    "zip_code": "73404",
+    "property_type": "Single Family",
+    "bedrooms": 3,
+    "bathrooms": 1.5,
+    "sqft": 2582,
+    "original_price": 626000,
+    "price": 626000,
+    "price_per_sqft": 242.45,
+    "price_reductions": 0,
+    "days_on_market": 9,
+    "showing_count": 8,
+    "negative_feedback_count": 0,
+    "offers_received": 3,
+    "listing_agent": "Lisa Park",
+    "seller_email": "seller261@example.com",
+    "seller_name": "James Smith",
+    "list_date": "2026-04-27",
+    "status": "sold",
+    "showing_feedback": [
+      {
+        "type": "open_house",
+        "comment": "Excellent condition for the price",
+        "date": "2026-04-28",
+        "price_concern": false
+      },
+      {
+        "type": "open_house",
+        "comment": "Excellent condition for the price",
+        "date": "2026-04-28",
+        "price_concern": false
+      },
+      {
+        "type": "showing",
+        "comment": "Great layout, very interested",
+        "date": "2026-05-01",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "50a73117-c8f0-4d9c-a6f2-de82b0b26a1b",
+    "address": "2455 Willow Way",
+    "city": "Hillcrest",
+    "state": "OK",
+    "zip_code": "73403",
+    "property_type": "Single Family",
+    "bedrooms": 2,
+    "bathrooms": 2.5,
+    "sqft": 1639,
+    "original_price": 301000,
+    "price": 275000,
+    "price_per_sqft": 167.79,
+    "price_reductions": 3,
+    "days_on_market": 141,
+    "showing_count": 115,
+    "negative_feedback_count": 6,
+    "offers_received": 0,
+    "listing_agent": "Derek Santos",
+    "seller_email": "seller850@example.com",
+    "seller_name": "Robert Johnson",
+    "list_date": "2025-12-16",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "showing",
+        "comment": "Needs too much work at this price point",
+        "date": "2026-03-06",
+        "price_concern": true
+      },
+      {
+        "type": "showing",
+        "comment": "Price seems high for the area",
+        "date": "2026-03-08",
+        "price_concern": true
+      },
+      {
+        "type": "open_house",
+        "comment": "Better value available in the neighborhood",
+        "date": "2026-02-12",
+        "price_concern": true
+      },
+      {
+        "type": "open_house",
+        "comment": "Buyer feels it's overpriced",
+        "date": "2026-03-22",
+        "price_concern": true
+      },
+      {
+        "type": "open_house",
+        "comment": "Needs too much work at this price point",
+        "date": "2026-01-26",
+        "price_concern": true
+      },
+      {
+        "type": "showing",
+        "comment": "Buyer feels it's overpriced",
+        "date": "2026-04-06",
+        "price_concern": true
+      }
+    ],
+    "_risk_label": "stale"
+  },
+  {
+    "id": "f51a9e8c-3008-4fd7-b9d6-25615565eb57",
+    "address": "4642 Birch Boulevard",
+    "city": "Springfield",
+    "state": "OK",
+    "zip_code": "73405",
+    "property_type": "Townhouse",
+    "bedrooms": 2,
+    "bathrooms": 3,
+    "sqft": 1279,
+    "original_price": 177000,
+    "price": 172000,
+    "price_per_sqft": 134.48,
+    "price_reductions": 2,
+    "days_on_market": 39,
+    "showing_count": 28,
+    "negative_feedback_count": 0,
+    "offers_received": 2,
+    "listing_agent": "Marcus Webb",
+    "seller_email": "seller409@example.com",
+    "seller_name": "Robert Smith",
+    "list_date": "2026-03-28",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "showing",
+        "comment": "Great layout, very interested",
+        "date": "2026-05-01",
+        "price_concern": false
+      },
+      {
+        "type": "open_house",
+        "comment": "Great layout, very interested",
+        "date": "2026-04-22",
+        "price_concern": false
+      },
+      {
+        "type": "open_house",
+        "comment": "Loved the backyard, submitting offer",
+        "date": "2026-04-09",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "price_reduced"
+  },
+  {
+    "id": "9c898237-8a34-46b5-be82-a6daca2a1da1",
+    "address": "6697 Elm Drive",
+    "city": "Lakewood",
+    "state": "OK",
+    "zip_code": "73401",
+    "property_type": "Single Family",
+    "bedrooms": 2,
+    "bathrooms": 1,
+    "sqft": 1717,
+    "original_price": 441000,
+    "price": 441000,
+    "price_per_sqft": 256.84,
+    "price_reductions": 0,
+    "days_on_market": 9,
+    "showing_count": 11,
+    "negative_feedback_count": 0,
+    "offers_received": 0,
+    "listing_agent": "Jake Morrison",
+    "seller_email": "seller850@example.com",
+    "seller_name": "Robert Smith",
+    "list_date": "2026-04-25",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "open_house",
+        "comment": "Excellent condition for the price",
+        "date": "2026-04-27",
+        "price_concern": false
+      },
+      {
+        "type": "showing",
+        "comment": "Excellent condition for the price",
+        "date": "2026-04-27",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "5b3493bb-5fd1-40a7-8dd4-895961c7a627",
+    "address": "3039 Sunset Boulevard",
+    "city": "Riverside",
+    "state": "OK",
+    "zip_code": "73404",
+    "property_type": "Multi-Family",
+    "bedrooms": 4,
+    "bathrooms": 1.5,
+    "sqft": 3005,
+    "original_price": 584000,
+    "price": 584000,
+    "price_per_sqft": 194.34,
+    "price_reductions": 0,
+    "days_on_market": 19,
+    "showing_count": 18,
+    "negative_feedback_count": 0,
+    "offers_received": 1,
+    "listing_agent": "Priya Nair",
+    "seller_email": "seller137@example.com",
+    "seller_name": "Robert Smith",
+    "list_date": "2026-04-15",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "open_house",
+        "comment": "Excellent condition for the price",
+        "date": "2026-04-20",
+        "price_concern": false
+      },
+      {
+        "type": "open_house",
+        "comment": "Great layout, very interested",
+        "date": "2026-04-25",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "1569b187-554a-4e06-b4ac-0a9d4898a8b0",
+    "address": "4300 Maple Avenue",
+    "city": "Springfield",
+    "state": "OK",
+    "zip_code": "73403",
+    "property_type": "Single Family",
+    "bedrooms": 5,
+    "bathrooms": 2.5,
+    "sqft": 2917,
+    "original_price": 799000,
+    "price": 799000,
+    "price_per_sqft": 273.91,
+    "price_reductions": 0,
+    "days_on_market": 12,
+    "showing_count": 14,
+    "negative_feedback_count": 0,
+    "offers_received": 1,
+    "listing_agent": "Sarah Chen",
+    "seller_email": "seller539@example.com",
+    "seller_name": "James Smith",
+    "list_date": "2026-04-23",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "showing",
+        "comment": "Perfect location, needs consideration",
+        "date": "2026-05-05",
+        "price_concern": false
+      },
+      {
+        "type": "showing",
+        "comment": "Great layout, very interested",
+        "date": "2026-04-30",
+        "price_concern": false
+      },
+      {
+        "type": "showing",
+        "comment": "Great layout, very interested",
+        "date": "2026-05-05",
+        "price_concern": false
+      },
+      {
+        "type": "showing",
+        "comment": "Great layout, very interested",
+        "date": "2026-04-28",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "9fbbfa47-6fdb-46cb-9a1f-f422a75dd0af",
+    "address": "6896 Cedar Lane",
+    "city": "Riverside",
+    "state": "OK",
+    "zip_code": "73402",
+    "property_type": "Single Family",
+    "bedrooms": 2,
+    "bathrooms": 2.5,
+    "sqft": 1023,
+    "original_price": 234000,
+    "price": 211000,
+    "price_per_sqft": 206.26,
+    "price_reductions": 2,
+    "days_on_market": 135,
+    "showing_count": 104,
+    "negative_feedback_count": 6,
+    "offers_received": 0,
+    "listing_agent": "Tom Reyes",
+    "seller_email": "seller246@example.com",
+    "seller_name": "Maria Johnson",
+    "list_date": "2025-12-22",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "showing",
+        "comment": "Buyer feels it's overpriced",
+        "date": "2026-03-19",
+        "price_concern": true
+      },
+      {
+        "type": "showing",
+        "comment": "Needs too much work at this price point",
+        "date": "2026-02-19",
+        "price_concern": true
+      },
+      {
+        "type": "showing",
+        "comment": "Priced above recent comps",
+        "date": "2026-02-18",
+        "price_concern": true
+      },
+      {
+        "type": "showing",
+        "comment": "Priced above recent comps",
+        "date": "2025-12-29",
+        "price_concern": true
+      },
+      {
+        "type": "showing",
+        "comment": "Priced above recent comps",
+        "date": "2026-01-05",
+        "price_concern": true
+      },
+      {
+        "type": "open_house",
+        "comment": "Better value available in the neighborhood",
+        "date": "2026-01-04",
+        "price_concern": true
+      }
+    ],
+    "_risk_label": "stale"
+  },
+  {
+    "id": "367e9d90-c247-4a5e-92cb-8edd49cdd8eb",
+    "address": "960 Cherry Path",
+    "city": "Mapleton",
+    "state": "OK",
+    "zip_code": "73403",
+    "property_type": "Multi-Family",
+    "bedrooms": 5,
+    "bathrooms": 1,
+    "sqft": 2136,
+    "original_price": 350000,
+    "price": 350000,
+    "price_per_sqft": 163.86,
+    "price_reductions": 0,
+    "days_on_market": 4,
+    "showing_count": 5,
+    "negative_feedback_count": 0,
+    "offers_received": 3,
+    "listing_agent": "Tom Reyes",
+    "seller_email": "seller903@example.com",
+    "seller_name": "Robert Garcia",
+    "list_date": "2026-05-01",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "open_house",
+        "comment": "Great layout, very interested",
+        "date": "2026-05-05",
+        "price_concern": false
+      },
+      {
+        "type": "open_house",
+        "comment": "Perfect location, needs consideration",
+        "date": "2026-05-02",
+        "price_concern": false
+      },
+      {
+        "type": "showing",
+        "comment": "Loved the backyard, submitting offer",
+        "date": "2026-05-06",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "07870d48-6e60-4b7b-8faa-d5c5c443e870",
+    "address": "9815 Elm Drive",
+    "city": "Riverside",
+    "state": "OK",
+    "zip_code": "73404",
+    "property_type": "Single Family",
+    "bedrooms": 3,
+    "bathrooms": 2,
+    "sqft": 1841,
+    "original_price": 387000,
+    "price": 387000,
+    "price_per_sqft": 210.21,
+    "price_reductions": 0,
+    "days_on_market": 9,
+    "showing_count": 7,
+    "negative_feedback_count": 0,
+    "offers_received": 1,
+    "listing_agent": "Derek Santos",
+    "seller_email": "seller262@example.com",
+    "seller_name": "Linda Garcia",
+    "list_date": "2026-04-27",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "showing",
+        "comment": "Great layout, very interested",
+        "date": "2026-04-30",
+        "price_concern": false
+      },
+      {
+        "type": "open_house",
+        "comment": "Great layout, very interested",
+        "date": "2026-04-28",
+        "price_concern": false
+      },
+      {
+        "type": "open_house",
+        "comment": "Loved the backyard, submitting offer",
+        "date": "2026-05-06",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "d17e52cd-2e6d-40c8-a6e0-09222ff1b380",
+    "address": "8100 Cherry Path",
+    "city": "Lakewood",
+    "state": "OK",
+    "zip_code": "73405",
+    "property_type": "Townhouse",
+    "bedrooms": 2,
+    "bathrooms": 2,
+    "sqft": 2098,
+    "original_price": 549000,
+    "price": 549000,
+    "price_per_sqft": 261.68,
+    "price_reductions": 0,
+    "days_on_market": 11,
+    "showing_count": 10,
+    "negative_feedback_count": 0,
+    "offers_received": 1,
+    "listing_agent": "Derek Santos",
+    "seller_email": "seller284@example.com",
+    "seller_name": "James Smith",
+    "list_date": "2026-04-25",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "open_house",
+        "comment": "Loved the backyard, submitting offer",
+        "date": "2026-05-01",
+        "price_concern": false
+      },
+      {
+        "type": "showing",
+        "comment": "Great layout, very interested",
+        "date": "2026-04-27",
+        "price_concern": false
+      },
+      {
+        "type": "open_house",
+        "comment": "Excellent condition for the price",
+        "date": "2026-05-04",
+        "price_concern": false
+      },
+      {
+        "type": "open_house",
+        "comment": "Excellent condition for the price",
+        "date": "2026-04-28",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "fd6f9b7c-11f5-45aa-944b-c556d311d4ca",
+    "address": "4637 Sunset Boulevard",
+    "city": "Hillcrest",
+    "state": "OK",
+    "zip_code": "73405",
+    "property_type": "Condo",
+    "bedrooms": 4,
+    "bathrooms": 2,
+    "sqft": 2685,
+    "original_price": 468000,
+    "price": 435000,
+    "price_per_sqft": 162.01,
+    "price_reductions": 2,
+    "days_on_market": 55,
+    "showing_count": 46,
+    "negative_feedback_count": 0,
+    "offers_received": 3,
+    "listing_agent": "Jake Morrison",
+    "seller_email": "seller252@example.com",
+    "seller_name": "Maria Garcia",
+    "list_date": "2026-03-10",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "open_house",
+        "comment": "Perfect location, needs consideration",
+        "date": "2026-04-13",
+        "price_concern": false
+      },
+      {
+        "type": "open_house",
+        "comment": "Loved the backyard, submitting offer",
+        "date": "2026-04-18",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "price_reduced"
+  },
+  {
+    "id": "f5253048-be32-4ba5-8727-e3443ace36ef",
+    "address": "8980 Willow Way",
+    "city": "Riverside",
+    "state": "OK",
+    "zip_code": "73402",
+    "property_type": "Townhouse",
+    "bedrooms": 3,
+    "bathrooms": 2,
+    "sqft": 3067,
+    "original_price": 500000,
+    "price": 461000,
+    "price_per_sqft": 150.31,
+    "price_reductions": 3,
+    "days_on_market": 114,
+    "showing_count": 98,
+    "negative_feedback_count": 4,
+    "offers_received": 0,
+    "listing_agent": "Sarah Chen",
+    "seller_email": "seller656@example.com",
+    "seller_name": "James Smith",
+    "list_date": "2026-01-10",
+    "status": "pending",
+    "showing_feedback": [
+      {
+        "type": "showing",
+        "comment": "Better value available in the neighborhood",
+        "date": "2026-04-09",
+        "price_concern": true
+      },
+      {
+        "type": "showing",
+        "comment": "Needs too much work at this price point",
+        "date": "2026-03-21",
+        "price_concern": true
+      },
+      {
+        "type": "open_house",
+        "comment": "Price seems high for the area",
+        "date": "2026-05-02",
+        "price_concern": true
+      },
+      {
+        "type": "showing",
+        "comment": "Priced above recent comps",
+        "date": "2026-04-29",
+        "price_concern": true
+      }
+    ],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "62fbd34f-071f-4d06-9c44-4cacd88b0f2b",
+    "address": "7500 Sunset Boulevard",
+    "city": "Hillcrest",
+    "state": "OK",
+    "zip_code": "73405",
+    "property_type": "Multi-Family",
+    "bedrooms": 3,
+    "bathrooms": 2,
+    "sqft": 3400,
+    "original_price": 410000,
+    "price": 410000,
+    "price_per_sqft": 120.59,
+    "price_reductions": 0,
+    "days_on_market": 11,
+    "showing_count": 6,
+    "negative_feedback_count": 0,
+    "offers_received": 1,
+    "listing_agent": "Priya Nair",
+    "seller_email": "seller676@example.com",
+    "seller_name": "Linda Johnson",
+    "list_date": "2026-04-23",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "showing",
+        "comment": "Excellent condition for the price",
+        "date": "2026-05-01",
+        "price_concern": false
+      },
+      {
+        "type": "open_house",
+        "comment": "Excellent condition for the price",
+        "date": "2026-05-02",
+        "price_concern": false
+      },
+      {
+        "type": "open_house",
+        "comment": "Great layout, very interested",
+        "date": "2026-05-06",
+        "price_concern": false
+      },
+      {
+        "type": "showing",
+        "comment": "Excellent condition for the price",
+        "date": "2026-05-01",
+        "price_concern": false
+      },
+      {
+        "type": "open_house",
+        "comment": "Great layout, very interested",
+        "date": "2026-04-28",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "5a5e4a4f-ea76-4d7f-b2e9-3674e8bd20ed",
+    "address": "3623 Sunset Boulevard",
+    "city": "Lakewood",
+    "state": "OK",
+    "zip_code": "73402",
+    "property_type": "Single Family",
+    "bedrooms": 3,
+    "bathrooms": 3,
+    "sqft": 3280,
+    "original_price": 692000,
+    "price": 692000,
+    "price_per_sqft": 210.98,
+    "price_reductions": 0,
+    "days_on_market": 7,
+    "showing_count": 6,
+    "negative_feedback_count": 0,
+    "offers_received": 3,
+    "listing_agent": "Marcus Webb",
+    "seller_email": "seller127@example.com",
+    "seller_name": "James Garcia",
+    "list_date": "2026-04-28",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "open_house",
+        "comment": "Perfect location, needs consideration",
+        "date": "2026-05-01",
+        "price_concern": false
+      },
+      {
+        "type": "open_house",
+        "comment": "Loved the backyard, submitting offer",
+        "date": "2026-05-01",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "e7a24f16-a9b3-4395-ada0-11d5863e7d66",
+    "address": "5406 Cherry Path",
+    "city": "Hillcrest",
+    "state": "OK",
+    "zip_code": "73404",
+    "property_type": "Condo",
+    "bedrooms": 5,
+    "bathrooms": 2,
+    "sqft": 2052,
+    "original_price": 352000,
+    "price": 334000,
+    "price_per_sqft": 162.77,
+    "price_reductions": 1,
+    "days_on_market": 37,
+    "showing_count": 33,
+    "negative_feedback_count": 0,
+    "offers_received": 0,
+    "listing_agent": "Angela Brooks",
+    "seller_email": "seller967@example.com",
+    "seller_name": "Robert Garcia",
+    "list_date": "2026-03-29",
+    "status": "sold",
+    "showing_feedback": [
+      {
+        "type": "open_house",
+        "comment": "Excellent condition for the price",
+        "date": "2026-04-24",
+        "price_concern": false
+      },
+      {
+        "type": "showing",
+        "comment": "Excellent condition for the price",
+        "date": "2026-04-19",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "7f6f80d8-1e58-4462-b7a4-912e7c493e62",
+    "address": "2433 Willow Way",
+    "city": "Springfield",
+    "state": "OK",
+    "zip_code": "73404",
+    "property_type": "Multi-Family",
+    "bedrooms": 2,
+    "bathrooms": 2,
+    "sqft": 1933,
+    "original_price": 519000,
+    "price": 519000,
+    "price_per_sqft": 268.49,
+    "price_reductions": 0,
+    "days_on_market": 18,
+    "showing_count": 13,
+    "negative_feedback_count": 0,
+    "offers_received": 3,
+    "listing_agent": "Lisa Park",
+    "seller_email": "seller924@example.com",
+    "seller_name": "Linda Garcia",
+    "list_date": "2026-04-18",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "open_house",
+        "comment": "Perfect location, needs consideration",
+        "date": "2026-04-23",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "9476af33-9e0e-4143-a0ca-8cd916584c31",
+    "address": "7635 Oak Street",
+    "city": "Riverside",
+    "state": "OK",
+    "zip_code": "73403",
+    "property_type": "Condo",
+    "bedrooms": 3,
+    "bathrooms": 2.5,
+    "sqft": 3178,
+    "original_price": 786000,
+    "price": 671000,
+    "price_per_sqft": 211.14,
+    "price_reductions": 3,
+    "days_on_market": 153,
+    "showing_count": 125,
+    "negative_feedback_count": 4,
+    "offers_received": 0,
+    "listing_agent": "Tom Reyes",
+    "seller_email": "seller100@example.com",
+    "seller_name": "Linda Smith",
+    "list_date": "2025-12-04",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "open_house",
+        "comment": "Price seems high for the area",
+        "date": "2026-04-09",
+        "price_concern": true
+      },
+      {
+        "type": "open_house",
+        "comment": "Better value available in the neighborhood",
+        "date": "2026-02-27",
+        "price_concern": true
+      },
+      {
+        "type": "showing",
+        "comment": "Kitchen needs updating, not worth the asking price",
+        "date": "2026-02-28",
+        "price_concern": true
+      },
+      {
+        "type": "showing",
+        "comment": "Buyer feels it's overpriced",
+        "date": "2026-04-21",
+        "price_concern": true
+      }
+    ],
+    "_risk_label": "stale"
+  },
+  {
+    "id": "cc38c6be-0033-4f61-97d6-6fb31414da54",
+    "address": "2851 Pine Court",
+    "city": "Mapleton",
+    "state": "OK",
+    "zip_code": "73402",
+    "property_type": "Condo",
+    "bedrooms": 2,
+    "bathrooms": 3,
+    "sqft": 2216,
+    "original_price": 377000,
+    "price": 377000,
+    "price_per_sqft": 170.13,
+    "price_reductions": 0,
+    "days_on_market": 14,
+    "showing_count": 11,
+    "negative_feedback_count": 0,
+    "offers_received": 3,
+    "listing_agent": "Jake Morrison",
+    "seller_email": "seller396@example.com",
+    "seller_name": "James Johnson",
+    "list_date": "2026-04-21",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "open_house",
+        "comment": "Loved the backyard, submitting offer",
+        "date": "2026-04-29",
+        "price_concern": false
+      },
+      {
+        "type": "open_house",
+        "comment": "Excellent condition for the price",
+        "date": "2026-04-29",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "99f91dd7-354d-44ba-a748-73fa499467dc",
+    "address": "5496 Willow Way",
+    "city": "Hillcrest",
+    "state": "OK",
+    "zip_code": "73404",
+    "property_type": "Condo",
+    "bedrooms": 4,
+    "bathrooms": 2,
+    "sqft": 938,
+    "original_price": 217000,
+    "price": 209000,
+    "price_per_sqft": 222.81,
+    "price_reductions": 1,
+    "days_on_market": 34,
+    "showing_count": 23,
+    "negative_feedback_count": 0,
+    "offers_received": 0,
+    "listing_agent": "Lisa Park",
+    "seller_email": "seller130@example.com",
+    "seller_name": "James Johnson",
+    "list_date": "2026-04-02",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "showing",
+        "comment": "Great layout, very interested",
+        "date": "2026-05-04",
+        "price_concern": false
+      },
+      {
+        "type": "open_house",
+        "comment": "Excellent condition for the price",
+        "date": "2026-04-06",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "price_reduced"
+  },
+  {
+    "id": "8ad61a5b-6a97-47da-8210-8f39eebb5a49",
+    "address": "1570 Cherry Path",
+    "city": "Riverside",
+    "state": "OK",
+    "zip_code": "73405",
+    "property_type": "Multi-Family",
+    "bedrooms": 5,
+    "bathrooms": 1.5,
+    "sqft": 1367,
+    "original_price": 339000,
+    "price": 339000,
+    "price_per_sqft": 247.99,
+    "price_reductions": 0,
+    "days_on_market": 14,
+    "showing_count": 14,
+    "negative_feedback_count": 0,
+    "offers_received": 2,
+    "listing_agent": "Lisa Park",
+    "seller_email": "seller281@example.com",
+    "seller_name": "Maria Garcia",
+    "list_date": "2026-04-20",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "open_house",
+        "comment": "Great layout, very interested",
+        "date": "2026-04-28",
+        "price_concern": false
+      },
+      {
+        "type": "showing",
+        "comment": "Great layout, very interested",
+        "date": "2026-05-02",
+        "price_concern": false
+      },
+      {
+        "type": "showing",
+        "comment": "Great layout, very interested",
+        "date": "2026-04-30",
+        "price_concern": false
+      },
+      {
+        "type": "open_house",
+        "comment": "Great layout, very interested",
+        "date": "2026-04-27",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "1f5c0ef1-8e01-4cbd-85c1-6ab7eb11cd25",
+    "address": "7186 Walnut Road",
+    "city": "Lakewood",
+    "state": "OK",
+    "zip_code": "73403",
+    "property_type": "Multi-Family",
+    "bedrooms": 3,
+    "bathrooms": 2.5,
+    "sqft": 1492,
+    "original_price": 197000,
+    "price": 197000,
+    "price_per_sqft": 132.04,
+    "price_reductions": 0,
+    "days_on_market": 15,
+    "showing_count": 8,
+    "negative_feedback_count": 0,
+    "offers_received": 0,
+    "listing_agent": "Lisa Park",
+    "seller_email": "seller294@example.com",
+    "seller_name": "James Johnson",
+    "list_date": "2026-04-19",
+    "status": "pending",
+    "showing_feedback": [],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "53915ccb-1283-4eff-b5e1-14002a23ba7e",
+    "address": "5049 Ridgeline Court",
+    "city": "Lakewood",
+    "state": "OK",
+    "zip_code": "73402",
+    "property_type": "Single Family",
+    "bedrooms": 3,
+    "bathrooms": 1,
+    "sqft": 1057,
+    "original_price": 156000,
+    "price": 142000,
+    "price_per_sqft": 134.34,
+    "price_reductions": 3,
+    "days_on_market": 128,
+    "showing_count": 99,
+    "negative_feedback_count": 4,
+    "offers_received": 0,
+    "listing_agent": "Tom Reyes",
+    "seller_email": "seller399@example.com",
+    "seller_name": "Robert Garcia",
+    "list_date": "2025-12-27",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "open_house",
+        "comment": "Price seems high for the area",
+        "date": "2026-01-29",
+        "price_concern": true
+      },
+      {
+        "type": "showing",
+        "comment": "Buyer feels it's overpriced",
+        "date": "2026-03-20",
+        "price_concern": true
+      },
+      {
+        "type": "showing",
+        "comment": "Priced above recent comps",
+        "date": "2026-01-03",
+        "price_concern": true
+      },
+      {
+        "type": "showing",
+        "comment": "Priced above recent comps",
+        "date": "2026-04-12",
+        "price_concern": true
+      }
+    ],
+    "_risk_label": "stale"
+  },
+  {
+    "id": "49953bef-6bd7-4075-921b-c3703d18c9a9",
+    "address": "1586 Valley Road",
+    "city": "Lakewood",
+    "state": "OK",
+    "zip_code": "73404",
+    "property_type": "Condo",
+    "bedrooms": 4,
+    "bathrooms": 1,
+    "sqft": 3068,
+    "original_price": 527000,
+    "price": 508000,
+    "price_per_sqft": 165.58,
+    "price_reductions": 1,
+    "days_on_market": 32,
+    "showing_count": 26,
+    "negative_feedback_count": 0,
+    "offers_received": 0,
+    "listing_agent": "Jake Morrison",
+    "seller_email": "seller112@example.com",
+    "seller_name": "Robert Smith",
+    "list_date": "2026-04-02",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "showing",
+        "comment": "Perfect location, needs consideration",
+        "date": "2026-04-07",
+        "price_concern": false
+      },
+      {
+        "type": "showing",
+        "comment": "Great layout, very interested",
+        "date": "2026-04-08",
+        "price_concern": false
+      },
+      {
+        "type": "open_house",
+        "comment": "Great layout, very interested",
+        "date": "2026-04-25",
+        "price_concern": false
+      },
+      {
+        "type": "showing",
+        "comment": "Loved the backyard, submitting offer",
+        "date": "2026-04-09",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "price_reduced"
+  },
+  {
+    "id": "753e0628-f15d-45e1-9ea7-b91108e3c729",
+    "address": "6069 Oak Street",
+    "city": "Hillcrest",
+    "state": "OK",
+    "zip_code": "73405",
+    "property_type": "Condo",
+    "bedrooms": 2,
+    "bathrooms": 3,
+    "sqft": 923,
+    "original_price": 152000,
+    "price": 152000,
+    "price_per_sqft": 164.68,
+    "price_reductions": 0,
+    "days_on_market": 14,
+    "showing_count": 13,
+    "negative_feedback_count": 0,
+    "offers_received": 1,
+    "listing_agent": "Derek Santos",
+    "seller_email": "seller970@example.com",
+    "seller_name": "James Johnson",
+    "list_date": "2026-04-22",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "open_house",
+        "comment": "Excellent condition for the price",
+        "date": "2026-04-25",
+        "price_concern": false
+      },
+      {
+        "type": "showing",
+        "comment": "Excellent condition for the price",
+        "date": "2026-04-23",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "c1beef24-e742-4e5b-9da9-866730d980df",
+    "address": "2165 Walnut Road",
+    "city": "Riverside",
+    "state": "OK",
+    "zip_code": "73402",
+    "property_type": "Condo",
+    "bedrooms": 4,
+    "bathrooms": 2.5,
+    "sqft": 2432,
+    "original_price": 506000,
+    "price": 506000,
+    "price_per_sqft": 208.06,
+    "price_reductions": 0,
+    "days_on_market": 12,
+    "showing_count": 14,
+    "negative_feedback_count": 0,
+    "offers_received": 0,
+    "listing_agent": "Angela Brooks",
+    "seller_email": "seller563@example.com",
+    "seller_name": "Maria Johnson",
+    "list_date": "2026-04-23",
+    "status": "pending",
+    "showing_feedback": [
+      {
+        "type": "showing",
+        "comment": "Great layout, very interested",
+        "date": "2026-05-03",
+        "price_concern": false
+      },
+      {
+        "type": "showing",
+        "comment": "Great layout, very interested",
+        "date": "2026-04-28",
+        "price_concern": false
+      },
+      {
+        "type": "open_house",
+        "comment": "Excellent condition for the price",
+        "date": "2026-04-28",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "69a5100e-ef59-43d7-a0dc-a266c54c9ff0",
+    "address": "8664 Sunset Boulevard",
+    "city": "Riverside",
+    "state": "OK",
+    "zip_code": "73405",
+    "property_type": "Condo",
+    "bedrooms": 3,
+    "bathrooms": 2,
+    "sqft": 931,
+    "original_price": 199000,
+    "price": 199000,
+    "price_per_sqft": 213.75,
+    "price_reductions": 0,
+    "days_on_market": 7,
+    "showing_count": 6,
+    "negative_feedback_count": 0,
+    "offers_received": 3,
+    "listing_agent": "Angela Brooks",
+    "seller_email": "seller989@example.com",
+    "seller_name": "Maria Garcia",
+    "list_date": "2026-04-29",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "open_house",
+        "comment": "Great layout, very interested",
+        "date": "2026-05-06",
+        "price_concern": false
+      },
+      {
+        "type": "open_house",
+        "comment": "Loved the backyard, submitting offer",
+        "date": "2026-05-03",
+        "price_concern": false
+      },
+      {
+        "type": "open_house",
+        "comment": "Perfect location, needs consideration",
+        "date": "2026-05-06",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "d0d6f7c5-f53d-44fc-ae9e-31827ee14188",
+    "address": "8001 Valley Road",
+    "city": "Riverside",
+    "state": "OK",
+    "zip_code": "73405",
+    "property_type": "Condo",
+    "bedrooms": 3,
+    "bathrooms": 2.5,
+    "sqft": 3273,
+    "original_price": 425000,
+    "price": 378000,
+    "price_per_sqft": 115.49,
+    "price_reductions": 3,
+    "days_on_market": 101,
+    "showing_count": 78,
+    "negative_feedback_count": 2,
+    "offers_received": 0,
+    "listing_agent": "Angela Brooks",
+    "seller_email": "seller487@example.com",
+    "seller_name": "Maria Garcia",
+    "list_date": "2026-01-24",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "showing",
+        "comment": "Needs too much work at this price point",
+        "date": "2026-03-25",
+        "price_concern": true
+      },
+      {
+        "type": "showing",
+        "comment": "Price seems high for the area",
+        "date": "2026-03-31",
+        "price_concern": true
+      }
+    ],
+    "_risk_label": "stale"
+  },
+  {
+    "id": "81bf0052-c385-4c3f-b9d2-a26cad0428b6",
+    "address": "7094 Harbor View Drive",
+    "city": "Mapleton",
+    "state": "OK",
+    "zip_code": "73403",
+    "property_type": "Townhouse",
+    "bedrooms": 3,
+    "bathrooms": 1.5,
+    "sqft": 3448,
+    "original_price": 761000,
+    "price": 761000,
+    "price_per_sqft": 220.71,
+    "price_reductions": 0,
+    "days_on_market": 9,
+    "showing_count": 5,
+    "negative_feedback_count": 0,
+    "offers_received": 1,
+    "listing_agent": "Angela Brooks",
+    "seller_email": "seller303@example.com",
+    "seller_name": "Maria Smith",
+    "list_date": "2026-04-27",
+    "status": "pending",
+    "showing_feedback": [
+      {
+        "type": "showing",
+        "comment": "Excellent condition for the price",
+        "date": "2026-05-04",
+        "price_concern": false
+      },
+      {
+        "type": "showing",
+        "comment": "Loved the backyard, submitting offer",
+        "date": "2026-04-27",
+        "price_concern": false
+      },
+      {
+        "type": "showing",
+        "comment": "Loved the backyard, submitting offer",
+        "date": "2026-05-01",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "5e642cb3-5393-412a-9d35-f79a0cabd434",
+    "address": "9592 Elm Drive",
+    "city": "Mapleton",
+    "state": "OK",
+    "zip_code": "73405",
+    "property_type": "Townhouse",
+    "bedrooms": 5,
+    "bathrooms": 2,
+    "sqft": 2542,
+    "original_price": 431000,
+    "price": 431000,
+    "price_per_sqft": 169.55,
+    "price_reductions": 0,
+    "days_on_market": 9,
+    "showing_count": 1,
+    "negative_feedback_count": 0,
+    "offers_received": 3,
+    "listing_agent": "Tom Reyes",
+    "seller_email": "seller727@example.com",
+    "seller_name": "Robert Smith",
+    "list_date": "2026-04-27",
+    "status": "active",
+    "showing_feedback": [],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "3290cf90-26bb-416f-9082-a6e8c04e8423",
+    "address": "7788 Sunset Boulevard",
+    "city": "Springfield",
+    "state": "OK",
+    "zip_code": "73404",
+    "property_type": "Townhouse",
+    "bedrooms": 4,
+    "bathrooms": 1.5,
+    "sqft": 2368,
+    "original_price": 333000,
+    "price": 333000,
+    "price_per_sqft": 140.62,
+    "price_reductions": 0,
+    "days_on_market": 8,
+    "showing_count": 6,
+    "negative_feedback_count": 0,
+    "offers_received": 2,
+    "listing_agent": "Derek Santos",
+    "seller_email": "seller571@example.com",
+    "seller_name": "Robert Johnson",
+    "list_date": "2026-04-28",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "showing",
+        "comment": "Great layout, very interested",
+        "date": "2026-05-05",
+        "price_concern": false
+      },
+      {
+        "type": "showing",
+        "comment": "Excellent condition for the price",
+        "date": "2026-04-29",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "a1839e8e-e75a-4297-b2e8-320fdd02206a",
+    "address": "3614 Elm Drive",
+    "city": "Springfield",
+    "state": "OK",
+    "zip_code": "73405",
+    "property_type": "Condo",
+    "bedrooms": 5,
+    "bathrooms": 2.5,
+    "sqft": 2194,
+    "original_price": 321000,
+    "price": 302000,
+    "price_per_sqft": 137.65,
+    "price_reductions": 2,
+    "days_on_market": 55,
+    "showing_count": 49,
+    "negative_feedback_count": 0,
+    "offers_received": 1,
+    "listing_agent": "Jake Morrison",
+    "seller_email": "seller926@example.com",
+    "seller_name": "Linda Smith",
+    "list_date": "2026-03-11",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "showing",
+        "comment": "Great layout, very interested",
+        "date": "2026-04-29",
+        "price_concern": false
+      },
+      {
+        "type": "showing",
+        "comment": "Great layout, very interested",
+        "date": "2026-03-28",
+        "price_concern": false
+      },
+      {
+        "type": "open_house",
+        "comment": "Loved the backyard, submitting offer",
+        "date": "2026-04-04",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "price_reduced"
+  },
+  {
+    "id": "3a041c6d-ad2d-4da5-a860-686095de5d3c",
+    "address": "4980 Harbor View Drive",
+    "city": "Riverside",
+    "state": "OK",
+    "zip_code": "73405",
+    "property_type": "Townhouse",
+    "bedrooms": 4,
+    "bathrooms": 2.5,
+    "sqft": 1276,
+    "original_price": 180000,
+    "price": 157000,
+    "price_per_sqft": 123.04,
+    "price_reductions": 4,
+    "days_on_market": 155,
+    "showing_count": 120,
+    "negative_feedback_count": 2,
+    "offers_received": 0,
+    "listing_agent": "Sarah Chen",
+    "seller_email": "seller412@example.com",
+    "seller_name": "Robert Garcia",
+    "list_date": "2025-12-01",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "showing",
+        "comment": "Perfect location, needs consideration",
+        "date": "2026-01-21",
+        "price_concern": false
+      },
+      {
+        "type": "open_house",
+        "comment": "Perfect location, needs consideration",
+        "date": "2026-02-25",
+        "price_concern": false
+      },
+      {
+        "type": "showing",
+        "comment": "Excellent condition for the price",
+        "date": "2026-03-30",
+        "price_concern": false
+      },
+      {
+        "type": "showing",
+        "comment": "Needs too much work at this price point",
+        "date": "2026-03-01",
+        "price_concern": true
+      },
+      {
+        "type": "showing",
+        "comment": "Kitchen needs updating, not worth the asking price",
+        "date": "2025-12-08",
+        "price_concern": true
+      }
+    ],
+    "_risk_label": "stale"
+  },
+  {
+    "id": "317bf508-ec97-40eb-aff0-6a9c8e8faffd",
+    "address": "7206 Harbor View Drive",
+    "city": "Lakewood",
+    "state": "OK",
+    "zip_code": "73401",
+    "property_type": "Single Family",
+    "bedrooms": 4,
+    "bathrooms": 1,
+    "sqft": 2348,
+    "original_price": 330000,
+    "price": 330000,
+    "price_per_sqft": 140.55,
+    "price_reductions": 0,
+    "days_on_market": 7,
+    "showing_count": 5,
+    "negative_feedback_count": 0,
+    "offers_received": 2,
+    "listing_agent": "Sarah Chen",
+    "seller_email": "seller129@example.com",
+    "seller_name": "Maria Garcia",
+    "list_date": "2026-04-29",
+    "status": "pending",
+    "showing_feedback": [
+      {
+        "type": "open_house",
+        "comment": "Excellent condition for the price",
+        "date": "2026-05-05",
+        "price_concern": false
+      },
+      {
+        "type": "open_house",
+        "comment": "Perfect location, needs consideration",
+        "date": "2026-05-05",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "c99d88b2-9026-44c3-b218-f74569c9f477",
+    "address": "3966 Aspen Circle",
+    "city": "Hillcrest",
+    "state": "OK",
+    "zip_code": "73405",
+    "property_type": "Multi-Family",
+    "bedrooms": 4,
+    "bathrooms": 1.5,
+    "sqft": 3371,
+    "original_price": 792000,
+    "price": 792000,
+    "price_per_sqft": 234.95,
+    "price_reductions": 0,
+    "days_on_market": 12,
+    "showing_count": 7,
+    "negative_feedback_count": 0,
+    "offers_received": 1,
+    "listing_agent": "Jake Morrison",
+    "seller_email": "seller678@example.com",
+    "seller_name": "Linda Johnson",
+    "list_date": "2026-04-24",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "showing",
+        "comment": "Perfect location, needs consideration",
+        "date": "2026-05-03",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "cce38499-e782-454d-ac4f-875b2775eab5",
+    "address": "6565 Valley Road",
+    "city": "Hillcrest",
+    "state": "OK",
+    "zip_code": "73404",
+    "property_type": "Single Family",
+    "bedrooms": 5,
+    "bathrooms": 2,
+    "sqft": 2303,
+    "original_price": 637000,
+    "price": 615000,
+    "price_per_sqft": 267.04,
+    "price_reductions": 1,
+    "days_on_market": 52,
+    "showing_count": 41,
+    "negative_feedback_count": 0,
+    "offers_received": 2,
+    "listing_agent": "Marcus Webb",
+    "seller_email": "seller622@example.com",
+    "seller_name": "Robert Smith",
+    "list_date": "2026-03-14",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "showing",
+        "comment": "Excellent condition for the price",
+        "date": "2026-05-05",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "price_reduced"
+  },
+  {
+    "id": "ba51bb27-d979-44cf-a272-62ff4291db6b",
+    "address": "3973 Maple Avenue",
+    "city": "Lakewood",
+    "state": "OK",
+    "zip_code": "73403",
+    "property_type": "Multi-Family",
+    "bedrooms": 2,
+    "bathrooms": 2.5,
+    "sqft": 1917,
+    "original_price": 292000,
+    "price": 292000,
+    "price_per_sqft": 152.32,
+    "price_reductions": 0,
+    "days_on_market": 16,
+    "showing_count": 13,
+    "negative_feedback_count": 0,
+    "offers_received": 3,
+    "listing_agent": "Priya Nair",
+    "seller_email": "seller147@example.com",
+    "seller_name": "Maria Garcia",
+    "list_date": "2026-04-18",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "open_house",
+        "comment": "Great layout, very interested",
+        "date": "2026-04-28",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "e2f8a6a4-b6dd-492f-8f89-76448adec899",
+    "address": "8110 Maple Avenue",
+    "city": "Lakewood",
+    "state": "OK",
+    "zip_code": "73404",
+    "property_type": "Condo",
+    "bedrooms": 2,
+    "bathrooms": 2.5,
+    "sqft": 1041,
+    "original_price": 209000,
+    "price": 186000,
+    "price_per_sqft": 178.67,
+    "price_reductions": 1,
+    "days_on_market": 90,
+    "showing_count": 68,
+    "negative_feedback_count": 4,
+    "offers_received": 0,
+    "listing_agent": "Jake Morrison",
+    "seller_email": "seller960@example.com",
+    "seller_name": "Robert Garcia",
+    "list_date": "2026-02-03",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "open_house",
+        "comment": "Buyer feels it's overpriced",
+        "date": "2026-04-01",
+        "price_concern": true
+      },
+      {
+        "type": "open_house",
+        "comment": "Priced above recent comps",
+        "date": "2026-04-10",
+        "price_concern": true
+      },
+      {
+        "type": "showing",
+        "comment": "Better value available in the neighborhood",
+        "date": "2026-04-05",
+        "price_concern": true
+      },
+      {
+        "type": "open_house",
+        "comment": "Buyer feels it's overpriced",
+        "date": "2026-02-24",
+        "price_concern": true
+      }
+    ],
+    "_risk_label": "stale"
+  },
+  {
+    "id": "7532a719-3a46-4f2d-9227-4537b2efce91",
+    "address": "9442 Ridgeline Court",
+    "city": "Springfield",
+    "state": "OK",
+    "zip_code": "73401",
+    "property_type": "Townhouse",
+    "bedrooms": 3,
+    "bathrooms": 2.5,
+    "sqft": 1757,
+    "original_price": 411000,
+    "price": 411000,
+    "price_per_sqft": 233.92,
+    "price_reductions": 0,
+    "days_on_market": 16,
+    "showing_count": 10,
+    "negative_feedback_count": 0,
+    "offers_received": 1,
+    "listing_agent": "Sarah Chen",
+    "seller_email": "seller414@example.com",
+    "seller_name": "James Garcia",
+    "list_date": "2026-04-19",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "showing",
+        "comment": "Perfect location, needs consideration",
+        "date": "2026-04-26",
+        "price_concern": false
+      },
+      {
+        "type": "showing",
+        "comment": "Great layout, very interested",
+        "date": "2026-05-05",
+        "price_concern": false
+      },
+      {
+        "type": "open_house",
+        "comment": "Great layout, very interested",
+        "date": "2026-05-06",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "2b850d69-d60e-4be4-bfec-05cca211cf0d",
+    "address": "8449 Harbor View Drive",
+    "city": "Lakewood",
+    "state": "OK",
+    "zip_code": "73403",
+    "property_type": "Single Family",
+    "bedrooms": 5,
+    "bathrooms": 1.5,
+    "sqft": 2935,
+    "original_price": 773000,
+    "price": 716000,
+    "price_per_sqft": 243.95,
+    "price_reductions": 2,
+    "days_on_market": 55,
+    "showing_count": 41,
+    "negative_feedback_count": 0,
+    "offers_received": 0,
+    "listing_agent": "Lisa Park",
+    "seller_email": "seller776@example.com",
+    "seller_name": "Robert Garcia",
+    "list_date": "2026-03-11",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "open_house",
+        "comment": "Perfect location, needs consideration",
+        "date": "2026-04-17",
+        "price_concern": false
+      },
+      {
+        "type": "showing",
+        "comment": "Loved the backyard, submitting offer",
+        "date": "2026-04-02",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "price_reduced"
+  },
+  {
+    "id": "68d9dd1d-cda5-4e1c-9d52-a8fce10c6d83",
+    "address": "3863 Sunset Boulevard",
+    "city": "Lakewood",
+    "state": "OK",
+    "zip_code": "73402",
+    "property_type": "Townhouse",
+    "bedrooms": 3,
+    "bathrooms": 3,
+    "sqft": 1538,
+    "original_price": 199000,
+    "price": 199000,
+    "price_per_sqft": 129.39,
+    "price_reductions": 0,
+    "days_on_market": 14,
+    "showing_count": 12,
+    "negative_feedback_count": 0,
+    "offers_received": 1,
+    "listing_agent": "Priya Nair",
+    "seller_email": "seller264@example.com",
+    "seller_name": "James Smith",
+    "list_date": "2026-04-20",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "showing",
+        "comment": "Excellent condition for the price",
+        "date": "2026-04-28",
+        "price_concern": false
+      },
+      {
+        "type": "open_house",
+        "comment": "Excellent condition for the price",
+        "date": "2026-04-23",
+        "price_concern": false
+      },
+      {
+        "type": "open_house",
+        "comment": "Loved the backyard, submitting offer",
+        "date": "2026-04-30",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "5abf94c8-9212-4a6a-bf0c-714f0f52b236",
+    "address": "6082 Birch Boulevard",
+    "city": "Mapleton",
+    "state": "OK",
+    "zip_code": "73404",
+    "property_type": "Townhouse",
+    "bedrooms": 2,
+    "bathrooms": 2,
+    "sqft": 1886,
+    "original_price": 252000,
+    "price": 252000,
+    "price_per_sqft": 133.62,
+    "price_reductions": 0,
+    "days_on_market": 19,
+    "showing_count": 12,
+    "negative_feedback_count": 0,
+    "offers_received": 0,
+    "listing_agent": "Sarah Chen",
+    "seller_email": "seller595@example.com",
+    "seller_name": "Robert Johnson",
+    "list_date": "2026-04-16",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "showing",
+        "comment": "Loved the backyard, submitting offer",
+        "date": "2026-04-21",
+        "price_concern": false
+      },
+      {
+        "type": "showing",
+        "comment": "Excellent condition for the price",
+        "date": "2026-04-24",
+        "price_concern": false
+      },
+      {
+        "type": "open_house",
+        "comment": "Perfect location, needs consideration",
+        "date": "2026-04-28",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "111ac924-ae71-45c6-a181-ee5380f25998",
+    "address": "1267 Cedar Lane",
+    "city": "Hillcrest",
+    "state": "OK",
+    "zip_code": "73402",
+    "property_type": "Single Family",
+    "bedrooms": 2,
+    "bathrooms": 1.5,
+    "sqft": 1469,
+    "original_price": 190000,
+    "price": 176000,
+    "price_per_sqft": 119.81,
+    "price_reductions": 1,
+    "days_on_market": 176,
+    "showing_count": 149,
+    "negative_feedback_count": 2,
+    "offers_received": 0,
+    "listing_agent": "Jake Morrison",
+    "seller_email": "seller629@example.com",
+    "seller_name": "Robert Garcia",
+    "list_date": "2025-11-09",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "open_house",
+        "comment": "Price seems high for the area",
+        "date": "2026-04-18",
+        "price_concern": true
+      },
+      {
+        "type": "open_house",
+        "comment": "Needs too much work at this price point",
+        "date": "2026-01-19",
+        "price_concern": true
+      },
+      {
+        "type": "showing",
+        "comment": "Excellent condition for the price",
+        "date": "2026-04-16",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "stale"
+  },
+  {
+    "id": "5629e1cf-a7ac-4851-8292-d97c53875bad",
+    "address": "1430 Cedar Lane",
+    "city": "Hillcrest",
+    "state": "OK",
+    "zip_code": "73402",
+    "property_type": "Multi-Family",
+    "bedrooms": 3,
+    "bathrooms": 2.5,
+    "sqft": 3158,
+    "original_price": 527000,
+    "price": 503000,
+    "price_per_sqft": 159.28,
+    "price_reductions": 1,
+    "days_on_market": 60,
+    "showing_count": 51,
+    "negative_feedback_count": 0,
+    "offers_received": 2,
+    "listing_agent": "Priya Nair",
+    "seller_email": "seller685@example.com",
+    "seller_name": "Maria Johnson",
+    "list_date": "2026-03-05",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "open_house",
+        "comment": "Loved the backyard, submitting offer",
+        "date": "2026-04-01",
+        "price_concern": false
+      },
+      {
+        "type": "open_house",
+        "comment": "Excellent condition for the price",
+        "date": "2026-03-12",
+        "price_concern": false
+      },
+      {
+        "type": "showing",
+        "comment": "Perfect location, needs consideration",
+        "date": "2026-05-06",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "price_reduced"
+  },
+  {
+    "id": "495ba4dc-a805-4077-8997-bca172437faa",
+    "address": "8783 Birch Boulevard",
+    "city": "Springfield",
+    "state": "OK",
+    "zip_code": "73402",
+    "property_type": "Townhouse",
+    "bedrooms": 2,
+    "bathrooms": 1,
+    "sqft": 2367,
+    "original_price": 404000,
+    "price": 404000,
+    "price_per_sqft": 170.68,
+    "price_reductions": 0,
+    "days_on_market": 12,
+    "showing_count": 10,
+    "negative_feedback_count": 0,
+    "offers_received": 2,
+    "listing_agent": "Angela Brooks",
+    "seller_email": "seller986@example.com",
+    "seller_name": "Robert Johnson",
+    "list_date": "2026-04-22",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "open_house",
+        "comment": "Great layout, very interested",
+        "date": "2026-05-05",
+        "price_concern": false
+      },
+      {
+        "type": "open_house",
+        "comment": "Great layout, very interested",
+        "date": "2026-04-28",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "7c52c1cd-6e29-4324-ba13-4b58aa7458b1",
+    "address": "1347 Elm Drive",
+    "city": "Lakewood",
+    "state": "OK",
+    "zip_code": "73403",
+    "property_type": "Multi-Family",
+    "bedrooms": 5,
+    "bathrooms": 2,
+    "sqft": 2778,
+    "original_price": 496000,
+    "price": 496000,
+    "price_per_sqft": 178.55,
+    "price_reductions": 0,
+    "days_on_market": 16,
+    "showing_count": 11,
+    "negative_feedback_count": 0,
+    "offers_received": 0,
+    "listing_agent": "Lisa Park",
+    "seller_email": "seller623@example.com",
+    "seller_name": "Robert Johnson",
+    "list_date": "2026-04-20",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "open_house",
+        "comment": "Great layout, very interested",
+        "date": "2026-04-23",
+        "price_concern": false
+      },
+      {
+        "type": "showing",
+        "comment": "Loved the backyard, submitting offer",
+        "date": "2026-04-30",
+        "price_concern": false
+      },
+      {
+        "type": "open_house",
+        "comment": "Loved the backyard, submitting offer",
+        "date": "2026-04-26",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "healthy"
+  },
+  {
+    "id": "15056ab9-f5ae-499b-8dc5-ee0fcbaba4be",
+    "address": "1058 Oak Street",
+    "city": "Mapleton",
+    "state": "OK",
+    "zip_code": "73403",
+    "property_type": "Single Family",
+    "bedrooms": 5,
+    "bathrooms": 2,
+    "sqft": 1256,
+    "original_price": 163000,
+    "price": 163000,
+    "price_per_sqft": 129.78,
+    "price_reductions": 0,
+    "days_on_market": 12,
+    "showing_count": 13,
+    "negative_feedback_count": 0,
+    "offers_received": 1,
+    "listing_agent": "Derek Santos",
+    "seller_email": "seller217@example.com",
+    "seller_name": "Linda Garcia",
+    "list_date": "2026-04-22",
+    "status": "active",
+    "showing_feedback": [
+      {
+        "type": "showing",
+        "comment": "Excellent condition for the price",
+        "date": "2026-04-27",
+        "price_concern": false
+      },
+      {
+        "type": "open_house",
+        "comment": "Great layout, very interested",
+        "date": "2026-05-03",
+        "price_concern": false
+      }
+    ],
+    "_risk_label": "healthy"
+  }
+]

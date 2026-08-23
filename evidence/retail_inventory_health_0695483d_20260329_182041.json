@@ -1,0 +1,187 @@
+{
+  "run_id": "0695483d-de37-43cd-be2d-d4e2f84e2428",
+  "workflow_name": "retail_inventory_health",
+  "tenant_id": "cccb65f3-1e5f-4537-ac14-0dfadf89e76d",
+  "tenant_name": "OpsGrid Development",
+  "status": "completed",
+  "completed_at": "2026-03-29T18:20:41.477156",
+  "llm_stats": {
+    "total_tokens_in": 32530,
+    "total_tokens_out": 4520,
+    "total_cost_usd": 0.15665300000000001,
+    "total_calls": 6,
+    "cache_hits": 0,
+    "optimization_level": 0,
+    "by_agent": {
+      "research_agent": {
+        "calls": 3,
+        "tokens_in": 25360,
+        "tokens_out": 3958,
+        "cost_usd": 0.13545,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "hyde_rag": {
+        "calls": 2,
+        "tokens_in": 682,
+        "tokens_out": 499,
+        "cost_usd": 0.000794,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "reasoning_agent": {
+        "calls": 1,
+        "tokens_in": 6488,
+        "tokens_out": 63,
+        "cost_usd": 0.020409,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      }
+    },
+    "recent_calls": [
+      {
+        "call_id": "0ac9e97f",
+        "agent": "research_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 1319,
+        "tokens_out": 183,
+        "cost": "$0.00670",
+        "ms": 2778,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "9ebb7de6",
+        "agent": "research_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 8450,
+        "tokens_out": 193,
+        "cost": "$0.02824",
+        "ms": 3701,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "ea112322",
+        "agent": "research_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 15591,
+        "tokens_out": 3582,
+        "cost": "$0.10050",
+        "ms": 37166,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "0b8939b0",
+        "agent": "hyde_rag",
+        "model": "claude-haiku-4-5-20251001",
+        "tokens_in": 341,
+        "tokens_out": 251,
+        "cost": "$0.00040",
+        "ms": 3630,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "b5da703a",
+        "agent": "hyde_rag",
+        "model": "claude-haiku-4-5-20251001",
+        "tokens_in": 341,
+        "tokens_out": 248,
+        "cost": "$0.00040",
+        "ms": 3514,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "5d5035b9",
+        "agent": "reasoning_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 6488,
+        "tokens_out": 63,
+        "cost": "$0.02041",
+        "ms": 27760,
+        "ok": true,
+        "cached": false
+      }
+    ]
+  },
+  "outcome": {
+    "status": "completed",
+    "nodes_completed": 6,
+    "total_tokens_in": 32530,
+    "total_tokens_out": 4520,
+    "total_cost_usd": 0.156653,
+    "cache_hits": 0,
+    "optimization_level": 0,
+    "by_agent": {
+      "research_agent": {
+        "calls": 3,
+        "tokens_in": 25360,
+        "tokens_out": 3958,
+        "cost_usd": 0.13545,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "hyde_rag": {
+        "calls": 2,
+        "tokens_in": 682,
+        "tokens_out": 499,
+        "cost_usd": 0.000794,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "reasoning_agent": {
+        "calls": 1,
+        "tokens_in": 6488,
+        "tokens_out": 63,
+        "cost_usd": 0.020409,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      }
+    },
+    "completed_at": "2026-03-29T18:20:41.233027",
+    "agent_runs": [
+      {
+        "node_id": "research",
+        "agent_type": "research_agent",
+        "status": "success",
+        "confidence": 0.95,
+        "tokens_in": 25360,
+        "tokens_out": 3958,
+        "cost_usd": 0.13545,
+        "model_used": "anthropic/claude-sonnet-4-6",
+        "duration_ms": 43978,
+        "error": null,
+        "completed_at": "2026-03-29T18:20:06.202389",
+        "tools_used": [
+          "retail_get_inventory",
+          "retail_get_sales"
+        ],
+        "node_description": "Fetch inventory levels, sales velocity, and stockout/overstock indicators"
+      },
+      {
+        "node_id": "reasoning",
+        "agent_type": "reasoning_agent",
+        "status": "success",
+        "confidence": 0.91,
+        "tokens_in": 6488,
+        "tokens_out": 63,
+        "cost_usd": 0.020409,
+        "model_used": "anthropic/claude-sonnet-4-6",
+        "duration_ms": 27771,
+        "error": null,
+        "completed_at": "2026-03-29T18:20:41.223780",
+        "tools_used": [],
+        "node_description": "Rank stockout/overstock risks by business impact"
+      }
+    ],
+    "situation_summary": "Inventory health is severely strained with 10 stockout-risk SKUs and 9 overstock SKUs across 25 total products. Multiple high-velocity SKUs face imminent stockouts with lead times exceeding days of supply, creating urgent replenishment gaps. Overstock positions are concentrated in slow-moving Apparel, Electronics, and Toys categories with sell-through rates well below 0.2.",
+    "urgency": "critical",
+    "reasoning_confidence": 0.91,
+    "memory_summary": "",
+    "delta_analysis": null,
+    "actions_summary": [],
+    "verification_summary": {
+      "passed": null,
+      "approved_count": 0,
+      "rejected_count": 0,
+      "prosecutor_issues": 0
+    }
+  }
+}

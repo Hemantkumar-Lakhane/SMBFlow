@@ -1,0 +1,223 @@
+{
+  "run_id": "2f8a39e6-a41d-45fc-ad37-a37c37273457",
+  "workflow_name": "saas_churn_prevention",
+  "tenant_id": "cccb65f3-1e5f-4537-ac14-0dfadf89e76d",
+  "tenant_name": "OpsGrid Development",
+  "status": "completed",
+  "completed_at": "2026-03-29T18:03:17.154885",
+  "llm_stats": {
+    "total_tokens_in": 24368,
+    "total_tokens_out": 7145,
+    "total_cost_usd": 0.10254799999999997,
+    "total_calls": 8,
+    "cache_hits": 0,
+    "optimization_level": 1,
+    "by_agent": {
+      "research_agent": {
+        "calls": 3,
+        "tokens_in": 10149,
+        "tokens_out": 2893,
+        "cost_usd": 0.073842,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "tool_result_compressor": {
+        "calls": 2,
+        "tokens_in": 6774,
+        "tokens_out": 3688,
+        "cost_usd": 0.006303,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "hyde_rag": {
+        "calls": 2,
+        "tokens_in": 662,
+        "tokens_out": 478,
+        "cost_usd": 0.000764,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "reasoning_agent": {
+        "calls": 1,
+        "tokens_in": 6783,
+        "tokens_out": 86,
+        "cost_usd": 0.021639,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      }
+    },
+    "recent_calls": [
+      {
+        "call_id": "a09ccc77",
+        "agent": "research_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 1622,
+        "tokens_out": 95,
+        "cost": "$0.00629",
+        "ms": 3087,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "3f7fd6b5",
+        "agent": "tool_result_compressor",
+        "model": "claude-haiku-4-5-20251001",
+        "tokens_in": 3387,
+        "tokens_out": 1522,
+        "cost": "$0.00275",
+        "ms": 11740,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "f882196d",
+        "agent": "research_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 3175,
+        "tokens_out": 80,
+        "cost": "$0.01073",
+        "ms": 2737,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "b5ee32f8",
+        "agent": "tool_result_compressor",
+        "model": "claude-haiku-4-5-20251001",
+        "tokens_in": 3387,
+        "tokens_out": 2166,
+        "cost": "$0.00355",
+        "ms": 12950,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "af859992",
+        "agent": "research_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 5352,
+        "tokens_out": 2718,
+        "cost": "$0.05683",
+        "ms": 23249,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "b80dd3f7",
+        "agent": "hyde_rag",
+        "model": "claude-haiku-4-5-20251001",
+        "tokens_in": 331,
+        "tokens_out": 239,
+        "cost": "$0.00038",
+        "ms": 6147,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "ebbf28f8",
+        "agent": "hyde_rag",
+        "model": "claude-haiku-4-5-20251001",
+        "tokens_in": 331,
+        "tokens_out": 239,
+        "cost": "$0.00038",
+        "ms": 3986,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "2ef3a42f",
+        "agent": "reasoning_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 6783,
+        "tokens_out": 86,
+        "cost": "$0.02164",
+        "ms": 37071,
+        "ok": true,
+        "cached": false
+      }
+    ]
+  },
+  "outcome": {
+    "status": "completed",
+    "nodes_completed": 6,
+    "total_tokens_in": 24368,
+    "total_tokens_out": 7145,
+    "total_cost_usd": 0.102548,
+    "cache_hits": 0,
+    "optimization_level": 1,
+    "by_agent": {
+      "research_agent": {
+        "calls": 3,
+        "tokens_in": 10149,
+        "tokens_out": 2893,
+        "cost_usd": 0.073842,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "tool_result_compressor": {
+        "calls": 2,
+        "tokens_in": 6774,
+        "tokens_out": 3688,
+        "cost_usd": 0.006303,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "hyde_rag": {
+        "calls": 2,
+        "tokens_in": 662,
+        "tokens_out": 478,
+        "cost_usd": 0.000764,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "reasoning_agent": {
+        "calls": 1,
+        "tokens_in": 6783,
+        "tokens_out": 86,
+        "cost_usd": 0.021639,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      }
+    },
+    "completed_at": "2026-03-29T18:03:16.909879",
+    "agent_runs": [
+      {
+        "node_id": "research",
+        "agent_type": "research_agent",
+        "status": "success",
+        "confidence": 0.95,
+        "tokens_in": 10149,
+        "tokens_out": 2893,
+        "cost_usd": 0.073842,
+        "model_used": "anthropic/claude-sonnet-4-6",
+        "duration_ms": 53914,
+        "error": null,
+        "completed_at": "2026-03-29T18:02:29.289894",
+        "tools_used": [
+          "product_api_usage",
+          "product_api_nps"
+        ],
+        "node_description": "Fetch usage metrics, NPS scores, support data for customer accounts"
+      },
+      {
+        "node_id": "reasoning",
+        "agent_type": "reasoning_agent",
+        "status": "success",
+        "confidence": 0.92,
+        "tokens_in": 6783,
+        "tokens_out": 86,
+        "cost_usd": 0.021639,
+        "model_used": "anthropic/claude-sonnet-4-6",
+        "duration_ms": 37082,
+        "error": null,
+        "completed_at": "2026-03-29T18:03:16.861135",
+        "tools_used": [],
+        "node_description": "Apply weighted churn model, classify accounts by risk level"
+      }
+    ],
+    "situation_summary": "5 of 19 accounts are CRITICAL with $17,315 combined MRR at risk. All 5 show severe DAU declines (-43% to -68%), detractor/passive NPS scores (1-4), and 20+ days since last login. VoltDesk ($10,711 MRR) is highest priority; NovaWorks renewal is imminent in ~63 days. 14 accounts lack sufficient data and are skipped.",
+    "urgency": "critical",
+    "reasoning_confidence": 0.92,
+    "memory_summary": "",
+    "delta_analysis": null,
+    "actions_summary": [],
+    "verification_summary": {
+      "passed": null,
+      "approved_count": 0,
+      "rejected_count": 0,
+      "prosecutor_issues": 0
+    }
+  }
+}

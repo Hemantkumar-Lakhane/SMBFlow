@@ -1,0 +1,403 @@
+{
+  "run_id": "563998d5-71b1-47cf-b409-8e12bbaf3e84",
+  "workflow_name": "re_listing_health_monitor",
+  "tenant_id": "f96e8a29-990d-497d-bd4b-b69ccef011d4",
+  "tenant_name": "Lodha",
+  "status": "completed",
+  "completed_at": "2026-05-07T14:47:36.809475",
+  "llm_stats": {
+    "total_tokens_in": 150130,
+    "total_tokens_out": 32121,
+    "total_cost_usd": 0.151541,
+    "total_calls": 30,
+    "cache_hits": 0,
+    "optimization_level": 1,
+    "by_agent": {
+      "research_agent": {
+        "calls": 10,
+        "tokens_in": 53502,
+        "tokens_out": 10180,
+        "cost_usd": 0.0261,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "tool_result_compressor": {
+        "calls": 8,
+        "tokens_in": 36870,
+        "tokens_out": 16514,
+        "cost_usd": 0.029858000000000003,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "hyde_rag": {
+        "calls": 4,
+        "tokens_in": 1056,
+        "tokens_out": 812,
+        "cost_usd": 0.001278,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "reasoning_agent": {
+        "calls": 1,
+        "tokens_in": 5429,
+        "tokens_out": 79,
+        "cost_usd": 0.017472,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "drafting_agent": {
+        "calls": 3,
+        "tokens_in": 12654,
+        "tokens_out": 1112,
+        "cost_usd": 0.054642,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "verification_agent": {
+        "calls": 3,
+        "tokens_in": 40125,
+        "tokens_out": 3412,
+        "cost_usd": 0.021637,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "memory_agent": {
+        "calls": 1,
+        "tokens_in": 494,
+        "tokens_out": 12,
+        "cost_usd": 0.000554,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      }
+    },
+    "recent_calls": [
+      {
+        "call_id": "f8e417b8",
+        "agent": "reasoning_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 5429,
+        "tokens_out": 79,
+        "cost": "$0.01747",
+        "ms": 32503,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "238aacb1",
+        "agent": "drafting_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 4267,
+        "tokens_out": 693,
+        "cost": "$0.02320",
+        "ms": 5187,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "986c1f09",
+        "agent": "drafting_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 5319,
+        "tokens_out": 319,
+        "cost": "$0.02074",
+        "ms": 5589,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "4452774a",
+        "agent": "drafting_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 3068,
+        "tokens_out": 100,
+        "cost": "$0.01070",
+        "ms": 44002,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "6bee9262",
+        "agent": "verification_agent",
+        "model": "anthropic/claude-haiku-4-5-20251001",
+        "tokens_in": 9307,
+        "tokens_out": 96,
+        "cost": "$0.00979",
+        "ms": 20910,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "6ac728c9",
+        "agent": "verification_agent",
+        "model": "claude-haiku-4-5-20251001",
+        "tokens_in": 15163,
+        "tokens_out": 389,
+        "cost": "$0.00428",
+        "ms": 3871,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "0c6ed8b9",
+        "agent": "verification_agent",
+        "model": "claude-haiku-4-5-20251001",
+        "tokens_in": 15655,
+        "tokens_out": 2927,
+        "cost": "$0.00757",
+        "ms": 26853,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "c19d47ce",
+        "agent": "memory_agent",
+        "model": "anthropic/claude-haiku-4-5-20251001",
+        "tokens_in": 494,
+        "tokens_out": 12,
+        "cost": "$0.00055",
+        "ms": 5375,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "24556baf",
+        "agent": "hyde_rag",
+        "model": "claude-haiku-4-5-20251001",
+        "tokens_in": 174,
+        "tokens_out": 170,
+        "cost": "$0.00026",
+        "ms": 3886,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "14f22113",
+        "agent": "hyde_rag",
+        "model": "claude-haiku-4-5-20251001",
+        "tokens_in": 212,
+        "tokens_out": 229,
+        "cost": "$0.00034",
+        "ms": 1875,
+        "ok": true,
+        "cached": false
+      }
+    ]
+  },
+  "outcome": {
+    "status": "completed",
+    "nodes_completed": 6,
+    "total_tokens_in": 149918,
+    "total_tokens_out": 31892,
+    "total_cost_usd": 0.151202,
+    "cache_hits": 0,
+    "optimization_level": 1,
+    "by_agent": {
+      "research_agent": {
+        "calls": 10,
+        "tokens_in": 53502,
+        "tokens_out": 10180,
+        "cost_usd": 0.0261,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "tool_result_compressor": {
+        "calls": 8,
+        "tokens_in": 36870,
+        "tokens_out": 16514,
+        "cost_usd": 0.029858000000000003,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "hyde_rag": {
+        "calls": 4,
+        "tokens_in": 1056,
+        "tokens_out": 812,
+        "cost_usd": 0.001278,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "reasoning_agent": {
+        "calls": 1,
+        "tokens_in": 5429,
+        "tokens_out": 79,
+        "cost_usd": 0.017472,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "drafting_agent": {
+        "calls": 3,
+        "tokens_in": 12654,
+        "tokens_out": 1112,
+        "cost_usd": 0.054642,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "verification_agent": {
+        "calls": 3,
+        "tokens_in": 40125,
+        "tokens_out": 3412,
+        "cost_usd": 0.021637,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "memory_agent": {
+        "calls": 1,
+        "tokens_in": 494,
+        "tokens_out": 12,
+        "cost_usd": 0.000554,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      }
+    },
+    "completed_at": "2026-05-07T14:47:34.209681",
+    "agent_runs": [
+      {
+        "node_id": "research",
+        "agent_type": "research_agent",
+        "status": "success",
+        "confidence": 0.95,
+        "tokens_in": 26751,
+        "tokens_out": 5090,
+        "cost_usd": 0.013049999999999999,
+        "model_used": "claude-haiku-4-5-20251001",
+        "duration_ms": 181575,
+        "error": null,
+        "completed_at": "2026-05-07T14:44:56.948178",
+        "tools_used": [
+          "re_get_listings",
+          "re_get_showing_feedback",
+          "re_get_comparable_sales",
+          "re_get_buyers"
+        ],
+        "node_description": "Fetch active listings, days on market, showing feedback, and recent comparable sales"
+      },
+      {
+        "node_id": "reasoning",
+        "agent_type": "reasoning_agent",
+        "status": "success",
+        "confidence": 0.82,
+        "tokens_in": 5429,
+        "tokens_out": 79,
+        "cost_usd": 0.017472,
+        "model_used": "anthropic/claude-sonnet-4-6",
+        "duration_ms": 32530,
+        "error": null,
+        "completed_at": "2026-05-07T14:45:38.082030",
+        "tools_used": [],
+        "node_description": "Score each listing by staleness risk, identify price-vs-market gaps, recommend action"
+      },
+      {
+        "node_id": "drafting",
+        "agent_type": "drafting_agent",
+        "status": "success",
+        "confidence": 0.85,
+        "tokens_in": 12654,
+        "tokens_out": 1112,
+        "cost_usd": 0.054642,
+        "model_used": "anthropic/claude-sonnet-4-6",
+        "duration_ms": 54847,
+        "error": null,
+        "completed_at": "2026-05-07T14:46:32.982286",
+        "tools_used": [
+          "get_communication_history"
+        ],
+        "node_description": "Write empathetic, data-backed strategy emails to sellers with specific comp references"
+      },
+      {
+        "node_id": "verification",
+        "agent_type": "verification_agent",
+        "status": "success",
+        "confidence": 0.65,
+        "tokens_in": 40125,
+        "tokens_out": 3412,
+        "cost_usd": 0.021637,
+        "model_used": "claude-haiku-4-5-20251001",
+        "duration_ms": 51705,
+        "error": null,
+        "completed_at": "2026-05-07T14:47:24.735224",
+        "tools_used": [
+          "get_communication_history"
+        ],
+        "node_description": "Enforce Fair Housing Act compliance, verify all comp data is accurate, reject discriminatory language",
+        "_prosecutor_issues": 46,
+        "_judge_verdict": "FAIL",
+        "_prosecutor_faults": [
+          "RULE 4: Draft 1 (6adc3db6) \u2014 Suggested price range $590,000\u2013$610,000 does not match research data. Current price is $645,000; at $239.65/sqft comp average \u00d7 2,477 sqft = $593,505 market value. Range should be approximately $590,000\u2013$600,000, not $610,000. Upper bound exceeds justified market alignment.",
+          "RULE 4: Draft 2 (757443f9) \u2014 Suggested price range $555,000\u2013$570,000 does not match research data. Current price is $582,000; at $239.65/sqft comp average \u00d7 2,372 sqft = $568,515 market value. Range should be approximately $555,000\u2013$570,000, which is technically correct, but the body states 'repositioning within a range of $555,000\u2013$570,000' while current price $582,000 is already above that range. Email should clarify this is a reduction, not repositioning.",
+          "RULE 4: Draft 3 (18880eba) \u2014 Suggested price range $755,000\u2013$775,000 does not match research data. Current price is $849,000; at $239.65/sqft comp average \u00d7 3,185 sqft = $763,022 market value. Range should be approximately $755,000\u2013$770,000, not $775,000. Upper bound exceeds justified market alignment by ~$12,000.",
+          "RULE 4: Draft 4 (0e0a6701) \u2014 Email body states 'current market average in this area is $239.65 per square foot' but does NOT state the property's current price per square foot ($115.10/sqft for condo at $247,000 \u00f7 2,146 sqft). This is a critical omission for a price discussion email. The email also does NOT provide a specific suggested price range in the body, only in metadata ($230,000\u2013$240,000). Email lacks the core data needed for a 'critical_price_discussion' type.",
+          "RULE 4: Draft 1 (6adc3db6) \u2014 Email states 'your home has received 101 showings over 127 days on market' \u2014 VERIFIED CORRECT per research data.",
+          "RULE 4: Draft 1 (6adc3db6) \u2014 Email states 'Recent comparable sales in your area have averaged $239.65 per square foot' \u2014 VERIFIED CORRECT per research data (market_comps avg_price_per_sqft: 239.65).",
+          "RULE 4: Draft 1 (6adc3db6) \u2014 Email states 'Your listing is currently positioned at $260.40 per square foot' \u2014 VERIFIED CORRECT per research data (price_per_sqft: 260.4).",
+          "RULE 4: Draft 1 (6adc3db6) \u2014 Email states 'approximately 8.7% above the market average' \u2014 VERIFIED CORRECT (260.40 vs 239.65 = 8.66%, rounds to 8.7%).",
+          "RULE 4: Draft 1 (6adc3db6) \u2014 Email states 'average home in this market selling within 50 days' \u2014 VERIFIED CORRECT per research data (avg_days_on_market: 50.4).",
+          "RULE 4: Draft 2 (757443f9) \u2014 Email states 'Your property has attracted 85 showings over 99 days on market' \u2014 VERIFIED CORRECT per research data.",
+          "RULE 4: Draft 2 (757443f9) \u2014 Email states 'across all five recorded buyer feedback instances, price was cited as the primary barrier' \u2014 VERIFIED CORRECT per research data (negative_feedback_count: 5, and all 5 feedback records show price_concern: true).",
+          "RULE 4: Draft 2 (757443f9) \u2014 Email states 'Recent comparable sales in the Lakewood area have averaged $239.65 per square foot' \u2014 VERIFIED CORRECT per research data.",
+          "RULE 4: Draft 2 (757443f9) \u2014 Email states 'Your listing is currently priced at $245.36 per square foot' \u2014 VERIFIED CORRECT per research data (price_per_sqft: 245.36).",
+          "RULE 4: Draft 2 (757443f9) \u2014 Email states 'average home is selling within 50 days' \u2014 VERIFIED CORRECT per research data.",
+          "RULE 4: Draft 3 (18880eba) \u2014 Email states 'Your property has generated 73 showings over 82 days on market' \u2014 VERIFIED CORRECT per research data.",
+          "RULE 4: Draft 3 (18880eba) \u2014 Email states 'in two of the three most recent buyer feedback sessions, price was raised as a concern' \u2014 PARTIALLY INCORRECT. Research data shows 3 feedback records for this listing: (1) open_house 2026-03-25, price_concern: false; (2) open_house 2026-04-08, price_concern: true; (3) showing 2026-04-09, price_concern: true. Email claims 'two of the three most recent' but does not specify which three or timeframe. The statement is technically defensible but imprecise.",
+          "RULE 4: Draft 3 (18880eba) \u2014 Email states 'Recent comparable sales in the Riverside area have averaged $239.65 per square foot' \u2014 VERIFIED CORRECT per research data.",
+          "RULE 4: Draft 3 (18880eba) \u2014 Email states 'At the current list price, 4240 Willow Way is positioned at $266.56 per square foot' \u2014 VERIFIED CORRECT per research data (price_per_sqft: 266.56).",
+          "RULE 4: Draft 3 (18880eba) \u2014 Email states 'approximately 11.2% above the market average' \u2014 VERIFIED CORRECT (266.56 vs 239.65 = 11.24%, rounds to 11.2%).",
+          "RULE 4: Draft 3 (18880eba) \u2014 Email states 'With homes in this market averaging 50 days to sell' \u2014 VERIFIED CORRECT per research data.",
+          "RULE 4: Draft 4 (0e0a6701) \u2014 Email states 'Your listing has received 49 showings over 67 days on market' \u2014 VERIFIED CORRECT per research data.",
+          "RULE 4: Draft 4 (0e0a6701) \u2014 Email states 'we have collected four negative feedback instances' \u2014 VERIFIED CORRECT per research data (negative_feedback_count: 4).",
+          "RULE 4: Draft 4 (0e0a6701) \u2014 Email states 'two price adjustments already made' \u2014 VERIFIED CORRECT per research data (price_reductions: 2).",
+          "RULE 4: Draft 4 (0e0a6701) \u2014 Email states 'current market average in this area is $239.65 per square foot' \u2014 VERIFIED CORRECT per research data.",
+          "RULE 4: Draft 4 (0e0a6701) \u2014 Email states 'homes are selling in an average of 50 days' \u2014 VERIFIED CORRECT per research data.",
+          "RULE 3: Draft 1 (6adc3db6) \u2014 Email states 'I cannot guarantee a specific outcome, but this adjustment would meaningfully strengthen your competitive position' \u2014 COMPLIANT. Properly disclaims guarantee while offering strategic guidance.",
+          "RULE 3: Draft 2 (757443f9) \u2014 Email states 'I cannot promise a specific outcome, but this move would address the single most consistent piece of feedback we have received' \u2014 COMPLIANT. Properly disclaims promise while offering strategic guidance.",
+          "RULE 3: Draft 3 (18880eba) \u2014 Email states 'I want to be transparent \u2014 no specific outcome can be guaranteed, but this adjustment addresses the clearest signal we are receiving from the market' \u2014 COMPLIANT. Properly disclaims guarantee while offering strategic guidance.",
+          "RULE 3: Draft 4 (0e0a6701) \u2014 Email does NOT make any specific price commitment or promise. Email asks open-ended questions about seller timeline and priorities. COMPLIANT with RULE 3.",
+          "RULE 2: Draft 1 (6adc3db6) \u2014 Full text scan for Fair Housing violations: No protected class references, no steering language detected. COMPLIANT.",
+          "RULE 2: Draft 2 (757443f9) \u2014 Full text scan for Fair Housing violations: No protected class references, no steering language detected. COMPLIANT.",
+          "RULE 2: Draft 3 (18880eba) \u2014 Full text scan for Fair Housing violations: No protected class references, no steering language detected. COMPLIANT.",
+          "RULE 2: Draft 4 (0e0a6701) \u2014 Full text scan for Fair Housing violations: No protected class references, no steering language detected. COMPLIANT.",
+          "RULE 1: Draft 1 (6adc3db6) \u2014 recipient_email 'seller389@example.com' is valid email format. recipient_name 'Linda Garcia' matches research data seller_name. agent_name 'Tom Reyes' matches research data listing_agent. COMPLIANT.",
+          "RULE 1: Draft 2 (757443f9) \u2014 recipient_email 'seller514@example.com' is valid email format. recipient_name 'James Garcia' matches research data seller_name. agent_name 'Priya Nair' matches research data listing_agent. COMPLIANT.",
+          "RULE 1: Draft 3 (18880eba) \u2014 recipient_email 'seller197@example.com' is valid email format. recipient_name 'Linda Smith' matches research data seller_name. agent_name 'Derek Santos' matches research data listing_agent. COMPLIANT.",
+          "RULE 1: Draft 4 (0e0a6701) \u2014 recipient_email 'seller145@example.com' is valid email format. recipient_name 'James Johnson' matches research data seller_name. agent_name 'Lisa Park' matches research data listing_agent. COMPLIANT.",
+          "RULE 5: Draft 1 (6adc3db6) \u2014 No placeholder tokens detected. COMPLIANT.",
+          "RULE 5: Draft 2 (757443f9) \u2014 No placeholder tokens detected. COMPLIANT.",
+          "RULE 5: Draft 3 (18880eba) \u2014 No placeholder tokens detected. COMPLIANT.",
+          "RULE 5: Draft 4 (0e0a6701) \u2014 No placeholder tokens detected. COMPLIANT.",
+          "RULE 6: Draft 1 (6adc3db6) \u2014 Tone is consultative, empathetic, data-driven. Sign-off 'Warm regards, Tom Reyes, Lodha Sales Team' matches brand voice. COMPLIANT.",
+          "RULE 6: Draft 2 (757443f9) \u2014 Tone is consultative, empathetic, data-driven. Sign-off 'Warm regards, Priya Nair, Lodha Sales Team' matches brand voice. COMPLIANT.",
+          "RULE 6: Draft 3 (18880eba) \u2014 Tone is consultative, empathetic, data-driven. Sign-off 'Warm regards, Derek Santos, Lodha Sales Team' matches brand voice. COMPLIANT.",
+          "RULE 6: Draft 4 (0e0a6701) \u2014 Tone is consultative, empathetic, open-ended. Sign-off 'Warm regards, Lisa Park, Lodha Sales Team' matches brand voice. COMPLIANT.",
+          "RULE 7: Cannot verify without external tool call to get_communication_history. Prosecutor cannot assess duplicate prevention without tool execution."
+        ]
+      },
+      {
+        "node_id": "memory",
+        "agent_type": "memory_agent",
+        "status": "success",
+        "confidence": 1.0,
+        "tokens_in": 494,
+        "tokens_out": 12,
+        "cost_usd": 0.000554,
+        "model_used": "anthropic/claude-haiku-4-5-20251001",
+        "duration_ms": 9405,
+        "error": null,
+        "completed_at": "2026-05-07T14:47:34.197221",
+        "tools_used": [
+          "db_update_pattern"
+        ],
+        "node_description": "Store listing health patterns, price reduction signals, and market timing data",
+        "delta_analysis": {
+          "summary": "This is the first workflow run for Lodha with no historical baseline established. The skipped execution provides no new data points to compare against historical lessons.",
+          "vs_history": "no_history",
+          "new_signals": [],
+          "trend": "insufficient_data"
+        },
+        "delta_vs_history": "no_history",
+        "delta_trend": "insufficient_data"
+      }
+    ],
+    "situation_summary": "Portfolio shows 4 fully-detailed active listings, all flagged 'stale' with 67\u2013127 days on market and zero offers received. Three listings have 3+ price reductions and persistent price-concern feedback. Four additional listings lack full data. Market comp avg is $239.65/sqft with avg DOM of 50.4 days.",
+    "urgency": "critical",
+    "reasoning_confidence": 0.82,
+    "memory_summary": "Workflow execution skipped with no actions taken. No listings reviewed, no health checks performed, no stale inventory identified. Unable to extract pricing signals, agent performance patterns, or intervention effectiveness data.",
+    "delta_analysis": {
+      "summary": "This is the first workflow run for Lodha with no historical baseline established. The skipped execution provides no new data points to compare against historical lessons.",
+      "vs_history": "no_history",
+      "new_signals": [],
+      "trend": "insufficient_data"
+    },
+    "actions_summary": [],
+    "verification_summary": {
+      "passed": false,
+      "approved_count": 0,
+      "rejected_count": 4,
+      "prosecutor_issues": 46
+    }
+  }
+}

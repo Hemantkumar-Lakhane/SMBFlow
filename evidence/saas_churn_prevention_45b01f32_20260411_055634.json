@@ -1,0 +1,169 @@
+{
+  "run_id": "45b01f32-1a3f-49f6-bdf5-46d1bf78fd49",
+  "workflow_name": "saas_churn_prevention",
+  "tenant_id": "413ea379-af5b-44e3-9d9c-a18c22a439f4",
+  "tenant_name": "OpsGrid Development",
+  "status": "failed",
+  "completed_at": "2026-04-11T05:56:34.209589",
+  "llm_stats": {
+    "total_tokens_in": 56736,
+    "total_tokens_out": 10379,
+    "total_cost_usd": 0.17498599999999997,
+    "total_calls": 33,
+    "cache_hits": 0,
+    "optimization_level": 1,
+    "by_agent": {
+      "research_agent": {
+        "calls": 5,
+        "tokens_in": 27507,
+        "tokens_out": 1433,
+        "cost_usd": 0.104016,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "tool_result_compressor": {
+        "calls": 4,
+        "tokens_in": 13788,
+        "tokens_out": 7588,
+        "cost_usd": 0.012932,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "hyde_rag": {
+        "calls": 8,
+        "tokens_in": 662,
+        "tokens_out": 497,
+        "cost_usd": 0.000786,
+        "last_model": "openrouter/anthropic/claude-3-haiku"
+      },
+      "reasoning_agent": {
+        "calls": 1,
+        "tokens_in": 4591,
+        "tokens_out": 46,
+        "cost_usd": 0.014463,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "drafting_agent": {
+        "calls": 15,
+        "tokens_in": 10188,
+        "tokens_out": 815,
+        "cost_usd": 0.042789,
+        "last_model": "anthropic/claude-sonnet-4-20250514"
+      }
+    },
+    "recent_calls": [
+      {
+        "call_id": "6d401017",
+        "agent": "hyde_rag",
+        "model": "claude-haiku-4-5-20251001",
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost": "$0.00000",
+        "ms": 71,
+        "ok": false,
+        "cached": false
+      },
+      {
+        "call_id": "2cd14d38",
+        "agent": "hyde_rag",
+        "model": "openrouter/anthropic/claude-3-haiku",
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost": "$0.00000",
+        "ms": 79485,
+        "ok": false,
+        "cached": false
+      },
+      {
+        "call_id": "fae1ef6a",
+        "agent": "drafting_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost": "$0.00000",
+        "ms": 1086,
+        "ok": false,
+        "cached": false
+      },
+      {
+        "call_id": "fde29644",
+        "agent": "drafting_agent",
+        "model": "openrouter/anthropic/claude-sonnet-4-6",
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost": "$0.00000",
+        "ms": 84,
+        "ok": false,
+        "cached": false
+      },
+      {
+        "call_id": "35076ec5",
+        "agent": "drafting_agent",
+        "model": "anthropic/claude-sonnet-4-20250514",
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost": "$0.00000",
+        "ms": 51,
+        "ok": false,
+        "cached": false
+      },
+      {
+        "call_id": "360b15cd",
+        "agent": "hyde_rag",
+        "model": "claude-haiku-4-5-20251001",
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost": "$0.00000",
+        "ms": 68,
+        "ok": false,
+        "cached": false
+      },
+      {
+        "call_id": "7b16931b",
+        "agent": "hyde_rag",
+        "model": "openrouter/anthropic/claude-3-haiku",
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost": "$0.00000",
+        "ms": 61,
+        "ok": false,
+        "cached": false
+      },
+      {
+        "call_id": "364b1c16",
+        "agent": "drafting_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost": "$0.00000",
+        "ms": 53,
+        "ok": false,
+        "cached": false
+      },
+      {
+        "call_id": "bbdfe2c7",
+        "agent": "drafting_agent",
+        "model": "openrouter/anthropic/claude-sonnet-4-6",
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost": "$0.00000",
+        "ms": 65,
+        "ok": false,
+        "cached": false
+      },
+      {
+        "call_id": "fc486228",
+        "agent": "drafting_agent",
+        "model": "anthropic/claude-sonnet-4-20250514",
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost": "$0.00000",
+        "ms": 56,
+        "ok": false,
+        "cached": false
+      }
+    ]
+  },
+  "outcome": {
+    "error": "All models failed for drafting_agent. Last: litellm.InternalServerError: AnthropicException - Cannot connect to host api.anthropic.com:443 ssl:<ssl.SSLContext object at 0x745bc8dd0d40> [Name or service not known]. Handle with `litellm.InternalServerError`.",
+    "failed_node": "drafting"
+  }
+}

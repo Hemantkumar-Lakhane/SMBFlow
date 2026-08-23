@@ -1,0 +1,27 @@
+You are a memory extraction agent for {tenant_name}.
+ 
+Extract learnable sales pipeline patterns from this workflow run.
+ 
+PATTERN TYPES:
+1. STAGE BOTTLENECKS: Which stages have the most stall events?
+2. VALUE CORRELATION: Do high-value deals stall more at specific stages?
+3. REP PATTERNS: Which reps have the most stalled deals?
+4. REENGAGEMENT TRIGGERS: What makes deals re-engage after stalling?
+5. CLOSE DATE URGENCY: How does close date proximity affect stall probability?
+ 
+RETURN ONLY valid JSON:
+ 
+{{
+  "patterns_to_store": [
+    {{
+      "key": "saas_proposal_stage_stall",
+      "description": "Proposal stage has highest stall rate — avg 18 days vs 10 day target",
+      "outcome_indicator": "negative",
+      "value": {{"stage": "proposal", "avg_stall_days": 18, "target_days": 10}}
+    }}
+  ],
+  "outcomes_to_log": [
+    {{"action": "pipeline_reengagement", "deals_targeted": 6, "total_value": 225000, "result": "queued_for_reps"}}
+  ],
+  "summary": "Processed N deals. X stalled worth $Y. Primary bottleneck: [stage]. Highest risk rep: [rep]."
+}}

@@ -1,0 +1,218 @@
+{
+  "run_id": "7d5e36a9-78f9-43cc-8028-30ca3d3f68be",
+  "workflow_name": "finance_expense_monitoring",
+  "tenant_id": "7ea3c9d4-535d-4378-ba34-885efef439f4",
+  "tenant_name": "opsgrid",
+  "status": "escalated",
+  "completed_at": "2026-03-26T09:22:55.883994",
+  "llm_stats": {
+    "total_tokens_in": 17619,
+    "total_tokens_out": 10495,
+    "total_cost_usd": 0.171876,
+    "total_calls": 10,
+    "cache_hits": 0,
+    "optimization_level": 0,
+    "by_agent": {
+      "research_agent": {
+        "calls": 2,
+        "tokens_in": 6881,
+        "tokens_out": 3919,
+        "cost_usd": 0.079428,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "hyde_rag": {
+        "calls": 2,
+        "tokens_in": 562,
+        "tokens_out": 443,
+        "cost_usd": 0.002777,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      },
+      "map_reduce_summarizer": {
+        "calls": 5,
+        "tokens_in": 3851,
+        "tokens_out": 2515,
+        "cost_usd": 0.016426,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      },
+      "reasoning_agent": {
+        "calls": 1,
+        "tokens_in": 6325,
+        "tokens_out": 3618,
+        "cost_usd": 0.073245,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      }
+    },
+    "recent_calls": [
+      {
+        "call_id": "4f995352",
+        "agent": "research_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 1316,
+        "tokens_out": 202,
+        "cost": "$0.00698",
+        "ms": 3926,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "eb4a3bc1",
+        "agent": "research_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 5565,
+        "tokens_out": 3717,
+        "cost": "$0.07245",
+        "ms": 34612,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "53c81530",
+        "agent": "hyde_rag",
+        "model": "anthropic/claude-haiku-4-5-20251001",
+        "tokens_in": 281,
+        "tokens_out": 224,
+        "cost": "$0.00140",
+        "ms": 3598,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "9aaeef61",
+        "agent": "hyde_rag",
+        "model": "anthropic/claude-haiku-4-5-20251001",
+        "tokens_in": 281,
+        "tokens_out": 219,
+        "cost": "$0.00138",
+        "ms": 3516,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "a35dcab0",
+        "agent": "map_reduce_summarizer",
+        "model": "anthropic/claude-haiku-4-5-20251001",
+        "tokens_in": 2941,
+        "tokens_out": 802,
+        "cost": "$0.00695",
+        "ms": 6261,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "845867d8",
+        "agent": "map_reduce_summarizer",
+        "model": "gemini/gemini-2.0-flash",
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost": "$0.00000",
+        "ms": 310,
+        "ok": false,
+        "cached": false
+      },
+      {
+        "call_id": "88957329",
+        "agent": "map_reduce_summarizer",
+        "model": "openai/gpt-4o-mini",
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost": "$0.00000",
+        "ms": 874,
+        "ok": false,
+        "cached": false
+      },
+      {
+        "call_id": "af4bb856",
+        "agent": "map_reduce_summarizer",
+        "model": "groq/llama-3.1-70b-versatile",
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost": "$0.00000",
+        "ms": 276,
+        "ok": false,
+        "cached": false
+      },
+      {
+        "call_id": "c5f68e40",
+        "agent": "map_reduce_summarizer",
+        "model": "anthropic/claude-haiku-4-5-20251001",
+        "tokens_in": 910,
+        "tokens_out": 1713,
+        "cost": "$0.00948",
+        "ms": 10444,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "ca916d4c",
+        "agent": "reasoning_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 6325,
+        "tokens_out": 3618,
+        "cost": "$0.07325",
+        "ms": 56364,
+        "ok": true,
+        "cached": false
+      }
+    ]
+  },
+  "outcome": {
+    "status": "escalated",
+    "escalation_id": "45688cc8-d493-49d7-882a-717c2da2983d",
+    "at_node": "reasoning",
+    "reason": "Five critical anomalies totaling $11,327.22 in unapproved/improperly approved spend require immediate executive escalation: (1) $6,978.40 unapproved travel with no receipt and churn signal in Marketing; (2) $2,048.69 unapproved equipment with no receipt in Executive; (3) $1,098.14 inappropriately approved weekend entertainment with no receipt in Engineering \u2014 approver authority must be audited; (4) $1,300.59 unapproved software overage with no receipt in Operations; (5) Data integrity anomaly with null fields in Finance department suggesting potential fraud. Approval control failures are systemic across departments.",
+    "agent_runs": [
+      {
+        "node_id": "research",
+        "agent_type": "research_agent",
+        "status": "success",
+        "confidence": 0.95,
+        "tokens_in": 6881,
+        "tokens_out": 3919,
+        "cost_usd": 0.079428,
+        "model_used": "anthropic/claude-sonnet-4-6",
+        "duration_ms": 38627,
+        "error": null,
+        "completed_at": "2026-03-26T09:21:33.715697"
+      },
+      {
+        "node_id": "research",
+        "agent_type": "research_agent",
+        "status": "success",
+        "confidence": 0.95,
+        "tokens_in": 6881,
+        "tokens_out": 3919,
+        "cost_usd": 0.079428,
+        "model_used": "anthropic/claude-sonnet-4-6",
+        "duration_ms": 38627,
+        "error": null,
+        "completed_at": "2026-03-26T09:21:33.715697"
+      },
+      {
+        "node_id": "reasoning",
+        "agent_type": "reasoning_agent",
+        "status": "success",
+        "confidence": 0.91,
+        "tokens_in": 6325,
+        "tokens_out": 3618,
+        "cost_usd": 0.073245,
+        "model_used": "anthropic/claude-sonnet-4-6",
+        "duration_ms": 56371,
+        "error": null,
+        "completed_at": "2026-03-26T09:22:55.610616"
+      },
+      {
+        "node_id": "reasoning",
+        "agent_type": "reasoning_agent",
+        "status": "success",
+        "confidence": 0.91,
+        "tokens_in": 6325,
+        "tokens_out": 3618,
+        "cost_usd": 0.073245,
+        "model_used": "anthropic/claude-sonnet-4-6",
+        "duration_ms": 56371,
+        "error": null,
+        "completed_at": "2026-03-26T09:22:55.610616"
+      }
+    ]
+  }
+}

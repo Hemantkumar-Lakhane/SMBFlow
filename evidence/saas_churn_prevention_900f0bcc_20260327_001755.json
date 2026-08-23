@@ -1,0 +1,413 @@
+{
+  "run_id": "900f0bcc-0e26-49af-8511-b03ab56083de",
+  "workflow_name": "saas_churn_prevention",
+  "tenant_id": "81128e4c-c41e-4694-b9c6-03181d5842df",
+  "tenant_name": "opsgrid",
+  "status": "completed",
+  "completed_at": "2026-03-27T00:17:55.586230",
+  "llm_stats": {
+    "total_tokens_in": 69758,
+    "total_tokens_out": 16888,
+    "total_cost_usd": 0.303122,
+    "total_calls": 17,
+    "cache_hits": 0,
+    "optimization_level": 0,
+    "by_agent": {
+      "research_agent": {
+        "calls": 3,
+        "tokens_in": 14551,
+        "tokens_out": 2972,
+        "cost_usd": 0.08823299999999999,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "hyde_rag": {
+        "calls": 2,
+        "tokens_in": 652,
+        "tokens_out": 446,
+        "cost_usd": 0.002882,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      },
+      "map_reduce_summarizer": {
+        "calls": 1,
+        "tokens_in": 3266,
+        "tokens_out": 2410,
+        "cost_usd": 0.015316,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      },
+      "reasoning_agent": {
+        "calls": 1,
+        "tokens_in": 8744,
+        "tokens_out": 1982,
+        "cost_usd": 0.055962,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "drafting_agent": {
+        "calls": 2,
+        "tokens_in": 11632,
+        "tokens_out": 2953,
+        "cost_usd": 0.079191,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "verification_agent": {
+        "calls": 4,
+        "tokens_in": 20836,
+        "tokens_out": 2110,
+        "cost_usd": 0.031386,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      },
+      "execution_agent": {
+        "calls": 3,
+        "tokens_in": 8172,
+        "tokens_out": 2196,
+        "cost_usd": 0.019152000000000002,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      },
+      "memory_agent": {
+        "calls": 1,
+        "tokens_in": 1905,
+        "tokens_out": 1819,
+        "cost_usd": 0.011,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      }
+    },
+    "recent_calls": [
+      {
+        "call_id": "46cf29bd",
+        "agent": "drafting_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 5483,
+        "tokens_out": 445,
+        "cost": "$0.02312",
+        "ms": 6279,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "f5e5a84c",
+        "agent": "drafting_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 6149,
+        "tokens_out": 2508,
+        "cost": "$0.05607",
+        "ms": 42697,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "5c24538b",
+        "agent": "verification_agent",
+        "model": "anthropic/claude-haiku-4-5-20251001",
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost": "$0.00000",
+        "ms": 33067,
+        "ok": false,
+        "cached": false
+      },
+      {
+        "call_id": "9c1b0a23",
+        "agent": "verification_agent",
+        "model": "groq/llama-3.1-8b-instant",
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost": "$0.00000",
+        "ms": 531,
+        "ok": false,
+        "cached": false
+      },
+      {
+        "call_id": "ced959f6",
+        "agent": "verification_agent",
+        "model": "anthropic/claude-haiku-4-5-20251001",
+        "tokens_in": 10064,
+        "tokens_out": 577,
+        "cost": "$0.01295",
+        "ms": 7364,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "ca14d540",
+        "agent": "verification_agent",
+        "model": "anthropic/claude-haiku-4-5-20251001",
+        "tokens_in": 10772,
+        "tokens_out": 1533,
+        "cost": "$0.01844",
+        "ms": 12975,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "242aeab1",
+        "agent": "execution_agent",
+        "model": "anthropic/claude-haiku-4-5-20251001",
+        "tokens_in": 2579,
+        "tokens_out": 666,
+        "cost": "$0.00591",
+        "ms": 4206,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "bcc6beed",
+        "agent": "execution_agent",
+        "model": "anthropic/claude-haiku-4-5-20251001",
+        "tokens_in": 2732,
+        "tokens_out": 647,
+        "cost": "$0.00597",
+        "ms": 4344,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "24cc9acc",
+        "agent": "execution_agent",
+        "model": "anthropic/claude-haiku-4-5-20251001",
+        "tokens_in": 2861,
+        "tokens_out": 883,
+        "cost": "$0.00728",
+        "ms": 9248,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "eca7e1d2",
+        "agent": "memory_agent",
+        "model": "anthropic/claude-haiku-4-5-20251001",
+        "tokens_in": 1905,
+        "tokens_out": 1819,
+        "cost": "$0.01100",
+        "ms": 15462,
+        "ok": true,
+        "cached": false
+      }
+    ]
+  },
+  "outcome": {
+    "status": "completed",
+    "nodes_completed": 6,
+    "total_tokens_in": 69758,
+    "total_tokens_out": 16888,
+    "total_cost_usd": 0.303122,
+    "cache_hits": 0,
+    "optimization_level": 0,
+    "by_agent": {
+      "research_agent": {
+        "calls": 3,
+        "tokens_in": 14551,
+        "tokens_out": 2972,
+        "cost_usd": 0.08823299999999999,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "hyde_rag": {
+        "calls": 2,
+        "tokens_in": 652,
+        "tokens_out": 446,
+        "cost_usd": 0.002882,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      },
+      "map_reduce_summarizer": {
+        "calls": 1,
+        "tokens_in": 3266,
+        "tokens_out": 2410,
+        "cost_usd": 0.015316,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      },
+      "reasoning_agent": {
+        "calls": 1,
+        "tokens_in": 8744,
+        "tokens_out": 1982,
+        "cost_usd": 0.055962,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "drafting_agent": {
+        "calls": 2,
+        "tokens_in": 11632,
+        "tokens_out": 2953,
+        "cost_usd": 0.079191,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "verification_agent": {
+        "calls": 4,
+        "tokens_in": 20836,
+        "tokens_out": 2110,
+        "cost_usd": 0.031386,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      },
+      "execution_agent": {
+        "calls": 3,
+        "tokens_in": 8172,
+        "tokens_out": 2196,
+        "cost_usd": 0.019152000000000002,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      },
+      "memory_agent": {
+        "calls": 1,
+        "tokens_in": 1905,
+        "tokens_out": 1819,
+        "cost_usd": 0.011,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      }
+    },
+    "completed_at": "2026-03-27T00:17:55.219176",
+    "agent_runs": [
+      {
+        "node_id": "research",
+        "agent_type": "research_agent",
+        "status": "success",
+        "confidence": 0.95,
+        "tokens_in": 14551,
+        "tokens_out": 2972,
+        "cost_usd": 0.08823299999999999,
+        "model_used": "anthropic/claude-sonnet-4-6",
+        "duration_ms": 28761,
+        "error": null,
+        "completed_at": "2026-03-27T00:14:33.851348",
+        "tools_used": [
+          "product_api_usage",
+          "product_api_nps"
+        ],
+        "node_description": "Fetch usage metrics, NPS scores, support data for customer accounts"
+      },
+      {
+        "node_id": "reasoning",
+        "agent_type": "reasoning_agent",
+        "status": "success",
+        "confidence": 0.92,
+        "tokens_in": 8744,
+        "tokens_out": 1982,
+        "cost_usd": 0.055962,
+        "model_used": "anthropic/claude-sonnet-4-6",
+        "duration_ms": 35480,
+        "error": null,
+        "completed_at": "2026-03-27T00:15:38.278827",
+        "tools_used": [],
+        "node_description": "Apply weighted churn model, classify accounts by risk level"
+      },
+      {
+        "node_id": "drafting",
+        "agent_type": "drafting_agent",
+        "status": "success",
+        "confidence": 0.85,
+        "tokens_in": 11632,
+        "tokens_out": 2953,
+        "cost_usd": 0.079191,
+        "model_used": "anthropic/claude-sonnet-4-6",
+        "duration_ms": 49073,
+        "error": null,
+        "completed_at": "2026-03-27T00:16:27.380034",
+        "tools_used": [
+          "get_communication_history",
+          "get_activity_log"
+        ],
+        "node_description": "Write personalized CSM emails for critical and at-risk accounts"
+      },
+      {
+        "node_id": "verification",
+        "agent_type": "verification_agent",
+        "status": "success",
+        "confidence": 0.92,
+        "tokens_in": 20836,
+        "tokens_out": 2110,
+        "cost_usd": 0.031386,
+        "model_used": "anthropic/claude-haiku-4-5-20251001",
+        "duration_ms": 54089,
+        "error": null,
+        "completed_at": "2026-03-27T00:17:21.499779",
+        "tools_used": [
+          "get_communication_history"
+        ],
+        "node_description": "Check factual accuracy, tone, duplicate prevention, business rule compliance",
+        "_prosecutor_issues": 0,
+        "_judge_verdict": "PASS",
+        "_prosecutor_faults": []
+      },
+      {
+        "node_id": "execution",
+        "agent_type": "execution_agent",
+        "status": "success",
+        "confidence": 1.0,
+        "tokens_in": 8172,
+        "tokens_out": 2196,
+        "cost_usd": 0.019152000000000002,
+        "model_used": "anthropic/claude-haiku-4-5-20251001",
+        "duration_ms": 18112,
+        "error": null,
+        "completed_at": "2026-03-27T00:17:39.642815",
+        "tools_used": [
+          "db_write_outcome"
+        ],
+        "node_description": "Queue emails, create CRM tasks, post Slack alerts"
+      },
+      {
+        "node_id": "memory",
+        "agent_type": "memory_agent",
+        "status": "success",
+        "confidence": 1.0,
+        "tokens_in": 1905,
+        "tokens_out": 1819,
+        "cost_usd": 0.011,
+        "model_used": "anthropic/claude-haiku-4-5-20251001",
+        "duration_ms": 15536,
+        "error": null,
+        "completed_at": "2026-03-27T00:17:55.212870",
+        "tools_used": [
+          "db_write_outcome",
+          "db_update_pattern"
+        ],
+        "node_description": "Log intervention for future outcome tracking",
+        "delta_analysis": {
+          "vs_historical_baseline": "No historical baseline available for opsgrid tenant. This run establishes first baseline.",
+          "structural_similarity_insights": "GraphRAG identified 96-100% structural similarity across all 5 at-risk accounts, suggesting systemic issue affecting mid-market segment rather than isolated account problems. Recommend investigating common platform feature, pricing tier, or onboarding cohort.",
+          "intervention_timing_assessment": "All interventions queued immediately upon detection (autonomous workflow). ClearSolutions 43-day inactivity suggests intervention may be late\u2014recommend 14-day inactivity threshold for future early warning.",
+          "risk_concentration": "High MRR concentration: VoltDesk ($10.7K) and NovaWorks ($3.5K) represent 40% of at-risk revenue. Prioritize these two for immediate CSM escalation if email outreach doesn't yield response within 48 hours."
+        },
+        "delta_vs_history": "no_history",
+        "delta_trend": "insufficient_data"
+      }
+    ],
+    "situation_summary": "5 of 19 accounts are CRITICAL with combined MRR of $17,315 at risk. Average DAU decline of -50.6% and average NPS of 2.8 across critical accounts. VoltDesk ($10,711 MRR) and NovaWorks ($3,514 MRR, renewal in 62 days) require immediate intervention.",
+    "urgency": "critical",
+    "reasoning_confidence": 0.92,
+    "memory_summary": "Processed 5 accounts with 5 critical and 0 at-risk. Primary risk patterns: (1) Usage drops 50-67% indicating engagement loss, (2) Extended inactivity (43 days) requiring immediate re-engagement, (3) Mid-market cluster ($1K-$5K MRR) with 96-100% structural similarity suggesting systemic issue. All interventions queued successfully via personalized CSM email outreach. No escalations required. Recommend 48-hour follow-up monitoring and diagnostic conversation with PeakSolutions (usage drop despite feature adoption). Establish 14-day inactivity alert threshold for future runs.",
+    "delta_analysis": {
+      "vs_historical_baseline": "No historical baseline available for opsgrid tenant. This run establishes first baseline.",
+      "structural_similarity_insights": "GraphRAG identified 96-100% structural similarity across all 5 at-risk accounts, suggesting systemic issue affecting mid-market segment rather than isolated account problems. Recommend investigating common platform feature, pricing tier, or onboarding cohort.",
+      "intervention_timing_assessment": "All interventions queued immediately upon detection (autonomous workflow). ClearSolutions 43-day inactivity suggests intervention may be late\u2014recommend 14-day inactivity threshold for future early warning.",
+      "risk_concentration": "High MRR concentration: VoltDesk ($10.7K) and NovaWorks ($3.5K) represent 40% of at-risk revenue. Prioritize these two for immediate CSM escalation if email outreach doesn't yield response within 48 hours."
+    },
+    "actions_summary": [
+      {
+        "action": "email_queued",
+        "status": "success",
+        "account_id": "9837c1d5-307a-462c-8cfc-fcfc9966de40"
+      },
+      {
+        "action": "email_queued",
+        "status": "success",
+        "account_id": "bd56ad46-6d87-406a-ad43-c64f2008557b"
+      },
+      {
+        "action": "email_queued",
+        "status": "success",
+        "account_id": "50c4161b-2a24-43fd-8d70-5e2403e99faf"
+      },
+      {
+        "action": "email_queued",
+        "status": "success",
+        "account_id": "4c0a2952-ee2c-4a11-9cbc-f53861d00601"
+      },
+      {
+        "action": "email_queued",
+        "status": "success",
+        "account_id": "b47488e1-631e-42cb-8b04-88ffe9a684a0"
+      }
+    ],
+    "verification_summary": {
+      "passed": true,
+      "approved_count": 5,
+      "rejected_count": 0,
+      "prosecutor_issues": 0
+    }
+  }
+}

@@ -1,0 +1,369 @@
+{
+  "run_id": "3940f467-5820-405a-8f92-aa734cc73911",
+  "workflow_name": "saas_churn_prevention",
+  "tenant_id": "cccb65f3-1e5f-4537-ac14-0dfadf89e76d",
+  "tenant_name": "OpsGrid Development",
+  "status": "completed",
+  "completed_at": "2026-03-29T17:26:08.546035",
+  "llm_stats": {
+    "total_tokens_in": 44385,
+    "total_tokens_out": 8238,
+    "total_cost_usd": 0.077968,
+    "total_calls": 12,
+    "cache_hits": 0,
+    "optimization_level": 1,
+    "by_agent": {
+      "research_agent": {
+        "calls": 2,
+        "tokens_in": 5421,
+        "tokens_out": 4195,
+        "cost_usd": 0.0065980000000000006,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "tool_result_compressor": {
+        "calls": 1,
+        "tokens_in": 3357,
+        "tokens_out": 2168,
+        "cost_usd": 0.003549,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "hyde_rag": {
+        "calls": 2,
+        "tokens_in": 654,
+        "tokens_out": 449,
+        "cost_usd": 0.000725,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "reasoning_agent": {
+        "calls": 1,
+        "tokens_in": 5694,
+        "tokens_out": 77,
+        "cost_usd": 0.018237,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "drafting_agent": {
+        "calls": 3,
+        "tokens_in": 10865,
+        "tokens_out": 665,
+        "cost_usd": 0.04257,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "verification_agent": {
+        "calls": 2,
+        "tokens_in": 17501,
+        "tokens_out": 640,
+        "cost_usd": 0.005176,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "memory_agent": {
+        "calls": 1,
+        "tokens_in": 893,
+        "tokens_out": 44,
+        "cost_usd": 0.001113,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      }
+    },
+    "recent_calls": [
+      {
+        "call_id": "edfe73bb",
+        "agent": "research_agent",
+        "model": "claude-haiku-4-5-20251001",
+        "tokens_in": 3800,
+        "tokens_out": 4062,
+        "cost": "$0.00603",
+        "ms": 18336,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "e2f64188",
+        "agent": "hyde_rag",
+        "model": "claude-haiku-4-5-20251001",
+        "tokens_in": 327,
+        "tokens_out": 225,
+        "cost": "$0.00036",
+        "ms": 5241,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "a303c075",
+        "agent": "hyde_rag",
+        "model": "claude-haiku-4-5-20251001",
+        "tokens_in": 327,
+        "tokens_out": 224,
+        "cost": "$0.00036",
+        "ms": 3406,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "2313995f",
+        "agent": "reasoning_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 5694,
+        "tokens_out": 77,
+        "cost": "$0.01824",
+        "ms": 32997,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "b64b556d",
+        "agent": "drafting_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 3584,
+        "tokens_out": 443,
+        "cost": "$0.01740",
+        "ms": 4334,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "af9b3ac7",
+        "agent": "drafting_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 4248,
+        "tokens_out": 168,
+        "cost": "$0.01526",
+        "ms": 2860,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "deaf3f49",
+        "agent": "drafting_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 3033,
+        "tokens_out": 54,
+        "cost": "$0.00991",
+        "ms": 23840,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "00e517b8",
+        "agent": "verification_agent",
+        "model": "claude-haiku-4-5-20251001",
+        "tokens_in": 7355,
+        "tokens_out": 35,
+        "cost": "$0.00188",
+        "ms": 7759,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "0b498b4c",
+        "agent": "verification_agent",
+        "model": "claude-haiku-4-5-20251001",
+        "tokens_in": 10146,
+        "tokens_out": 605,
+        "cost": "$0.00329",
+        "ms": 4284,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "e43cc16a",
+        "agent": "memory_agent",
+        "model": "anthropic/claude-haiku-4-5-20251001",
+        "tokens_in": 893,
+        "tokens_out": 44,
+        "cost": "$0.00111",
+        "ms": 9857,
+        "ok": true,
+        "cached": false
+      }
+    ]
+  },
+  "outcome": {
+    "status": "completed",
+    "nodes_completed": 6,
+    "total_tokens_in": 44385,
+    "total_tokens_out": 8238,
+    "total_cost_usd": 0.077968,
+    "cache_hits": 0,
+    "optimization_level": 1,
+    "by_agent": {
+      "research_agent": {
+        "calls": 2,
+        "tokens_in": 5421,
+        "tokens_out": 4195,
+        "cost_usd": 0.0065980000000000006,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "tool_result_compressor": {
+        "calls": 1,
+        "tokens_in": 3357,
+        "tokens_out": 2168,
+        "cost_usd": 0.003549,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "hyde_rag": {
+        "calls": 2,
+        "tokens_in": 654,
+        "tokens_out": 449,
+        "cost_usd": 0.000725,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "reasoning_agent": {
+        "calls": 1,
+        "tokens_in": 5694,
+        "tokens_out": 77,
+        "cost_usd": 0.018237,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "drafting_agent": {
+        "calls": 3,
+        "tokens_in": 10865,
+        "tokens_out": 665,
+        "cost_usd": 0.04257,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "verification_agent": {
+        "calls": 2,
+        "tokens_in": 17501,
+        "tokens_out": 640,
+        "cost_usd": 0.005176,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "memory_agent": {
+        "calls": 1,
+        "tokens_in": 893,
+        "tokens_out": 44,
+        "cost_usd": 0.001113,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      }
+    },
+    "completed_at": "2026-03-29T17:26:07.375126",
+    "agent_runs": [
+      {
+        "node_id": "research",
+        "agent_type": "research_agent",
+        "status": "success",
+        "confidence": 0.95,
+        "tokens_in": 5421,
+        "tokens_out": 4195,
+        "cost_usd": 0.0065980000000000006,
+        "model_used": "claude-haiku-4-5-20251001",
+        "duration_ms": 36356,
+        "error": null,
+        "completed_at": "2026-03-29T17:24:31.347925",
+        "tools_used": [
+          "product_api_usage",
+          "product_api_nps"
+        ],
+        "node_description": "Fetch usage metrics, NPS scores, support data for customer accounts"
+      },
+      {
+        "node_id": "reasoning",
+        "agent_type": "reasoning_agent",
+        "status": "success",
+        "confidence": 0.82,
+        "tokens_in": 5694,
+        "tokens_out": 77,
+        "cost_usd": 0.018237,
+        "model_used": "anthropic/claude-sonnet-4-6",
+        "duration_ms": 33018,
+        "error": null,
+        "completed_at": "2026-03-29T17:25:14.032683",
+        "tools_used": [],
+        "node_description": "Apply weighted churn model, classify accounts by risk level"
+      },
+      {
+        "node_id": "drafting",
+        "agent_type": "drafting_agent",
+        "status": "success",
+        "confidence": 0.85,
+        "tokens_in": 10865,
+        "tokens_out": 665,
+        "cost_usd": 0.04257,
+        "model_used": "anthropic/claude-sonnet-4-6",
+        "duration_ms": 31137,
+        "error": null,
+        "completed_at": "2026-03-29T17:25:45.249123",
+        "tools_used": [
+          "get_communication_history",
+          "get_activity_log"
+        ],
+        "node_description": "Write personalized CSM emails for critical and at-risk accounts"
+      },
+      {
+        "node_id": "verification",
+        "agent_type": "verification_agent",
+        "status": "success",
+        "confidence": 0.65,
+        "tokens_in": 17501,
+        "tokens_out": 640,
+        "cost_usd": 0.005176,
+        "model_used": "claude-haiku-4-5-20251001",
+        "duration_ms": 12076,
+        "error": null,
+        "completed_at": "2026-03-29T17:25:57.349871",
+        "tools_used": [
+          "get_communication_history"
+        ],
+        "node_description": "Check factual accuracy, tone, duplicate prevention, business rule compliance",
+        "_prosecutor_issues": 14,
+        "_judge_verdict": "FAIL",
+        "_prosecutor_faults": [
+          "RULE 1: All 5 critical accounts have contact_email = null. Cannot send email without valid recipient email address.",
+          "RULE 1: All 5 critical accounts have contact_name = null. Cannot send email without real recipient name.",
+          "RULE 1: All 5 critical accounts have csm_name = null. Cannot send email without real CSM name for signature.",
+          "RULE 5: Account b51635e1-f05c-4bc5-ab9e-e323d8594801 (VoltDesk) \u2014 no email draft provided, but exec brief references 'immediate CSM outreach email' which cannot be drafted without contact details.",
+          "RULE 5: Account f31cd994-3250-4056-89ae-4753e5f759f8 (NovaWorks) \u2014 no email draft provided, but exec brief recommends 'CSM outreach email' which cannot be drafted without contact details.",
+          "RULE 5: Account c197587e-1ae5-49af-b5fb-b0f359335aae (BoldConnect) \u2014 no email draft provided, but exec brief recommends 'CSM outreach email' which cannot be drafted without contact details.",
+          "STRUCTURAL: Input contains 0 email drafts in 'drafts' array. All 5 critical accounts are in 'skipped_accounts' with explicit reasons that contact/CSM data is missing. No drafts exist to verify against Rules 1-6.",
+          "STRUCTURAL: Account b51635e1-f05c-4bc5-ab9e-e323d8594801 (VoltDesk) \u2014 skipped_accounts reason states 'contact_email, contact_name, and csm_name are all null' \u2014 matches research data exactly. Email cannot be drafted.",
+          "STRUCTURAL: Account f31cd994-3250-4056-89ae-4753e5f759f8 (NovaWorks) \u2014 skipped_accounts reason states 'contact_email, contact_name, and csm_name are all null' \u2014 matches research data exactly. Email cannot be drafted.",
+          "STRUCTURAL: Account 148bff0a-ebea-444b-b029-c8bcc5f0f09b (PeakSolutions) \u2014 recommended_action is 'create_hubspot_task', not 'send_csm_outreach_email'. Correctly skipped; no email draft expected.",
+          "STRUCTURAL: Account c197587e-1ae5-49af-b5fb-b0f359335aae (BoldConnect) \u2014 skipped_accounts reason states 'contact_email, contact_name, and csm_name are all null' \u2014 matches research data exactly. Email cannot be drafted.",
+          "STRUCTURAL: Account 729287bf-dc2a-4fbc-8942-3bac05416c76 (ClearSolutions) \u2014 recommended_action is 'post_slack_alert', not 'send_csm_outreach_email'. Correctly skipped; no email draft expected.",
+          "RULE 2: No communication_history verification tool was called for any account. Cannot confirm safe_to_email status for any draft (though no drafts exist to verify).",
+          "CRITICAL ABSENCE: The 'drafts' array is empty. Zero email drafts submitted for verification. All 5 critical accounts are blocked at the data enrichment stage (missing contact_email, contact_name, csm_name)."
+        ]
+      },
+      {
+        "node_id": "memory",
+        "agent_type": "memory_agent",
+        "status": "success",
+        "confidence": 1.0,
+        "tokens_in": 893,
+        "tokens_out": 44,
+        "cost_usd": 0.001113,
+        "model_used": "anthropic/claude-haiku-4-5-20251001",
+        "duration_ms": 9989,
+        "error": null,
+        "completed_at": "2026-03-29T17:26:07.368345",
+        "tools_used": [
+          "db_write_outcome",
+          "db_update_pattern"
+        ],
+        "node_description": "Log intervention for future outcome tracking",
+        "delta_analysis": {
+          "comparison_to_lessons": "No historical lessons exist yet for this tenant. This run establishes the baseline. Key observation: 5 critical accounts were identified but workflow execution was skipped, creating a 100% intervention gap. Future runs should compare against this baseline to identify whether skip conditions are systematic or anomalous.",
+          "risk_assessment": "HIGH - Critical churn risk cluster detected but unaddressed",
+          "recommendation": "Immediate action required: (1) Investigate why workflow was skipped for critical accounts, (2) Manually queue CSM outreach for all 5 accounts, (3) Review escalation trigger logic in workflow configuration"
+        },
+        "delta_vs_history": "no_history",
+        "delta_trend": "insufficient_data"
+      }
+    ],
+    "situation_summary": "5 of 19 accounts have full data and all score CRITICAL (churn scores 90-100), representing $17,315 combined MRR at immediate risk. The top threat is VoltDesk at $10,711 MRR with a 67.6% DAU drop and NPS=2. The remaining 14 accounts lack sufficient usage/support data and are skipped pending data enrichment.",
+    "urgency": "critical",
+    "reasoning_confidence": 0.82,
+    "memory_summary": "Processed 5 accounts with 5 critical and 0 at-risk. Primary risk pattern: Structurally similar cluster (94-100% similarity) with extreme MRR variance ($292-$10,711) all marked critical. CRITICAL ISSUE: Workflow was skipped entirely with zero interventions queued despite high-confidence risk detection. This baseline run establishes patterns for future comparison but represents a complete intervention failure for the identified critical accounts. Immediate manual escalation recommended.",
+    "delta_analysis": {
+      "comparison_to_lessons": "No historical lessons exist yet for this tenant. This run establishes the baseline. Key observation: 5 critical accounts were identified but workflow execution was skipped, creating a 100% intervention gap. Future runs should compare against this baseline to identify whether skip conditions are systematic or anomalous.",
+      "risk_assessment": "HIGH - Critical churn risk cluster detected but unaddressed",
+      "recommendation": "Immediate action required: (1) Investigate why workflow was skipped for critical accounts, (2) Manually queue CSM outreach for all 5 accounts, (3) Review escalation trigger logic in workflow configuration"
+    },
+    "actions_summary": [],
+    "verification_summary": {
+      "passed": false,
+      "approved_count": 0,
+      "rejected_count": 0,
+      "prosecutor_issues": 14
+    }
+  }
+}

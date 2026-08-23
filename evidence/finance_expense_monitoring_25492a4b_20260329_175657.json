@@ -1,0 +1,201 @@
+{
+  "run_id": "25492a4b-b42b-4ab7-ada8-f9b2516917c7",
+  "workflow_name": "finance_expense_monitoring",
+  "tenant_id": "cccb65f3-1e5f-4537-ac14-0dfadf89e76d",
+  "tenant_name": "OpsGrid Development",
+  "status": "completed",
+  "completed_at": "2026-03-29T17:56:57.068986",
+  "llm_stats": {
+    "total_tokens_in": 17973,
+    "total_tokens_out": 6811,
+    "total_cost_usd": 0.117369,
+    "total_calls": 6,
+    "cache_hits": 0,
+    "optimization_level": 0,
+    "by_agent": {
+      "research_agent": {
+        "calls": 2,
+        "tokens_in": 7022,
+        "tokens_out": 3765,
+        "cost_usd": 0.077541,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "hyde_rag": {
+        "calls": 2,
+        "tokens_in": 574,
+        "tokens_out": 418,
+        "cost_usd": 0.000665,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "map_reduce_summarizer": {
+        "calls": 1,
+        "tokens_in": 2864,
+        "tokens_out": 2566,
+        "cost_usd": 0.015694,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      },
+      "reasoning_agent": {
+        "calls": 1,
+        "tokens_in": 7513,
+        "tokens_out": 62,
+        "cost_usd": 0.023469,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      }
+    },
+    "recent_calls": [
+      {
+        "call_id": "90656f43",
+        "agent": "research_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 1366,
+        "tokens_out": 203,
+        "cost": "$0.00714",
+        "ms": 2908,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "5a65fcfd",
+        "agent": "research_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 5656,
+        "tokens_out": 3562,
+        "cost": "$0.07040",
+        "ms": 31669,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "bdefb0b7",
+        "agent": "hyde_rag",
+        "model": "claude-haiku-4-5-20251001",
+        "tokens_in": 287,
+        "tokens_out": 199,
+        "cost": "$0.00032",
+        "ms": 2803,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "c3d2a197",
+        "agent": "hyde_rag",
+        "model": "claude-haiku-4-5-20251001",
+        "tokens_in": 287,
+        "tokens_out": 219,
+        "cost": "$0.00034",
+        "ms": 3490,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "730468a1",
+        "agent": "map_reduce_summarizer",
+        "model": "anthropic/claude-haiku-4-5-20251001",
+        "tokens_in": 2864,
+        "tokens_out": 2566,
+        "cost": "$0.01569",
+        "ms": 19918,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "af929fcf",
+        "agent": "reasoning_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 7513,
+        "tokens_out": 62,
+        "cost": "$0.02347",
+        "ms": 25608,
+        "ok": true,
+        "cached": false
+      }
+    ]
+  },
+  "outcome": {
+    "status": "completed",
+    "nodes_completed": 6,
+    "total_tokens_in": 17973,
+    "total_tokens_out": 6811,
+    "total_cost_usd": 0.117369,
+    "cache_hits": 0,
+    "optimization_level": 0,
+    "by_agent": {
+      "research_agent": {
+        "calls": 2,
+        "tokens_in": 7022,
+        "tokens_out": 3765,
+        "cost_usd": 0.077541,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "hyde_rag": {
+        "calls": 2,
+        "tokens_in": 574,
+        "tokens_out": 418,
+        "cost_usd": 0.000665,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "map_reduce_summarizer": {
+        "calls": 1,
+        "tokens_in": 2864,
+        "tokens_out": 2566,
+        "cost_usd": 0.015694,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      },
+      "reasoning_agent": {
+        "calls": 1,
+        "tokens_in": 7513,
+        "tokens_out": 62,
+        "cost_usd": 0.023469,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      }
+    },
+    "completed_at": "2026-03-29T17:56:56.811432",
+    "agent_runs": [
+      {
+        "node_id": "research",
+        "agent_type": "research_agent",
+        "status": "success",
+        "confidence": 0.95,
+        "tokens_in": 7022,
+        "tokens_out": 3765,
+        "cost_usd": 0.077541,
+        "model_used": "anthropic/claude-sonnet-4-6",
+        "duration_ms": 34673,
+        "error": null,
+        "completed_at": "2026-03-29T17:56:04.775151",
+        "tools_used": [
+          "finance_get_expenses",
+          "finance_get_employees"
+        ],
+        "node_description": "Fetch recent expense transactions and employee records"
+      },
+      {
+        "node_id": "reasoning",
+        "agent_type": "reasoning_agent",
+        "status": "success",
+        "confidence": 0.92,
+        "tokens_in": 7513,
+        "tokens_out": 62,
+        "cost_usd": 0.023469,
+        "model_used": "anthropic/claude-sonnet-4-6",
+        "duration_ms": 25622,
+        "error": null,
+        "completed_at": "2026-03-29T17:56:56.760131",
+        "tools_used": [],
+        "node_description": "Classify expense anomalies, score severity, recommend actions"
+      }
+    ],
+    "situation_summary": "8 expense anomalies totaling $15,951.45 detected across HR, Operations, Engineering, Sales, and Marketing. One critical outlier (Morgan Brown, HR, $7,718.03 travel) is 286% over policy with no receipt and no approval. Systemic control gaps: 62.5% of anomalies lack receipts and 75% are unapproved.",
+    "urgency": "critical",
+    "reasoning_confidence": 0.92,
+    "memory_summary": "",
+    "delta_analysis": null,
+    "actions_summary": [],
+    "verification_summary": {
+      "passed": null,
+      "approved_count": 0,
+      "rejected_count": 0,
+      "prosecutor_issues": 0
+    }
+  }
+}

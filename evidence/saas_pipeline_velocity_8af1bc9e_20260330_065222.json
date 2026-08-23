@@ -1,0 +1,408 @@
+{
+  "run_id": "8af1bc9e-fd8a-41ae-9c39-e604709bac60",
+  "workflow_name": "saas_pipeline_velocity",
+  "tenant_id": "cccb65f3-1e5f-4537-ac14-0dfadf89e76d",
+  "tenant_name": "OpsGrid Development",
+  "status": "completed",
+  "completed_at": "2026-03-30T06:52:22.631941",
+  "llm_stats": {
+    "total_tokens_in": 83027,
+    "total_tokens_out": 8863,
+    "total_cost_usd": 0.15279800000000002,
+    "total_calls": 11,
+    "cache_hits": 0,
+    "optimization_level": 0,
+    "by_agent": {
+      "research_agent": {
+        "calls": 2,
+        "tokens_in": 5707,
+        "tokens_out": 3349,
+        "cost_usd": 0.067356,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "hyde_rag": {
+        "calls": 2,
+        "tokens_in": 642,
+        "tokens_out": 385,
+        "cost_usd": 0.000642,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "reasoning_agent": {
+        "calls": 1,
+        "tokens_in": 2748,
+        "tokens_out": 261,
+        "cost_usd": 0.012159,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "drafting_agent": {
+        "calls": 2,
+        "tokens_in": 15825,
+        "tokens_out": 284,
+        "cost_usd": 0.051735,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "verification_agent": {
+        "calls": 3,
+        "tokens_in": 57315,
+        "tokens_out": 4569,
+        "cost_usd": 0.020041,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "memory_agent": {
+        "calls": 1,
+        "tokens_in": 790,
+        "tokens_out": 15,
+        "cost_usd": 0.000865,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      }
+    },
+    "recent_calls": [
+      {
+        "call_id": "56110e7f",
+        "agent": "research_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 4475,
+        "tokens_out": 3165,
+        "cost": "$0.06090",
+        "ms": 31942,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "62c4792e",
+        "agent": "hyde_rag",
+        "model": "claude-haiku-4-5-20251001",
+        "tokens_in": 321,
+        "tokens_out": 197,
+        "cost": "$0.00033",
+        "ms": 2950,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "2be34d66",
+        "agent": "hyde_rag",
+        "model": "claude-haiku-4-5-20251001",
+        "tokens_in": 321,
+        "tokens_out": 188,
+        "cost": "$0.00032",
+        "ms": 3180,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "b1d42d5f",
+        "agent": "reasoning_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 2748,
+        "tokens_out": 261,
+        "cost": "$0.01216",
+        "ms": 108216,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "d560f8f0",
+        "agent": "drafting_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 8477,
+        "tokens_out": 92,
+        "cost": "$0.02681",
+        "ms": 4997,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "706f42f1",
+        "agent": "drafting_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 7348,
+        "tokens_out": 192,
+        "cost": "$0.02492",
+        "ms": 77717,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "6366027b",
+        "agent": "verification_agent",
+        "model": "claude-haiku-4-5-20251001",
+        "tokens_in": 13647,
+        "tokens_out": 133,
+        "cost": "$0.00358",
+        "ms": 31137,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "3ed99b38",
+        "agent": "verification_agent",
+        "model": "claude-haiku-4-5-20251001",
+        "tokens_in": 21063,
+        "tokens_out": 1243,
+        "cost": "$0.00682",
+        "ms": 9370,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "2ee770af",
+        "agent": "verification_agent",
+        "model": "claude-haiku-4-5-20251001",
+        "tokens_in": 22605,
+        "tokens_out": 3193,
+        "cost": "$0.00964",
+        "ms": 24219,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "bcca1dd7",
+        "agent": "memory_agent",
+        "model": "anthropic/claude-haiku-4-5-20251001",
+        "tokens_in": 790,
+        "tokens_out": 15,
+        "cost": "$0.00086",
+        "ms": 3109,
+        "ok": true,
+        "cached": false
+      }
+    ]
+  },
+  "outcome": {
+    "status": "completed",
+    "nodes_completed": 6,
+    "total_tokens_in": 83027,
+    "total_tokens_out": 8863,
+    "total_cost_usd": 0.152798,
+    "cache_hits": 0,
+    "optimization_level": 0,
+    "by_agent": {
+      "research_agent": {
+        "calls": 2,
+        "tokens_in": 5707,
+        "tokens_out": 3349,
+        "cost_usd": 0.067356,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "hyde_rag": {
+        "calls": 2,
+        "tokens_in": 642,
+        "tokens_out": 385,
+        "cost_usd": 0.000642,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "reasoning_agent": {
+        "calls": 1,
+        "tokens_in": 2748,
+        "tokens_out": 261,
+        "cost_usd": 0.012159,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "drafting_agent": {
+        "calls": 2,
+        "tokens_in": 15825,
+        "tokens_out": 284,
+        "cost_usd": 0.051735,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "verification_agent": {
+        "calls": 3,
+        "tokens_in": 57315,
+        "tokens_out": 4569,
+        "cost_usd": 0.020041,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "memory_agent": {
+        "calls": 1,
+        "tokens_in": 790,
+        "tokens_out": 15,
+        "cost_usd": 0.000865,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      }
+    },
+    "completed_at": "2026-03-30T06:52:22.127321",
+    "agent_runs": [
+      {
+        "node_id": "research",
+        "agent_type": "research_agent",
+        "status": "success",
+        "confidence": 0.95,
+        "tokens_in": 5707,
+        "tokens_out": 3349,
+        "cost_usd": 0.067356,
+        "model_used": "anthropic/claude-sonnet-4-6",
+        "duration_ms": 35803,
+        "error": null,
+        "completed_at": "2026-03-30T06:47:55.875274",
+        "tools_used": [
+          "product_api_deals",
+          "get_activity_log"
+        ],
+        "node_description": "Fetch open deals, stage progression, and last activity dates"
+      },
+      {
+        "node_id": "reasoning",
+        "agent_type": "reasoning_agent",
+        "status": "success",
+        "confidence": 0.8,
+        "tokens_in": 2748,
+        "tokens_out": 261,
+        "cost_usd": 0.012159,
+        "model_used": "anthropic/claude-sonnet-4-6",
+        "duration_ms": 108226,
+        "error": null,
+        "completed_at": "2026-03-30T06:49:50.677802",
+        "tools_used": [],
+        "node_description": "Identify stalled deals, calculate velocity scores, recommend interventions"
+      },
+      {
+        "node_id": "drafting",
+        "agent_type": "drafting_agent",
+        "status": "success",
+        "confidence": 0.85,
+        "tokens_in": 15825,
+        "tokens_out": 284,
+        "cost_usd": 0.051735,
+        "model_used": "anthropic/claude-sonnet-4-6",
+        "duration_ms": 82756,
+        "error": null,
+        "completed_at": "2026-03-30T06:51:13.536035",
+        "tools_used": [
+          "get_communication_history"
+        ],
+        "node_description": "Write personalized re-engagement emails for stalled deals"
+      },
+      {
+        "node_id": "verification",
+        "agent_type": "verification_agent",
+        "status": "success",
+        "confidence": 0.65,
+        "tokens_in": 57315,
+        "tokens_out": 4569,
+        "cost_usd": 0.020041,
+        "model_used": "claude-haiku-4-5-20251001",
+        "duration_ms": 65157,
+        "error": null,
+        "completed_at": "2026-03-30T06:52:18.730746",
+        "tools_used": [
+          "get_communication_history"
+        ],
+        "node_description": "Check factual accuracy, no duplicates, appropriate tone",
+        "_prosecutor_issues": 59,
+        "_judge_verdict": "FAIL",
+        "_prosecutor_faults": [
+          "RULE 1: Draft 1 (SpanConnect negotiation) \u2014 recipient_name is 'Sam Davis' but research data shows contact for deal f3e621bc-5bce-4341-afce-5feaf511547a is 'Sam Davis' at company 'SpanConnect' in Finance industry. HOWEVER, the subject line says 'Sam' and body addresses 'Sam' \u2014 this is internally consistent. No placeholder violation detected.",
+          "RULE 1: Draft 2 (CoreAnalytics) \u2014 recipient_name 'Jordan Davis' matches research data for deal 9aab528e-e232-4b24-b221-6c73bcbce5be. No placeholder violation.",
+          "RULE 1: Draft 3 (SwiftSuite) \u2014 recipient_name 'Alex Williams' matches research data for deal 5ce8b72d-9b56-4941-919f-1b867a834f0f. No placeholder violation.",
+          "RULE 1: Draft 4 (PeakIO) \u2014 recipient_name 'Sam Brown' matches research data for deal 94d60a89-03b2-473f-8a3f-93674a82e314. No placeholder violation.",
+          "RULE 1: Draft 5 (CoreHQ) \u2014 recipient_name 'Alex Brown' matches research data for deal 873d61b1-f09f-48c9-bbdd-35265f8e7617. No placeholder violation.",
+          "RULE 1: Draft 6 (SwiftSolutions) \u2014 recipient_name 'Jordan Davis' matches research data for deal 2ce18390-fe2c-4dd0-a244-29e8fbf86930. No placeholder violation.",
+          "RULE 1: Draft 7 (WaveIO) \u2014 recipient_name 'Sam Williams' matches research data for deal 213e2093-e71e-4aed-aaa7-7fbc7e377342. No placeholder violation.",
+          "RULE 1: Draft 8 (FluxTech) \u2014 recipient_name 'Jordan Brown' matches research data for deal 022a8147-e4fc-43cc-a27a-8a85c35c3d7a. No placeholder violation.",
+          "RULE 1: Draft 9 (NovaCloud) \u2014 recipient_name 'Alex Davis' matches research data for deal 4f09ca0b-9697-4bb6-b8e8-7c8ba8a2d352. No placeholder violation.",
+          "RULE 1: Draft 10 (GridPlatform) \u2014 recipient_name 'Alex Williams' matches research data for deal 58961385-20ff-4bdc-bc9c-20ab04d0c2dc. No placeholder violation.",
+          "RULE 1: Draft 11 (SpanConnect discovery) \u2014 recipient_name 'Jordan Davis' matches research data for deal 6dd1be83-da89-45a5-947f-28f0f75ce6a6. No placeholder violation.",
+          "RULE 4: Draft 1 (SpanConnect negotiation) \u2014 deal_id f3e621bc-5bce-4341-afce-5feaf511547a shows stage 'negotiation' in research data. Body states 'negotiation we've been working through together' and 'target close date approaching in late May' (close_date is 2026-05-25). Stage context matches.",
+          "RULE 4: Draft 2 (CoreAnalytics) \u2014 deal_id 9aab528e-e232-4b24-b221-6c73bcbce5be shows stage 'negotiation' in research data. Body states 'negotiation we've been progressing' and 'about 18 days since we last connected' (last_activity_days_ago is 18). Stage and context match.",
+          "RULE 4: Draft 3 (SwiftSuite) \u2014 deal_id 5ce8b72d-9b56-4941-919f-1b867a834f0f shows stage 'proposal' in research data. Body states 'proposal we submitted' and 'about two weeks' (days_in_stage is 14). Stage and context match.",
+          "RULE 4: Draft 4 (PeakIO) \u2014 deal_id 94d60a89-03b2-473f-8a3f-93674a82e314 shows stage 'negotiation' in research data. Body states 'negotiation we've been working through' and 'a little while since we last spoke' (last_activity_days_ago is 18). Stage and context match.",
+          "RULE 4: Draft 5 (CoreHQ) \u2014 deal_id 873d61b1-f09f-48c9-bbdd-35265f8e7617 shows stage 'discovery' in research data. Body states 'early discovery phase' and 'about 19 days' (last_activity_days_ago is 19) and 'just over five weeks away' (close_date 2026-05-07 is 38 days away, not 'just over five weeks'). FAULT: 'just over five weeks' is approximately 35-40 days, which is accurate, but the phrasing is vague. However, this is not a factual error \u2014 38 days is indeed 'just over five weeks.' Stage and context match.",
+          "RULE 4: Draft 6 (SwiftSolutions) \u2014 deal_id 2ce18390-fe2c-4dd0-a244-29e8fbf86930 shows stage 'discovery' in research data. Body states 'discovery phase' and 'a couple of weeks since we last connected' (last_activity_days_ago is 15). Stage and context match.",
+          "RULE 4: Draft 7 (WaveIO) \u2014 deal_id 213e2093-e71e-4aed-aaa7-7fbc7e377342 shows stage 'proposal' in research data. Body states 'proposal we shared' and 'about 16 days' (last_activity_days_ago is 16). Stage and context match.",
+          "RULE 4: Draft 8 (FluxTech) \u2014 deal_id 022a8147-e4fc-43cc-a27a-8a85c35c3d7a shows stage 'proposal' in research data. Body states 'proposal we submitted' and 'about 18 days' (last_activity_days_ago is 18). Stage and context match.",
+          "RULE 4: Draft 9 (NovaCloud) \u2014 deal_id 4f09ca0b-9697-4bb6-b8e8-7c8ba8a2d352 shows stage 'proposal' in research data. Body states 'proposal we shared' and 'about 22 days' (last_activity_days_ago is 22). Stage and context match.",
+          "RULE 4: Draft 10 (GridPlatform) \u2014 deal_id 58961385-20ff-4bdc-bc9c-20ab04d0c2dc shows stage 'demo' in research data. Body states 'demo session' and 'about 10 days' (last_activity_days_ago is 10). Stage and context match.",
+          "RULE 4: Draft 11 (SpanConnect discovery) \u2014 deal_id 6dd1be83-da89-45a5-947f-28f0f75ce6a6 shows stage 'discovery' in research data. Body states 'discovery conversations we started' and 'a couple of weeks' (last_activity_days_ago is 16). Stage and context match.",
+          "RULE 5: All 11 drafts \u2014 no unreplaced template variables detected. All [Name], [Company], [Stage], etc. placeholders have been replaced with actual values.",
+          "RULE 6: Draft 1 \u2014 sales_rep_name 'Julia Okafor' is listed in research data as owner of deal f3e621bc-5bce-4341-afce-5feaf511547a. Actual rep name confirmed.",
+          "RULE 6: Draft 2 \u2014 sales_rep_name 'Julia Okafor' is listed in research data as owner of deal 9aab528e-e232-4b24-b221-6c73bcbce5be. Actual rep name confirmed.",
+          "RULE 6: Draft 3 \u2014 sales_rep_name 'Tom Reyes' is listed in research data as owner of deal 5ce8b72d-9b56-4941-919f-1b867a834f0f. Actual rep name confirmed.",
+          "RULE 6: Draft 4 \u2014 sales_rep_name 'Marcus Webb' is listed in research data as owner of deal 94d60a89-03b2-473f-8a3f-93674a82e314. Actual rep name confirmed.",
+          "RULE 6: Draft 5 \u2014 sales_rep_name 'Julia Okafor' is listed in research data as owner of deal 873d61b1-f09f-48c9-bbdd-35265f8e7617. Actual rep name confirmed.",
+          "RULE 6: Draft 6 \u2014 sales_rep_name 'Derek Santos' is listed in research data as owner of deal 2ce18390-fe2c-4dd0-a244-29e8fbf86930. Actual rep name confirmed.",
+          "RULE 6: Draft 7 \u2014 sales_rep_name 'Marcus Webb' is listed in research data as owner of deal 213e2093-e71e-4aed-aaa7-7fbc7e377342. Actual rep name confirmed.",
+          "RULE 6: Draft 8 \u2014 sales_rep_name 'Marcus Webb' is listed in research data as owner of deal 022a8147-e4fc-43cc-a27a-8a85c35c3d7a. Actual rep name confirmed.",
+          "RULE 6: Draft 9 \u2014 sales_rep_name 'Julia Okafor' is listed in research data as owner of deal 4f09ca0b-9697-4bb6-b8e8-7c8ba8a2d352. Actual rep name confirmed.",
+          "RULE 6: Draft 10 \u2014 sales_rep_name 'Sarah Chen' is listed in research data as owner of deal 58961385-20ff-4bdc-bc9c-20ab04d0c2dc. Actual rep name confirmed.",
+          "RULE 6: Draft 11 \u2014 sales_rep_name 'Sarah Chen' is listed in research data as owner of deal 6dd1be83-da89-45a5-947f-28f0f75ce6a6. Actual rep name confirmed.",
+          "RULE 3 (TONE): Draft 1 \u2014 tone is professional and appropriately urgent given the 23-day stall and 56-day close date. Not desperate, not generic. Compliant.",
+          "RULE 3 (TONE): Draft 2 \u2014 tone is professional and measured. Compliant.",
+          "RULE 3 (TONE): Draft 3 \u2014 tone is professional and collaborative ('walk through it with you'). Compliant.",
+          "RULE 3 (TONE): Draft 4 \u2014 tone is professional but slightly vague ('a little while'). Not aggressive or desperate. Compliant.",
+          "RULE 3 (TONE): Draft 5 \u2014 tone is professional and appropriately urgent given 38-day close date and discovery stage. Compliant.",
+          "RULE 3 (TONE): Draft 6 \u2014 tone is professional and open-ended. Compliant.",
+          "RULE 3 (TONE): Draft 7 \u2014 tone is professional and collaborative. Compliant.",
+          "RULE 3 (TONE): Draft 8 \u2014 tone is professional and collaborative. Compliant.",
+          "RULE 3 (TONE): Draft 9 \u2014 tone is professional and collaborative. Compliant.",
+          "RULE 3 (TONE): Draft 10 \u2014 tone is professional but includes a qualifying question ('still a good fit?') that could be perceived as slightly aggressive or doubting. However, it is not desperate or generic. Compliant.",
+          "RULE 3 (TONE): Draft 11 \u2014 tone is professional and open-ended. Compliant.",
+          "CRITICAL LOGIC FAULT: Draft 5 (CoreHQ) \u2014 The body states 'your projected close date is now just over five weeks away' but the research data shows close_date is 2026-05-07 and current_datetime is 2026-03-30. This is 38 days away, which is approximately 5.4 weeks. The phrasing is technically accurate but the word 'now' suggests urgency that may not be fully justified by the timeline alone. However, given the discovery stage and 19-day stall, the urgency is warranted. No factual error detected.",
+          "CRITICAL LOGIC FAULT: Draft 1 (SpanConnect negotiation) \u2014 The subject line says 'let's get this moving, Sam' but the body does not use the word 'moving' or reference urgency in the same way. The tone shift between subject and body is minor but noticeable. Subject is slightly more aggressive than body. Not a rule violation but a tone inconsistency.",
+          "CRITICAL LOGIC FAULT: Draft 4 (PeakIO) \u2014 The body says 'It's been a little while since we last spoke' but research data shows last_activity_days_ago is 18. This is more than 2 weeks, not 'a little while.' FAULT: Vague temporal reference does not match specific data (18 days is more than 'a little while').",
+          "CRITICAL LOGIC FAULT: Draft 6 (SwiftSolutions) \u2014 The body says 'It's been a couple of weeks since we last connected' but research data shows last_activity_days_ago is 15. This is approximately 2 weeks, so 'a couple of weeks' is accurate. Compliant.",
+          "CRITICAL LOGIC FAULT: Draft 10 (GridPlatform) \u2014 The body says 'it's been about 10 days' and research data shows last_activity_days_ago is 10. Accurate.",
+          "CRITICAL LOGIC FAULT: Draft 11 (SpanConnect discovery) \u2014 The body says 'It's been a couple of weeks' but research data shows last_activity_days_ago is 16. This is approximately 2.3 weeks, so 'a couple of weeks' is slightly understated but not factually wrong. Compliant.",
+          "SIGN-OFF FAULT: All 11 drafts \u2014 The sign-off is 'OpsGrid Support Team' but the tone_profile specifies sign_off_name should be 'OpsGrid Support Team'. All drafts use the correct sign-off. Compliant.",
+          "SIGN-OFF FAULT: All 11 drafts \u2014 The sign-off should be from the sales_rep_name (Julia Okafor, Tom Reyes, Marcus Webb, Sarah Chen, Derek Santos) but instead all drafts sign off as 'OpsGrid Support Team'. RULE 3 VIOLATION: The sign-off does not match the sales rep attribution. The tone_profile specifies 'OpsGrid Support Team' as the sign_off_name, but this creates a disconnect where the email is written in first person by the rep but signed by a generic team. This is a systemic tone/attribution issue across all 11 drafts.",
+          "CRITICAL LOGIC FAULT: Draft 1 (SpanConnect negotiation) \u2014 The body says 'It's been a few weeks since we last connected' but research data shows last_activity_days_ago is 23. This is approximately 3.3 weeks, which is more than 'a few weeks' (typically 2-3 weeks). FAULT: Temporal reference is understated.",
+          "CRITICAL LOGIC FAULT: Draft 2 (CoreAnalytics) \u2014 The body says 'It's been about 18 days since we last connected' and research data confirms last_activity_days_ago is 18. Accurate.",
+          "CRITICAL LOGIC FAULT: Draft 3 (SwiftSuite) \u2014 The body says 'It's been about two weeks' and research data shows last_activity_days_ago is 14. This is approximately 2 weeks. Accurate.",
+          "CRITICAL LOGIC FAULT: Draft 7 (WaveIO) \u2014 The body says 'It's been about 16 days' and research data shows last_activity_days_ago is 16. Accurate.",
+          "CRITICAL LOGIC FAULT: Draft 8 (FluxTech) \u2014 The body says 'it's been about 18 days' and research data shows last_activity_days_ago is 18. Accurate.",
+          "CRITICAL LOGIC FAULT: Draft 9 (NovaCloud) \u2014 The"
+        ]
+      },
+      {
+        "node_id": "memory",
+        "agent_type": "memory_agent",
+        "status": "success",
+        "confidence": 1.0,
+        "tokens_in": 790,
+        "tokens_out": 15,
+        "cost_usd": 0.000865,
+        "model_used": "anthropic/claude-haiku-4-5-20251001",
+        "duration_ms": 3345,
+        "error": null,
+        "completed_at": "2026-03-30T06:52:22.116731",
+        "tools_used": [
+          "db_update_pattern"
+        ],
+        "node_description": "Store deal velocity and intervention patterns",
+        "delta_analysis": {
+          "summary": "Current run replicates the critical failure pattern from Past Situations #2 and #3, where workflows skipped interventions despite identified at-risk accounts. Historical context shows identical skip scenarios resulted in neutral outcomes, but prior successful runs queued interventions for critical accounts with positive results.",
+          "vs_history": "worse",
+          "new_signals": [
+            "repeated_skip_pattern_without_escalation",
+            "no_deal_processing_despite_tenant_context",
+            "missing_intervention_queue_action"
+          ],
+          "trend": "degrading"
+        },
+        "delta_vs_history": "worse",
+        "delta_trend": "degrading"
+      }
+    ],
+    "situation_summary": "",
+    "urgency": "",
+    "reasoning_confidence": null,
+    "memory_summary": "Processed 0 deals. 0 stalled. No pipeline interventions executed. Workflow skipped all processing.",
+    "delta_analysis": {
+      "summary": "Current run replicates the critical failure pattern from Past Situations #2 and #3, where workflows skipped interventions despite identified at-risk accounts. Historical context shows identical skip scenarios resulted in neutral outcomes, but prior successful runs queued interventions for critical accounts with positive results.",
+      "vs_history": "worse",
+      "new_signals": [
+        "repeated_skip_pattern_without_escalation",
+        "no_deal_processing_despite_tenant_context",
+        "missing_intervention_queue_action"
+      ],
+      "trend": "degrading"
+    },
+    "actions_summary": [],
+    "verification_summary": {
+      "passed": false,
+      "approved_count": 0,
+      "rejected_count": 11,
+      "prosecutor_issues": 59
+    }
+  }
+}

@@ -1,0 +1,447 @@
+{
+  "run_id": "261eb0d9-73ed-4926-a59f-47b8e1fc10cf",
+  "workflow_name": "finance_expense_monitoring",
+  "tenant_id": "cccb65f3-1e5f-4537-ac14-0dfadf89e76d",
+  "tenant_name": "OpsGrid Development",
+  "status": "completed",
+  "completed_at": "2026-03-29T18:01:05.661407",
+  "llm_stats": {
+    "total_tokens_in": 39000,
+    "total_tokens_out": 5255,
+    "total_cost_usd": 0.10073499999999999,
+    "total_calls": 13,
+    "cache_hits": 0,
+    "optimization_level": 1,
+    "by_agent": {
+      "research_agent": {
+        "calls": 3,
+        "tokens_in": 7573,
+        "tokens_out": 2305,
+        "cost_usd": 0.057294,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "tool_result_compressor": {
+        "calls": 2,
+        "tokens_in": 8632,
+        "tokens_out": 2226,
+        "cost_usd": 0.00494,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "hyde_rag": {
+        "calls": 2,
+        "tokens_in": 614,
+        "tokens_out": 275,
+        "cost_usd": 0.000498,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "reasoning_agent": {
+        "calls": 1,
+        "tokens_in": 3856,
+        "tokens_out": 65,
+        "cost_usd": 0.012543,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "drafting_agent": {
+        "calls": 2,
+        "tokens_in": 6130,
+        "tokens_out": 211,
+        "cost_usd": 0.021554999999999998,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "verification_agent": {
+        "calls": 2,
+        "tokens_in": 11507,
+        "tokens_out": 140,
+        "cost_usd": 0.003052,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "memory_agent": {
+        "calls": 1,
+        "tokens_in": 688,
+        "tokens_out": 33,
+        "cost_usd": 0.000853,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      }
+    },
+    "recent_calls": [
+      {
+        "call_id": "a2b161ec",
+        "agent": "tool_result_compressor",
+        "model": "claude-haiku-4-5-20251001",
+        "tokens_in": 4316,
+        "tokens_out": 1113,
+        "cost": "$0.00247",
+        "ms": 8694,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "00551bbb",
+        "agent": "research_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 3681,
+        "tokens_out": 1904,
+        "cost": "$0.03960",
+        "ms": 15516,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "0dbf177f",
+        "agent": "hyde_rag",
+        "model": "claude-haiku-4-5-20251001",
+        "tokens_in": 307,
+        "tokens_out": 127,
+        "cost": "$0.00024",
+        "ms": 2245,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "b34ac0bc",
+        "agent": "hyde_rag",
+        "model": "claude-haiku-4-5-20251001",
+        "tokens_in": 307,
+        "tokens_out": 148,
+        "cost": "$0.00026",
+        "ms": 4189,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "481bfaba",
+        "agent": "reasoning_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 3856,
+        "tokens_out": 65,
+        "cost": "$0.01254",
+        "ms": 24456,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "81900eb5",
+        "agent": "drafting_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 3198,
+        "tokens_out": 151,
+        "cost": "$0.01186",
+        "ms": 4317,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "402a212e",
+        "agent": "drafting_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 2932,
+        "tokens_out": 60,
+        "cost": "$0.00970",
+        "ms": 24818,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "0510b259",
+        "agent": "verification_agent",
+        "model": "claude-haiku-4-5-20251001",
+        "tokens_in": 5192,
+        "tokens_out": 63,
+        "cost": "$0.00138",
+        "ms": 15058,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "05048932",
+        "agent": "verification_agent",
+        "model": "claude-haiku-4-5-20251001",
+        "tokens_in": 6315,
+        "tokens_out": 77,
+        "cost": "$0.00168",
+        "ms": 15809,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "90e0e5e2",
+        "agent": "memory_agent",
+        "model": "anthropic/claude-haiku-4-5-20251001",
+        "tokens_in": 688,
+        "tokens_out": 33,
+        "cost": "$0.00085",
+        "ms": 7065,
+        "ok": true,
+        "cached": false
+      }
+    ]
+  },
+  "outcome": {
+    "status": "completed",
+    "nodes_completed": 6,
+    "total_tokens_in": 39000,
+    "total_tokens_out": 5255,
+    "total_cost_usd": 0.100735,
+    "cache_hits": 0,
+    "optimization_level": 1,
+    "by_agent": {
+      "research_agent": {
+        "calls": 3,
+        "tokens_in": 7573,
+        "tokens_out": 2305,
+        "cost_usd": 0.057294,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "tool_result_compressor": {
+        "calls": 2,
+        "tokens_in": 8632,
+        "tokens_out": 2226,
+        "cost_usd": 0.00494,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "hyde_rag": {
+        "calls": 2,
+        "tokens_in": 614,
+        "tokens_out": 275,
+        "cost_usd": 0.000498,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "reasoning_agent": {
+        "calls": 1,
+        "tokens_in": 3856,
+        "tokens_out": 65,
+        "cost_usd": 0.012543,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "drafting_agent": {
+        "calls": 2,
+        "tokens_in": 6130,
+        "tokens_out": 211,
+        "cost_usd": 0.021554999999999998,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "verification_agent": {
+        "calls": 2,
+        "tokens_in": 11507,
+        "tokens_out": 140,
+        "cost_usd": 0.003052,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "memory_agent": {
+        "calls": 1,
+        "tokens_in": 688,
+        "tokens_out": 33,
+        "cost_usd": 0.000853,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      }
+    },
+    "completed_at": "2026-03-29T18:01:05.407337",
+    "agent_runs": [
+      {
+        "node_id": "research",
+        "agent_type": "research_agent",
+        "status": "success",
+        "confidence": 0.95,
+        "tokens_in": 7573,
+        "tokens_out": 2305,
+        "cost_usd": 0.057294,
+        "model_used": "anthropic/claude-sonnet-4-6",
+        "duration_ms": 42518,
+        "error": null,
+        "completed_at": "2026-03-29T17:59:27.087275",
+        "tools_used": [
+          "finance_get_expenses",
+          "finance_get_employees"
+        ],
+        "node_description": "Fetch recent expense transactions and employee records"
+      },
+      {
+        "node_id": "reasoning",
+        "agent_type": "reasoning_agent",
+        "status": "success",
+        "confidence": 0.88,
+        "tokens_in": 3856,
+        "tokens_out": 65,
+        "cost_usd": 0.012543,
+        "model_used": "anthropic/claude-sonnet-4-6",
+        "duration_ms": 24467,
+        "error": null,
+        "completed_at": "2026-03-29T17:59:58.113083",
+        "tools_used": [],
+        "node_description": "Classify expense anomalies, score severity, recommend actions"
+      },
+      {
+        "node_id": "drafting",
+        "agent_type": "drafting_agent",
+        "status": "success",
+        "confidence": 0.85,
+        "tokens_in": 6130,
+        "tokens_out": 211,
+        "cost_usd": 0.021554999999999998,
+        "model_used": "anthropic/claude-sonnet-4-6",
+        "duration_ms": 29148,
+        "error": null,
+        "completed_at": "2026-03-29T18:00:27.308426",
+        "tools_used": [
+          "get_communication_history"
+        ],
+        "node_description": "Write professional manager notifications for policy violations"
+      },
+      {
+        "node_id": "verification",
+        "agent_type": "verification_agent",
+        "status": "success",
+        "confidence": 0.65,
+        "tokens_in": 11507,
+        "tokens_out": 140,
+        "cost_usd": 0.003052,
+        "model_used": "claude-haiku-4-5-20251001",
+        "duration_ms": 30895,
+        "error": null,
+        "completed_at": "2026-03-29T18:00:58.233029",
+        "tools_used": [],
+        "node_description": "Verify accuracy and tone of manager notifications",
+        "_prosecutor_issues": 18,
+        "_judge_verdict": "FAIL",
+        "_prosecutor_faults": [
+          "RULE 1: All 7 skipped_accounts lack manager_email \u2014 cannot draft alerts without valid recipient email addresses. This is a systemic blocker affecting 100% of anomalies.",
+          "RULE 1: Transaction 86de9896-8b76-426f-9c25-fbc3baba79ce (EMP-5913, HR) has no manager_email available \u2014 cannot send manager alert.",
+          "RULE 1: Transaction 0e698243-fdca-4fe8-ae8b-ea37efb77bc9 (EMP-8920, Operations) has no manager_email available \u2014 cannot send manager alert.",
+          "RULE 1: Transaction 87e3b0b9-1a2a-461e-ab3f-2414fc2f5572 (EMP-7636, Engineering) has no manager_email available \u2014 cannot send manager alert.",
+          "RULE 1: Transaction 5cdb07ed-cc34-4125-bbff-1a57ac7783f7 (EMP-7218, Engineering) has no manager_email available \u2014 cannot send manager alert.",
+          "RULE 1: Transactions 73ebba99-7bcd-4c57-8272-57425bfc6d8a and 7767c1fb-55ba-40e9-a9d0-db8bdb0376c3 (EMP-2835, Sales) have no manager_email available \u2014 cannot send manager alerts.",
+          "RULE 1: Transaction 8b9d082b-e170-408a-b846-7f27ae89e3b1 (EMP-9899, Operations) has no manager_email available \u2014 cannot send manager alert.",
+          "RULE 1: Transaction dd70e256-a6c5-48a3-9bcf-40981679828f (EMP-5232, Marketing) has no manager_email available \u2014 cannot send manager alert.",
+          "DATA INCONSISTENCY: Skipped account for EMP-5232 states 'receipt_attached: false' in reasoning but ground truth shows 'receipt_attached: true' for transaction dd70e256-a6c5-48a3-9bcf-40981679828f. Factual mismatch on receipt status.",
+          "DATA INCONSISTENCY: Skipped account for EMP-7636 states 'no receipt' in recommended_next_step but ground truth shows 'receipt_attached: false' (consistent). However, reasoning output claims 'no receipt attached' while transaction data confirms this \u2014 no fault here, but note the emphasis.",
+          "DATA INCONSISTENCY: Skipped account for EMP-5232 states 'Weekend expense of $262.14 is within the $300 policy limit' but reasoning output shows severity_score of 40 and anomaly_type 'weekend_expense' \u2014 the characterization as 'lowest priority' may understate the policy violation pattern across the batch.",
+          "LOGIC FAULT: Phase2_status reports 'All 8 anomalies across all 5 departments' but only 7 skipped_accounts are listed (HR, Operations x2, Engineering x2, Sales, Marketing). Count mismatch: 8 anomalies vs. 7 account records. Ground truth shows 8 transactions but only 7 employee records with manager data gaps.",
+          "LOGIC FAULT: Reasoning output lists 5 'critical_anomalies' with 'recommended_action: send_manager_alert' but no drafts were generated. The system identified these as requiring immediate manager alerts yet produced zero draft communications \u2014 this is a process failure, not a data fault, but indicates the blocking issue prevented execution.",
+          "SEVERITY INCONSISTENCY: EMP-5232 (Marketing) transaction dd70e256-a6c5-48a3-9bcf-40981679828f is marked severity_score 40 (lowest in batch) and 'lowest priority' but is still flagged as an anomaly requiring manager review. The severity threshold and action mapping are unclear.",
+          "MISSING CONTEXT: Reasoning output references 'duplicate-flagged' for transactions 0e698243-fdca-4fe8-ae8b-ea37efb77bc9 (EMP-8920) and 8b9d082b-e170-408a-b846-7f27ae89e3b1 (EMP-9899) but ground truth does not provide duplicate transaction IDs or evidence of the duplicate. The 'duplicate' anomaly_type is stated but not substantiated with comparison data.",
+          "MISSING CONTEXT: Reasoning output states EMP-2835 has 'pattern' of violations (two anomalies) but does not provide historical context or prior violation count. Pattern assessment requires baseline data not present in ground truth.",
+          "RULE 5: All 8 transactions are referenced by valid transaction_id in skipped_accounts, but no drafts were generated to verify transaction_id inclusion in draft text. Cannot assess RULE 5 compliance for non-existent drafts.",
+          "RULE 6: Cannot assess RULE 6 (no duplicates within 48h) because no drafts were generated and no communication_history is provided. This is a tool-based verification that the Judge must handle."
+        ]
+      },
+      {
+        "node_id": "memory",
+        "agent_type": "memory_agent",
+        "status": "success",
+        "confidence": 1.0,
+        "tokens_in": 688,
+        "tokens_out": 33,
+        "cost_usd": 0.000853,
+        "model_used": "anthropic/claude-haiku-4-5-20251001",
+        "duration_ms": 7140,
+        "error": null,
+        "completed_at": "2026-03-29T18:01:05.400495",
+        "tools_used": [
+          "db_update_pattern"
+        ],
+        "node_description": "Store expense anomaly patterns for future detection",
+        "delta_analysis": {
+          "comparison_to_historical_lessons": [
+            {
+              "lesson_id": "Past Situation #1",
+              "similarity": "59%",
+              "delta_finding": "CRITICAL DIVERGENCE: Historical run detected 8 anomalies totaling $15,951.45 with systemic control gaps (62.5% missing receipts, 75% unapproved). Current run skipped entirely with zero detection capability. This represents regression in anomaly detection execution.",
+              "risk_level": "high",
+              "recommendation": "Verify workflow trigger conditions and execution pipeline. Current skip pattern mirrors Situation #3 (27% similarity) where workflow was also bypassed."
+            },
+            {
+              "lesson_id": "Past Situation #2",
+              "similarity": "33%",
+              "delta_finding": "PATTERN MATCH: Both runs show workflow skip with zero interventions. Historical lesson explicitly flagged this as 'complete intervention failure.' Current run repeats this failure mode without manual escalation trigger.",
+              "risk_level": "high",
+              "recommendation": "Implement fallback escalation protocol when workflow skip is detected to prevent unmonitored expense anomalies."
+            },
+            {
+              "lesson_id": "Past Situation #3",
+              "similarity": "27%",
+              "delta_finding": "IDENTICAL OUTCOME: Both runs skipped with zero processing. Pattern suggests systemic workflow execution issue rather than absence of anomalies.",
+              "risk_level": "medium",
+              "recommendation": "Investigate workflow scheduling, trigger conditions, and execution logs for infrastructure-level failures."
+            }
+          ],
+          "learnable_insights": [
+            {
+              "insight": "workflow_skip_recurrence",
+              "frequency": "3 of 3 recent runs show skip or zero-intervention patterns",
+              "implication": "Expense anomaly detection system may be offline or misconfigured",
+              "action_required": true
+            },
+            {
+              "insight": "historical_anomaly_baseline",
+              "from_lesson": "Past Situation #1",
+              "baseline_metrics": {
+                "typical_anomaly_count": 8,
+                "typical_total_amount": 15951.45,
+                "typical_receipt_gap_pct": 62.5,
+                "typical_approval_gap_pct": 75
+              },
+              "current_deviation": "Unable to assess - workflow skipped"
+            }
+          ]
+        },
+        "delta_vs_history": "no_history",
+        "delta_trend": "insufficient_data"
+      }
+    ],
+    "situation_summary": "8 expense anomalies totaling $15,951.45 detected across 5 departments (Engineering, Marketing, Sales, Operations, HR). Critical outlier: EMP-5913 (HR) submitted $7,718.03 travel with no receipt and no approval, 286% over policy. Systemic control gaps persist: 50% of anomalies lack receipts and 62.5% are unapproved.",
+    "urgency": "critical",
+    "reasoning_confidence": 0.88,
+    "memory_summary": "Workflow execution skipped with no transactions processed and no anomalies detected. Zero interventions queued.",
+    "delta_analysis": {
+      "comparison_to_historical_lessons": [
+        {
+          "lesson_id": "Past Situation #1",
+          "similarity": "59%",
+          "delta_finding": "CRITICAL DIVERGENCE: Historical run detected 8 anomalies totaling $15,951.45 with systemic control gaps (62.5% missing receipts, 75% unapproved). Current run skipped entirely with zero detection capability. This represents regression in anomaly detection execution.",
+          "risk_level": "high",
+          "recommendation": "Verify workflow trigger conditions and execution pipeline. Current skip pattern mirrors Situation #3 (27% similarity) where workflow was also bypassed."
+        },
+        {
+          "lesson_id": "Past Situation #2",
+          "similarity": "33%",
+          "delta_finding": "PATTERN MATCH: Both runs show workflow skip with zero interventions. Historical lesson explicitly flagged this as 'complete intervention failure.' Current run repeats this failure mode without manual escalation trigger.",
+          "risk_level": "high",
+          "recommendation": "Implement fallback escalation protocol when workflow skip is detected to prevent unmonitored expense anomalies."
+        },
+        {
+          "lesson_id": "Past Situation #3",
+          "similarity": "27%",
+          "delta_finding": "IDENTICAL OUTCOME: Both runs skipped with zero processing. Pattern suggests systemic workflow execution issue rather than absence of anomalies.",
+          "risk_level": "medium",
+          "recommendation": "Investigate workflow scheduling, trigger conditions, and execution logs for infrastructure-level failures."
+        }
+      ],
+      "learnable_insights": [
+        {
+          "insight": "workflow_skip_recurrence",
+          "frequency": "3 of 3 recent runs show skip or zero-intervention patterns",
+          "implication": "Expense anomaly detection system may be offline or misconfigured",
+          "action_required": true
+        },
+        {
+          "insight": "historical_anomaly_baseline",
+          "from_lesson": "Past Situation #1",
+          "baseline_metrics": {
+            "typical_anomaly_count": 8,
+            "typical_total_amount": 15951.45,
+            "typical_receipt_gap_pct": 62.5,
+            "typical_approval_gap_pct": 75
+          },
+          "current_deviation": "Unable to assess - workflow skipped"
+        }
+      ]
+    },
+    "actions_summary": [],
+    "verification_summary": {
+      "passed": false,
+      "approved_count": 0,
+      "rejected_count": 0,
+      "prosecutor_issues": 18
+    }
+  }
+}

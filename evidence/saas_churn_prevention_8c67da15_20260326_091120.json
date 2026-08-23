@@ -1,0 +1,386 @@
+{
+  "run_id": "8c67da15-54ff-4bde-bf57-e1aa9becf2a2",
+  "workflow_name": "saas_churn_prevention",
+  "tenant_id": "7ea3c9d4-535d-4378-ba34-885efef439f4",
+  "tenant_name": "opsgrid",
+  "status": "completed",
+  "completed_at": "2026-03-26T09:11:20.065062",
+  "llm_stats": {
+    "total_tokens_in": 25945,
+    "total_tokens_out": 3984,
+    "total_cost_usd": 0.068883,
+    "total_calls": 13,
+    "cache_hits": 0,
+    "optimization_level": 0,
+    "by_agent": {
+      "research_agent": {
+        "calls": 4,
+        "tokens_in": 9724,
+        "tokens_out": 374,
+        "cost_usd": 0.000212,
+        "last_model": "groq/llama-3.3-70b-versatile"
+      },
+      "hyde_rag": {
+        "calls": 2,
+        "tokens_in": 632,
+        "tokens_out": 387,
+        "cost_usd": 0.002567,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      },
+      "reasoning_agent": {
+        "calls": 1,
+        "tokens_in": 1774,
+        "tokens_out": 916,
+        "cost_usd": 0.019062,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "drafting_agent": {
+        "calls": 2,
+        "tokens_in": 7026,
+        "tokens_out": 764,
+        "cost_usd": 0.032538,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "verification_agent": {
+        "calls": 3,
+        "tokens_in": 6209,
+        "tokens_out": 934,
+        "cost_usd": 0.010879,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      },
+      "memory_agent": {
+        "calls": 1,
+        "tokens_in": 580,
+        "tokens_out": 609,
+        "cost_usd": 0.003625,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      }
+    },
+    "recent_calls": [
+      {
+        "call_id": "74dd6389",
+        "agent": "research_agent",
+        "model": "groq/llama-3.3-70b-versatile",
+        "tokens_in": 4542,
+        "tokens_out": 245,
+        "cost": "$0.00000",
+        "ms": 1497,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "5b79f046",
+        "agent": "hyde_rag",
+        "model": "anthropic/claude-haiku-4-5-20251001",
+        "tokens_in": 316,
+        "tokens_out": 185,
+        "cost": "$0.00124",
+        "ms": 3088,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "2b777830",
+        "agent": "hyde_rag",
+        "model": "anthropic/claude-haiku-4-5-20251001",
+        "tokens_in": 316,
+        "tokens_out": 202,
+        "cost": "$0.00133",
+        "ms": 3256,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "f43aa913",
+        "agent": "reasoning_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 1774,
+        "tokens_out": 916,
+        "cost": "$0.01906",
+        "ms": 16397,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "277de7e2",
+        "agent": "drafting_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 3432,
+        "tokens_out": 143,
+        "cost": "$0.01244",
+        "ms": 3211,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "c6934894",
+        "agent": "drafting_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 3594,
+        "tokens_out": 621,
+        "cost": "$0.02010",
+        "ms": 11833,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "958d00e6",
+        "agent": "verification_agent",
+        "model": "anthropic/claude-haiku-4-5-20251001",
+        "tokens_in": 1421,
+        "tokens_out": 285,
+        "cost": "$0.00285",
+        "ms": 3899,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "7a5143c4",
+        "agent": "verification_agent",
+        "model": "anthropic/claude-haiku-4-5-20251001",
+        "tokens_in": 2314,
+        "tokens_out": 141,
+        "cost": "$0.00302",
+        "ms": 1681,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "3171c10b",
+        "agent": "verification_agent",
+        "model": "anthropic/claude-haiku-4-5-20251001",
+        "tokens_in": 2474,
+        "tokens_out": 508,
+        "cost": "$0.00501",
+        "ms": 4465,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "209d6cd1",
+        "agent": "memory_agent",
+        "model": "anthropic/claude-haiku-4-5-20251001",
+        "tokens_in": 580,
+        "tokens_out": 609,
+        "cost": "$0.00363",
+        "ms": 5690,
+        "ok": true,
+        "cached": false
+      }
+    ]
+  },
+  "outcome": {
+    "status": "completed",
+    "nodes_completed": 6,
+    "total_tokens_in": 25945,
+    "total_tokens_out": 3984,
+    "total_cost_usd": 0.068883,
+    "cache_hits": 0,
+    "optimization_level": 0,
+    "by_agent": {
+      "research_agent": {
+        "calls": 4,
+        "tokens_in": 9724,
+        "tokens_out": 374,
+        "cost_usd": 0.000212,
+        "last_model": "groq/llama-3.3-70b-versatile"
+      },
+      "hyde_rag": {
+        "calls": 2,
+        "tokens_in": 632,
+        "tokens_out": 387,
+        "cost_usd": 0.002567,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      },
+      "reasoning_agent": {
+        "calls": 1,
+        "tokens_in": 1774,
+        "tokens_out": 916,
+        "cost_usd": 0.019062,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "drafting_agent": {
+        "calls": 2,
+        "tokens_in": 7026,
+        "tokens_out": 764,
+        "cost_usd": 0.032538,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "verification_agent": {
+        "calls": 3,
+        "tokens_in": 6209,
+        "tokens_out": 934,
+        "cost_usd": 0.010879,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      },
+      "memory_agent": {
+        "calls": 1,
+        "tokens_in": 580,
+        "tokens_out": 609,
+        "cost_usd": 0.003625,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      }
+    },
+    "completed_at": "2026-03-26T09:11:19.626783",
+    "agent_runs": [
+      {
+        "node_id": "research",
+        "agent_type": "research_agent",
+        "status": "success",
+        "confidence": 0.95,
+        "tokens_in": 9724,
+        "tokens_out": 374,
+        "cost_usd": 0.000212,
+        "model_used": "groq/llama-3.3-70b-versatile",
+        "duration_ms": 4699,
+        "error": null,
+        "completed_at": "2026-03-26T09:10:25.726001"
+      },
+      {
+        "node_id": "research",
+        "agent_type": "research_agent",
+        "status": "success",
+        "confidence": 0.95,
+        "tokens_in": 9724,
+        "tokens_out": 374,
+        "cost_usd": 0.000212,
+        "model_used": "groq/llama-3.3-70b-versatile",
+        "duration_ms": 4699,
+        "error": null,
+        "completed_at": "2026-03-26T09:10:25.726001"
+      },
+      {
+        "node_id": "reasoning",
+        "agent_type": "reasoning_agent",
+        "status": "success",
+        "confidence": 0.97,
+        "tokens_in": 1774,
+        "tokens_out": 916,
+        "cost_usd": 0.019062,
+        "model_used": "anthropic/claude-sonnet-4-6",
+        "duration_ms": 16403,
+        "error": null,
+        "completed_at": "2026-03-26T09:10:48.631416"
+      },
+      {
+        "node_id": "reasoning",
+        "agent_type": "reasoning_agent",
+        "status": "success",
+        "confidence": 0.97,
+        "tokens_in": 1774,
+        "tokens_out": 916,
+        "cost_usd": 0.019062,
+        "model_used": "anthropic/claude-sonnet-4-6",
+        "duration_ms": 16403,
+        "error": null,
+        "completed_at": "2026-03-26T09:10:48.631416"
+      },
+      {
+        "node_id": "drafting",
+        "agent_type": "drafting_agent",
+        "status": "success",
+        "confidence": 0.85,
+        "tokens_in": 7026,
+        "tokens_out": 764,
+        "cost_usd": 0.032538,
+        "model_used": "anthropic/claude-sonnet-4-6",
+        "duration_ms": 15088,
+        "error": null,
+        "completed_at": "2026-03-26T09:11:03.744709"
+      },
+      {
+        "node_id": "drafting",
+        "agent_type": "drafting_agent",
+        "status": "success",
+        "confidence": 0.85,
+        "tokens_in": 7026,
+        "tokens_out": 764,
+        "cost_usd": 0.032538,
+        "model_used": "anthropic/claude-sonnet-4-6",
+        "duration_ms": 15088,
+        "error": null,
+        "completed_at": "2026-03-26T09:11:03.744709"
+      },
+      {
+        "node_id": "verification",
+        "agent_type": "verification_agent",
+        "status": "success",
+        "confidence": 0.65,
+        "tokens_in": 6209,
+        "tokens_out": 934,
+        "cost_usd": 0.010879,
+        "model_used": "anthropic/claude-haiku-4-5-20251001",
+        "duration_ms": 10097,
+        "error": null,
+        "completed_at": "2026-03-26T09:11:13.866047",
+        "_prosecutor_issues": 8,
+        "_judge_verdict": "FAIL"
+      },
+      {
+        "node_id": "verification",
+        "agent_type": "verification_agent",
+        "status": "success",
+        "confidence": 0.65,
+        "tokens_in": 6209,
+        "tokens_out": 934,
+        "cost_usd": 0.010879,
+        "model_used": "anthropic/claude-haiku-4-5-20251001",
+        "duration_ms": 10097,
+        "error": null,
+        "completed_at": "2026-03-26T09:11:13.866047",
+        "_prosecutor_issues": 8,
+        "_judge_verdict": "FAIL"
+      },
+      {
+        "node_id": "memory",
+        "agent_type": "memory_agent",
+        "status": "success",
+        "confidence": 1.0,
+        "tokens_in": 580,
+        "tokens_out": 609,
+        "cost_usd": 0.003625,
+        "model_used": "anthropic/claude-haiku-4-5-20251001",
+        "duration_ms": 5725,
+        "error": null,
+        "completed_at": "2026-03-26T09:11:19.618813",
+        "delta_analysis": {
+          "comparison_to_historical": "No historical lessons available for opsgrid tenant (HyDE enabled). This is the first workflow run for this tenant.",
+          "baseline_established": false,
+          "recommendations": [
+            "Enable data collection on next run to establish baseline risk signal thresholds",
+            "Verify data pipeline connectivity for usage metrics, NPS scores, and support ticket counts",
+            "Confirm account eligibility criteria are correctly configured",
+            "Review workflow trigger conditions to ensure accounts are being selected for analysis"
+          ]
+        },
+        "delta_vs_history": "no_history",
+        "delta_trend": "insufficient_data"
+      },
+      {
+        "node_id": "memory",
+        "agent_type": "memory_agent",
+        "status": "success",
+        "confidence": 1.0,
+        "tokens_in": 580,
+        "tokens_out": 609,
+        "cost_usd": 0.003625,
+        "model_used": "anthropic/claude-haiku-4-5-20251001",
+        "duration_ms": 5725,
+        "error": null,
+        "completed_at": "2026-03-26T09:11:19.618813",
+        "delta_analysis": {
+          "comparison_to_historical": "No historical lessons available for opsgrid tenant (HyDE enabled). This is the first workflow run for this tenant.",
+          "baseline_established": false,
+          "recommendations": [
+            "Enable data collection on next run to establish baseline risk signal thresholds",
+            "Verify data pipeline connectivity for usage metrics, NPS scores, and support ticket counts",
+            "Confirm account eligibility criteria are correctly configured",
+            "Review workflow trigger conditions to ensure accounts are being selected for analysis"
+          ]
+        },
+        "delta_vs_history": "no_history",
+        "delta_trend": "insufficient_data"
+      }
+    ]
+  }
+}

@@ -1,0 +1,351 @@
+{
+  "run_id": "1900d526-8309-433e-9096-07e69553de67",
+  "workflow_name": "saas_pipeline_velocity",
+  "tenant_id": "81128e4c-c41e-4694-b9c6-03181d5842df",
+  "tenant_name": "opsgrid",
+  "status": "completed",
+  "completed_at": "2026-03-26T21:04:24.817248",
+  "llm_stats": {
+    "total_tokens_in": 72788,
+    "total_tokens_out": 26020,
+    "total_cost_usd": 0.453092,
+    "total_calls": 13,
+    "cache_hits": 0,
+    "optimization_level": 0,
+    "by_agent": {
+      "research_agent": {
+        "calls": 2,
+        "tokens_in": 5594,
+        "tokens_out": 3336,
+        "cost_usd": 0.066822,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "hyde_rag": {
+        "calls": 2,
+        "tokens_in": 648,
+        "tokens_out": 458,
+        "cost_usd": 0.0029379999999999996,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      },
+      "map_reduce_summarizer": {
+        "calls": 1,
+        "tokens_in": 2634,
+        "tokens_out": 3069,
+        "cost_usd": 0.017979,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      },
+      "reasoning_agent": {
+        "calls": 1,
+        "tokens_in": 6286,
+        "tokens_out": 8553,
+        "cost_usd": 0.147153,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "drafting_agent": {
+        "calls": 2,
+        "tokens_in": 37175,
+        "tokens_out": 4923,
+        "cost_usd": 0.18537,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "verification_agent": {
+        "calls": 4,
+        "tokens_in": 20012,
+        "tokens_out": 5435,
+        "cost_usd": 0.031161,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      },
+      "memory_agent": {
+        "calls": 1,
+        "tokens_in": 439,
+        "tokens_out": 246,
+        "cost_usd": 0.001669,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      }
+    },
+    "recent_calls": [
+      {
+        "call_id": "fff33cb6",
+        "agent": "hyde_rag",
+        "model": "anthropic/claude-haiku-4-5-20251001",
+        "tokens_in": 324,
+        "tokens_out": 188,
+        "cost": "$0.00126",
+        "ms": 2929,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "c4a7b007",
+        "agent": "map_reduce_summarizer",
+        "model": "anthropic/claude-haiku-4-5-20251001",
+        "tokens_in": 2634,
+        "tokens_out": 3069,
+        "cost": "$0.01798",
+        "ms": 18292,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "b1461e37",
+        "agent": "reasoning_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 6286,
+        "tokens_out": 8553,
+        "cost": "$0.14715",
+        "ms": 121514,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "7171af61",
+        "agent": "drafting_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 17745,
+        "tokens_out": 1358,
+        "cost": "$0.07361",
+        "ms": 21985,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "ef43db6a",
+        "agent": "drafting_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 19430,
+        "tokens_out": 3565,
+        "cost": "$0.11177",
+        "ms": 62315,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "6b3d1832",
+        "agent": "verification_agent",
+        "model": "anthropic/claude-haiku-4-5-20251001",
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost": "$0.00000",
+        "ms": 32181,
+        "ok": false,
+        "cached": false
+      },
+      {
+        "call_id": "b2fb9489",
+        "agent": "verification_agent",
+        "model": "groq/llama-3.1-8b-instant",
+        "tokens_in": 3378,
+        "tokens_out": 2605,
+        "cost": "$0.00038",
+        "ms": 4423,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "336aac8a",
+        "agent": "verification_agent",
+        "model": "anthropic/claude-haiku-4-5-20251001",
+        "tokens_in": 7539,
+        "tokens_out": 1257,
+        "cost": "$0.01382",
+        "ms": 5940,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "dc3c4bef",
+        "agent": "verification_agent",
+        "model": "anthropic/claude-haiku-4-5-20251001",
+        "tokens_in": 9095,
+        "tokens_out": 1573,
+        "cost": "$0.01696",
+        "ms": 10971,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "f5acc6d4",
+        "agent": "memory_agent",
+        "model": "anthropic/claude-haiku-4-5-20251001",
+        "tokens_in": 439,
+        "tokens_out": 246,
+        "cost": "$0.00167",
+        "ms": 2833,
+        "ok": true,
+        "cached": false
+      }
+    ]
+  },
+  "outcome": {
+    "status": "completed",
+    "nodes_completed": 6,
+    "total_tokens_in": 72788,
+    "total_tokens_out": 26020,
+    "total_cost_usd": 0.453092,
+    "cache_hits": 0,
+    "optimization_level": 0,
+    "by_agent": {
+      "research_agent": {
+        "calls": 2,
+        "tokens_in": 5594,
+        "tokens_out": 3336,
+        "cost_usd": 0.066822,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "hyde_rag": {
+        "calls": 2,
+        "tokens_in": 648,
+        "tokens_out": 458,
+        "cost_usd": 0.0029379999999999996,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      },
+      "map_reduce_summarizer": {
+        "calls": 1,
+        "tokens_in": 2634,
+        "tokens_out": 3069,
+        "cost_usd": 0.017979,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      },
+      "reasoning_agent": {
+        "calls": 1,
+        "tokens_in": 6286,
+        "tokens_out": 8553,
+        "cost_usd": 0.147153,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "drafting_agent": {
+        "calls": 2,
+        "tokens_in": 37175,
+        "tokens_out": 4923,
+        "cost_usd": 0.18537,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "verification_agent": {
+        "calls": 4,
+        "tokens_in": 20012,
+        "tokens_out": 5435,
+        "cost_usd": 0.031161,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      },
+      "memory_agent": {
+        "calls": 1,
+        "tokens_in": 439,
+        "tokens_out": 246,
+        "cost_usd": 0.001669,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      }
+    },
+    "completed_at": "2026-03-26T21:04:21.642283",
+    "agent_runs": [
+      {
+        "node_id": "research",
+        "agent_type": "research_agent",
+        "status": "success",
+        "confidence": 0.95,
+        "tokens_in": 5594,
+        "tokens_out": 3336,
+        "cost_usd": 0.066822,
+        "model_used": "anthropic/claude-sonnet-4-6",
+        "duration_ms": 42764,
+        "error": null,
+        "completed_at": "2026-03-26T20:59:31.182819",
+        "tools_used": [
+          "product_api_deals",
+          "get_activity_log"
+        ],
+        "node_description": "Fetch open deals, stage progression, and last activity dates"
+      },
+      {
+        "node_id": "reasoning",
+        "agent_type": "reasoning_agent",
+        "status": "success",
+        "confidence": 0.8,
+        "tokens_in": 6286,
+        "tokens_out": 8553,
+        "cost_usd": 0.147153,
+        "model_used": "anthropic/claude-sonnet-4-6",
+        "duration_ms": 121527,
+        "error": null,
+        "completed_at": "2026-03-26T21:02:00.397543",
+        "tools_used": [],
+        "node_description": "Identify stalled deals, calculate velocity scores, recommend interventions"
+      },
+      {
+        "node_id": "drafting",
+        "agent_type": "drafting_agent",
+        "status": "success",
+        "confidence": 0.85,
+        "tokens_in": 37175,
+        "tokens_out": 4923,
+        "cost_usd": 0.18537,
+        "model_used": "anthropic/claude-sonnet-4-6",
+        "duration_ms": 84502,
+        "error": null,
+        "completed_at": "2026-03-26T21:03:24.977940",
+        "tools_used": [
+          "get_communication_history"
+        ],
+        "node_description": "Write personalized re-engagement emails for stalled deals"
+      },
+      {
+        "node_id": "verification",
+        "agent_type": "verification_agent",
+        "status": "success",
+        "confidence": 0.65,
+        "tokens_in": 20012,
+        "tokens_out": 5435,
+        "cost_usd": 0.031160999999999998,
+        "model_used": "anthropic/claude-haiku-4-5-20251001",
+        "duration_ms": 53740,
+        "error": null,
+        "completed_at": "2026-03-26T21:04:18.752481",
+        "tools_used": [
+          "get_communication_history"
+        ],
+        "node_description": "Check factual accuracy, no duplicates, appropriate tone",
+        "_prosecutor_issues": 60,
+        "_judge_verdict": "FAIL"
+      },
+      {
+        "node_id": "memory",
+        "agent_type": "memory_agent",
+        "status": "success",
+        "confidence": 1.0,
+        "tokens_in": 439,
+        "tokens_out": 246,
+        "cost_usd": 0.001669,
+        "model_used": "anthropic/claude-haiku-4-5-20251001",
+        "duration_ms": 2845,
+        "error": null,
+        "completed_at": "2026-03-26T21:04:21.633247",
+        "tools_used": [
+          "db_update_pattern"
+        ],
+        "node_description": "Store deal velocity and intervention patterns",
+        "delta_analysis": {
+          "comparison_to_historical": "N/A \u2014 no historical lessons available for tenant 'opsgrid' (HyDE initialization phase)",
+          "baseline_status": "First run \u2014 establishing baseline metrics",
+          "recommendation": "Rerun workflow with active deal data to begin pattern extraction and establish tenant-specific benchmarks for: stage dwell times, value correlation analysis, and rep performance tracking"
+        },
+        "delta_vs_history": "no_history",
+        "delta_trend": "insufficient_data"
+      }
+    ],
+    "situation_summary": "",
+    "urgency": "",
+    "reasoning_confidence": null,
+    "memory_summary": "Workflow execution skipped \u2014 no deal data processed. Unable to extract sales pipeline patterns. No stalled deals, stage bottlenecks, or rep performance metrics available for analysis.",
+    "delta_analysis": {
+      "comparison_to_historical": "N/A \u2014 no historical lessons available for tenant 'opsgrid' (HyDE initialization phase)",
+      "baseline_status": "First run \u2014 establishing baseline metrics",
+      "recommendation": "Rerun workflow with active deal data to begin pattern extraction and establish tenant-specific benchmarks for: stage dwell times, value correlation analysis, and rep performance tracking"
+    },
+    "actions_summary": [],
+    "verification_summary": {
+      "passed": false,
+      "approved_count": 0,
+      "rejected_count": 11,
+      "prosecutor_issues": 60
+    }
+  }
+}

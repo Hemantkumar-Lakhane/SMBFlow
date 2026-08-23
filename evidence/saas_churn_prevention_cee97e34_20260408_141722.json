@@ -1,0 +1,449 @@
+{
+  "run_id": "cee97e34-0aa3-4c1b-9aeb-d1e9f2a770dc",
+  "workflow_name": "saas_churn_prevention",
+  "tenant_id": "a083411e-e988-4bfa-a029-dcfb582b094a",
+  "tenant_name": "OpsGrid Development",
+  "status": "completed",
+  "completed_at": "2026-04-08T14:17:22.239225",
+  "llm_stats": {
+    "total_tokens_in": 53135,
+    "total_tokens_out": 9181,
+    "total_cost_usd": 0.080896,
+    "total_calls": 17,
+    "cache_hits": 0,
+    "optimization_level": 1,
+    "by_agent": {
+      "research_agent": {
+        "calls": 2,
+        "tokens_in": 5150,
+        "tokens_out": 1401,
+        "cost_usd": 0.003038,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "tool_result_compressor": {
+        "calls": 1,
+        "tokens_in": 3455,
+        "tokens_out": 1897,
+        "cost_usd": 0.003235,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "hyde_rag": {
+        "calls": 4,
+        "tokens_in": 1139,
+        "tokens_out": 949,
+        "cost_usd": 0.001471,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "reasoning_agent": {
+        "calls": 1,
+        "tokens_in": 3351,
+        "tokens_out": 56,
+        "cost_usd": 0.010893,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "drafting_agent": {
+        "calls": 3,
+        "tokens_in": 10537,
+        "tokens_out": 832,
+        "cost_usd": 0.044091000000000005,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "verification_agent": {
+        "calls": 3,
+        "tokens_in": 22751,
+        "tokens_out": 2549,
+        "cost_usd": 0.013202000000000002,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "execution_agent": {
+        "calls": 2,
+        "tokens_in": 5141,
+        "tokens_out": 1444,
+        "cost_usd": 0.00309,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "memory_agent": {
+        "calls": 1,
+        "tokens_in": 1611,
+        "tokens_out": 53,
+        "cost_usd": 0.001876,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      }
+    },
+    "recent_calls": [
+      {
+        "call_id": "eb463cd9",
+        "agent": "drafting_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 4346,
+        "tokens_out": 173,
+        "cost": "$0.01563",
+        "ms": 3815,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "7b56e250",
+        "agent": "drafting_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 2550,
+        "tokens_out": 85,
+        "cost": "$0.00893",
+        "ms": 35931,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "bd45717c",
+        "agent": "verification_agent",
+        "model": "anthropic/claude-haiku-4-5-20251001",
+        "tokens_in": 5530,
+        "tokens_out": 48,
+        "cost": "$0.00577",
+        "ms": 11134,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "07ad5c3d",
+        "agent": "verification_agent",
+        "model": "claude-haiku-4-5-20251001",
+        "tokens_in": 8255,
+        "tokens_out": 580,
+        "cost": "$0.00279",
+        "ms": 5824,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "15ca6a7d",
+        "agent": "verification_agent",
+        "model": "claude-haiku-4-5-20251001",
+        "tokens_in": 8966,
+        "tokens_out": 1921,
+        "cost": "$0.00464",
+        "ms": 17428,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "a0ec4292",
+        "agent": "execution_agent",
+        "model": "claude-haiku-4-5-20251001",
+        "tokens_in": 2494,
+        "tokens_out": 682,
+        "cost": "$0.00148",
+        "ms": 5335,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "0d1b5430",
+        "agent": "execution_agent",
+        "model": "claude-haiku-4-5-20251001",
+        "tokens_in": 2647,
+        "tokens_out": 762,
+        "cost": "$0.00161",
+        "ms": 5467,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "ce75d3d7",
+        "agent": "memory_agent",
+        "model": "anthropic/claude-haiku-4-5-20251001",
+        "tokens_in": 1611,
+        "tokens_out": 53,
+        "cost": "$0.00188",
+        "ms": 11449,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "01d2de8f",
+        "agent": "hyde_rag",
+        "model": "claude-haiku-4-5-20251001",
+        "tokens_in": 266,
+        "tokens_out": 254,
+        "cost": "$0.00038",
+        "ms": 4503,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "02cf88ff",
+        "agent": "hyde_rag",
+        "model": "claude-haiku-4-5-20251001",
+        "tokens_in": 215,
+        "tokens_out": 241,
+        "cost": "$0.00036",
+        "ms": 4225,
+        "ok": true,
+        "cached": false
+      }
+    ]
+  },
+  "outcome": {
+    "status": "completed",
+    "nodes_completed": 6,
+    "total_tokens_in": 52920,
+    "total_tokens_out": 8940,
+    "total_cost_usd": 0.080541,
+    "cache_hits": 0,
+    "optimization_level": 1,
+    "by_agent": {
+      "research_agent": {
+        "calls": 2,
+        "tokens_in": 5150,
+        "tokens_out": 1401,
+        "cost_usd": 0.003038,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "tool_result_compressor": {
+        "calls": 1,
+        "tokens_in": 3455,
+        "tokens_out": 1897,
+        "cost_usd": 0.003235,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "hyde_rag": {
+        "calls": 4,
+        "tokens_in": 1139,
+        "tokens_out": 949,
+        "cost_usd": 0.001471,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "reasoning_agent": {
+        "calls": 1,
+        "tokens_in": 3351,
+        "tokens_out": 56,
+        "cost_usd": 0.010893,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "drafting_agent": {
+        "calls": 3,
+        "tokens_in": 10537,
+        "tokens_out": 832,
+        "cost_usd": 0.044091000000000005,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "verification_agent": {
+        "calls": 3,
+        "tokens_in": 22751,
+        "tokens_out": 2549,
+        "cost_usd": 0.013202000000000002,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "execution_agent": {
+        "calls": 2,
+        "tokens_in": 5141,
+        "tokens_out": 1444,
+        "cost_usd": 0.00309,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "memory_agent": {
+        "calls": 1,
+        "tokens_in": 1611,
+        "tokens_out": 53,
+        "cost_usd": 0.001876,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      }
+    },
+    "completed_at": "2026-04-08T14:17:17.554507",
+    "agent_runs": [
+      {
+        "node_id": "research",
+        "agent_type": "research_agent",
+        "status": "success",
+        "confidence": 0.95,
+        "tokens_in": 5150,
+        "tokens_out": 1401,
+        "cost_usd": 0.003038,
+        "model_used": "claude-haiku-4-5-20251001",
+        "duration_ms": 22612,
+        "error": null,
+        "completed_at": "2026-04-08T14:14:54.062253",
+        "tools_used": [
+          "product_api_usage",
+          "product_api_nps"
+        ],
+        "node_description": "Fetch usage metrics, NPS scores, support data for customer accounts"
+      },
+      {
+        "node_id": "reasoning",
+        "agent_type": "reasoning_agent",
+        "status": "success",
+        "confidence": 0.95,
+        "tokens_in": 3351,
+        "tokens_out": 56,
+        "cost_usd": 0.010893,
+        "model_used": "anthropic/claude-sonnet-4-6",
+        "duration_ms": 25729,
+        "error": null,
+        "completed_at": "2026-04-08T14:15:29.277328",
+        "tools_used": [],
+        "node_description": "Apply weighted churn model, classify accounts by risk level"
+      },
+      {
+        "node_id": "drafting",
+        "agent_type": "drafting_agent",
+        "status": "success",
+        "confidence": 0.85,
+        "tokens_in": 10537,
+        "tokens_out": 832,
+        "cost_usd": 0.044091000000000005,
+        "model_used": "anthropic/claude-sonnet-4-6",
+        "duration_ms": 46259,
+        "error": null,
+        "completed_at": "2026-04-08T14:16:15.589360",
+        "tools_used": [
+          "get_communication_history",
+          "get_activity_log"
+        ],
+        "node_description": "Write personalized CSM emails for critical and at-risk accounts"
+      },
+      {
+        "node_id": "verification",
+        "agent_type": "verification_agent",
+        "status": "success",
+        "confidence": 0.92,
+        "tokens_in": 22751,
+        "tokens_out": 2549,
+        "cost_usd": 0.013202,
+        "model_used": "claude-haiku-4-5-20251001",
+        "duration_ms": 34535,
+        "error": null,
+        "completed_at": "2026-04-08T14:16:50.156983",
+        "tools_used": [
+          "get_communication_history"
+        ],
+        "node_description": "Check factual accuracy, tone, duplicate prevention, business rule compliance",
+        "_prosecutor_issues": 23,
+        "_judge_verdict": "PASS",
+        "_prosecutor_faults": [
+          "RULE 4: Draft 1 (VoltDesk) claims '8 open support tickets' but research data shows tickets_30d=9 with open_tickets=8. The email states '8 open support tickets that haven't been resolved yet' which is factually correct per research, but the phrasing 'I can see there are 8 open support tickets' without context of total tickets (9) could be misleading. However, the core metric (8 open) matches research data exactly \u2014 NO FAULT on this specific claim.",
+          "RULE 4: Draft 2 (NovaWorks) states '14 support tickets over the past 30 days' which matches research data (tickets_30d=14) \u2014 ACCURATE.",
+          "RULE 4: Draft 2 (NovaWorks) states 'daily active usage has dropped 47.1%' which matches research data (dau_trend_pct=-47.1) \u2014 ACCURATE.",
+          "RULE 4: Draft 2 (NovaWorks) references 'renewal coming up in June' and research shows renewal_date='2026-06-01' \u2014 ACCURATE.",
+          "RULE 4: Draft 3 (ClearSolutions) states 'last login on ClearSolutions' account was 43 days ago' which matches research data (last_login_days_ago=43) \u2014 ACCURATE.",
+          "RULE 4: Draft 3 (ClearSolutions) states '6 support tickets still unresolved' which matches research data (open_tickets=6) \u2014 ACCURATE.",
+          "RULE 4: Draft 4 (PeakSolutions) states 'Daily active usage has declined 50.1% over the past 30 days' which matches research data (dau_trend_pct=-50.1) \u2014 ACCURATE.",
+          "RULE 4: Draft 4 (PeakSolutions) states 'your recent support tickets were all resolved' which matches research data (open_tickets=0 out of tickets_30d=10) \u2014 ACCURATE.",
+          "RULE 4: Draft 5 (BoldConnect) states 'Daily active usage is down 45.2% over the past 30 days' which matches research data (dau_trend_pct=-45.2) \u2014 ACCURATE.",
+          "RULE 4: Draft 5 (BoldConnect) states 'there are still 4 open support tickets' which matches research data (open_tickets=4) \u2014 ACCURATE.",
+          "RULE 1: All 5 drafts have valid recipient_email addresses (contain @) \u2014 PASS.",
+          "RULE 1: All 5 drafts have real recipient_name values matching research data \u2014 PASS.",
+          "RULE 1: All 5 drafts have real csm_name values (Marcus Webb, Derek Santos, Derek Santos, Tom Reyes, Julia Okafor) \u2014 PASS.",
+          "RULE 5: No placeholder variables detected in any draft ([Company], [Date], [Metric], [Action], {variable}, etc.) \u2014 PASS.",
+          "RULE 3: All 5 drafts use professional, data-driven tone consistent with 'medium' formality \u2014 PASS.",
+          "RULE 3: All 5 drafts sign off with 'OpsGrid Support Team' as specified in brand voice \u2014 PASS.",
+          "RULE 3: No phrases from avoid_phrases list detected (list not provided, but no generic/overly formal language detected) \u2014 PASS.",
+          "RULE 6: Draft 1 subject 'VoltDesk \u2014 daily active usage down 67.6%, let's connect this week' references company name and specific metric \u2014 PASS.",
+          "RULE 6: Draft 2 subject 'NovaWorks \u2014 14 support tickets in 30 days, I want to help resolve this' references company name and specific metric \u2014 PASS.",
+          "RULE 6: Draft 3 subject 'ClearSolutions \u2014 checking in after 43 days of no platform activity' references company name and specific metric \u2014 PASS.",
+          "RULE 6: Draft 4 subject 'PeakSolutions \u2014 daily usage down 50.1%, wanted to check in' references company name and specific metric \u2014 PASS.",
+          "RULE 6: Draft 5 subject 'BoldConnect \u2014 4 open tickets and a 45.2% usage drop, let's fix this' references company name and specific metrics \u2014 PASS.",
+          "RULE 2: No communication_history data provided in input. Cannot verify safe_to_email status. This rule requires external tool verification which is outside scope of text-based prosecution."
+        ]
+      },
+      {
+        "node_id": "execution",
+        "agent_type": "execution_agent",
+        "status": "success",
+        "confidence": 1.0,
+        "tokens_in": 5141,
+        "tokens_out": 1444,
+        "cost_usd": 0.00309,
+        "model_used": "claude-haiku-4-5-20251001",
+        "duration_ms": 11090,
+        "error": null,
+        "completed_at": "2026-04-08T14:17:01.271910",
+        "tools_used": [
+          "db_write_outcome"
+        ],
+        "node_description": "Queue emails, create CRM tasks, post Slack alerts"
+      },
+      {
+        "node_id": "memory",
+        "agent_type": "memory_agent",
+        "status": "success",
+        "confidence": 1.0,
+        "tokens_in": 1611,
+        "tokens_out": 53,
+        "cost_usd": 0.001876,
+        "model_used": "anthropic/claude-haiku-4-5-20251001",
+        "duration_ms": 16238,
+        "error": null,
+        "completed_at": "2026-04-08T14:17:17.547237",
+        "tools_used": [
+          "db_write_outcome",
+          "db_update_pattern"
+        ],
+        "node_description": "Log intervention for future outcome tracking",
+        "delta_analysis": {
+          "summary": "This is the first run for OpsGrid Development with no historical baseline; all 5 critical accounts have been identified and outreach initiated successfully. The workflow demonstrates strong multi-signal detection (usage drop, inactivity, support tickets) with 100% autonomous execution success, establishing a solid foundation for future pattern comparison.",
+          "vs_history": "no_history",
+          "new_signals": [
+            "saas_usage_drop_50plus_critical_signal",
+            "saas_inactivity_43days_churn_trigger",
+            "saas_support_tickets_14_30day_escalation",
+            "saas_combined_usage_tickets_compound_risk",
+            "saas_cto_recipient_targeting_pattern"
+          ],
+          "trend": "insufficient_data"
+        },
+        "delta_vs_history": "no_history",
+        "delta_trend": "insufficient_data"
+      }
+    ],
+    "situation_summary": "All 5 accounts are CRITICAL with churn scores ranging from 85-100. VoltDesk (MRR $10,711) leads urgency with a -67.6% DAU drop and NPS=2. Combined MRR at risk is $17,315. Immediate CSM outreach and CRM tasks are required across all accounts.",
+    "urgency": "critical",
+    "reasoning_confidence": 0.95,
+    "memory_summary": "Processed 5 accounts with 5 critical and 0 at-risk. Primary risk patterns: usage drop >50% (2 accounts), complete inactivity 43+ days (1 account), and high support ticket volume 14/30d (1 account). Compound risk detected in 1 account combining usage drop + open tickets. All 5 critical outreach emails successfully queued for CSM follow-up. MRR range $292-$10,711 indicates churn risk spans all account sizes. Autonomous workflow execution at 100% success rate with zero escalations required.",
+    "delta_analysis": {
+      "summary": "This is the first run for OpsGrid Development with no historical baseline; all 5 critical accounts have been identified and outreach initiated successfully. The workflow demonstrates strong multi-signal detection (usage drop, inactivity, support tickets) with 100% autonomous execution success, establishing a solid foundation for future pattern comparison.",
+      "vs_history": "no_history",
+      "new_signals": [
+        "saas_usage_drop_50plus_critical_signal",
+        "saas_inactivity_43days_churn_trigger",
+        "saas_support_tickets_14_30day_escalation",
+        "saas_combined_usage_tickets_compound_risk",
+        "saas_cto_recipient_targeting_pattern"
+      ],
+      "trend": "insufficient_data"
+    },
+    "actions_summary": [
+      {
+        "action": "email_queued",
+        "status": "success",
+        "account_id": "641676f0-5fa6-4414-aa52-9474c2915335"
+      },
+      {
+        "action": "email_queued",
+        "status": "success",
+        "account_id": "76ef9fe1-a745-47fa-ab14-97074b8ebd6f"
+      },
+      {
+        "action": "email_queued",
+        "status": "success",
+        "account_id": "7a4d03e0-a9c0-412e-8834-b0f53061a433"
+      },
+      {
+        "action": "email_queued",
+        "status": "success",
+        "account_id": "fbf3d8ed-422e-414b-8e1a-286779dbf986"
+      },
+      {
+        "action": "email_queued",
+        "status": "success",
+        "account_id": "b80b0bd8-377a-4b7f-a6df-4e856c3d2dd5"
+      }
+    ],
+    "verification_summary": {
+      "passed": true,
+      "approved_count": 5,
+      "rejected_count": 0,
+      "prosecutor_issues": 23
+    }
+  }
+}

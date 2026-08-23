@@ -1,0 +1,212 @@
+{
+  "run_id": "f0cae0d6-15f5-48ed-8a94-63f2261cd16d",
+  "workflow_name": "saas_churn_prevention",
+  "tenant_id": "cccb65f3-1e5f-4537-ac14-0dfadf89e76d",
+  "tenant_name": "OpsGrid Development",
+  "status": "completed",
+  "completed_at": "2026-03-29T17:54:59.250533",
+  "llm_stats": {
+    "total_tokens_in": 27390,
+    "total_tokens_out": 5664,
+    "total_cost_usd": 0.131683,
+    "total_calls": 7,
+    "cache_hits": 0,
+    "optimization_level": 0,
+    "by_agent": {
+      "research_agent": {
+        "calls": 3,
+        "tokens_in": 14809,
+        "tokens_out": 3050,
+        "cost_usd": 0.09017700000000001,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "hyde_rag": {
+        "calls": 2,
+        "tokens_in": 658,
+        "tokens_out": 488,
+        "cost_usd": 0.000775,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "map_reduce_summarizer": {
+        "calls": 1,
+        "tokens_in": 3289,
+        "tokens_out": 2035,
+        "cost_usd": 0.013464,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      },
+      "reasoning_agent": {
+        "calls": 1,
+        "tokens_in": 8634,
+        "tokens_out": 91,
+        "cost_usd": 0.027267,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      }
+    },
+    "recent_calls": [
+      {
+        "call_id": "595bd976",
+        "agent": "research_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 1622,
+        "tokens_out": 107,
+        "cost": "$0.00647",
+        "ms": 2625,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "43a43f07",
+        "agent": "research_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 4939,
+        "tokens_out": 135,
+        "cost": "$0.01684",
+        "ms": 3634,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "5847e408",
+        "agent": "research_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 8248,
+        "tokens_out": 2808,
+        "cost": "$0.06686",
+        "ms": 24863,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "5718e29f",
+        "agent": "hyde_rag",
+        "model": "claude-haiku-4-5-20251001",
+        "tokens_in": 329,
+        "tokens_out": 242,
+        "cost": "$0.00038",
+        "ms": 3369,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "ceca37c2",
+        "agent": "hyde_rag",
+        "model": "claude-haiku-4-5-20251001",
+        "tokens_in": 329,
+        "tokens_out": 246,
+        "cost": "$0.00039",
+        "ms": 3463,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "fccb8f53",
+        "agent": "map_reduce_summarizer",
+        "model": "anthropic/claude-haiku-4-5-20251001",
+        "tokens_in": 3289,
+        "tokens_out": 2035,
+        "cost": "$0.01346",
+        "ms": 19287,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "91777d15",
+        "agent": "reasoning_agent",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tokens_in": 8634,
+        "tokens_out": 91,
+        "cost": "$0.02727",
+        "ms": 38508,
+        "ok": true,
+        "cached": false
+      }
+    ]
+  },
+  "outcome": {
+    "status": "completed",
+    "nodes_completed": 6,
+    "total_tokens_in": 27390,
+    "total_tokens_out": 5664,
+    "total_cost_usd": 0.131683,
+    "cache_hits": 0,
+    "optimization_level": 0,
+    "by_agent": {
+      "research_agent": {
+        "calls": 3,
+        "tokens_in": 14809,
+        "tokens_out": 3050,
+        "cost_usd": 0.09017700000000001,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      },
+      "hyde_rag": {
+        "calls": 2,
+        "tokens_in": 658,
+        "tokens_out": 488,
+        "cost_usd": 0.000775,
+        "last_model": "claude-haiku-4-5-20251001"
+      },
+      "map_reduce_summarizer": {
+        "calls": 1,
+        "tokens_in": 3289,
+        "tokens_out": 2035,
+        "cost_usd": 0.013464,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      },
+      "reasoning_agent": {
+        "calls": 1,
+        "tokens_in": 8634,
+        "tokens_out": 91,
+        "cost_usd": 0.027267,
+        "last_model": "anthropic/claude-sonnet-4-6"
+      }
+    },
+    "completed_at": "2026-03-29T17:54:59.011172",
+    "agent_runs": [
+      {
+        "node_id": "research",
+        "agent_type": "research_agent",
+        "status": "success",
+        "confidence": 0.95,
+        "tokens_in": 14809,
+        "tokens_out": 3050,
+        "cost_usd": 0.09017700000000001,
+        "model_used": "anthropic/claude-sonnet-4-6",
+        "duration_ms": 31253,
+        "error": null,
+        "completed_at": "2026-03-29T17:53:53.923424",
+        "tools_used": [
+          "product_api_usage",
+          "product_api_nps"
+        ],
+        "node_description": "Fetch usage metrics, NPS scores, support data for customer accounts"
+      },
+      {
+        "node_id": "reasoning",
+        "agent_type": "reasoning_agent",
+        "status": "success",
+        "confidence": 0.95,
+        "tokens_in": 8634,
+        "tokens_out": 91,
+        "cost_usd": 0.027267,
+        "model_used": "anthropic/claude-sonnet-4-6",
+        "duration_ms": 38522,
+        "error": null,
+        "completed_at": "2026-03-29T17:54:58.960946",
+        "tools_used": [],
+        "node_description": "Apply weighted churn model, classify accounts by risk level"
+      }
+    ],
+    "situation_summary": "5 of 19 accounts are CRITICAL with $17,315 combined MRR at risk. All 5 show severe DAU declines (-43% to -68%), low NPS (1-4), and 20+ days inactivity. VoltDesk ($10,711 MRR) is highest priority; NovaWorks renewal is imminent in 63 days. 14 accounts lack sufficient data and are skipped.",
+    "urgency": "critical",
+    "reasoning_confidence": 0.95,
+    "memory_summary": "",
+    "delta_analysis": null,
+    "actions_summary": [],
+    "verification_summary": {
+      "passed": null,
+      "approved_count": 0,
+      "rejected_count": 0,
+      "prosecutor_issues": 0
+    }
+  }
+}

@@ -1,0 +1,183 @@
+{
+  "run_id": "8a850dcc-5f03-493b-9192-880caba45535",
+  "workflow_name": "saas_churn_prevention",
+  "tenant_id": "a083411e-e988-4bfa-a029-dcfb582b094a",
+  "tenant_name": "OpsGrid Development",
+  "status": "failed",
+  "completed_at": "2026-03-28T14:44:50.345507",
+  "llm_stats": {
+    "total_tokens_in": 51546,
+    "total_tokens_out": 10809,
+    "total_cost_usd": 0.08658,
+    "total_calls": 45,
+    "cache_hits": 0,
+    "optimization_level": 1,
+    "by_agent": {
+      "research_agent": {
+        "calls": 8,
+        "tokens_in": 6039,
+        "tokens_out": 4157,
+        "cost_usd": 0.026824,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      },
+      "tool_result_compressor": {
+        "calls": 2,
+        "tokens_in": 3357,
+        "tokens_out": 2786,
+        "cost_usd": 0.017287,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      },
+      "hyde_rag": {
+        "calls": 12,
+        "tokens_in": 1190,
+        "tokens_out": 1169,
+        "cost_usd": 0.0070350000000000005,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      },
+      "map_reduce_summarizer": {
+        "calls": 3,
+        "tokens_in": 3210,
+        "tokens_out": 1874,
+        "cost_usd": 0.01258,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      },
+      "reasoning_agent": {
+        "calls": 4,
+        "tokens_in": 7469,
+        "tokens_out": 93,
+        "cost_usd": 0.007934,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      },
+      "drafting_agent": {
+        "calls": 12,
+        "tokens_in": 11760,
+        "tokens_out": 632,
+        "cost_usd": 0.01492,
+        "last_model": "anthropic/claude-haiku-4-5-20251001"
+      },
+      "verification_agent": {
+        "calls": 4,
+        "tokens_in": 18521,
+        "tokens_out": 98,
+        "cost_usd": 0.0,
+        "last_model": "anthropic/claude-haiku-4-5"
+      }
+    },
+    "recent_calls": [
+      {
+        "call_id": "6c861d8e",
+        "agent": "hyde_rag",
+        "model": "anthropic/claude-haiku-4-5-20251001",
+        "tokens_in": 134,
+        "tokens_out": 141,
+        "cost": "$0.00084",
+        "ms": 2873,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "db26ef91",
+        "agent": "hyde_rag",
+        "model": "gemini/gemini-2.0-flash",
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost": "$0.00000",
+        "ms": 248,
+        "ok": false,
+        "cached": false
+      },
+      {
+        "call_id": "b93fa055",
+        "agent": "hyde_rag",
+        "model": "anthropic/claude-haiku-4-5-20251001",
+        "tokens_in": 134,
+        "tokens_out": 157,
+        "cost": "$0.00092",
+        "ms": 2734,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "8b48ff5c",
+        "agent": "verification_agent",
+        "model": "anthropic/claude-haiku-4-5",
+        "tokens_in": 4659,
+        "tokens_out": 20,
+        "cost": "$0.00000",
+        "ms": 5118,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "76b563fe",
+        "agent": "hyde_rag",
+        "model": "gemini/gemini-2.0-flash",
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost": "$0.00000",
+        "ms": 181,
+        "ok": false,
+        "cached": false
+      },
+      {
+        "call_id": "73c8ec57",
+        "agent": "hyde_rag",
+        "model": "anthropic/claude-haiku-4-5-20251001",
+        "tokens_in": 134,
+        "tokens_out": 166,
+        "cost": "$0.00096",
+        "ms": 2932,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "8d672c3b",
+        "agent": "verification_agent",
+        "model": "anthropic/claude-haiku-4-5",
+        "tokens_in": 4659,
+        "tokens_out": 20,
+        "cost": "$0.00000",
+        "ms": 5149,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "b1e36bf8",
+        "agent": "hyde_rag",
+        "model": "gemini/gemini-2.0-flash",
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost": "$0.00000",
+        "ms": 163,
+        "ok": false,
+        "cached": false
+      },
+      {
+        "call_id": "521b8b55",
+        "agent": "hyde_rag",
+        "model": "anthropic/claude-haiku-4-5-20251001",
+        "tokens_in": 134,
+        "tokens_out": 150,
+        "cost": "$0.00088",
+        "ms": 3074,
+        "ok": true,
+        "cached": false
+      },
+      {
+        "call_id": "05ce6366",
+        "agent": "verification_agent",
+        "model": "anthropic/claude-haiku-4-5",
+        "tokens_in": 4659,
+        "tokens_out": 27,
+        "cost": "$0.00000",
+        "ms": 7145,
+        "ok": true,
+        "cached": false
+      }
+    ]
+  },
+  "outcome": {
+    "error": "'VerificationAgent' object has no attribute '_build_judge_user'",
+    "failed_node": "verification"
+  }
+}
