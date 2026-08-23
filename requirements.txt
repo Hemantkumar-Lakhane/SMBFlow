@@ -45,7 +45,7 @@ tenacity
 # --- Security ---
 python-jose[cryptography]
 passlib
-bcrypt==3.1.7
+bcrypt
 cryptography
 
 # --- Logging / Config ---

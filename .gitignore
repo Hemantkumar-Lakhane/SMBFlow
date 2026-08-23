@@ -1,16 +1,19 @@
-# Logs
+﻿# Logs
 logs/
+*.log
 
-# Python virtual environment
+# Python
+__pycache__/
+*.pyc
 venv/
 
 # Environment files
 .env
-.env.example
 
 # Recordings
 epi-recordings/
 
-# Frontend dependencies
+# Frontend
 frontend/node_modules/
-.dump_paths_to_txt.ps1
+frontend/dist/
+frontend/.next/

@@ -49,7 +49,7 @@ async def _load_prompt(prompt_file: str) -> str:
     """Load a prompt template from the prompts directory (async)."""
     path = Path("workflows/prompts") / prompt_file
     if path.exists():
-        async with aiofiles.open(path, mode="r") as f:
+        async with aiofiles.open(path, mode="r", encoding="utf-8") as f:
             return await f.read()
     return ""   # Fallback — agent will use inline template
 
