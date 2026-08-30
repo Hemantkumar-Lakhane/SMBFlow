@@ -726,7 +726,10 @@ async def get_dashboard_data(db: AsyncSession, tenant_id: str) -> dict:
     from datetime import datetime, timezone, timedelta
     from core.state_manager import WorkflowInstance, Escalation, A2ARequest, AgentRunRecord
 
-    now = datetime.now(timezone.utc)
+    # NOTE: DB DateTime columns are naive UTC (Column(DateTime), default=datetime.utcnow)
+    # throughout this schema. Use naive UTC here so comparisons/date_trunc against
+    # started_at/completed_at don't raise "can't subtract offset-naive and offset-aware".
+    now = datetime.utcnow()
     today = now.replace(hour=0, minute=0, second=0, microsecond=0)
     first_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     ten_days_ago = today - timedelta(days=9)

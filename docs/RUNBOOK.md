@@ -40,10 +40,29 @@ npm run dev
 ## 4. Access the Application
 1. Open your web browser and navigate to the authentication page:
    [http://localhost:5173/auth](http://localhost:5173/auth)
-2. Log in using the default super admin credentials (seeded in `db/init.sql`):
-   - **Email:** `admin@smbflow.com`
-   - **Password:** `admin123`
-3. Upon successful login, you will be redirected to the `/dashboard`.
+2. Log in based on your desired role:
+   - **SMB Owner (Business User)**:
+     - **Email:** `demo@tenant.com` *(Replace with seeded tenant email)*
+     - **Password:** `demo123`
+     - **Redirect:** `/dashboard` (The SMB Owner Dashboard)
+   - **SMBFlow Admin (Super Admin / OpsGrid Team)**:
+     - **Email:** `admin@smbflow.com` (seeded in `db/init.sql`)
+     - **Password:** `admin123`
+     - **Redirect:** `/admin` (The Platform God View - *To be implemented*)
+
+---
+
+## 5. API Testing & Documentation
+While the backend is running, you can interact with the API endpoints directly:
+
+- **Interactive API Documentation (Swagger UI)**:
+  [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+- **Alternative API Documentation (ReDoc)**:
+  [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc)
+- **OpenAPI JSON Schema**:
+  [http://127.0.0.1:8000/openapi.json](http://127.0.0.1:8000/openapi.json)
+- **Health Check Endpoint**:
+  [http://127.0.0.1:8000/api/v1/health](http://127.0.0.1:8000/api/v1/health)
 
 ---
 

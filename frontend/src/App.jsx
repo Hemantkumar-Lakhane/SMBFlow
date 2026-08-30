@@ -47,9 +47,10 @@ function ProtectedRoute({ children, adminOnly = false }) {
   const { user, token } = useAuth()
   if (!token || !user) return <Navigate to="/auth" replace />
   if (adminOnly && user.role !== 'super_admin') return <Navigate to="/dashboard" replace />
-  if (!adminOnly && user.role === 'super_admin' && window.location.pathname === '/dashboard') {
-    return <Navigate to="/admin" replace />
-  }
+  // Admins are allowed to view the dashboard; removed automatic redirect
+  // if (!adminOnly && user.role === 'super_admin' && window.location.pathname === '/dashboard') {
+  //   return <Navigate to="/admin" replace />
+  // }
   return children
 }
 
