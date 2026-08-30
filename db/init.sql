@@ -294,7 +294,7 @@ CREATE TRIGGER update_budget_settings_updated_at
 -- Password: admin123 (bcrypt hash) — CHANGE IN PRODUCTION
 INSERT INTO users (email, password_hash, full_name, role)
 VALUES (
-    'admin@opsgrid.io',
+    'admin@smbflow.com',
     '$2b$12$kJBJTdvgvGbM98YN.UCWauIkWDUOoKcxuXjtBCXzMH9QdpxB6P/.e',
     'OpsGrid Admin',
     'super_admin'

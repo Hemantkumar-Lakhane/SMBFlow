@@ -26,3 +26,9 @@
 ## Summary of Runtime State
 The code is syntactically sound and well-structured, but the project is currently untestable in environments lacking Docker. 
 **Next Steps for Runtime:** Provision a PostgreSQL database and a Redis instance (either locally natively, or remotely) and configure the `.env` file to point to them.
+
+## Frontend Runtime Verification
+- **Mismatch**: CLI runs completed successfully in Lite Mode (no DB), but Frontend UI is strictly DB-driven. Thus, Admin dashboard shows 0 runs and 0 cost.
+- **UI Blocking**: The "Trigger Workflow" UI is broken due to a missing fallback when the `tenants` DB table is empty. Most client-facing pages require a tenant context.
+- **WebSocket Verification**: Blocked until a workflow can be successfully triggered from the UI.
+- **Fix**: Require Database Seeding with a mock tenant (e.g., `TechFlow SaaS Inc.`).

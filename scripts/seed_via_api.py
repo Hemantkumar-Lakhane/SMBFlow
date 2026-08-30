@@ -24,7 +24,7 @@ def main():
     # 2. Login to get token
     login_url = "http://localhost:8000/api/v1/auth/login"
     login_data = {
-        "email": "admin@opsgrid.io",
+        "email": "admin@smbflow.com",
         "password": "admin123"
     }
     

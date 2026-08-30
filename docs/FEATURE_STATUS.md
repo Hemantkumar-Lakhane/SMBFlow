@@ -14,7 +14,7 @@
 
 ## 4. AI / ML
 - **Status:** Prototype (LLM only)
-- **Details:** See `ML_AUDIT.md`. There is no classical ML. It entirely relies on prompting LLMs to perform "reasoning".
+- **Details:** See `EXISTING_SYSTEM_AUDIT.md`. There is no classical ML. It entirely relies on prompting LLMs to perform "reasoning".
 
 ## 5. Database
 - **Status:** Mostly Complete

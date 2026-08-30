@@ -1,7 +1,7 @@
 """
 api/main.py  (full rewrite — DB-first)
 =======================================
-FastAPI application — OpsGrid API v3.
+FastAPI application — SMBFlow API v3.
 
 All state lives in PostgreSQL.  In-memory dicts are removed.
 Two things remain in-memory legitimately:
@@ -79,9 +79,9 @@ async def lifespan(app: FastAPI):
     log.info("Redis pub/sub initialized")
 
     # Seed super-admin from env
-    _admin_email = os.getenv("ADMIN_EMAIL", "admin@opsgrid.io")
+    _admin_email = os.getenv("ADMIN_EMAIL", "admin@smbflow.com")
     _admin_pw    = os.getenv("ADMIN_PASSWORD", "admin123")
-    _admin_name  = os.getenv("ADMIN_FULL_NAME", "OpsGrid Admin")
+    _admin_name  = os.getenv("ADMIN_FULL_NAME", "SMBFlow Admin")
     try:
         session = await get_raw_session()
         async with session:
@@ -122,16 +122,16 @@ async def lifespan(app: FastAPI):
     except Exception as _recovery_err:
         log.error("Startup recovery failed (non-fatal)", error=str(_recovery_err))
 
-    log.info("OpsGrid API started")
+    log.info("SMBFlow API started")
     yield
 
     # Shutdown
     await redis_pubsub.stop()
-    log.info("OpsGrid API stopped")
+    log.info("SMBFlow API stopped")
 
 
 app = FastAPI(
-    title="OpsGrid API v3",
+    title="SMBFlow API v3",
     description="Autonomous Multi-Agent Workflow Engine — DB-first",
     version="3.0.0",
     lifespan=lifespan,
@@ -1602,6 +1602,16 @@ async def estimate_workflow_cost(
 # ─────────────────────────────────────────────────────────────────────────────
 # Analytics
 # ─────────────────────────────────────────────────────────────────────────────
+
+@app.get("/api/v1/dashboard/{tenant_id}", tags=["Analytics"])
+async def get_dashboard(
+    tenant_id: str,
+    current_user: TokenData = Depends(require_any_auth),
+    db: AsyncSession = Depends(get_db),
+):
+    assert_tenant_access(current_user, tenant_id)
+    return await crud.get_dashboard_data(db, tenant_id)
+
 
 @app.get("/api/v1/analytics/{tenant_id}", tags=["Analytics"])
 async def get_analytics(

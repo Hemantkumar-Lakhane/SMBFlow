@@ -1,7 +1,7 @@
 """
 api/crud.py
 ===========
-All PostgreSQL CRUD operations for the OpsGrid API.
+All PostgreSQL CRUD operations for the SMBFlow API.
 Each function receives an AsyncSession and returns ORM objects or plain dicts.
 No business logic here — just data access.
 
@@ -719,4 +719,184 @@ def pattern_to_dict(p: PatternMemory) -> dict:
         "sample_size":    p.sample_size,
         "pattern_status": p.pattern_status,
         "last_updated":   p.last_updated.isoformat() if p.last_updated else None,
+    }
+
+async def get_dashboard_data(db: AsyncSession, tenant_id: str) -> dict:
+    from sqlalchemy import select, func, and_, desc, text
+    from datetime import datetime, timezone, timedelta
+    from core.state_manager import WorkflowInstance, Escalation, A2ARequest, AgentRunRecord
+
+    now = datetime.now(timezone.utc)
+    today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    first_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    ten_days_ago = today - timedelta(days=9)
+    seven_days_ago = today - timedelta(days=6)
+
+    # 1. Active Runs
+    active_runs_res = await db.execute(
+        select(
+            func.count().filter(WorkflowInstance.status == 'running'),
+            func.count().filter(WorkflowInstance.started_at >= today)
+        ).where(WorkflowInstance.tenant_id == tenant_id)
+    )
+    active_count, initiated_today = active_runs_res.first()
+
+    # 2. Pending Approvals
+    pending_esc_res = await db.execute(
+        select(func.count(Escalation.id)).where(
+            and_(Escalation.tenant_id == tenant_id, Escalation.status == 'pending')
+        )
+    )
+    pending_a2a_res = await db.execute(
+        select(func.count(A2ARequest.id)).where(
+            and_(A2ARequest.tenant_id == tenant_id, A2ARequest.status == 'pending_permission')
+        )
+    )
+    pending_approvals = (pending_esc_res.scalar() or 0) + (pending_a2a_res.scalar() or 0)
+
+    # 3. Tasks Completed
+    tasks_res = await db.execute(
+        select(func.count(AgentRunRecord.id))
+        .join(WorkflowInstance, AgentRunRecord.instance_id == WorkflowInstance.id)
+        .where(
+            and_(
+                WorkflowInstance.tenant_id == tenant_id,
+                AgentRunRecord.status.in_(['success', 'completed'])
+            )
+        )
+    )
+    tasks_total = tasks_res.scalar() or 0
+
+    # Sparkline trend (last 7 days)
+    sparkline_res = await db.execute(
+        select(
+            func.date_trunc('day', AgentRunRecord.completed_at).label('day'),
+            func.count(AgentRunRecord.id)
+        )
+        .join(WorkflowInstance, AgentRunRecord.instance_id == WorkflowInstance.id)
+        .where(
+            and_(
+                WorkflowInstance.tenant_id == tenant_id,
+                AgentRunRecord.status.in_(['success', 'completed']),
+                AgentRunRecord.completed_at >= seven_days_ago
+            )
+        )
+        .group_by('day')
+    )
+    trend_dict = {str(row[0].date()) if row[0] else '': row[1] for row in sparkline_res.all()}
+    
+    tasks_trend = []
+    for i in range(7):
+        d = (seven_days_ago + timedelta(days=i)).date()
+        tasks_trend.append(trend_dict.get(str(d), 0))
+
+    # 4. Recent Activity
+    recent_res = await db.execute(
+        select(
+            WorkflowInstance.id, 
+            WorkflowInstance.workflow_name, 
+            WorkflowInstance.status, 
+            WorkflowInstance.started_at,
+            WorkflowInstance.current_node
+        )
+        .where(WorkflowInstance.tenant_id == tenant_id)
+        .order_by(desc(WorkflowInstance.started_at))
+        .limit(5)
+    )
+    recent_activity = []
+    for r in recent_res.all():
+        desc_text = 'Workflow is running'
+        if r.status in ['completed', 'WorkflowStatus.COMPLETED']:
+            desc_text = 'Workflow completed'
+        elif r.status in ['failed', 'stopped']:
+            desc_text = 'Workflow failed'
+        elif r.status in ['escalated', 'pending_a2a']:
+            desc_text = 'Awaiting approval'
+        
+        recent_activity.append({
+            'id': str(r.id),
+            'name': r.workflow_name or 'Workflow Run',
+            'status': r.status,
+            'timestamp': r.started_at.isoformat() if r.started_at else None,
+            'description': desc_text
+        })
+
+    # 5. Workflow Performance
+    perf_res = await db.execute(
+        select(
+            WorkflowInstance.workflow_name,
+            func.count().filter(WorkflowInstance.status.in_(['completed', 'WorkflowStatus.COMPLETED'])).label('completed'),
+            func.count().filter(WorkflowInstance.status.in_(['failed', 'stopped'])).label('failed')
+        )
+        .where(WorkflowInstance.tenant_id == tenant_id)
+        .group_by(WorkflowInstance.workflow_name)
+    )
+    performance = []
+    for row in perf_res.all():
+        comp = row.completed or 0
+        fail = row.failed or 0
+        total = comp + fail
+        if total > 0:
+            rate = round((comp / total) * 100)
+            performance.append({
+                'name': row.workflow_name or 'Unknown',
+                'success_rate': rate,
+                'runs': comp + fail
+            })
+    performance.sort(key=lambda x: x['runs'], reverse=True)
+    performance = performance[:5]
+
+    # 6. Cost Overview
+    cost_res = await db.execute(
+        select(
+            func.sum(WorkflowInstance.total_cost_usd),
+            func.count(WorkflowInstance.id)
+        )
+        .where(
+            and_(
+                WorkflowInstance.tenant_id == tenant_id,
+                WorkflowInstance.started_at >= first_of_month
+            )
+        )
+    )
+    cost_row = cost_res.first()
+    mtd_spend = cost_row[0] or 0.0
+    mtd_runs = cost_row[1] or 0
+    avg_cost = (mtd_spend / mtd_runs) if mtd_runs > 0 else 0.0
+
+    daily_cost_res = await db.execute(
+        select(
+            func.date_trunc('day', WorkflowInstance.started_at).label('day'),
+            func.sum(WorkflowInstance.total_cost_usd)
+        )
+        .where(
+            and_(
+                WorkflowInstance.tenant_id == tenant_id,
+                WorkflowInstance.started_at >= ten_days_ago
+            )
+        )
+        .group_by('day')
+    )
+    daily_cost_dict = {str(row[0].date()) if row[0] else '': (row[1] or 0.0) for row in daily_cost_res.all()}
+    
+    daily_trend = []
+    for i in range(10):
+        d = (ten_days_ago + timedelta(days=i)).date()
+        daily_trend.append({
+            'date': str(d),
+            'cost': daily_cost_dict.get(str(d), 0.0)
+        })
+
+    return {
+        'active_runs': {'current': active_count or 0, 'initiated_today': initiated_today or 0},
+        'pending_approvals': {'total': pending_approvals},
+        'tasks_completed': {'total': tasks_total, 'trend': tasks_trend},
+        'net_savings': {'value': None, 'status': 'not_measured'},
+        'recent_activity': recent_activity,
+        'workflow_performance': performance,
+        'cost_overview': {
+            'mtd_spend': round(mtd_spend, 6),
+            'avg_cost_per_run': round(avg_cost, 6),
+            'daily_trend': daily_trend
+        }
     }

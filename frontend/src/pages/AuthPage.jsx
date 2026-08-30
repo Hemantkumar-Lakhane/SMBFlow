@@ -20,7 +20,7 @@ export default function AuthPage() {
   const { isDark, toggle: toggleTheme } = useTheme()
   const [mode, setMode] = useState('login')
 
-  const [email,      setEmail]      = useState('admin@opsgrid.io')
+  const [email,      setEmail]      = useState('admin@smbflow.com')
   const [password,   setPassword]   = useState('admin123')
   const [fullName,   setFullName]   = useState('')
   const [tenantName, setTenantName] = useState('')
@@ -82,7 +82,7 @@ export default function AuthPage() {
             <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-primary shadow-glow-primary mb-4">
               <Zap className="w-7 h-7 text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-[rgb(var(--text-primary))]">OpsGrid</h1>
+            <h1 className="text-2xl font-bold text-[rgb(var(--text-primary))]">SMBFlow</h1>
             <p className="text-sm text-[rgb(var(--text-muted))] mt-1">Autonomous Multi-Agent Engine</p>
           </div>
 
@@ -155,7 +155,7 @@ export default function AuthPage() {
 
           {mode === 'login' && (
             <p className="text-xs text-[rgb(var(--text-muted))] text-center mt-4">
-              Default: admin@opsgrid.io / admin123
+              Default: admin@smbflow.com / admin123
             </p>
           )}
         </motion.div>

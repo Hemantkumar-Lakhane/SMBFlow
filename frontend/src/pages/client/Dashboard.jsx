@@ -1,247 +1,148 @@
 // frontend/src/pages/client/Dashboard.jsx
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Zap, CheckCircle2, AlertTriangle, DollarSign, Play, Pause,
-  Square, RefreshCw, Plus, ChevronRight, Activity, Clock,
-  TrendingUp, Bot, ArrowUpRight, Loader2,
+  CheckCircle2, AlertTriangle, Play,
+  RefreshCw, ArrowUpRight, Activity, Zap
 } from 'lucide-react'
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell
+} from 'recharts'
 import { useAuth }      from '../../contexts/AuthContext'
 import { useWebSocket } from '../../contexts/WSContext'
 import {
-  Card, StatCard, Badge, Button, Spinner, Alert, EmptyState,
-  Modal, Select, Textarea, LiveDot, cn,
+  Card, Button, Alert, cn,
 } from '../../components/ui'
-import { fmtCost, timeAgo, truncate, AGENT_ICONS, AGENT_LABELS } from '../../utils/helpers'
+import { fmtCost, timeAgo, truncate } from '../../utils/helpers'
 
 const POLL_MS = 5000
 
-// ── Trigger Modal ─────────────────────────────────────────────────────────────
-function TriggerModal({ open, onClose, tenantId, api, onDone }) {
-  const [workflow,  setWorkflow]  = useState('')
-  const [workflows, setWorkflows] = useState([])
-  const [signal,    setSignal]    = useState('{"type":"manual","source":"dashboard"}')
-  const [loading,   setLoading]   = useState(false)
-  const [error,     setError]     = useState('')
-  const [estimate,  setEstimate]  = useState(null)
-  const [estimating,setEstimating]= useState(false)
+// ── Shared Dashboard Components ───────────────────────────────────────────────
 
-  useEffect(() => {
-    if (!open) return
-    api.get('/config/workflows').then(setWorkflows).catch(() => {})
-  }, [open, api])
-
-  const onWorkflowChange = async (wf) => {
-    setWorkflow(wf)
-    if (!wf || !tenantId) return
-    setEstimating(true)
-    try {
-      const est = await api.get(`/workflows/estimate-cost?tenant_id=${tenantId}&workflow_name=${wf}`)
-      setEstimate(est)
-    } catch { setEstimate(null) }
-    finally { setEstimating(false) }
-  }
-
-  const submit = async () => {
-    if (!workflow) { setError('Select a workflow'); return }
-    let signalData
-    try { signalData = JSON.parse(signal) } catch { setError('Invalid JSON'); return }
-    setLoading(true); setError('')
-    try {
-      const res = await api.post('/workflows/trigger', { tenant_id: tenantId, workflow_name: workflow, signal_data: signalData })
-      onDone(res); onClose()
-    } catch (err) { setError(err.message) }
-    finally { setLoading(false) }
-  }
-
+function DashboardStatCard({ title, value, subtitle, badge, chart }) {
   return (
-    <Modal open={open} onClose={onClose} title="Trigger Workflow" subtitle="Start a new autonomous workflow run">
-      <div className="space-y-4">
-        <Select
-          label="Workflow"
-          value={workflow}
-          onChange={e => onWorkflowChange(e.target.value)}
-          options={[{ value: '', label: '— select a workflow —' }, ...workflows.map(w => ({ value: w.name, label: `${w.display_name || w.name} (${w.name})` }))]}
-        />
-
-        {estimating && <div className="text-xs text-[rgb(var(--text-muted))] animate-pulse flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" />Estimating cost…</div>}
-
-        {estimate && !estimating && (
-          <div className="p-3 surface-card rounded-xl text-xs space-y-1.5">
-            <p className="font-semibold text-[rgb(var(--text-secondary))] mb-2">Cost Estimate</p>
-            <div className="flex justify-between">
-              <span className="text-[rgb(var(--text-muted))]">Estimated cost</span>
-              <span className="font-mono text-warning font-semibold">{estimate.estimated_cost_usd != null ? `$${estimate.estimated_cost_usd.toFixed(5)}` : '—'}</span>
-            </div>
-            {estimate.estimated_savings_pct > 0 && (
-              <div className="flex justify-between">
-                <span className="text-[rgb(var(--text-muted))]">Savings at current level</span>
-                <span className="text-success">+{estimate.estimated_savings_pct.toFixed(0)}%</span>
-              </div>
-            )}
-          </div>
-        )}
-
-        <Textarea label="Trigger Signal (JSON)" value={signal} onChange={e => setSignal(e.target.value)} rows={3} hint="Context passed to all agents" />
-
-        {error && <Alert type="error" onClose={() => setError('')}>{error}</Alert>}
-
-        <div className="flex gap-2">
-          <Button variant="gradient" loading={loading} onClick={submit} className="flex-1" icon={<Zap className="w-4 h-4" />}>
-            Launch Workflow
-          </Button>
-          <Button variant="secondary" onClick={onClose}>Cancel</Button>
+    <Card className="flex flex-col justify-between p-5 h-full relative overflow-hidden" hover>
+      <div className="relative z-10">
+        <div className="flex items-start justify-between mb-2">
+          <h3 className="text-[13px] font-medium text-[rgb(var(--text-secondary))]">{title}</h3>
+          {badge}
         </div>
+        <p className="text-3xl font-bold text-[rgb(var(--text-primary))] mt-2">{value}</p>
       </div>
-    </Modal>
+      <div className="relative z-10 flex justify-between items-end mt-3">
+        <p className="text-xs text-[rgb(var(--text-muted))] truncate">{subtitle}</p>
+      </div>
+      {chart && (
+        <div className="absolute bottom-0 left-0 right-0 h-16 opacity-30 pointer-events-none">
+          {chart}
+        </div>
+      )}
+    </Card>
   )
 }
 
-// ── Workflow Card ─────────────────────────────────────────────────────────────
-function WorkflowCard({ w, api, navigate, onRefresh }) {
-  const [controlling, setControlling] = useState(null)
-  const isRunning = w.status === 'running'
-  const isPaused  = w.status === 'paused'
-
-  const control = async (action, e) => {
-    e.stopPropagation()
-    setControlling(action)
-    try {
-      await api.post(`/workflows/${w.run_id}/${action}`, {})
-      await onRefresh()
-    } finally { setControlling(null) }
+function StatBadge({ text, variant = 'default', icon: Icon }) {
+  const variants = {
+    success: 'bg-[#E6F8F0] text-[#00A96B]',
+    warning: 'bg-[#FFF3E0] text-[#F57C00]',
+    default: 'bg-[rgb(var(--bg-hover))] text-[rgb(var(--text-secondary))]'
   }
-
-  const STATUS_BG = {
-    running:   'border-success/25 bg-success/4',
-    completed: 'border-emerald-500/20 bg-emerald-500/4',
-    failed:    'border-danger/25 bg-danger/4',
-    escalated: 'border-warning/25 bg-warning/4',
-    paused:    'border-warning/20 bg-warning/4',
-    stopped:   'border-[rgb(var(--border))] bg-[rgb(var(--bg-card))]',
-    pending:   'border-[rgb(var(--border))] bg-[rgb(var(--bg-card))]',
-  }
-
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      className={cn(
-        'relative border rounded-2xl p-4 cursor-pointer transition-all duration-200 hover:shadow-md group',
-        STATUS_BG[w.status] || STATUS_BG.pending,
-      )}
-      onClick={() => navigate(`/workflows/${w.run_id}`)}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <Badge status={w.status} />
-            <p className="text-sm font-semibold text-[rgb(var(--text-primary))] truncate">{w.workflow_name}</p>
-          </div>
-          <div className="flex items-center gap-3 text-[11px] text-[rgb(var(--text-muted))]">
-            <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{timeAgo(w.started_at)}</span>
-            <span className="flex items-center gap-1 text-warning font-mono font-medium"><DollarSign className="w-3 h-3" />{fmtCost(w.total_cost_usd)}</span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-1.5 flex-shrink-0">
-          {isRunning && (
-            <>
-              <Button size="xs" variant="warning" onClick={(e) => control('pause', e)} loading={controlling === 'pause'} icon={<Pause className="w-3 h-3" />} />
-              <Button size="xs" variant="danger"  onClick={(e) => control('stop',  e)} loading={controlling === 'stop'}  icon={<Square className="w-3 h-3" />} />
-            </>
-          )}
-          {isPaused && (
-            <Button size="xs" variant="success" onClick={(e) => control('resume', e)} loading={controlling === 'resume'} icon={<Play className="w-3 h-3" />} />
-          )}
-          <ChevronRight className="w-3.5 h-3.5 text-[rgb(var(--text-muted))] opacity-0 group-hover:opacity-100 transition-opacity" />
-        </div>
-      </div>
-
-      {isRunning && (
-        <div className="mt-2 flex items-center gap-1.5">
-          <Activity className="w-3 h-3 text-success animate-pulse" />
-          <div className="flex-1 h-1 bg-[rgb(var(--bg-hover))] rounded-full overflow-hidden">
-            <div className="h-full bg-gradient-primary rounded-full animate-shimmer" style={{ width: '60%' }} />
-          </div>
-        </div>
-      )}
-    </motion.div>
+    <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold tracking-wide', variants[variant])}>
+      {Icon && <Icon className="w-3 h-3" />}
+      {text}
+    </span>
   )
 }
 
-// ── A2A Banner ─────────────────────────────────────────────────────────────────
-function A2ABanner({ req, api, onDone, navigate }) {
-  const [loading, setLoading] = useState(false)
-  const decide = async (approved) => {
-    setLoading(true)
-    try { await api.post(`/a2a/${req.a2a_id}/decide`, { approved }); onDone() }
-    finally { setLoading(false) }
+function TimelineItem({ run }) {
+  const isCompleted = run.status === 'completed' || run.status === 'WorkflowStatus.COMPLETED'
+  const isRunning = run.status === 'running'
+  const isPending = run.status === 'pending' || run.status === 'pending_a2a'
+  const isEscalated = run.status === 'escalated'
+  const isFailed = run.status === 'failed' || run.status === 'stopped'
+  
+  let iconObj = null
+  let statusBadge = null
+  
+  if (isCompleted) {
+    iconObj = <div className="w-6 h-6 rounded-full bg-[#E6F8F0] flex items-center justify-center flex-shrink-0 z-10 outline outline-4 outline-[rgb(var(--bg-base))]"><CheckCircle2 className="w-4 h-4 text-[#00A96B]" /></div>
+    statusBadge = <span className="px-2 py-0.5 bg-[#E6F8F0] text-[#00A96B] text-[10px] font-semibold rounded">Completed</span>
+  } else if (isRunning) {
+    iconObj = <div className="w-6 h-6 rounded-full bg-[#E3F2FD] flex items-center justify-center flex-shrink-0 z-10 outline outline-4 outline-[rgb(var(--bg-base))]"><Activity className="w-4 h-4 text-[#1976D2]" /></div>
+    statusBadge = <span className="px-2 py-0.5 bg-[#E3F2FD] text-[#1976D2] text-[10px] font-semibold rounded">In Progress</span>
+  } else if (isEscalated || isPending) {
+    iconObj = <div className="w-6 h-6 rounded-full bg-[#FFF3E0] flex items-center justify-center flex-shrink-0 z-10 outline outline-4 outline-[rgb(var(--bg-base))]"><AlertTriangle className="w-4 h-4 text-[#F57C00]" /></div>
+    statusBadge = <span className="px-2 py-0.5 bg-[#FFF3E0] text-[#F57C00] text-[10px] font-semibold rounded">Awaiting Approval</span>
+  } else if (isFailed) {
+    iconObj = <div className="w-6 h-6 rounded-full bg-danger/10 flex items-center justify-center flex-shrink-0 z-10 outline outline-4 outline-[rgb(var(--bg-base))]"><AlertTriangle className="w-4 h-4 text-danger" /></div>
+    statusBadge = <span className="px-2 py-0.5 bg-danger/10 text-danger text-[10px] font-semibold rounded">Failed</span>
+  } else {
+    iconObj = <div className="w-6 h-6 rounded-full bg-[rgb(var(--bg-hover))] flex items-center justify-center flex-shrink-0 z-10 outline outline-4 outline-[rgb(var(--bg-base))]"><Play className="w-4 h-4 text-[rgb(var(--text-muted))]" /></div>
+    statusBadge = <span className="px-2 py-0.5 bg-[rgb(var(--bg-hover))] text-[rgb(var(--text-secondary))] text-[10px] font-semibold rounded">{run.status}</span>
   }
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: -8 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="p-4 bg-primary-500/8 border border-primary-500/25 rounded-2xl"
-    >
-      <div className="flex items-start gap-3">
-        <div className="w-9 h-9 rounded-xl bg-primary-500/15 flex items-center justify-center flex-shrink-0">
-          <Bot className="w-5 h-5 text-primary-400" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <p className="text-sm font-semibold text-[rgb(var(--text-primary))]">Agent-to-Agent Request</p>
-            <span className="px-2 py-0.5 bg-primary-500/10 text-primary-400 text-[10px] font-semibold rounded-full border border-primary-500/20 animate-pulse">
-              Action Needed
-            </span>
-          </div>
-          <p className="text-xs text-[rgb(var(--text-secondary))] mb-1">
-            <span className="font-medium text-primary-400">{AGENT_LABELS[req.requesting_agent] || req.requesting_agent}</span>
-            {' → '}
-            <span className="font-medium text-primary-400">{AGENT_LABELS[req.target_agent] || req.target_agent}</span>
-          </p>
-          <p className="text-xs text-[rgb(var(--text-muted))]">{truncate(req.reason, 100)}</p>
-          <p className="text-xs text-warning mt-1">Est. cost: {fmtCost(req.estimated_cost_usd || 0.001)}</p>
-        </div>
+    <div className="relative pl-10 pb-6 group">
+      {/* Timeline connector */}
+      <div className="absolute left-[11px] top-6 bottom-0 w-[2px] bg-[rgb(var(--border))] group-last:hidden" />
+      
+      {/* Icon */}
+      <div className="absolute left-0 top-1">
+        {iconObj}
       </div>
-      <div className="flex gap-2 mt-3">
-        <Button size="sm" variant="success" loading={loading} onClick={() => decide(true)}>✓ Allow</Button>
-        <Button size="sm" variant="danger"  loading={loading} onClick={() => decide(false)}>✗ Reject</Button>
-        <Button size="sm" variant="ghost" onClick={() => navigate(`/workflows/${req.run_id}`)}>View Run <ArrowUpRight className="w-3 h-3" /></Button>
+
+      <div className="flex flex-col gap-1.5">
+        <div className="flex items-center justify-between">
+          <h4 className="text-sm font-bold text-[rgb(var(--text-primary))]">{run.name}</h4>
+          {statusBadge}
+        </div>
+        <p className="text-sm text-[rgb(var(--text-secondary))] leading-relaxed">
+          {run.description}
+        </p>
+        <span className="text-xs text-[rgb(var(--text-muted))] font-medium mt-1">
+          {timeAgo(run.timestamp)}
+        </span>
       </div>
-    </motion.div>
+    </div>
+  )
+}
+
+function ProgressBar({ percentage, color = 'bg-[#00A96B]' }) {
+  return (
+    <div className="flex items-center gap-4">
+      <div className="flex-1 h-2 bg-[rgb(var(--bg-hover))] rounded-full overflow-hidden">
+        <div className={cn("h-full rounded-full transition-all duration-500", color)} style={{ width: `${percentage}%` }} />
+      </div>
+      <span className="text-sm font-semibold text-[rgb(var(--text-primary))] w-10 text-right">{percentage}%</span>
+    </div>
   )
 }
 
 // ── Main Dashboard ────────────────────────────────────────────────────────────
+
 export default function Dashboard() {
   const navigate       = useNavigate()
   const { user, api }  = useAuth()
   const { subscribe }  = useWebSocket()
-  const [workflows,   setWorkflows]   = useState([])
-  const [escalations, setEscalations] = useState([])
-  const [a2aRequests, setA2aRequests] = useState([])
-  const [loading,     setLoading]     = useState(true)
-  const [error,       setError]       = useState('')
-  const [trigger,     setTrigger]     = useState(false)
-  const [filter,      setFilter]      = useState('all')
-
+  
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [data, setData] = useState(null)
+  
   const load = useCallback(async () => {
+    if (!user?.tenant_id) return
     try {
-      const [wfs, escs, a2as] = await Promise.all([
-        api.get('/workflows'),
-        api.get('/escalations?status=pending').catch(() => []),
-        api.get('/a2a/requests').catch(() => []),
-      ])
-      setWorkflows(Array.isArray(wfs) ? wfs : [])
-      setEscalations(Array.isArray(escs) ? escs : [])
-      setA2aRequests(Array.isArray(a2as) ? a2as : [])
+      const res = await api.get(`/dashboard/${user.tenant_id}`)
+      setData(res)
       setError('')
-    } catch (err) { setError(err.message) }
-    finally { setLoading(false) }
-  }, [api])
+    } catch (err) {
+      setError('Failed to load dashboard data')
+    } finally {
+      setLoading(false)
+    }
+  }, [api, user?.tenant_id])
 
   useEffect(() => {
     load()
@@ -251,178 +152,196 @@ export default function Dashboard() {
 
   useEffect(() => {
     const unsubs = [
-      subscribe('escalation_created',       load),
+      subscribe('escalation_created', load),
       subscribe('a2a_permission_requested', load),
-      subscribe('a2a_decided',              load),
-      subscribe('workflow_completed',       (ev) => {
-        setWorkflows(p => p.map(w => w.run_id === ev.data?.run_id ? { ...w, status: 'completed' } : w))
-        setTimeout(load, 500)
-      }),
-      subscribe('workflow_failed', (ev) => {
-        setWorkflows(p => p.map(w => w.run_id === ev.data?.run_id ? { ...w, status: 'failed' } : w))
-        setTimeout(load, 500)
-      }),
+      subscribe('a2a_decided', load),
+      subscribe('workflow_completed', load),
+      subscribe('workflow_failed', load),
       subscribe('workflow_stopped', load),
     ]
     return () => unsubs.forEach(fn => fn())
   }, [subscribe, load])
 
-  const myRuns = workflows.filter(w => !user?.tenant_id || w.tenant_id === user.tenant_id)
-  const totalCost = myRuns.reduce((s, w) => s + (w.total_cost_usd || 0), 0)
-
-  const stats = {
-    running:   myRuns.filter(w => w.status === 'running').length,
-    completed: myRuns.filter(w => ['completed','WorkflowStatus.COMPLETED'].includes(w.status)).length,
-    pending:   escalations.length + a2aRequests.length,
-    cost:      fmtCost(totalCost),
-  }
-
-  const FILTERS = ['all', 'running', 'completed', 'failed', 'escalated']
-  const filtered = filter === 'all' ? myRuns : myRuns.filter(w => w.status === filter)
-
   if (loading) return (
     <div className="flex items-center justify-center h-64">
       <div className="text-center">
-        <div className="w-12 h-12 rounded-2xl bg-gradient-primary flex items-center justify-center mx-auto mb-3 animate-float">
+        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[rgb(var(--c-primary))] to-[rgb(var(--c-accent))] flex items-center justify-center mx-auto mb-3 animate-float shadow-md">
           <Zap className="w-6 h-6 text-white" />
         </div>
-        <p className="text-sm text-[rgb(var(--text-muted))]">Loading workflows…</p>
+        <p className="text-sm text-[rgb(var(--text-muted))] font-medium tracking-wide animate-pulse">Loading dashboard telemetry…</p>
       </div>
     </div>
   )
 
+  const firstName = user?.full_name ? user.full_name.split(' ')[0] : 'User'
+
+  // Cost chart data formatting
+  const chartData = data?.cost_overview?.daily_trend?.map((item, idx) => ({
+    name: idx, // Just index for x-axis
+    cost: item.cost
+  })) || []
+  
+  // Sparkline data
+  const sparklineData = data?.tasks_completed?.trend?.map((val, idx) => ({
+    name: idx,
+    value: val
+  })) || []
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-[rgb(var(--text-primary))]">
-            Welcome back{user?.full_name ? `, ${user.full_name.split(' ')[0]}` : ''} 👋
-          </h1>
-          <p className="text-sm text-[rgb(var(--text-muted))] mt-0.5">Monitor and manage your autonomous workflows</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="secondary" size="sm" onClick={load} icon={<RefreshCw className="w-3.5 h-3.5" />}>Refresh</Button>
-          <Button variant="gradient" onClick={() => setTrigger(true)} icon={<Zap className="w-4 h-4" />}>Launch Workflow</Button>
-        </div>
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
+      
+      {/* ── Dashboard Header ── */}
+      <div className="flex flex-col gap-1 mb-2">
+        <h1 className="text-[28px] font-bold text-[rgb(var(--text-primary))] tracking-tight">
+          Welcome back, {firstName}
+        </h1>
+        <p className="text-[15px] text-[rgb(var(--text-muted))] font-medium">
+          Here is a summary of your workspace operational telemetry.
+        </p>
       </div>
 
       {error && <Alert type="error" onClose={() => setError('')}>{error}</Alert>}
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { icon: Activity,     label: 'Active Runs',   value: stats.running,   color: 'text-success' },
-          { icon: CheckCircle2, label: 'Completed',     value: stats.completed, color: 'text-emerald-400' },
-          { icon: AlertTriangle,label: 'Need Action',   value: stats.pending,   color: stats.pending > 0 ? 'text-danger' : 'text-[rgb(var(--text-muted))]' },
-          { icon: DollarSign,   label: 'Total Cost',    value: stats.cost,      color: 'text-warning' },
-        ].map(({ icon, label, value, color }, i) => (
-          <motion.div key={label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}>
-            <StatCard icon={icon} label={label} value={value} color={color} />
-          </motion.div>
-        ))}
+      {/* ── KPI Row ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 h-32">
+        <DashboardStatCard
+          title="Active Runs"
+          value={data?.active_runs?.current || 0}
+          subtitle={`+${data?.active_runs?.initiated_today || 0} initiated today`}
+          badge={<StatBadge text="Live" variant="success" />}
+        />
+        <DashboardStatCard
+          title="Pending Approvals"
+          value={data?.pending_approvals?.total || 0}
+          subtitle="Requires manual review"
+          badge={data?.pending_approvals?.total > 0 ? <StatBadge text="Action Required" variant="warning" /> : <StatBadge text="Clear" variant="success" />}
+        />
+        <DashboardStatCard
+          title="Tasks Completed"
+          value={data?.tasks_completed?.total || 0}
+          subtitle="Standard actions processed"
+          badge={null}
+          chart={
+            sparklineData.length > 0 && (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={sparklineData}>
+                  <Bar dataKey="value" fill="#00A96B" radius={[2, 2, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )
+          }
+        />
+        <DashboardStatCard
+          title="Net Savings"
+          value={data?.net_savings?.value != null ? fmtCost(data.net_savings.value) : "—"}
+          subtitle={data?.net_savings?.status === 'not_measured' ? 'Not yet measured' : 'MTD workflow cost savings'}
+          badge={<StatBadge text="-" variant="default" />}
+        />
       </div>
 
-      {/* A2A Alerts */}
-      <AnimatePresence>
-        {a2aRequests.map(req => (
-          <A2ABanner key={req.a2a_id} req={req} api={api} onDone={load} navigate={navigate} />
-        ))}
-      </AnimatePresence>
-
-      {/* Escalation Alerts */}
-      <AnimatePresence>
-        {escalations.slice(0, 2).map(esc => (
-          <motion.div
-            key={esc.id}
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="p-4 bg-warning/8 border border-warning/25 rounded-2xl flex items-start justify-between gap-4"
-          >
-            <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-xl bg-warning/15 flex items-center justify-center flex-shrink-0">
-                <AlertTriangle className="w-5 h-5 text-warning" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <p className="text-sm font-semibold text-[rgb(var(--text-primary))]">Escalation: {esc.node_id}</p>
-                  <span className="px-2 py-0.5 bg-warning/10 text-warning text-[10px] rounded-full border border-warning/20 animate-pulse">Decision Needed</span>
-                </div>
-                <p className="text-xs text-[rgb(var(--text-muted))]">{truncate(esc.reason, 100)}</p>
-              </div>
+      {/* ── Main Content Grid ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        {/* Left Column (Activity) */}
+        <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-6">
+          <Card className="flex-1 p-6">
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-lg font-bold text-[rgb(var(--text-primary))]">Recent Activity</h2>
+              <button onClick={load} className="text-[rgb(var(--text-muted))] hover:text-[rgb(var(--text-primary))] transition-colors">
+                <RefreshCw className="w-5 h-5" />
+              </button>
             </div>
-            <Button size="sm" variant="warning" onClick={() => navigate('/escalations')}>Decide</Button>
-          </motion.div>
-        ))}
-      </AnimatePresence>
-
-      {/* Workflow list */}
-      <Card>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-bold text-[rgb(var(--text-primary))]">Workflow Runs</h2>
-          <div className="flex items-center gap-2">
-            <div className="flex bg-[rgb(var(--bg-base))] rounded-xl p-1 gap-0.5">
-              {FILTERS.map(f => (
-                <button
-                  key={f}
-                  onClick={() => setFilter(f)}
-                  className={cn(
-                    'px-3 py-1 rounded-lg text-[11px] font-semibold capitalize transition-all',
-                    filter === f ? 'bg-[rgb(var(--bg-card))] text-[rgb(var(--text-primary))] shadow-sm' : 'text-[rgb(var(--text-muted))] hover:text-[rgb(var(--text-primary))]'
-                  )}
-                >
-                  {f}
-                </button>
-              ))}
+            
+            <div className="pt-2">
+              {(!data?.recent_activity || data.recent_activity.length === 0) ? (
+                <div className="text-sm text-[rgb(var(--text-muted))] py-4">No recent activity found.</div>
+              ) : (
+                data.recent_activity.map(run => <TimelineItem key={run.id} run={run} />)
+              )}
             </div>
-            <span className="text-xs text-[rgb(var(--text-muted))]">{filtered.length} runs</span>
-          </div>
+          </Card>
         </div>
 
-        {filtered.length === 0 ? (
-          <EmptyState
-            icon={Zap}
-            title={filter === 'all' ? 'No workflows yet' : `No ${filter} workflows`}
-            description="Launch your first workflow to get started"
-            action={<Button variant="gradient" onClick={() => setTrigger(true)} icon={<Plus className="w-4 h-4" />}>Launch Workflow</Button>}
-          />
-        ) : (
-          <motion.div
-            className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3"
-            variants={{
-              hidden: { opacity: 0 },
-              show: { opacity: 1, transition: { staggerChildren: 0.06, delayChildren: 0.05 } },
-            }}
-            initial="hidden"
-            animate="show"
-          >
-            <AnimatePresence>
-              {filtered.slice(0, 30).map(w => (
-                <motion.div
-                  key={w.run_id}
-                  variants={{
-                    hidden: { opacity: 0, y: 12, scale: 0.98 },
-                    show:   { opacity: 1, y: 0,  scale: 1, transition: { type: 'spring', stiffness: 280, damping: 22 } },
-                  }}
-                >
-                  <WorkflowCard w={w} api={api} navigate={navigate} onRefresh={load} />
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </motion.div>
-        )}
-      </Card>
+        {/* Right Column (Performance & Cost) */}
+        <div className="lg:col-span-5 xl:col-span-4 flex flex-col gap-6">
+          
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-[15px] font-bold text-[rgb(var(--text-primary))]">Workflow Performance</h2>
+              <span className="text-[13px] font-medium text-[#1976D2]">By success rate</span>
+            </div>
+            <div className="space-y-6">
+              {(!data?.workflow_performance || data.workflow_performance.length === 0) ? (
+                <div className="text-sm text-[rgb(var(--text-muted))]">Not enough data to calculate performance.</div>
+              ) : (
+                data.workflow_performance.map((perf, i) => {
+                  let color = 'bg-[#00A96B]'
+                  if (perf.success_rate < 80) color = 'bg-[#F57C00]'
+                  if (perf.success_rate > 80 && perf.success_rate < 90) color = 'bg-[#1976D2]'
+                  // Alternate colors for variety in top 5
+                  if (i === 1) color = 'bg-[#00A96B]' 
+                  if (i === 2 || i === 3) color = 'bg-[#3b82f6]' 
+                  if (i === 4) color = 'bg-[#F57C00]'
+                  return (
+                    <div key={perf.name} className="flex flex-col gap-2.5">
+                      <span className="text-[13px] font-semibold text-[rgb(var(--text-primary))] truncate">{perf.name}</span>
+                      <ProgressBar percentage={perf.success_rate} color={color} />
+                    </div>
+                  )
+                })
+              )}
+            </div>
+          </Card>
 
-      <TriggerModal
-        open={trigger}
-        onClose={() => setTrigger(false)}
-        tenantId={user?.tenant_id}
-        api={api}
-        onDone={(res) => {
-          if (res?.run_id) navigate(`/workflows/${res.run_id}`)
-          else load()
-        }}
-      />
+          <Card className="p-6">
+            <h2 className="text-[15px] font-bold text-[rgb(var(--text-primary))] mb-6">Cost Overview</h2>
+            
+            <div className="flex justify-between items-start mb-8">
+              <div>
+                <p className="text-[13px] text-[rgb(var(--text-secondary))] mb-1.5">MTD Spend</p>
+                <p className="text-[28px] font-bold text-[rgb(var(--text-primary))] tracking-tight">{fmtCost(data?.cost_overview?.mtd_spend || 0)}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-[13px] text-[rgb(var(--text-secondary))] mb-1.5">Avg cost per run</p>
+                <p className="text-xl font-bold text-[rgb(var(--text-primary))]">{fmtCost(data?.cost_overview?.avg_cost_per_run || 0)}</p>
+              </div>
+            </div>
+
+            <div>
+              <p className="text-[13px] text-[rgb(var(--text-secondary))] mb-3">Daily Spend Trend (last 10 days)</p>
+              
+              <div className="h-32 pt-2 -ml-4">
+                {chartData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={chartData}>
+                      <Tooltip 
+                        cursor={{fill: 'rgba(var(--bg-hover), 0.5)'}}
+                        contentStyle={{ backgroundColor: 'rgb(var(--bg-elevated))', border: '1px solid rgb(var(--border))', borderRadius: '8px', fontSize: '12px' }}
+                        formatter={(val) => [fmtCost(val), 'Cost']}
+                        labelFormatter={() => ''}
+                      />
+                      <Bar dataKey="cost" radius={[4, 4, 0, 0]}>
+                        {chartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={index === chartData.length - 1 ? '#00A96B' : 'rgb(var(--border))'} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full border border-[rgb(var(--border))] rounded-lg bg-[rgb(var(--bg-base))] flex items-center justify-center shadow-inner">
+                    <div className="text-center text-[rgb(var(--text-muted))]">
+                      <Activity className="w-6 h-6 mx-auto mb-2 opacity-30" />
+                      <p className="text-[13px] font-medium">Historical trend unavailable</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </Card>
+          
+        </div>
+
+      </div>
     </div>
   )
 }

@@ -12,7 +12,7 @@ async def main():
     async with httpx.AsyncClient() as client:
         # Login
         print("Logging in...")
-        resp = await client.post(f"{API_URL}/auth/login", json={"email": "admin@opsgrid.io", "password": "admin123"})
+        resp = await client.post(f"{API_URL}/auth/login", json={"email": "admin@smbflow.com", "password": "admin123"})
         if resp.status_code != 200:
             print("Login failed:", resp.text)
             return

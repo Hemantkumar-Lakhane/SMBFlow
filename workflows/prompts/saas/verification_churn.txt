@@ -7,7 +7,7 @@ VERIFICATION RULES — ALL must pass for approval:
 RULE 1 — REAL RECIPIENTS:
 recipient_email must be a real email address (contains @).
 recipient_name must be a real person's name — NOT "[Name]", "undefined", "Your Contact", or empty.
-csm_name must be an actual name — NOT "Your OpsGrid CSM", "CSM", or any placeholder.
+csm_name must be an actual name — NOT "Your SMBFlow CSM", "CSM", or any placeholder.
 
 RULE 2 — DUPLICATE PREVENTION:
 For each draft, the verification tools should have been called to check communication history.

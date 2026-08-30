@@ -1,7 +1,7 @@
 // frontend/src/pages/client/PatternsPage.jsx
 // ============================================
 // Pattern Memory Browser — for business owners (tenant users).
-// Shows what OpsGrid has learned from past workflow runs.
+// Shows what SMBFlow has learned from past workflow runs.
 // Business owner can promote sandbox patterns to active (inject into future RAG)
 // or demote active patterns back to review if they seem incorrect.
 
@@ -240,7 +240,7 @@ export default function PatternsPage() {
         <div>
           <h1 className="text-xl font-bold text-white">🧠 Pattern Memory</h1>
           <p className="text-gray-400 text-xs mt-0.5">
-            What OpsGrid has learned from your workflow runs — activate patterns you trust
+            What SMBFlow has learned from your workflow runs — activate patterns you trust
           </p>
         </div>
         <Button size="sm" variant="ghost" onClick={load}>↻ Refresh</Button>
