@@ -256,100 +256,42 @@ This distinction is the key to OpsGrid's multi-tenant model:
 
 ## 6. Installation & Setup
 
-### Step 1 — Clone the repository
+We have provided automated scripts for local development setup.
 
-```bash
-git clone https://github.com/yourorg/opsgrid.git
-cd opsgrid
+### Step 1 — One-Time Setup
+Run the setup script from the project root:
+```powershell
+.\setup.ps1
 ```
+This will automatically:
+- Verify prerequisites (Python, Node, Docker)
+- Create and activate a Python virtual environment
+- Ensure `.env` is created and safely generate a `VAULT_ENCRYPTION_KEY`
+- Start PostgreSQL and Redis via Docker Compose
+- Install backend and frontend dependencies
+- Generate local JSON seed data
 
-### Step 2 — Create your environment file
-
-```bash
-cp .env.example .env
+### Step 2 — Daily Startup
+To start the application:
+```powershell
+.\start.ps1
 ```
+This will launch the backend API and the Vite frontend in separate windows. 
 
-Open `.env` and fill in your values. At minimum:
+### Step 3 — Access the Application
+- **Frontend Dashboard:** [http://localhost:5173](http://localhost:5173)
+- **API Docs:** [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 
-```env
-ANTHROPIC_API_KEY=sk-ant-your-key-here
+**Test Logins:**
+- *SMB Owner (Business User):* `demo@tenant.com` / `demo123`
+- *SMBFlow Admin (Super Admin):* `admin@smbflow.com` / `admin123`
+
+### Step 4 — Shutdown
+When you are done developing, shut everything down safely:
+```powershell
+.\stop.ps1
 ```
-
-Full environment variable reference is in [Section 20](#20-environment-variables).
-
-### Step 3 — Start the database and Redis
-
-```bash
-docker-compose up -d postgres redis
-```
-
-Verify they're running:
-
-```bash
-docker-compose ps
-# Both services should show "healthy"
-```
-
-### Step 4 — Install Python dependencies
-
-```bash
-# Create a virtual environment (recommended)
-python -m venv venv
-source venv/bin/activate          # Mac/Linux
-# OR
-venv\Scripts\activate             # Windows
-
-# Install all packages
-pip install -r requirements.txt
-```
-
-This installs LiteLLM, FastAPI, SQLAlchemy, EPI Recorder, Rich, and all other dependencies.
-
-### Step 5 — Initialise the database
-
-The schema is applied automatically by Docker on first run via `db/init.sql`. Verify:
-
-```bash
-docker exec opsgrid_postgres psql -U opsgrid -d opsgrid -c "\dt"
-# Should list: tenants, workflow_instances, agent_runs, escalations, pattern_memory, etc.
-```
-
-### Step 6 — Generate demo data
-
-```bash
-python db/seed/saas_seed.py
-```
-
-This creates `db/seed/data/saas_accounts.json` — 120 synthetic SaaS customer accounts with realistic churn signals baked in (40 healthy, 50 at-risk, 30 critical). Used by the demo workflow.
-
-### Step 7 — Validate the default config
-
-```bash
-python main.py check-config config/templates/saas.json
-```
-
-You'll see which fields still have `[MODIFY]` placeholders. For the demo run, the placeholders are fine. For a real client, replace them all.
-
-### Step 8 — Verify the system is ready
-
-```bash
-# Check health
-curl http://localhost:8000/api/v1/health
-# Should return: {"status":"ok","db":"connected","redis":"connected",...}
-
-# List available workflows
-python main.py list-workflows
-# Should show: saas_churn_prevention, saas_pipeline_velocity, etc.
-```
-
-### Step 9 — Install the frontend (optional but recommended)
-
-```bash
-cd frontend
-npm install
-npm run dev
-# Opens at http://localhost:5173
-```
+This will gracefully stop the local backend/frontend processes and run `docker-compose stop` to pause the infrastructure without losing your database state.
 
 ---
 

@@ -1,4 +1,4 @@
-version: "3.9"
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # OpsGrid Infrastructure
@@ -71,8 +71,9 @@ services:
       - LLM_FAST_MODEL=${LLM_FAST_MODEL:-groq/llama-3.3-70b-versatile}
       - LLM_MINI_MODEL=${LLM_MINI_MODEL:-anthropic/claude-haiku-4-5-20251001}
       - ENVIRONMENT=development
-    ports:
-      - "8000:8000"
+    # Commented out port mapping so Docker doesn't conflict with the native Windows backend
+    # ports:
+    #   - "8000:8000"
     volumes:
       - .:/app
       - ./evidence:/app/evidence
