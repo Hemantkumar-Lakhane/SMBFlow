@@ -36,6 +36,10 @@ try:
 except ImportError:
     pass
 
+import hashlib
+import secrets
+from datetime import timedelta
+
 import api.crud as crud
 from api.auth import (
     LoginRequest, SignupRequest, TokenData, TokenResponse,
@@ -43,6 +47,7 @@ from api.auth import (
     get_tenant_filter, hash_password, require_admin,
     require_any_auth, verify_password,
 )
+from api import mailer
 from api.dependencies import get_db
 from core.database import get_raw_session
 from core.state_manager import WorkflowStatus
@@ -447,6 +452,128 @@ async def get_me(
         "full_name": user.full_name if user else None,
         "tenant_name": tenant_name,
     }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Password Reset  (secure, single-use, expiring — see api/mailer.py)
+#
+# Security invariants enforced here:
+#   • forgot-password returns an IDENTICAL generic response for known/unknown
+#     emails (no account-existence disclosure).
+#   • Only a SHA-256 hash of the token is persisted; the raw token is never
+#     logged or stored — it lives only in the emailed link (or, in an explicitly
+#     enabled non-production dev environment with email unconfigured, the
+#     dev_reset_url field of the response).
+#   • Tokens expire (PASSWORD_RESET_TOKEN_TTL_MINUTES) and are single-use.
+#   • Best-effort per-email + per-IP rate limiting when Redis is available.
+# ─────────────────────────────────────────────────────────────────────────────
+
+MIN_PASSWORD_LENGTH = 8
+_RESET_TTL_MINUTES = int(os.getenv("PASSWORD_RESET_TOKEN_TTL_MINUTES", "30"))
+_GENERIC_FORGOT_MESSAGE = (
+    "If an account exists for that email, you'll receive password reset instructions."
+)
+_GENERIC_INVALID_TOKEN = "This reset link is invalid or has expired."
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+
+def _hash_reset_token(raw_token: str) -> str:
+    return hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+
+
+async def _reset_rate_limited(email: str, client_ip: str) -> bool:
+    """
+    Best-effort rate limit: max 5 requests / 15 min per email and per IP.
+    Uses the existing Redis client when available; if Redis is down we do NOT
+    block (availability over strictness for a non-critical control).
+    """
+    r = getattr(redis_pubsub, "_redis", None)
+    if not redis_pubsub.available or not r:
+        return False
+    try:
+        window = 900
+        limit = 5
+        for scope in (f"pwreset:email:{email.lower()}", f"pwreset:ip:{client_ip}"):
+            n = await r.incr(scope)
+            if n == 1:
+                await r.expire(scope, window)
+            if n > limit:
+                return True
+    except Exception:
+        return False
+    return False
+
+
+@app.post("/api/v1/auth/forgot-password", tags=["Auth"])
+async def forgot_password(
+    body: ForgotPasswordRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    email = (body.email or "").strip()
+    client_ip = request.client.host if request.client else "unknown"
+
+    # Uniform response object built once — returned on every path so timing and
+    # payload do not reveal whether the account exists.
+    response: dict[str, Any] = {"message": _GENERIC_FORGOT_MESSAGE}
+
+    # Rate limit silently (still returns the generic message).
+    if email and await _reset_rate_limited(email, client_ip):
+        return JSONResponse(response)
+
+    user = await crud.get_user_by_email(db, email) if email else None
+    if user and user.is_active:
+        raw_token = secrets.token_urlsafe(32)
+        token_hash = _hash_reset_token(raw_token)
+        expires_at = datetime.utcnow() + timedelta(minutes=_RESET_TTL_MINUTES)
+        await crud.create_password_reset_token(db, str(user.id), token_hash, expires_at)
+
+        reset_url = f"{mailer.app_base_url()}/auth/reset-password?token={raw_token}"
+        delivered = mailer.send_password_reset_email(user.email, reset_url)
+
+        # Dev-only inspection: ONLY when explicitly enabled, non-production, and
+        # email delivery is not configured. Never in production/staging.
+        if not delivered and mailer.dev_token_inspection_enabled():
+            response["dev_reset_url"] = reset_url
+
+    return JSONResponse(response)
+
+
+@app.post("/api/v1/auth/reset-password", tags=["Auth"])
+async def reset_password(
+    body: ResetPasswordRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    new_password = body.new_password or ""
+    if len(new_password) < MIN_PASSWORD_LENGTH:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Password must be at least {MIN_PASSWORD_LENGTH} characters.",
+        )
+
+    token_hash = _hash_reset_token((body.token or "").strip())
+    row = await crud.get_valid_reset_token(db, token_hash)
+    if not row:
+        # Generic — do not distinguish invalid / expired / already-used.
+        raise HTTPException(status_code=400, detail=_GENERIC_INVALID_TOKEN)
+
+    user = await crud.get_user_by_id(db, str(row.user_id))
+    if not user or not user.is_active:
+        raise HTTPException(status_code=400, detail=_GENERIC_INVALID_TOKEN)
+
+    await crud.update_user_password(db, str(user.id), hash_password(new_password))
+    await crud.mark_reset_token_used(db, str(row.id))
+    await crud.invalidate_user_reset_tokens(db, str(user.id))
+
+    return {"message": "Your password has been updated."}
 
 
 # ─────────────────────────────────────────────────────────────────────────────

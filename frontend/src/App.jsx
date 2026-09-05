@@ -4,8 +4,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { WSProvider }    from './contexts/WSContext'
 import { ThemeProvider } from './contexts/ThemeContext'
-import Layout            from './components/layout/Layout'
-import AuthPage          from './pages/AuthPage'
+import { AppShell }      from './components/shell/AppShell'
+import LoginPage         from './pages/LoginPage'
+import SignupPage        from './pages/SignupPage'
+import ForgotPasswordPage from './pages/ForgotPasswordPage'
+import ResetPasswordPage  from './pages/ResetPasswordPage'
+import AccessDenied      from './components/shell/AccessDenied'
 import { Spinner }       from './components/ui'
 
 // Admin
@@ -45,19 +49,20 @@ function HomeRedirect() {
 
 function ProtectedRoute({ children, adminOnly = false }) {
   const { user, token } = useAuth()
+  // Unauthenticated → sign in (session-expiry clears token, so this also
+  // covers an expired session; LoginPage shows the "session expired" notice).
   if (!token || !user) return <Navigate to="/auth" replace />
-  if (adminOnly && user.role !== 'super_admin') return <Navigate to="/dashboard" replace />
-  // Admins are allowed to view the dashboard; removed automatic redirect
-  // if (!adminOnly && user.role === 'super_admin' && window.location.pathname === '/dashboard') {
-  //   return <Navigate to="/admin" replace />
-  // }
+  // Authenticated but unauthorized for an admin-only area: show a professional
+  // access-denied state inside the shell instead of a silent redirect. The
+  // access rule itself (super_admin only) is unchanged.
+  if (adminOnly && user.role !== 'super_admin') return <AccessDenied />
   return children
 }
 
 function Wrap({ adminOnly = false, children }) {
   return (
     <ProtectedRoute adminOnly={adminOnly}>
-      <Layout>{children}</Layout>
+      <AppShell>{children}</AppShell>
     </ProtectedRoute>
   )
 }
@@ -65,7 +70,10 @@ function Wrap({ adminOnly = false, children }) {
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/auth" element={<AuthPage />} />
+      <Route path="/auth"                  element={<LoginPage />} />
+      <Route path="/auth/signup"           element={<SignupPage />} />
+      <Route path="/auth/forgot-password"  element={<ForgotPasswordPage />} />
+      <Route path="/auth/reset-password"   element={<ResetPasswordPage />} />
       <Route path="/"     element={<HomeRedirect />} />
 
       <Route path="/admin"       element={<Wrap adminOnly><GodView /></Wrap>} />

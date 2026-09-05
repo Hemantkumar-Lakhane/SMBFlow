@@ -1,11 +1,30 @@
-# CURRENT STATE & CHANGELOG
+# SMBFlow Project Status — Current Checkpoint
 
-## Current Phase: Phase 3 (SMB Owner Dashboard) - COMPLETED
-## Next Phase: Phase 3.5 (SMBFlow Admin UI) - PLANNED
+## Milestone Status Overview
 
+### DONE
+- **Backend API Audit:** Comprehensive inventory of 80 FastAPI HTTP endpoints + 1 WebSocket endpoint completed.
+- **Frontend Migration Analysis:** Integration strategy defined (retaining legacy client/auth infrastructure while adopting Figma presentation UI).
+- **API Service Foundation:** Modular API service layer created in `src/api/client.js` and `src/api/services/`.
+- **Login & Auth Shell:** Figma login, signup, forgot password, and reset password UI integrated with real backend auth.
+- **Real Auth Verification:** Login verified against live backend JWT endpoints (`/api/v1/auth/login`, `/api/v1/auth/me`).
+- **Role Routing:** Enforced automatic routing (`super_admin` → `/admin`, `tenant_user` → `/dashboard`).
+- **Protected Routes:** Enforced `ProtectedRoute` guard across Figma shell components (`AppShell`, `Sidebar`, `TopHeader`).
+- **Auth Input Visibility:** Explicit readable input text color and lighter placeholder styling fixed across all auth pages.
+- **Build Verification:** Production frontend build passed with exit code 0.
 
+### IN PROGRESS
+- Remaining authentication verification / edge-case testing
+- Screen-by-screen frontend migration preparation
 
-<!-- ==================== FROM CHANGELOG.md ==================== -->
+### NEXT
+- Dashboard migration & backend wiring
+- Owner screens integration
+- Admin screens integration
+- API integration for remaining domain endpoints
+- Lead Assessment ML integration
+
+---
 
 # Changelog
 

@@ -39,6 +39,22 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_tenant ON users(tenant_id);
 
+-- Password reset tokens: single-use, expiring. Only a SHA-256 hash of the
+-- token is stored (never the raw token). Matches core.state_manager
+-- PasswordResetToken (auto-created at startup via Base.metadata.create_all;
+-- this keeps the SQL source of truth in sync).
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token_hash VARCHAR(64) NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    used_at    TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_pwreset_token_hash ON password_reset_tokens(token_hash);
+CREATE INDEX IF NOT EXISTS idx_pwreset_user ON password_reset_tokens(user_id);
+
 -- ── Workflow Definitions ─────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS workflow_definitions (
     id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),

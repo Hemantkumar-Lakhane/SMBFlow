@@ -226,8 +226,27 @@ class User(Base):
     last_login    = Column(DateTime)
     created_at    = Column(DateTime, default=datetime.utcnow)
     updated_at    = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
- 
- 
+
+
+class PasswordResetToken(Base):
+    """
+    Single-use, expiring password-reset tokens.
+
+    Only a SHA-256 hash of the token is ever stored (``token_hash``); the raw
+    token exists only in the emailed reset link (or the dev-only inspection
+    response). ``used_at`` enforces single-use; ``expires_at`` enforces TTL.
+    Naive UTC datetimes, consistent with the rest of this schema.
+    """
+    __tablename__ = "password_reset_tokens"
+
+    id         = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id    = Column(UUID(as_uuid=True), nullable=False, index=True)
+    token_hash = Column(String(64), nullable=False, index=True)  # SHA-256 hex
+    expires_at = Column(DateTime, nullable=False)
+    used_at    = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 class A2ARequest(Base):
     __tablename__ = "a2a_requests"
  

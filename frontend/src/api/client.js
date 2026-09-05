@@ -1,5 +1,7 @@
 // frontend/src/api/client.js
 
+import { emitSessionExpired } from './authEvents'
+
 export const API_BASE = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:8000/api/v1'
 export const WS_BASE  = import.meta.env.VITE_WS_BASE  || 'http://127.0.0.1:8000/ws'
 
@@ -21,6 +23,15 @@ export async function apiCall(path, options = {}, token = null) {
   }
 
   if (!res.ok) {
+    // Authenticated session expiry: a 401 returned while a bearer token was
+    // attached means the token is no longer valid. Signal AuthContext to clear
+    // auth (which also tears down the authenticated WebSocket) and redirect.
+    // Unauthenticated calls (login/forgot/reset use token === null) are exempt,
+    // so their 401s are handled inline as ordinary errors.
+    if (res.status === 401 && token) {
+      emitSessionExpired()
+    }
+
     let detail = `${res.status} ${res.statusText}`
     try {
       const contentType = res.headers.get('content-type') || ''

@@ -179,6 +179,76 @@ def user_to_dict(u: User) -> dict:
     }
 
 
+async def update_user_password(db: AsyncSession, user_id: str, password_hash: str) -> None:
+    await db.execute(
+        update(User).where(User.id == user_id).values(password_hash=password_hash)
+    )
+    await db.commit()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Password Reset Tokens
+#
+# Security: callers store only a SHA-256 hash of the raw token. These helpers
+# never receive, return, or log the raw token — they operate on the hash.
+# ─────────────────────────────────────────────────────────────────────────────
+
+async def create_password_reset_token(
+    db: AsyncSession,
+    user_id: str,
+    token_hash: str,
+    expires_at: datetime,
+):
+    from core.state_manager import PasswordResetToken
+    row = PasswordResetToken(
+        id=uuid.uuid4(),
+        user_id=user_id,
+        token_hash=token_hash,
+        expires_at=expires_at,
+    )
+    db.add(row)
+    await db.commit()
+    await db.refresh(row)
+    return row
+
+
+async def get_valid_reset_token(db: AsyncSession, token_hash: str):
+    """Return an unused, unexpired token row for this hash, else None."""
+    from core.state_manager import PasswordResetToken
+    result = await db.execute(
+        select(PasswordResetToken).where(
+            PasswordResetToken.token_hash == token_hash,
+            PasswordResetToken.used_at.is_(None),
+            PasswordResetToken.expires_at > datetime.utcnow(),
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+async def mark_reset_token_used(db: AsyncSession, token_id: str) -> None:
+    from core.state_manager import PasswordResetToken
+    await db.execute(
+        update(PasswordResetToken)
+        .where(PasswordResetToken.id == token_id)
+        .values(used_at=datetime.utcnow())
+    )
+    await db.commit()
+
+
+async def invalidate_user_reset_tokens(db: AsyncSession, user_id: str) -> None:
+    """Mark all outstanding (unused) reset tokens for a user as used."""
+    from core.state_manager import PasswordResetToken
+    await db.execute(
+        update(PasswordResetToken)
+        .where(
+            PasswordResetToken.user_id == user_id,
+            PasswordResetToken.used_at.is_(None),
+        )
+        .values(used_at=datetime.utcnow())
+    )
+    await db.commit()
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Workflow Instances
 # ─────────────────────────────────────────────────────────────────────────────
