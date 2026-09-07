@@ -1,5 +1,7 @@
 param()
 
+Set-Location $PSScriptRoot
+
 Write-Host "Starting local setup for SMBFlow..." -ForegroundColor Cyan
 
 # 1. Check Prerequisites

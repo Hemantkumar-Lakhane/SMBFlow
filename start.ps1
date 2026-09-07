@@ -1,5 +1,7 @@
 param()
 
+Set-Location $PSScriptRoot
+
 Write-Host "Starting SMBFlow Local Environment..." -ForegroundColor Cyan
 
 # 1. Start Docker Infrastructure

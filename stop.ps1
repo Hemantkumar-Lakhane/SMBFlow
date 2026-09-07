@@ -1,5 +1,7 @@
 param()
 
+Set-Location $PSScriptRoot
+
 Write-Host "Stopping SMBFlow Local Environment..." -ForegroundColor Cyan
 
 # Helper to stop process by port
