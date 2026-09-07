@@ -259,28 +259,34 @@ This distinction is the key to OpsGrid's multi-tenant model:
 We have provided automated scripts for local development setup.
 
 ### Step 1 — One-Time Setup
-Run the setup script from the project root:
+Run the setup script from the project root (or **drag & drop `setup.ps1`** into your PowerShell terminal window):
 ```powershell
 .\setup.ps1
+# Or if execution policy is restricted:
+powershell -ExecutionPolicy Bypass -File .\setup.ps1
 ```
 This will automatically:
 - Verify prerequisites (Python, Node, Docker)
 - Create and activate a Python virtual environment
 - Ensure `.env` is created and safely generate a `VAULT_ENCRYPTION_KEY`
-- Start PostgreSQL and Redis via Docker Compose
+- Start PostgreSQL (port 5434) and Redis (port 6379) via Docker Compose
 - Install backend and frontend dependencies
 - Generate local JSON seed data
 
 ### Step 2 — Daily Startup
-To start the application:
+To start the application, run (or **drag & drop `start.ps1`** into your PowerShell terminal window):
 ```powershell
 .\start.ps1
 ```
 This will launch the backend API and the Vite frontend in separate windows. 
 
-### Step 3 — Access the Application
+### Step 3 — Access the Application & API Testing URLs
 - **Frontend Dashboard:** [http://localhost:5173](http://localhost:5173)
-- **API Docs:** [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+- **API Base Endpoint:** [http://127.0.0.1:8000](http://127.0.0.1:8000)
+- **Interactive API Testing Docs (Swagger UI):** [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+- **API Health Check Endpoint:** [http://127.0.0.1:8000/api/v1/health](http://127.0.0.1:8000/api/v1/health)
+- **API ReDoc Documentation:** [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc)
+- **OpenAPI JSON Schema:** [http://127.0.0.1:8000/openapi.json](http://127.0.0.1:8000/openapi.json)
 
 **Test Logins:**
 - *SMB Owner (Business User):* `demo@tenant.com` / `demo123`

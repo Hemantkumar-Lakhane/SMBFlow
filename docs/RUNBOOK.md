@@ -7,30 +7,42 @@ This document outlines the step-by-step process for starting the full SMBFlow ap
 - Python 3.10+
 - Node.js 18+ & npm
 
+## Quick Automated Setup & Launch (Recommended)
+
+### 1. One-Time Setup
+Drag and drop `setup.ps1` into your PowerShell terminal (or run `.\setup.ps1`):
+```powershell
+.\setup.ps1
+# If execution policy prevents script execution:
+powershell -ExecutionPolicy Bypass -File .\setup.ps1
+```
+
+### 2. Daily Application Launch
+Drag and drop `start.ps1` into your PowerShell terminal (or run `.\start.ps1`):
+```powershell
+.\start.ps1
+```
+
 ---
 
-## 1. Start the Database Infrastructure
-The backend relies on PostgreSQL for relational data and vector storage, and Redis for caching and background tasks.
+## Manual Step-by-Step Setup
 
-From the root of the repository, start the Docker containers in detached mode:
+## 1. Start the Database Infrastructure
+The backend relies on PostgreSQL (exposed on host port **5434**) for relational data and vector storage, and Redis (port **6379**) for caching.
+
+From the root of the repository, start the Docker containers:
 ```powershell
-docker-compose up -d
+docker-compose up -d postgres redis
 ```
-*Note: Ensure PostgreSQL is running on port 5432 and Redis on 6379, as defined in your configuration.*
 
 ## 2. Start the FastAPI Backend
-The backend provides the API, orchestration engine, and database interactions.
-
 Open a terminal at the root of the repository (`C:\Users\lakha\ml_cp\SMBFlow`) and run:
 ```powershell
-python main.py api
+.\venv\Scripts\python.exe main.py api
 ```
-*This starts the Uvicorn server on `http://127.0.0.1:8000` with hot-reloading enabled.*
 
 ## 3. Start the React Frontend
-The frontend provides the user interface, including the new Figma-faithful Home Dashboard.
-
-Open a **second terminal window**, navigate to the frontend directory, and start the Vite development server:
+Open a second terminal window, navigate to `frontend`, and run:
 ```powershell
 cd frontend
 npm run dev

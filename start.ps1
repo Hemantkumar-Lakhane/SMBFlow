@@ -38,7 +38,10 @@ if ($frontendRunning) {
 Write-Host ""
 Write-Host "==========================================" -ForegroundColor Cyan
 Write-Host "SMBFlow is running!" -ForegroundColor Green
-Write-Host "Frontend:   http://localhost:5173"
-Write-Host "API:        http://127.0.0.1:8000"
-Write-Host "API Docs:   http://127.0.0.1:8000/docs"
+Write-Host "Frontend Dashboard:   http://localhost:5173"
+Write-Host "API Base URL:         http://127.0.0.1:8000"
+Write-Host "API Testing (Docs):   http://127.0.0.1:8000/docs"
+Write-Host "API Health Check:     http://127.0.0.1:8000/api/v1/health"
+Write-Host "API ReDoc View:       http://127.0.0.1:8000/redoc"
+Write-Host "API OpenAPI Schema:   http://127.0.0.1:8000/openapi.json"
 Write-Host "==========================================" -ForegroundColor Cyan
