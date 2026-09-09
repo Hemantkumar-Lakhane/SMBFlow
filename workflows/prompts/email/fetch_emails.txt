@@ -1,0 +1,1 @@
+Retrieve synthetic email messages for workflow execution testing using the email_get_synthetic_messages tool. Return all available messages.

@@ -102,13 +102,23 @@ export default function Dashboard() {
   const [error,   setError]   = useState('')
 
   const load = useCallback(async () => {
-    if (!user?.tenant_id) return
+    // Guard: do not call /dashboard/null if org context isn't resolved yet
+    if (!user?.tenant_id) {
+      setLoading(false)
+      return
+    }
     try {
       const res = await api.get(`/dashboard/${user.tenant_id}`)
       setData(res)
       setError('')
-    } catch {
-      setError('Failed to load dashboard data')
+    } catch (err) {
+      // 404 = org exists but no data yet (new workspace) — show empty state, not error
+      if (err?.status === 404 || err?.response?.status === 404) {
+        setData(null)
+        setError('')
+      } else {
+        setError('Failed to load dashboard data')
+      }
     } finally {
       setLoading(false)
     }

@@ -122,25 +122,45 @@ async def lifespan(app: FastAPI):
                 log.warning(
                     "Startup recovery: marked interrupted workflows as failed",
                     count=len(stuck),
-                    run_ids=[str(w.id)[:8] for w in stuck[:10]],
                 )
-    except Exception as _recovery_err:
-        log.error("Startup recovery failed (non-fatal)", error=str(_recovery_err))
+    except Exception as _rec_err:
+        log.warning("Startup recovery failed (non-fatal)", error=str(_rec_err))
+
+    # Start Email Event Detector
+    global _email_detector
+    try:
+        from core.event_detector import EmailEventDetector
+        _email_detector = EmailEventDetector(
+            poll_interval=float(os.getenv("EMAIL_DETECTOR_POLL_INTERVAL", "5.0")),
+            execute_workflow_fn=_execute_workflow_background,
+            broadcast_fn=broadcast_event,
+        )
+        await _email_detector.start()
+    except Exception as _det_err:
+        log.error("Failed to start EmailEventDetector", error=str(_det_err))
 
     log.info("SMBFlow API started")
     yield
 
     # Shutdown
+    if "_email_detector" in globals() and _email_detector:
+        await _email_detector.stop()
     await redis_pubsub.stop()
     log.info("SMBFlow API stopped")
 
 
+from api.routers import connections, reviews, medical_tourism
+
 app = FastAPI(
     title="SMBFlow API v3",
-    description="Autonomous Multi-Agent Workflow Engine — DB-first",
+    description="Autonomous Multi-Tenant Agentic Workflow Automation Platform",
     version="3.0.0",
     lifespan=lifespan,
 )
+
+app.include_router(connections.router)
+app.include_router(reviews.router)
+app.include_router(medical_tourism.router)
 
 app.add_middleware(
     CORSMiddleware,
@@ -303,9 +323,13 @@ class TenantCreate(BaseModel):
     config: dict = Field(default_factory=dict)
 
 class WorkflowTriggerRequest(BaseModel):
-    tenant_id: str
+    # tenant_id is OPTIONAL — Phase 0 bridge derives it from the authenticated
+    # user's organization when not supplied.  Kept for backwards compatibility
+    # with platform-admin triggers that supply an explicit tenant.
+    tenant_id: Optional[str] = None
     workflow_name: str
-    signal_data: dict = Field(default_factory=dict)
+    signal_data: Optional[dict] = Field(default_factory=dict)
+    trigger_signal: Optional[dict] = None
 
 class EscalationDecision(BaseModel):
     decision: dict
@@ -381,8 +405,18 @@ class WebhookMappingCreate(BaseModel):
     sample_payload: dict
     workflow_name: str
     field_mappings: dict  # e.g. {"account_id": "data.object.customer_id"}
-    trigger_conditions: Optional[dict] = None  # e.g. {"type": "invoice.payment_failed"}
- 
+class AdminUserInviteRequest(BaseModel):
+    email: str
+    full_name: Optional[str] = None
+    role: Optional[str] = "platform_admin"
+    organization_id: Optional[str] = None
+
+class ProvisionRequest(BaseModel):
+    full_name: Optional[str] = None
+    workspace_name: Optional[str] = None
+    industry: Optional[str] = "saas"
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Auth
 # ─────────────────────────────────────────────────────────────────────────────
@@ -413,7 +447,7 @@ async def signup(body: SignupRequest, db: AsyncSession = Depends(get_db)):
 
     tenant_id = None
     if body.tenant_name:
-        tenant = await crud.create_tenant(db, body.tenant_name, body.industry, {})
+        tenant = await crud.create_tenant(db, body.tenant_name, body.industry or "saas", {})
         tenant_id = str(tenant.id)
 
     user = await crud.create_user(
@@ -436,21 +470,184 @@ async def signup(body: SignupRequest, db: AsyncSession = Depends(get_db)):
     )
 
 
+@app.post("/api/v1/auth/provision", tags=["Auth"])
+async def provision_user_workspace(
+    body: ProvisionRequest,
+    current_user: TokenData = Depends(require_any_auth),
+    db: AsyncSession = Depends(get_db),
+):
+    org_user, org = await crud.ensure_user_organization_provisioned(
+        db,
+        user_id=current_user.user_id,
+        email=current_user.email,
+        full_name=body.full_name,
+        workspace_name=body.workspace_name,
+        industry=body.industry,
+    )
+    org_id = str(org.id) if org else (current_user.organization_id or current_user.tenant_id)
+    org_name = org.name if org else body.workspace_name
+
+    return {
+        "id": current_user.user_id,
+        "email": current_user.email,
+        "role": org_user.role if org_user else "org_user",
+        "organization_id": org_id,
+        "tenant_id": org_id,
+        "full_name": org_user.full_name if org_user else body.full_name,
+        "organization_name": org_name,
+        "tenant_name": org_name,
+        "industry": org.industry if org else (body.industry or "saas"),
+        "requires_onboarding": False,
+    }
+
+
 @app.get("/api/v1/auth/me", tags=["Auth"])
 async def get_me(
     current_user: TokenData = Depends(require_any_auth),
     db: AsyncSession = Depends(get_db),
 ):
-    user = await crud.get_user_by_id(db, current_user.user_id)
-    tenant_name = None
-    if current_user.tenant_id:
-        t = await crud.get_tenant(db, current_user.tenant_id)
-        tenant_name = t.name if t else None
+    org_user, org = await crud.ensure_user_organization_provisioned(
+        db,
+        user_id=current_user.user_id,
+        email=current_user.email,
+        full_name=current_user.full_name,
+    )
+    role = org_user.role if org_user else current_user.role
+    org_id = str(org.id) if org else (current_user.organization_id or current_user.tenant_id)
+    org_name = org.name if org else None
+
+    # Check if user requires workspace onboarding setup
+    requires_onboarding = False
+    if org and org.name == "Pending Workspace Setup":
+        requires_onboarding = True
+    elif org and org.profile_config and org.profile_config.get("requires_onboarding"):
+        requires_onboarding = True
+
+    resolved_full_name = (
+        (org_user.full_name if org_user and org_user.full_name and "@" not in org_user.full_name else None)
+        or current_user.full_name
+        or (current_user.email.split("@")[0].replace(".", " ").title() if current_user.email else "Dev User")
+    )
+
     return {
-        "id": current_user.user_id, "email": current_user.email,
-        "role": current_user.role, "tenant_id": current_user.tenant_id,
-        "full_name": user.full_name if user else None,
-        "tenant_name": tenant_name,
+        "id": current_user.user_id,
+        "email": current_user.email,
+        "role": role,
+        "organization_id": org_id,
+        "tenant_id": org_id,
+        "full_name": resolved_full_name,
+        "organization_name": org_name,
+        "tenant_name": org_name,
+        "industry": org.industry if org else "saas",
+        "requires_onboarding": requires_onboarding,
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Organizations — canonical org-scoped endpoints (Phase 0)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class OrgConfigUpdate(BaseModel):
+    """Partial update to organizations.profile_config."""
+    config: dict = Field(default_factory=dict)
+
+class OrgProfileUpdate(BaseModel):
+    """Update organization name / industry / settings."""
+    name: Optional[str] = None
+    industry: Optional[str] = None
+    config: Optional[dict] = None
+
+
+@app.get("/api/v1/organizations/me", tags=["Organizations"])
+async def get_my_organization(
+    current_user: TokenData = Depends(require_any_auth),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Return the authenticated user's organization from the ``organizations`` table.
+    This is the canonical source of truth for org name, industry, and profile.
+    Used by: GeneralSettings, Dashboard header, Workflow Builder industry pre-fill.
+    """
+    org_user, org = await crud.ensure_user_organization_provisioned(
+        db,
+        user_id=current_user.user_id,
+        email=current_user.email,
+        full_name=current_user.full_name,
+    )
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    profile = org.profile_config or {}
+    return {
+        "id":               str(org.id),
+        "name":             org.name,
+        "industry":         org.industry,
+        "enabled_modules":  org.enabled_modules or [],
+        "active":           org.active,
+        "created_at":       org.created_at.isoformat() if org.created_at else None,
+        "config": {
+            "timezone":      profile.get("timezone", "UTC"),
+            "notifications": profile.get("notifications", {}),
+            "retention":     profile.get("retention", {}),
+        },
+        "role":             org_user.role if org_user else "org_user",
+        "full_name":        org_user.full_name if org_user else current_user.full_name,
+    }
+
+
+@app.put("/api/v1/organizations/me/config", tags=["Organizations"])
+async def update_my_organization_config(
+    body: OrgConfigUpdate,
+    current_user: TokenData = Depends(require_any_auth),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Merge partial config into the authenticated user's organization.profile_config.
+    Used by: GeneralSettings → Save changes.
+    """
+    org_user, org = await crud.ensure_user_organization_provisioned(
+        db,
+        user_id=current_user.user_id,
+        email=current_user.email,
+        full_name=current_user.full_name,
+    )
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    updated = await crud.update_organization_config(db, str(org.id), body.config)
+    await broadcast_event("org_config_updated", {"org_id": str(org.id)})
+    return {"message": "Organization config updated", "org_id": str(org.id)}
+
+
+@app.put("/api/v1/organizations/me/profile", tags=["Organizations"])
+async def update_my_organization_profile(
+    body: OrgProfileUpdate,
+    current_user: TokenData = Depends(require_any_auth),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Update the authenticated user's organization name/industry/profile.
+    Only org_admin or platform_admin may change org name and industry.
+    """
+    org_user, org = await crud.ensure_user_organization_provisioned(
+        db,
+        user_id=current_user.user_id,
+        email=current_user.email,
+        full_name=current_user.full_name,
+    )
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    updated = await crud.update_organization_profile(
+        db,
+        str(org.id),
+        name=body.name,
+        industry=body.industry,
+        profile_config=body.config,
+    )
+    await broadcast_event("org_profile_updated", {"org_id": str(org.id)})
+    return {
+        "message":  "Organization profile updated",
+        "org_id":   str(org.id),
+        "name":     updated.name if updated else body.name,
+        "industry": updated.industry if updated else body.industry,
     }
 
 
@@ -757,19 +954,158 @@ async def get_system_events(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Users
+# Users & Admin Management
 # ─────────────────────────────────────────────────────────────────────────────
+
+@app.post("/api/v1/admin/users/invite", tags=["Admin"])
+async def invite_platform_admin_or_user(
+    body: AdminUserInviteRequest,
+    current_user: TokenData = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    if current_user.role not in ("platform_admin", "super_admin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Platform Admin access required",
+        )
+
+    target_role = body.role or "platform_admin"
+    if target_role == "super_admin":
+        target_role = "platform_admin"
+    elif target_role == "tenant_user":
+        target_role = "org_user"
+
+    if target_role not in ("platform_admin", "org_user"):
+        target_role = "org_user"
+
+    target_uid = str(uuid.uuid5(uuid.NAMESPACE_DNS, body.email.lower().strip()))
+    supabase_url = os.getenv("SUPABASE_URL") or os.getenv("VITE_SUPABASE_URL")
+    service_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_SECRET_KEY")
+
+    if supabase_url and service_key and not service_key.startswith("YOUR_"):
+        try:
+            import httpx
+            async with httpx.AsyncClient() as client:
+                res = await client.post(
+                    f"{supabase_url.rstrip('/')}/auth/v1/admin/users",
+                    json={"email": body.email.strip(), "email_confirm": True},
+                    headers={
+                        "apikey": service_key,
+                        "Authorization": f"Bearer {service_key}",
+                        "Content-Type": "application/json",
+                    },
+                    timeout=5.0,
+                )
+                if res.status_code in (200, 201):
+                    data = res.json()
+                    target_uid = str(data.get("id") or target_uid)
+        except Exception as e:
+            log.warning("Supabase Admin API call failed/skipped", error=str(e))
+
+    org_user, org = await crud.ensure_user_organization_provisioned(
+        db,
+        user_id=target_uid,
+        email=body.email.strip(),
+        full_name=body.full_name,
+    )
+    if org_user:
+        org_user.role = target_role
+        if body.full_name:
+            org_user.full_name = body.full_name
+        await db.commit()
+        await db.refresh(org_user)
+
+    legacy_u = await crud.get_user_by_email(db, body.email.strip())
+    if legacy_u:
+        legacy_u.role = "super_admin" if target_role == "platform_admin" else "tenant_user"
+        await db.commit()
+
+    await crud.log_event(
+        db,
+        event_type="admin_user_invited",
+        tenant_id=str(org.id) if org else None,
+        instance_id=None,
+        message=f"Platform Admin {current_user.email} invited {body.email} as {target_role}",
+        metadata={
+            "actor_user_id": current_user.user_id,
+            "actor_email": current_user.email,
+            "target_email": body.email.strip(),
+            "assigned_role": target_role,
+        },
+    )
+
+    return {
+        "message": f"Successfully invited {body.email.strip()} as {target_role}",
+        "user_id": target_uid,
+        "email": body.email.strip(),
+        "role": target_role,
+    }
+
+
+@app.get("/api/v1/users", tags=["Users"])
+@app.get("/api/v1/admin/users", tags=["Admin"])
+async def list_admin_users(
+    current_user: TokenData = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    if current_user.role not in ("platform_admin", "super_admin"):
+        raise HTTPException(status_code=403, detail="Platform Admin access required")
+
+    res_ou = await db.execute(select(OrganizationUser).order_by(OrganizationUser.created_at.desc()))
+    ous = res_ou.scalars().all()
+
+    res_orgs = await db.execute(select(Organization))
+    orgs_map = {str(o.id): o.name for o in res_orgs.scalars().all()}
+
+    result = []
+    seen_emails = set()
+
+    for ou in ous:
+        role = "platform_admin" if ou.role in ("platform_admin", "super_admin") else "org_user"
+        seen_emails.add(ou.email.lower())
+        result.append({
+            "id": str(ou.id),
+            "user_id": str(ou.user_id),
+            "email": ou.email,
+            "full_name": ou.full_name,
+            "role": role,
+            "organization_id": str(ou.organization_id) if ou.organization_id else None,
+            "organization_name": orgs_map.get(str(ou.organization_id), "SMBFlow Workspace"),
+            "tenant_id": str(ou.organization_id) if ou.organization_id else None,
+            "is_active": True,
+            "created_at": ou.created_at.isoformat() if ou.created_at else None,
+        })
+
+    legacy_users = await crud.list_users(db)
+    for u in legacy_users:
+        if u.email.lower() not in seen_emails:
+            role = "platform_admin" if u.role in ("platform_admin", "super_admin") else "org_user"
+            result.append({
+                "id": str(u.id),
+                "user_id": str(u.id),
+                "email": u.email,
+                "full_name": u.full_name,
+                "role": role,
+                "organization_id": str(u.tenant_id) if u.tenant_id else None,
+                "organization_name": orgs_map.get(str(u.tenant_id), "—"),
+                "tenant_id": str(u.tenant_id) if u.tenant_id else None,
+                "is_active": u.is_active,
+                "created_at": u.created_at.isoformat() if u.created_at else None,
+            })
+
+    return result
+
 
 @app.post("/api/v1/users", tags=["Users"])
 async def create_user(
     body: UserCreate,
-    _: TokenData = Depends(require_admin),
+    current_user: TokenData = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
+    if current_user.role not in ("platform_admin", "super_admin"):
+        raise HTTPException(status_code=403, detail="Platform Admin access required")
     if await crud.get_user_by_email(db, body.email):
         raise HTTPException(status_code=409, detail="Email already exists")
-    if body.tenant_id and not await crud.get_tenant(db, body.tenant_id):
-        raise HTTPException(status_code=404, detail="Tenant not found")
     user = await crud.create_user(
         db, body.email, hash_password(body.password),
         body.full_name, "tenant_user", body.tenant_id,
@@ -777,21 +1113,19 @@ async def create_user(
     return {"user_id": str(user.id), "message": "User created"}
 
 
-@app.get("/api/v1/users", tags=["Users"])
-async def list_users(_: TokenData = Depends(require_admin), db: AsyncSession = Depends(get_db)):
-    return [crud.user_to_dict(u) for u in await crud.list_users(db)]
-
-
 @app.patch("/api/v1/users/{user_id}/deactivate", tags=["Users"])
 async def deactivate_user(
     user_id: str,
-    _: TokenData = Depends(require_admin),
+    current_user: TokenData = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
+    if current_user.role not in ("platform_admin", "super_admin"):
+        raise HTTPException(status_code=403, detail="Platform Admin access required")
     if not await crud.get_user_by_id(db, user_id):
         raise HTTPException(status_code=404, detail="User not found")
     await crud.deactivate_user(db, user_id)
     return {"message": "User deactivated"}
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -929,6 +1263,38 @@ async def get_evidence_file_content(
 # path segments as run_id values.
 # ─────────────────────────────────────────────────────────────────────────────
 
+@app.get("/api/v1/workflows/{workflow_name}/trigger-info", tags=["Workflows"])
+async def get_workflow_trigger_info(
+    workflow_name: str,
+    current_user: TokenData = Depends(require_any_auth),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Returns live metadata for manual workflow trigger UI (available fixture messages, trigger type, source).
+    """
+    available_messages = 40
+    try:
+        data_path = Path("db/seed/data/email_messages.json")
+        if data_path.exists():
+            emails = json.loads(data_path.read_text(encoding="utf-8"))
+            available_messages = len(emails)
+    except Exception:
+        pass
+
+    display_name = workflow_name.replace("_", " ").title()
+    if workflow_name == "email_summarizer":
+        display_name = "Email Summarizer"
+
+    return {
+        "workflow_name": workflow_name,
+        "display_name": display_name,
+        "trigger_type": "New Email" if "email" in workflow_name else "Manual",
+        "source": "Synthetic Inbox" if "email" in workflow_name else "System Direct",
+        "available_messages_count": available_messages,
+        "status": "active",
+    }
+
+
 @app.post("/api/v1/workflows/trigger", tags=["Workflows"])
 async def trigger_workflow(
     body: WorkflowTriggerRequest,
@@ -936,44 +1302,169 @@ async def trigger_workflow(
     current_user: TokenData = Depends(require_any_auth),
     db: AsyncSession = Depends(get_db),
 ):
-    assert_tenant_access(current_user, body.tenant_id)
-    tenant = await crud.get_tenant(db, body.tenant_id)
-    if not tenant:
-        raise HTTPException(status_code=404, detail="Tenant not found")
+    """
+    Trigger a workflow run.
+
+    Phase 0 bridge: ``tenant_id`` in the request body is now optional.
+    When omitted (or for org_users), the tenant context is derived from the
+    authenticated user's organization via ``resolve_tenant_config_bridge``.
+    Platform admins may still supply an explicit ``tenant_id`` to target a
+    specific legacy tenant.
+    """
+    # ── Resolve effective tenant_id and config (Option B bridge) ──────────
+    if body.tenant_id and current_user.role in ("platform_admin", "super_admin"):
+        # Platform admin with explicit tenant_id — use legacy path
+        assert_tenant_access(current_user, body.tenant_id)
+        effective_tenant_id, tenant_config = await crud.resolve_tenant_config_bridge(
+            db, body.tenant_id
+        )
+    else:
+        # Org user — always derive from authenticated organization
+        org_id = (
+            current_user.organization_id
+            or current_user.tenant_id
+            or body.tenant_id
+        )
+        if not org_id:
+            # Canonical resolution: authenticated user -> organization_users -> organizations
+            org_user, org = await crud.ensure_user_organization_provisioned(
+                db,
+                user_id=current_user.user_id,
+                email=current_user.email,
+                full_name=current_user.full_name,
+            )
+            if org:
+                org_id = str(org.id)
+                current_user.organization_id = org_id
+                current_user.tenant_id = org_id
+                if org_user and current_user.role == "org_user":
+                    current_user.role = org_user.role
+
+        if not org_id:
+            raise HTTPException(
+                status_code=422,
+                detail="Cannot determine organization context. Complete onboarding first.",
+            )
+        effective_tenant_id, tenant_config = await crud.resolve_tenant_config_bridge(
+            db, org_id
+        )
 
     run_id = str(uuid.uuid4())
-    # ── Pre-flight config validation ──────────────────────────────────────
+
+    # ── Pre-flight config validation (best-effort — warns but allows run) ─
     from core.config_validator import validate_tenant_config
-    validation = validate_tenant_config(tenant.config or {}, strict=False)
-    if not validation.valid:
-        for err in validation.errors:
-            log.error("Validation Error", field=err.field, message=err.message)
-        raise HTTPException(
-            status_code=422,
-            detail={
-                "message": "Tenant config has blocking errors — fix before triggering",
-                "errors": [{"field": e.field, "message": e.message} for e in validation.errors],
-                "warnings": [{"field": w.field, "message": w.message} for w in validation.warnings],
-                "hint": "Fix [MODIFY] placeholders and REPLACE_WITH_UUID values in Config Studio",
-            }
+    validation = validate_tenant_config(tenant_config, strict=False)
+    if not validation.valid and validation.errors:
+        log.warning(
+            "Workflow trigger config warnings",
+            tenant_id=effective_tenant_id,
+            errors=[e.message for e in validation.errors],
         )
+        # Only block on hard errors if config was explicitly supplied (admin path)
+        if body.tenant_id and current_user.role in ("platform_admin", "super_admin"):
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "message": "Tenant config has blocking errors — fix before triggering",
+                    "errors": [{"field": e.field, "message": e.message} for e in validation.errors],
+                    "warnings": [{"field": w.field, "message": w.message} for w in validation.warnings],
+                    "hint": "Fix [MODIFY] placeholders and REPLACE_WITH_UUID values in Config Studio",
+                },
+            )
+
+    # Normalize trigger signal / payload
+    sig = body.trigger_signal or body.signal_data or {}
+    if not isinstance(sig, dict):
+        sig = {}
+    if "source" not in sig:
+        sig["source"] = "manual_ui"
+
     await crud.create_workflow_instance(
-        db, run_id=run_id, tenant_id=body.tenant_id,
-        workflow_name=body.workflow_name, trigger_signal=body.signal_data,
-        triggered_by=current_user.user_id, tenant_config=tenant.config,
+        db, run_id=run_id, tenant_id=effective_tenant_id,
+        workflow_name=body.workflow_name, trigger_signal=sig,
+        triggered_by=current_user.user_id, tenant_config=tenant_config,
     )
-    budget = await crud.get_budget_settings(db, body.tenant_id) or {}
+    budget = await crud.get_budget_settings(db, effective_tenant_id) or {}
     background_tasks.add_task(
-        _execute_workflow_background, run_id, tenant.config,
-        body.workflow_name, body.signal_data, budget,
+        _execute_workflow_background, run_id, tenant_config,
+        body.workflow_name, sig, budget,
     )
-    await crud.log_event(db, "workflow_triggered", body.tenant_id, run_id,
-                         f"Workflow '{body.workflow_name}' triggered by {current_user.email}")
-    await broadcast_event("workflow_triggered",
-                          {"run_id": run_id, "workflow": body.workflow_name,
-                           "tenant_id": body.tenant_id})
-    return {"run_id": run_id, "status": "pending",
-            "message": f"Workflow '{body.workflow_name}' queued."}
+    await crud.log_event(
+        db, "workflow_triggered", effective_tenant_id, run_id,
+        f"Workflow '{body.workflow_name}' triggered by {current_user.email}",
+    )
+    await broadcast_event(
+        "workflow_triggered",
+        {"run_id": run_id, "workflow": body.workflow_name,
+         "tenant_id": effective_tenant_id},
+    )
+    return {
+        "run_id":     run_id,
+        "status":     "pending",
+        "tenant_id":  effective_tenant_id,
+        "message":    f"Workflow '{body.workflow_name}' queued.",
+    }
+
+
+@app.get("/api/v1/workflows/{workflow_name}/trigger-info", tags=["Workflows"])
+async def get_workflow_trigger_info(
+    workflow_name: str,
+    current_user: TokenData = Depends(require_any_auth),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Returns real runtime trigger information, available message counts from fixtures,
+    and execution statistics for the given workflow.
+    """
+    safe_name = workflow_name.replace("/", "_").replace("..", "")
+    dag_path = Path("workflows/dags") / f"{safe_name}.json"
+    meta = {}
+    if dag_path.exists():
+        try:
+            async with aiofiles.open(dag_path) as fp:
+                dag = json.loads(await fp.read())
+            meta = dag.get("_meta", {})
+        except Exception:
+            pass
+
+    available_messages_count = 0
+    if workflow_name == "email_summarizer" or "email" in workflow_name:
+        fixture_path = Path("db/seed/data/email_messages.json")
+        if fixture_path.exists():
+            try:
+                async with aiofiles.open(fixture_path) as fp:
+                    emails = json.loads(await fp.read())
+                if isinstance(emails, list):
+                    available_messages_count = len(emails)
+            except Exception:
+                pass
+
+    trigger_meta = meta.get("trigger", {})
+    trigger_type = "New Email" if ("email" in workflow_name or trigger_meta.get("type") == "email") else "Manual"
+    source = "Synthetic Inbox" if ("email" in workflow_name or "synthetic" in str(trigger_meta.get("source", ""))) else "Direct"
+
+    # Compute stats for authenticated org / tenant
+    org_id = current_user.organization_id or current_user.tenant_id
+    instances = await crud.list_workflow_instances(db, tenant_id=org_id, limit=200)
+    wf_runs = [i for i in instances if i.workflow_name == workflow_name]
+    completed_runs = [i for i in wf_runs if i.status in ("completed", "WorkflowStatus.COMPLETED")]
+    last_run = wf_runs[0] if wf_runs else None
+
+    return {
+        "workflow_name": workflow_name,
+        "display_name": meta.get("name", workflow_name.replace("_", " ").title()),
+        "description": meta.get("description", ""),
+        "status": "active",
+        "automation_status": "active",
+        "automation_enabled": True,
+        "trigger_type": trigger_type,
+        "source": source,
+        "available_messages_count": available_messages_count,
+        "total_runs": len(wf_runs),
+        "completed_runs": len(completed_runs),
+        "success_rate": round((len(completed_runs) / len(wf_runs)) * 100) if wf_runs else None,
+        "last_run": crud.workflow_to_dict(last_run) if last_run else None,
+    }
 
 
 @app.get("/api/v1/workflows/estimate-cost", tags=["Workflows"])
@@ -1084,9 +1575,54 @@ async def list_workflows(
     current_user: TokenData = Depends(require_any_auth),
     db: AsyncSession = Depends(get_db),
 ):
-    filter_tid = get_tenant_filter(current_user) or tenant_id
+    """
+    List workflow instances (runs) scoped to the authenticated user's org.
+
+    Phase 0: For org_users, the tenant_id is always derived from auth — the
+    query param is accepted for backwards compatibility but is overridden by
+    the authenticated org_id.  Platform admins may filter by explicit tenant_id.
+    """
+    if current_user.role in ("platform_admin", "super_admin"):
+        filter_tid = get_tenant_filter(current_user) or tenant_id
+    else:
+        # Org user — always scope to their own org; ignore client-supplied tenant_id
+        filter_tid = current_user.organization_id or current_user.tenant_id
     instances = await crud.list_workflow_instances(db, tenant_id=filter_tid, limit=200)
     return [crud.workflow_to_dict(i) for i in instances]
+
+
+@app.get("/api/v1/workflows/definitions", tags=["Workflows"])
+async def list_org_workflow_definitions(
+    include_templates: bool = Query(False, description="Also return platform templates"),
+    current_user: TokenData = Depends(require_any_auth),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    List WorkflowDefinitions owned by the authenticated user's organization.
+
+    Returns definitions from the ``workflow_definitions`` DB table — distinct
+    from the filesystem DAGs returned by ``/config/workflows``.
+    Set ``include_templates=true`` to also return platform-level templates.
+    """
+    org_id = current_user.organization_id or current_user.tenant_id
+    defs = await crud.list_workflow_definitions(
+        db,
+        organization_id=org_id,
+        include_templates=include_templates,
+    )
+    return [
+        {
+            "id":              str(d.id),
+            "name":            d.name,
+            "industry":        d.industry,
+            "version":         d.version,
+            "is_template":     d.is_template,
+            "organization_id": str(d.organization_id) if d.organization_id else None,
+            "active":          d.active,
+            "created_at":      d.created_at.isoformat() if d.created_at else None,
+        }
+        for d in defs
+    ]
 
 
 @app.post("/api/v1/workflows/{run_id}/pause", tags=["Workflows"])
@@ -1355,7 +1891,15 @@ async def list_escalations(
 ):
     filter_tid = get_tenant_filter(current_user)
     escs = await crud.list_escalations(db, status=status, tenant_id=filter_tid)
-    return [crud.escalation_to_dict(e) for e in escs]
+    res = [crud.escalation_to_dict(e) for e in escs]
+
+    # Also query ApprovalItems so Action Center displays workflow recommendations & email drafts
+    org_id = current_user.organization_id or filter_tid
+    approval_status = "pending" if status == "pending" else ("approved" if status in ("resolved", "approved") else status)
+    approval_items = await crud.list_approval_items(db, organization_id=org_id, status=approval_status)
+    for a in approval_items:
+        res.append(await crud.approval_item_to_dict(a))
+    return res
 
 
 @app.post("/api/v1/escalations/{escalation_id}/decide", tags=["Escalations"])
@@ -1370,7 +1914,56 @@ async def decide_escalation(
     sm = StateManager(session=db)
     esc = await crud.get_escalation(db, escalation_id)
     if not esc:
-        raise HTTPException(status_code=404, detail="Escalation not found")
+        # Check if this ID is an ApprovalItem
+        from db.models.core import ApprovalItem
+        from sqlalchemy import select
+        try:
+            r = await db.execute(select(ApprovalItem).where(ApprovalItem.id == uuid.UUID(escalation_id)))
+            appr = r.scalar_one_or_none()
+        except Exception:
+            appr = None
+
+        if appr:
+            action_lower = body.action_chosen.lower()
+            decided_status = "approved" if ("approve" in action_lower or "send" in action_lower) else "rejected"
+            appr.status = decided_status
+            appr.decided_by = body.decided_by or current_user.email
+            appr.decided_at = datetime.utcnow()
+            payload = appr.payload or {}
+            if isinstance(body.decision, dict) and body.decision.get("notes"):
+                payload["decision_notes"] = body.decision.get("notes")
+            appr.payload = payload
+            await db.commit()
+
+            # Safe test mode execution boundary — zero external side effects
+            if decided_status == "approved":
+                log.info(
+                    "[TEST MODE] Approval executed safely — Simulated email action approved",
+                    approval_id=escalation_id,
+                    recipient=payload.get("to_address") or payload.get("to") or "client@enterprise.com",
+                    subject=payload.get("subject"),
+                    simulated=True,
+                )
+
+            await broadcast_event("approval_decided", {
+                "approval_id": escalation_id,
+                "status": decided_status,
+                "action_chosen": body.action_chosen,
+                "decided_by": appr.decided_by,
+                "organization_id": str(appr.organization_id) if appr.organization_id else None,
+            })
+
+            return {
+                "message": f"Approval item {decided_status}.",
+                "escalation_id": escalation_id,
+                "action_chosen": body.action_chosen,
+                "resolved": True,
+                "signatures_collected": 1,
+                "required_signatures": 1,
+            }
+
+        raise HTTPException(status_code=404, detail="Escalation or Approval item not found")
+
     assert_tenant_access(current_user, str(esc.tenant_id))
 
     updated_esc = await sm.add_escalation_signature(
@@ -2036,14 +2629,34 @@ async def list_workflow_dags():
             async with aiofiles.open(f) as fp:
                 dag = json.loads(await fp.read())
             meta = dag.get("_meta", {})
+            trigger_meta = meta.get("trigger", {})
+            trigger_type = "New Email" if ("email" in f.stem or trigger_meta.get("type") == "email") else "Manual"
+            source = "Synthetic Inbox" if ("email" in f.stem or "synthetic" in str(trigger_meta.get("source", ""))) else "Direct"
+
             workflows.append({
-                "name": f.stem, "display_name": meta.get("name", f.stem),
+                "name": f.stem,
+                "display_name": meta.get("name", f.stem.replace("_", " ").title()),
                 "industry": meta.get("industry", "general"),
                 "description": meta.get("description", ""),
+                "status": "active",
+                "automation_status": "active",
+                "automation_enabled": True,
+                "trigger_type": trigger_type,
                 "trigger_types": meta.get("trigger_types", ["manual"]),
+                "trigger": trigger_meta,
+                "source": source,
+                "sla_hours": meta.get("sla_hours", 2),
+                "estimated_duration_minutes": meta.get("estimated_duration_minutes", 2),
             })
         except Exception:
-            workflows.append({"name": f.stem, "display_name": f.stem})
+            workflows.append({
+                "name": f.stem,
+                "display_name": f.stem.replace("_", " ").title(),
+                "status": "active",
+                "trigger_type": "Manual",
+                "source": "Direct",
+                "automation_status": "active",
+            })
     return workflows
 
 

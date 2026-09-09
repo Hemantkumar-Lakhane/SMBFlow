@@ -1,4 +1,4 @@
-// frontend/src/components/shell/Sidebar.jsx
+import React, { useMemo } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
   Home, Inbox, Workflow, BookOpen, Bot, Plug, Settings,
@@ -90,7 +90,25 @@ const adminNav = [
 export function Sidebar({ isAdmin = false, getBadge, onNavClick }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
-  const sections = isAdmin ? adminNav : ownerNav
+
+  const enabledModules = user?.enabled_modules || ['medical_tourism']
+  const hasMedicalTourism = enabledModules.includes('medical_tourism')
+
+  const dynamicOwnerNav = useMemo(() => {
+    const nav = [...ownerNav]
+    if (hasMedicalTourism) {
+      nav.splice(1, 0, {
+        title: 'Medical Tourism',
+        items: [
+          { label: 'Patient Cases', to: '/medical/cases', icon: FileText },
+        ],
+      })
+    }
+    return nav
+  }, [hasMedicalTourism])
+
+  const sections = isAdmin ? adminNav : dynamicOwnerNav
+
 
   function handleLogout() {
     logout()

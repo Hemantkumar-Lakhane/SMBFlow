@@ -1,23 +1,24 @@
 // frontend/src/contexts/AuthContext.jsx
 // ─────────────────────────────────────────────────────────────────────────────
-// KEY CHANGES vs original:
-//  1. JWT access token stored in React state (memory) — NOT localStorage
-//     Eliminates XSS vector: malicious injected scripts cannot steal the token
-//  2. Non-sensitive user profile still persisted to localStorage for UX
-//     (name, email, role shown on refresh before re-auth — no token exposed)
-//  3. On page refresh: user info shown immediately, token must be re-acquired
-//     via a silent /auth/refresh call if you add a refresh-token cookie endpoint.
-//     For now, users simply re-login on hard refresh (acceptable tradeoff vs XSS).
+// Supabase Auth + SMBFlow Canonical Profile Context
+// Handles token, user, role, organization hydration & session listeners.
 // ─────────────────────────────────────────────────────────────────────────────
 import { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react'
+import { createClient } from '@supabase/supabase-js'
 import { createApiClient } from '../api/client'
 import { createServices } from '../api/services'
+import { createAuthService } from '../api/services/auth.service'
 import { onSessionExpired } from '../api/authEvents'
 
 const AuthContext = createContext(null)
 
-// Safe user profile storage (no token — profile is not secret)
-const USER_STORAGE_KEY = 'opsgrid_user_profile'
+const USER_STORAGE_KEY = 'smbflow_user_profile'
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || ''
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
+export const supabase = (supabaseUrl && supabaseAnonKey && !supabaseAnonKey.startsWith('YOUR_'))
+  ? createClient(supabaseUrl, supabaseAnonKey)
+  : null
 
 function loadStoredUser() {
   try {
@@ -28,28 +29,24 @@ function loadStoredUser() {
 }
 
 export function AuthProvider({ children }) {
-  // Token lives ONLY in memory — never touches localStorage / sessionStorage
   const [token, setToken] = useState(null)
-
-  // Non-sensitive profile hydrated from localStorage for instant UI
   const [user, setUser] = useState(() => loadStoredUser())
-
-  // One-shot flag: set when an authenticated call 401s (token expired/revoked).
-  // The login page reads it to show "Your session has expired…", then clears it.
+  const [loading, setLoading] = useState(true)
   const [sessionExpired, setSessionExpired] = useState(false)
 
   const login = useCallback((newToken, newUser) => {
-    // Store token in memory only
     setToken(newToken)
     setUser(newUser)
     setSessionExpired(false)
-    // Persist non-sensitive profile for UX continuity across soft navigations
     try {
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(newUser))
     } catch (_) {}
   }, [])
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    if (supabase) {
+      try { await supabase.auth.signOut() } catch (_) {}
+    }
     setToken(null)
     setUser(null)
     try {
@@ -59,10 +56,85 @@ export function AuthProvider({ children }) {
 
   const clearSessionExpired = useCallback(() => setSessionExpired(false), [])
 
-  // Bridge the transport-layer session-expiry signal into React state.
-  // On an authenticated 401, clear auth (which also closes the authenticated
-  // WebSocket, since WSContext no-ops without a token) and raise the flag so
-  // the login page can explain what happened.
+  // Hydrate profile via FastAPI /auth/me or fallback to session metadata
+  const processSession = useCallback(async (session) => {
+    if (!session) {
+      setToken(null)
+      setUser(null)
+      try { localStorage.removeItem(USER_STORAGE_KEY) } catch (_) {}
+      setLoading(false)
+      return
+    }
+
+    setToken(session.access_token)
+    try {
+      const authApi = createAuthService(createApiClient(session.access_token))
+      const profile = await authApi.me().catch(() => null)
+
+      const u = {
+        id: profile?.id || session.user.id,
+        email: profile?.email || session.user.email,
+        role: profile?.role || session.user.user_metadata?.role || 'org_user',
+        organization_id: profile?.organization_id || profile?.tenant_id || session.user.user_metadata?.organization_id || null,
+        tenant_id: profile?.organization_id || profile?.tenant_id || session.user.user_metadata?.organization_id || null,
+        full_name: profile?.full_name || session.user.user_metadata?.full_name || session.user.user_metadata?.name || null,
+        organization_name: profile?.organization_name || profile?.tenant_name || null,
+        industry: profile?.industry || 'saas',
+        requires_onboarding: profile?.requires_onboarding ?? false,
+        enabled_modules: [profile?.industry || 'saas'],
+      }
+      setUser(u)
+      try { localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(u)) } catch (_) {}
+    } catch (_) {
+      const u = {
+        id: session.user.id,
+        email: session.user.email,
+        role: session.user.user_metadata?.role || 'org_user',
+        organization_id: session.user.user_metadata?.organization_id || null,
+        requires_onboarding: false,
+        enabled_modules: ['saas'],
+      }
+      setUser(u)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  const provisionWorkspace = useCallback(async (payload) => {
+    if (!token) throw new Error('No active authentication token')
+    const authApi = createAuthService(createApiClient(token))
+    const profile = await authApi.provision(payload)
+    const u = {
+      id: profile.id,
+      email: profile.email,
+      role: profile.role || 'org_user',
+      organization_id: profile.organization_id || profile.tenant_id,
+      tenant_id: profile.organization_id || profile.tenant_id,
+      full_name: profile.full_name,
+      organization_name: profile.organization_name || profile.tenant_name,
+      industry: profile.industry || 'saas',
+      requires_onboarding: false,
+      enabled_modules: [profile.industry || 'saas'],
+    }
+    setUser(u)
+    try { localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(u)) } catch (_) {}
+    return u
+  }, [token])
+
+  // Supabase Auth listener — INITIAL_SESSION fires on mount for existing sessions
+  useEffect(() => {
+    if (!supabase) {
+      setLoading(false)
+      return
+    }
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      processSession(session)
+    })
+
+    return () => subscription.unsubscribe()
+  }, [processSession])
+
   useEffect(() => {
     return onSessionExpired(() => {
       setToken((prev) => {
@@ -76,21 +148,19 @@ export function AuthProvider({ children }) {
     })
   }, [])
 
-  // Bound API client — recreated only when token changes
   const api = useMemo(() => createApiClient(token), [token])
-
-  // Domain service layer, built on the bound client — recreated with it.
   const services = useMemo(() => createServices(api), [api])
 
-  const isAdmin = user?.role === 'super_admin'
+  const isAdmin = user?.role === 'platform_admin' || user?.role === 'super_admin'
 
   const value = useMemo(
     () => ({
-      user, token, isAdmin, login, logout, api, services,
-      sessionExpired, clearSessionExpired,
+      user, token, loading, isAdmin, login, logout, provisionWorkspace, api, services,
+      sessionExpired, clearSessionExpired, supabase,
     }),
-    [user, token, isAdmin, login, logout, api, services, sessionExpired, clearSessionExpired],
+    [user, token, loading, isAdmin, login, logout, provisionWorkspace, api, services, sessionExpired, clearSessionExpired],
   )
+
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

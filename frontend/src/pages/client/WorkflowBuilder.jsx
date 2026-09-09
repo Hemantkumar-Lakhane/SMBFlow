@@ -22,6 +22,7 @@ import {
   EmptyState, Modal, Badge, cn,
 } from '../../components/ui'
 import { AGENT_ICONS, AGENT_LABELS, AGENT_DESCRIPTIONS } from '../../utils/helpers'
+import RunWorkflowModal from '../../components/workflow/RunWorkflowModal'
 
 // ── Agent type config ──────────────────────────────────────────────────────────
 const AGENT_TYPES = [
@@ -333,7 +334,7 @@ function AgentPalette({ onDragStart }) {
 }
 
 // ── Flow Canvas ───────────────────────────────────────────────────────────────
-function FlowCanvas({ workflowName, dag, allTools, promptFiles, onSave, isSaving }) {
+function FlowCanvas({ workflowName, dag, allTools, promptFiles, onSave, isSaving, onRun }) {
   const [nodes, setNodes, onNodesChange] = useNodesState([])
   const [edges, setEdges, onEdgesChange] = useEdgesState([])
   const [editingNode, setEditingNode]    = useState(null)
@@ -447,6 +448,9 @@ function FlowCanvas({ workflowName, dag, allTools, promptFiles, onSave, isSaving
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs text-[rgb(var(--text-muted))]">{nodes.length} nodes · {edges.length} edges</span>
+            <Button size="sm" variant="secondary" onClick={onRun} icon={<Play className="w-3.5 h-3.5 fill-blue-600 text-blue-600" />}>
+              Run Workflow
+            </Button>
             <Button size="sm" variant="gradient" loading={isSaving} onClick={handleSave} icon={<Save className="w-3.5 h-3.5" />}>
               Save Workflow
             </Button>
@@ -537,7 +541,7 @@ function FlowCanvas({ workflowName, dag, allTools, promptFiles, onSave, isSaving
 // ── Main WorkflowBuilder ───────────────────────────────────────────────────────
 export default function WorkflowBuilder() {
   const navigate          = useNavigate()
-  const { api }           = useAuth()
+  const { api, user }     = useAuth()
   const [workflows, setWorkflows] = useState([])
   const [selected, setSelected]   = useState(null)
   const [dag, setDag]             = useState(null)
@@ -548,10 +552,19 @@ export default function WorkflowBuilder() {
   const [error, setError]         = useState('')
   const [success, setSuccess]     = useState('')
   const [showCreate, setShowCreate] = useState(false)
+  const [runModalOpen, setRunModalOpen] = useState(false)
 
-  // Create form
-  const [newName, setNewName]     = useState('')
-  const [newIndustry, setNewIndustry] = useState('saas')
+  // Create form — pre-fill industry from the authenticated org (avoids re-selection every time)
+  const [newName, setNewName]         = useState('')
+  const [newIndustry, setNewIndustry] = useState(user?.industry || 'saas')
+
+  // Sync if user.industry arrives asynchronously after mount
+  useEffect(() => {
+    if (user?.industry && newIndustry === 'saas') {
+      setNewIndustry(user.industry)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.industry])
 
   const load = useCallback(async () => {
     try {
@@ -688,6 +701,7 @@ export default function WorkflowBuilder() {
                 promptFiles={promptFiles}
                 onSave={handleSave}
                 isSaving={saving}
+                onRun={() => setRunModalOpen(true)}
               />
             </ReactFlowProvider>
           ) : (
@@ -707,6 +721,18 @@ export default function WorkflowBuilder() {
         </div>
       </div>
 
+      {/* Run Workflow Modal */}
+      <RunWorkflowModal
+        open={runModalOpen}
+        onClose={() => setRunModalOpen(false)}
+        workflowName={selected || 'email_summarizer'}
+        displayName={dag?._meta?.name || selected || 'Workflow'}
+        onSuccess={(res) => {
+          setSuccess(`Workflow '${selected}' successfully queued (Run ID: ${res?.run_id?.slice(0, 8)}...)`)
+          setTimeout(() => setSuccess(''), 5000)
+        }}
+      />
+
       {/* Create modal */}
       <Modal open={showCreate} onClose={() => setShowCreate(false)} title="New Workflow" width="max-w-sm">
         <div className="space-y-4">
@@ -718,7 +744,7 @@ export default function WorkflowBuilder() {
             hint="Becomes the file name and workflow ID"
           />
           <Select
-            label="Industry"
+            label={`Industry${user?.industry ? ` (org: ${user.industry})` : ''}`}
             value={newIndustry}
             onChange={e => setNewIndustry(e.target.value)}
             options={INDUSTRIES.map(i => ({ value: i, label: i.toUpperCase() }))}

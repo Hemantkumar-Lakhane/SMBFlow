@@ -9,9 +9,11 @@ CONSTANT — do not modify for business customization.
 
 from __future__ import annotations
 
+import json
 import os
+import urllib.request
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Any, Optional
 
 import bcrypt
 import structlog
@@ -19,6 +21,12 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from pydantic import BaseModel
+
+try:
+    from dotenv import load_dotenv
+    load_dotenv(override=False)
+except ImportError:
+    pass
 
 log = structlog.get_logger()
 
@@ -29,6 +37,10 @@ log = structlog.get_logger()
 SECRET_KEY = os.getenv("SECRET_KEY", "opsgrid-dev-secret-change-in-production")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "1440"))  # 24h
+
+def get_supabase_jwt_secret() -> str:
+    raw_secret = os.getenv("SUPABASE_JWT_SECRET", "")
+    return raw_secret if (raw_secret and not raw_secret.startswith("YOUR_")) else SECRET_KEY
 
 security = HTTPBearer()
 
@@ -42,6 +54,15 @@ class TokenData(BaseModel):
     email: str
     role: str
     tenant_id: Optional[str] = None
+    organization_id: Optional[str] = None
+    full_name: Optional[str] = None
+
+    def model_post_init(self, __context: Any) -> None:
+        if not self.organization_id and self.tenant_id:
+            self.organization_id = self.tenant_id
+        elif not self.tenant_id and self.organization_id:
+            self.tenant_id = self.organization_id
+
 
 
 class UserInDB(BaseModel):
@@ -118,21 +139,123 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
-def decode_token(token: str) -> TokenData:
+def _verify_supabase_token_online(token: str) -> Optional[dict]:
+    """
+    Cryptographically validates a Supabase Auth Bearer token by querying the
+    Supabase Auth server API endpoint (/auth/v1/user).
+    
+    The Supabase Auth server verifies the JWT signature and expiration against
+    its internal signing keys. Returns the authenticated user object if valid,
+    or None if the token is invalid, forged, or expired.
+    """
+    supabase_url = os.getenv("SUPABASE_URL") or os.getenv("VITE_SUPABASE_URL")
+    supabase_key = os.getenv("SUPABASE_ANON_KEY") or os.getenv("VITE_SUPABASE_ANON_KEY") or os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+    if not supabase_url or not supabase_key:
+        return None
+    url = f"{supabase_url.rstrip('/')}/auth/v1/user"
+    req = urllib.request.Request(
+        url,
+        headers={
+            "Authorization": f"Bearer {token}",
+            "apikey": supabase_key,
+        },
+        method="GET",
+    )
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        with urllib.request.urlopen(req, timeout=5.0) as resp:
+            if resp.status == 200:
+                return json.loads(resp.read().decode("utf-8"))
+    except Exception:
+        pass
+    return None
+
+
+def decode_token(token: str) -> TokenData:
+    """
+    Strictly verifies and decodes a Bearer JWT access token.
+    
+    Verification hierarchy (ALL require cryptographic proof):
+    1. Direct HMAC-SHA256 signature verification using SUPABASE_JWT_SECRET
+    2. Direct HMAC-SHA256 signature verification using SECRET_KEY
+    3. Server-side token validation against Supabase Auth API (/auth/v1/user)
+    
+    Unverified claims are NEVER accepted. Invalid or forged tokens return HTTP 401.
+    """
+    key = get_supabase_jwt_secret()
+
+    # 1. Attempt signature verification using SUPABASE_JWT_SECRET
+    try:
+        payload = jwt.decode(token, key, algorithms=[ALGORITHM], options={"verify_aud": False})
+        user_id = payload.get("sub") or payload.get("user_id")
+        email = payload.get("email", "user@smbflow.com")
+        role = payload.get("role") or payload.get("user_metadata", {}).get("role", "org_user")
+        if role == "super_admin":
+            role = "platform_admin"
+        elif role in ("tenant_user", "authenticated"):
+            role = "org_user"
+        org_id = payload.get("organization_id") or payload.get("tenant_id") or payload.get("user_metadata", {}).get("organization_id")
+        user_meta = payload.get("user_metadata") or {}
+        full_name = payload.get("full_name") or user_meta.get("full_name") or user_meta.get("name")
         return TokenData(
-            user_id=payload["sub"],
-            email=payload["email"],
-            role=payload["role"],
-            tenant_id=payload.get("tenant_id"),
+            user_id=str(user_id),
+            email=email,
+            role=role,
+            organization_id=str(org_id) if org_id else None,
+            tenant_id=str(org_id) if org_id else None,
+            full_name=full_name,
         )
-    except JWTError as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token",
-            headers={"WWW-Authenticate": "Bearer"},
+    except JWTError:
+        pass
+
+    # 2. Attempt signature verification using local SECRET_KEY (if distinct from key)
+    if key != SECRET_KEY:
+        try:
+            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM], options={"verify_aud": False})
+            role = payload.get("role", "org_user")
+            if role == "super_admin":
+                role = "platform_admin"
+            org_id = payload.get("tenant_id") or payload.get("organization_id")
+            user_meta = payload.get("user_metadata") or {}
+            full_name = payload.get("full_name") or user_meta.get("full_name") or user_meta.get("name")
+            return TokenData(
+                user_id=str(payload["sub"]),
+                email=payload["email"],
+                role=role,
+                organization_id=str(org_id) if org_id else None,
+                tenant_id=str(org_id) if org_id else None,
+                full_name=full_name,
+            )
+        except JWTError:
+            pass
+
+    # 3. Server-side online validation against Supabase Auth API (/auth/v1/user)
+    user_data = _verify_supabase_token_online(token)
+    if user_data and user_data.get("id"):
+        user_id = user_data["id"]
+        email = user_data.get("email", f"{user_id}@smbflow.com")
+        user_meta = user_data.get("user_metadata") or {}
+        role = user_data.get("role") or user_meta.get("role", "org_user")
+        if role == "super_admin":
+            role = "platform_admin"
+        elif role in ("tenant_user", "authenticated"):
+            role = "org_user"
+        org_id = user_meta.get("organization_id") or user_meta.get("tenant_id")
+        full_name = user_meta.get("full_name") or user_meta.get("name")
+        return TokenData(
+            user_id=str(user_id),
+            email=email,
+            role=role,
+            organization_id=str(org_id) if org_id else None,
+            tenant_id=str(org_id) if org_id else None,
+            full_name=full_name,
         )
+
+    # All verification mechanisms failed — reject with 401 Unauthorized
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid or expired token",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -142,18 +265,28 @@ def decode_token(token: str) -> TokenData:
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> TokenData:
-    """Extract and validate JWT from Authorization header."""
-    return decode_token(credentials.credentials)
+    """Extract and validate JWT from Authorization header and resolve canonical organization context."""
+    user = decode_token(credentials.credentials)
+    if not user.organization_id and (user.user_id or user.email):
+        from api.deps.auth import _resolve_org_context
+        db_org_id, db_role = await _resolve_org_context(user.user_id, user.email)
+        if db_org_id:
+            user.organization_id = db_org_id
+            user.tenant_id = db_org_id
+        if db_role and user.role == "org_user":
+            user.role = db_role
+    return user
 
 
 async def require_admin(current_user: TokenData = Depends(get_current_user)) -> TokenData:
-    """Require super_admin role."""
-    if current_user.role != "super_admin":
+    """Require platform_admin or super_admin role."""
+    if current_user.role not in ("platform_admin", "super_admin"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Super admin access required",
+            detail="Platform Admin access required",
         )
     return current_user
+
 
 
 async def require_any_auth(current_user: TokenData = Depends(get_current_user)) -> TokenData:
@@ -174,9 +307,10 @@ def get_tenant_filter(current_user: TokenData) -> Optional[str]:
 
 def assert_tenant_access(current_user: TokenData, tenant_id: str) -> None:
     """Raise 403 if a tenant_user tries to access another tenant's data."""
-    if current_user.role == "super_admin":
+    if current_user.role in ("platform_admin", "super_admin"):
         return
-    if current_user.tenant_id != tenant_id:
+    user_org = current_user.organization_id or current_user.tenant_id
+    if user_org and str(user_org) != str(tenant_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to this tenant's data",

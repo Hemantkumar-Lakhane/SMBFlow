@@ -32,7 +32,15 @@ KNOWN_AGENT_TYPES = {
     "execution_agent",
     "memory_agent",
     "discovery_agent",
-    "consensus_agent",   # new meta-debate agent
+    "consensus_agent",
+    "customer_outreach_agent",
+    "customer_support_agent",
+    "marketing_outreach_agent",
+    "summarizer_agent",
+    "recommendation_agent",
+    "comparison_agent",
+    "hr_agent",
+    "operations_agent",
 }
 
 # Tools always available regardless of custom tools
@@ -50,6 +58,7 @@ BUILTIN_TOOL_NAMES = {
     "health_get_appointments",
     "finance_get_expenses",
     "finance_get_employees",
+    "email_get_synthetic_messages",
     "auto",  # Discovery agent wildcard
 }
 

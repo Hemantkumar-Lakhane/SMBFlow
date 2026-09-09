@@ -431,9 +431,17 @@ export default function WorkflowDetail() {
         </button>
         <div className="flex-1 min-w-0">
           <h1 className="text-xl font-bold text-[rgb(var(--text-primary))] truncate">{workflow?.workflow_name}</h1>
-          <div className="flex items-center gap-3 mt-0.5 flex-wrap text-xs text-[rgb(var(--text-muted))]">
-            <span className="font-mono">{runId?.slice(0, 8)}</span>
+          <div className="flex items-center gap-2.5 mt-1 flex-wrap text-xs text-[rgb(var(--text-muted))]">
+            <span className="font-mono bg-[rgb(var(--bg-card))] px-2 py-0.5 rounded border border-[rgb(var(--border))]">{runId?.slice(0, 8)}</span>
             <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{timeAgo(workflow?.started_at)}</span>
+            <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold border bg-purple-50 text-purple-700 border-purple-200">
+              Trigger: {workflow?.trigger_type || (workflow?.trigger_source === 'manual_ui' ? 'Manual' : 'New Email')}
+            </span>
+            {workflow?.message_count != null && (
+              <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold border bg-blue-50 text-blue-700 border-blue-200">
+                Messages: {workflow.message_count}
+              </span>
+            )}
           </div>
         </div>
 

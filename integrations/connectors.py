@@ -16,6 +16,8 @@ MODIFY — add new connectors by extending BaseConnector.
 from __future__ import annotations
 
 import json
+import os
+import time
 from abc import ABC, abstractmethod
 from typing import Any, Optional
 
@@ -191,27 +193,110 @@ class GmailConnector(BaseConnector):
     """
     Gmail for sending and reading emails.
     Auth: OAuth2 via Google. Requires 'access_token' in credentials.
+    Supports auto-refresh via 'refresh_token', 'client_id', and 'client_secret'.
     """
 
     BASE_URL = "https://gmail.googleapis.com/gmail/v1"
 
-    def __init__(self, credentials: dict, config: dict = None):
+    def __init__(self, credentials: dict, config: dict = None, on_token_refreshed: Optional[Any] = None):
         super().__init__(credentials, config)
         self._access_token = credentials.get("access_token")
+        self._refresh_token = credentials.get("refresh_token")
+        self._client_id = credentials.get("client_id") or os.getenv("GOOGLE_CLIENT_ID")
+        self._client_secret = credentials.get("client_secret") or os.getenv("GOOGLE_CLIENT_SECRET")
+        self._expires_at = float(credentials.get("expires_at", 0))
         self._sender_alias = (config or {}).get("sender_alias", "")
         self._sender_name = (config or {}).get("sender_name", "OpsGrid")
         self._queue_for_approval = (config or {}).get("queue_for_approval", True)
+        self._on_token_refreshed = on_token_refreshed
+
+    async def refresh_access_token(self) -> bool:
+        """Exchange refresh_token for a new access_token using Google OAuth token endpoint."""
+        refresh_token = self._refresh_token or self.credentials.get("refresh_token")
+        client_id = self._client_id or os.getenv("GOOGLE_CLIENT_ID")
+        client_secret = self._client_secret or os.getenv("GOOGLE_CLIENT_SECRET")
+
+        if not (refresh_token and client_id and client_secret):
+            self._log.warning("Token refresh skipped — missing refresh_token, client_id, or client_secret")
+            return False
+
+        try:
+            async with httpx.AsyncClient(timeout=15) as client:
+                resp = await client.post(
+                    "https://oauth2.googleapis.com/token",
+                    data={
+                        "client_id": client_id,
+                        "client_secret": client_secret,
+                        "refresh_token": refresh_token,
+                        "grant_type": "refresh_token",
+                    }
+                )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    new_token = data.get("access_token")
+                    expires_in = int(data.get("expires_in", 3600))
+                    if new_token:
+                        self._access_token = new_token
+                        self.credentials["access_token"] = new_token
+                        self._expires_at = time.time() + expires_in
+                        self.credentials["expires_at"] = self._expires_at
+
+                        if self._client:
+                            await self._client.aclose()
+                            self._client = None
+
+                        if callable(self._on_token_refreshed):
+                            try:
+                                res = self._on_token_refreshed(self.credentials)
+                                if hasattr(res, "__await__"):
+                                    await res
+                            except Exception as ex:
+                                self._log.error("Token refreshed callback error", error=str(ex))
+
+                        self._log.info("Successfully refreshed Google OAuth access token")
+                        return True
+                self._log.error("Google token refresh failed", status=resp.status_code)
+                return False
+        except Exception as e:
+            self._log.error("Token refresh exception", error=str(e))
+            return False
+
+    async def _ensure_valid_token(self) -> bool:
+        """Check if access token is valid or expired. Refresh if refresh_token is available."""
+        if not self._access_token:
+            return await self.refresh_access_token()
+
+        # If token expires in less than 60 seconds
+        if self._expires_at > 0 and time.time() >= self._expires_at - 60:
+            return await self.refresh_access_token()
+
+        return True
 
     async def authenticate(self) -> bool:
         try:
+            await self._ensure_valid_token()
+            if not self._access_token:
+                return False
+
             if not self._client:
                 self._client = httpx.AsyncClient(
                     headers={"Authorization": f"Bearer {self._access_token}"},
                     timeout=30
                 )
             resp = await self._client.get(f"{self.BASE_URL}/users/me/profile")
+
+            if resp.status_code == 401:
+                # Force refresh once on 401
+                if await self.refresh_access_token():
+                    self._client = httpx.AsyncClient(
+                        headers={"Authorization": f"Bearer {self._access_token}"},
+                        timeout=30
+                    )
+                    resp = await self._client.get(f"{self.BASE_URL}/users/me/profile")
+
             return resp.status_code == 200
-        except Exception:
+        except Exception as e:
+            self._log.error("Gmail authenticate failed", error=str(e))
             return False
 
     async def read(self, resource: str, filters: dict = None) -> list[dict]:
@@ -220,6 +305,10 @@ class GmailConnector(BaseConnector):
         q = filters.get("q", "in:sent")
         limit = filters.get("limit", 10)
         try:
+            await self._ensure_valid_token()
+            if not self._access_token:
+                return []
+
             if not self._client:
                 self._client = httpx.AsyncClient(
                     headers={"Authorization": f"Bearer {self._access_token}"}, timeout=30
@@ -228,6 +317,17 @@ class GmailConnector(BaseConnector):
                 f"{self.BASE_URL}/users/me/{resource}",
                 params={"q": q, "maxResults": limit}
             )
+
+            if resp.status_code == 401:
+                if await self.refresh_access_token():
+                    self._client = httpx.AsyncClient(
+                        headers={"Authorization": f"Bearer {self._access_token}"}, timeout=30
+                    )
+                    resp = await self._client.get(
+                        f"{self.BASE_URL}/users/me/{resource}",
+                        params={"q": q, "maxResults": limit}
+                    )
+
             resp.raise_for_status()
             return resp.json().get("messages", [])
         except Exception as e:

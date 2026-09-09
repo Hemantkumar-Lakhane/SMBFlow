@@ -238,7 +238,7 @@ class RAGEngine:
         metadata = {
             "workflow_name": workflow_name,
             "outcome": outcome_indicator,
-            "actions": [a.get("action_id", "") for a in (actions_taken or [])[:3]],
+            "actions": [a.get("action_id", str(a)) if isinstance(a, dict) else str(a) for a in (actions_taken or [])[:3]],
             "cost_usd": cost_usd,
         }
 
@@ -265,6 +265,24 @@ class RAGEngine:
             })
 
         log.info("RAG: Workflow outcome stored", tenant=tenant_id[:8], workflow=workflow_name)
+
+    def _build_lesson_content(
+        self,
+        situation_summary: str,
+        reasoning_chain: str,
+        actions_taken: list,
+        outcome_indicator: str,
+    ) -> str:
+        actions_str = ", ".join(
+            a.get("action_id", str(a)) if isinstance(a, dict) else str(a)
+            for a in (actions_taken or [])
+        )
+        return (
+            f"OUTCOME: {outcome_indicator}\n"
+            f"SITUATION: {situation_summary}\n"
+            f"REASONING: {reasoning_chain}\n"
+            f"ACTIONS: {actions_str}"
+        )
     
     async def store_workflow_outcome_background(
         self,
@@ -752,14 +770,20 @@ class RAGEngine:
                 if "rag_embeddings_tenant_id_fkey" in str(e):
                     # Tenant doesn't exist in DB (e.g., CLI mock run). Retry with NULL tenant_id.
                     params["tid"] = None
-                    await self._db.execute(query, params)
-                    await self._db.commit()
+                    try:
+                        await self._db.execute(query, params)
+                        await self._db.commit()
+                    except Exception:
+                        await self._db.rollback()
                 else:
-                    raise e
-                    
+                    log.debug("RAG DB store integrity error (non-fatal)", error=str(e))
+            except Exception as e:
+                await self._db.rollback()
+                log.debug("RAG DB store skipped (non-fatal)", error=str(e))
         except Exception as e:
-            await self._db.rollback()
-            log.error("RAG DB store failed", error=str(e))
+            if self._db:
+                await self._db.rollback()
+            log.debug("RAG DB store error", error=str(e))
 
     async def _db_search(self, tenant_id, query_embedding, top_k, content_type):
         """

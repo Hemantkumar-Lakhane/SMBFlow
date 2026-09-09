@@ -1,10 +1,11 @@
 // frontend/src/pages/client/WorkflowLibrary.jsx
-// Matches Figma: Workflow Library — browse templates + active POC
+// Workflow Library — browse templates + active automations
 
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { BookOpen, ArrowRight } from 'lucide-react'
+import { BookOpen, ArrowRight, Play, Mail, Zap, CheckCircle2, Layers } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
+import RunWorkflowModal from '../../components/workflow/RunWorkflowModal'
 
 const CATEGORY_TABS = ['All','Sales','Customer Support','Finance','Operations','HR','Procurement','Custom']
 
@@ -53,17 +54,17 @@ export default function WorkflowLibrary() {
   const navigate      = useNavigate()
   const { api }       = useAuth()
   const [category,    setCategory]    = useState('All')
-  const [activePOC,   setActivePOC]   = useState(null)
+  const [activeWfs,   setActiveWfs]   = useState([])
   const [loading,     setLoading]     = useState(true)
+  const [modalOpen,   setModalOpen]   = useState(false)
+  const [selectedWf,  setSelectedWf]  = useState({ name: 'email_summarizer', displayName: 'Email Summarizer' })
 
   const load = useCallback(async () => {
     try {
       const wfs = await api.get('/config/workflows')
-      // Find the "Lead Assessment" POC — or the first active workflow
-      const poc = Array.isArray(wfs) ? wfs.find(w => w.name?.includes('lead') || w.name?.includes('assessment')) : null
-      setActivePOC(poc || (Array.isArray(wfs) && wfs[0]) || null)
+      setActiveWfs(Array.isArray(wfs) ? wfs : [])
     } catch {
-      /* no POC */
+      setActiveWfs([])
     } finally {
       setLoading(false)
     }
@@ -77,13 +78,32 @@ export default function WorkflowLibrary() {
     navigate('/workflows/builder')
   }
 
+  const handleRunNow = (wf) => {
+    setSelectedWf({
+      name: wf.name || 'email_summarizer',
+      displayName: wf.display_name || wf.name || 'Email Summarizer',
+    })
+    setModalOpen(true)
+  }
+
+  const emailSummarizerWf = activeWfs.find(w => w.name === 'email_summarizer' || w.name?.includes('email'))
+
   return (
     <div className="p-6 bg-gray-50 min-h-full">
+      {/* Run Workflow Modal */}
+      <RunWorkflowModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        workflowName={selectedWf.name}
+        displayName={selectedWf.displayName}
+        onSuccess={() => load()}
+      />
+
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Workflow Library</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Start from a proven template or build a custom workflow</p>
+          <p className="text-sm text-gray-500 mt-0.5">Start from proven templates or run active AI workflow pipelines</p>
         </div>
         <button
           onClick={() => navigate('/workflows/builder')}
@@ -92,6 +112,59 @@ export default function WorkflowLibrary() {
           + Create Custom
         </button>
       </div>
+
+      {/* Active Autonomous Pipeline Banner */}
+      {!loading && emailSummarizerWf && (
+        <div className="mb-6">
+          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">Active Production Workflow</p>
+          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+                <Mail className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <h3 className="text-sm font-bold text-gray-900">{emailSummarizerWf.display_name || 'Email Summarizer'}</h3>
+                  <span className="text-[11px] font-semibold px-2 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded-full flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500" /> Active
+                  </span>
+                  <span className="text-[11px] font-semibold px-2 py-0.5 bg-purple-50 text-purple-700 border border-purple-200 rounded-full">
+                    Trigger: New Email
+                  </span>
+                  <span className="text-[11px] font-semibold px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full">
+                    Source: Synthetic Inbox
+                  </span>
+                  <span className="text-[11px] font-semibold px-2 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full">
+                    Automation: Enabled
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 max-w-2xl leading-relaxed">
+                  {emailSummarizerWf.description || 'Continuously monitors inbox for incoming synthetic messages, analyzes priorities, evaluates actionable escalations, and persists summaries.'}
+                </p>
+                <div className="flex gap-1.5 mt-2.5">
+                  {['Research Agent', 'Summarizer Agent', 'Drafting Agent', 'Memory Agent', 'EPI Signing'].map(t => (
+                    <ToolChip key={t} label={t} />
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2.5 flex-shrink-0">
+              <button
+                onClick={() => handleRunNow(emailSummarizerWf)}
+                className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors"
+              >
+                <Play className="w-4 h-4 fill-white" /> Run Now
+              </button>
+              <button
+                onClick={() => navigate('/workflows/builder')}
+                className="flex items-center gap-1.5 px-3.5 py-2 border border-gray-200 hover:border-blue-300 text-sm font-semibold text-gray-700 hover:text-blue-600 rounded-lg transition-colors whitespace-nowrap"
+              >
+                Configure <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Category tabs */}
       <div className="flex gap-2 flex-wrap mb-6">
@@ -109,37 +182,6 @@ export default function WorkflowLibrary() {
           </button>
         ))}
       </div>
-
-      {/* Active POC banner */}
-      {!loading && activePOC && (
-        <div className="mb-6">
-          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">Active POC</p>
-          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm flex items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold text-lg">
-                A
-              </div>
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="text-sm font-bold text-gray-900">{activePOC.display_name || activePOC.name}</h3>
-                  <span className="text-[11px] font-semibold px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full">PROOF OF CONCEPT</span>
-                  <span className="text-[11px] font-semibold px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-full">Configuration required</span>
-                </div>
-                <p className="text-xs text-gray-500">Score and prioritize inbound leads using ML predictive models and LLM reasoning.</p>
-                <div className="flex gap-1.5 mt-2">
-                  {['ML Model','LLM Agent','CRM Tool'].map(t => <ToolChip key={t} label={t} />)}
-                </div>
-              </div>
-            </div>
-            <button
-              onClick={() => navigate('/workflows/builder')}
-              className="flex items-center gap-1.5 px-4 py-2 border border-gray-200 hover:border-blue-300 text-sm font-semibold text-gray-700 hover:text-blue-600 rounded-lg transition-colors whitespace-nowrap"
-            >
-              View workflow <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Templates grid */}
       <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3">Reusable Templates</p>

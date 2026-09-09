@@ -32,6 +32,7 @@ from core.state_manager import (
     WorkflowInstance,
     WorkflowStatus,
 )
+from db.models.core import Organization, OrganizationUser
 
 log = structlog.get_logger()
 
@@ -263,9 +264,8 @@ async def create_workflow_instance(
     tenant_config: Optional[dict] = None,
 ) -> WorkflowInstance:
     inst = WorkflowInstance(
-        id=run_id,
-        tenant_id=tenant_id,
-        # definition_id=uuid.uuid4(),  # placeholder; real DAG lookup optional
+        id=uuid.UUID(run_id) if isinstance(run_id, str) else run_id,
+        tenant_id=uuid.UUID(tenant_id) if isinstance(tenant_id, str) else tenant_id,
         workflow_name=workflow_name,
         status=WorkflowStatus.PENDING,
         trigger_signal=trigger_signal,
@@ -275,9 +275,9 @@ async def create_workflow_instance(
             "workflow_name": workflow_name,
             "started_at": datetime.utcnow().isoformat(),
             "patterns": [],
+            "tenant_config": tenant_config or {},
+            "triggered_by": triggered_by,
         },
-        tenant_config=tenant_config,
-        triggered_by=triggered_by,
     )
     db.add(inst)
     await db.commit()
@@ -286,7 +286,8 @@ async def create_workflow_instance(
 
 
 async def get_workflow_instance(db: AsyncSession, run_id: str) -> Optional[WorkflowInstance]:
-    result = await db.execute(select(WorkflowInstance).where(WorkflowInstance.id == run_id))
+    u_id = uuid.UUID(run_id) if isinstance(run_id, str) else run_id
+    result = await db.execute(select(WorkflowInstance).where(WorkflowInstance.id == u_id))
     return result.scalar_one_or_none()
 
 
@@ -391,10 +392,45 @@ async def update_workflow_status(
 
 def workflow_to_dict(inst: WorkflowInstance) -> dict:
     """Serialise a WorkflowInstance to a plain API-friendly dict."""
+    signal = getattr(inst, "trigger_signal", None)
+    if signal is None:
+        signal = getattr(inst, "trigger_payload", None)
+    if not isinstance(signal, dict):
+        signal = {}
+
+    # Distinguish manual vs new email / automatic trigger
+    raw_source = signal.get("source", "manual")
+    if raw_source in ("manual_ui", "manual", "ui", "user_trigger"):
+        trigger_type = "Manual"
+    elif raw_source in ("email_event_detector", "synthetic_fixture", "new_email", "email_inbox", "synthetic_inbox"):
+        trigger_type = "New Email"
+    elif raw_source in ("scheduled", "cron"):
+        trigger_type = "Scheduled"
+    elif raw_source in ("webhook", "api_event"):
+        trigger_type = "Webhook"
+    else:
+        trigger_type = str(raw_source).replace("_", " ").title()
+
+    msg_ids = signal.get("message_ids")
+    msg_limit = signal.get("limit")
+    if isinstance(msg_ids, list):
+        message_count = len(msg_ids)
+    elif msg_limit is not None:
+        message_count = int(msg_limit)
+    elif isinstance(inst.outcome, dict) and "emails_processed" in inst.outcome:
+        message_count = inst.outcome.get("emails_processed")
+    else:
+        message_count = None
+
+    tenant_val = getattr(inst, "tenant_id", None) or getattr(inst, "organization_id", None)
+
     return {
         "run_id": str(inst.id),
-        "tenant_id": str(inst.tenant_id),
+        "id": str(inst.id),
+        "tenant_id": str(tenant_val) if tenant_val else "",
+        "organization_id": str(tenant_val) if tenant_val else "",
         "workflow_name": inst.workflow_name,
+        "name": inst.workflow_name,
         "status": inst.status,
         "current_node": inst.current_node,
         "started_at": inst.started_at.isoformat() if inst.started_at else None,
@@ -402,10 +438,14 @@ def workflow_to_dict(inst: WorkflowInstance) -> dict:
         "total_cost_usd": inst.total_cost_usd or 0.0,
         "total_tokens_in": inst.total_tokens_in or 0,
         "total_tokens_out": inst.total_tokens_out or 0,
-        "agent_runs": inst.agent_runs or [],
+        "agent_runs": getattr(inst, "agent_runs", []) or [],
         "outcome": inst.outcome,
-        "trigger_signal": inst.trigger_signal,
-        "error": inst.error_log,
+        "trigger_signal": signal,
+        "trigger_payload": signal,
+        "trigger_source": raw_source,
+        "trigger_type": trigger_type,
+        "message_count": message_count,
+        "error": getattr(inst, "error_log", None),
     }
 
 
@@ -973,3 +1013,490 @@ async def get_dashboard_data(db: AsyncSession, tenant_id: str) -> dict:
             'daily_trend': daily_trend
         }
     }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Organization & User Auto-Provisioning (Supabase Managed PostgreSQL)
+# ─────────────────────────────────────────────────────────────────────────────
+
+async def ensure_user_organization_provisioned(
+    db: AsyncSession,
+    user_id: str,
+    email: str,
+    full_name: Optional[str] = None,
+    workspace_name: Optional[str] = None,
+    industry: Optional[str] = None,
+) -> tuple[Optional[OrganizationUser], Optional[Organization]]:
+    """
+    Deterministically resolves or auto-provisions an SMBFlow organization_users
+    and Organization record for a valid Supabase Auth user.
+    Enforces server-side authority:
+      - Uses stable auth.users.id (user_id)
+      - Never allows client-supplied role self-assignment
+      - New users receive default 'org_user' role
+      - Reuses existing organization if present to prevent duplicate org creation
+    """
+    try:
+        u_uuid = uuid.UUID(user_id)
+    except (ValueError, TypeError):
+        u_uuid = uuid.uuid5(uuid.NAMESPACE_DNS, user_id)
+
+    # 1. Query existing OrganizationUser by user_id
+    res = await db.execute(select(OrganizationUser).where(OrganizationUser.user_id == u_uuid))
+    org_user = res.scalar_one_or_none()
+
+    if not org_user and email:
+        # Fallback check by email to prevent duplicate entries for existing users
+        res_email = await db.execute(select(OrganizationUser).where(OrganizationUser.email == email))
+        org_user = res_email.scalar_one_or_none()
+        if org_user and org_user.user_id != u_uuid:
+            org_user.user_id = u_uuid
+            await db.flush()
+
+    # Check if this email is a legacy platform admin or admin@smbflow.com
+    is_bootstrap_admin = False
+    if email:
+        if email.lower() == "admin@smbflow.com":
+            is_bootstrap_admin = True
+        else:
+            legacy_u = await get_user_by_email(db, email)
+            if legacy_u and legacy_u.role in ("super_admin", "platform_admin"):
+                is_bootstrap_admin = True
+
+    if org_user:
+        # Fetch organization
+        org_res = await db.execute(select(Organization).where(Organization.id == org_user.organization_id))
+        org = org_res.scalar_one_or_none()
+
+        updated = False
+        if is_bootstrap_admin and org_user.role != "platform_admin":
+            org_user.role = "platform_admin"
+            updated = True
+
+        if org:
+            if workspace_name and org.name != workspace_name:
+                org.name = workspace_name
+                updated = True
+            if industry and org.industry != industry:
+                org.industry = industry
+                org.enabled_modules = [industry]
+                updated = True
+            if workspace_name:
+                cfg = dict(org.profile_config or {})
+                if cfg.get("requires_onboarding") != False:
+                    cfg["requires_onboarding"] = False
+                    org.profile_config = cfg
+                    updated = True
+        else:
+            org = Organization(
+                id=org_user.organization_id,
+                name=workspace_name or "Pending Workspace Setup",
+                industry=industry or "saas",
+                enabled_modules=[industry] if industry else ["saas"],
+                profile_config={"requires_onboarding": False if workspace_name else True},
+                active=True,
+            )
+            db.add(org)
+            updated = True
+
+        if full_name and org_user.full_name != full_name:
+            org_user.full_name = full_name
+            updated = True
+
+        if updated:
+            await db.commit()
+            await db.refresh(org)
+            await db.refresh(org_user)
+
+        return org_user, org
+
+    # 2. No organization_user record found — check if user provided workspace_name
+    if workspace_name:
+        org = Organization(
+            id=uuid.uuid4(),
+            name=workspace_name,
+            industry=industry or "saas",
+            enabled_modules=[industry] if industry else ["saas"],
+            profile_config={"requires_onboarding": False},
+            active=True,
+        )
+        db.add(org)
+        await db.flush()
+        await db.refresh(org)
+    else:
+        # New user without workspace_name gets a dedicated pending workspace requiring onboarding
+        org = Organization(
+            id=uuid.uuid4(),
+            name="Pending Workspace Setup",
+            industry=industry or "saas",
+            enabled_modules=[industry] if industry else ["saas"],
+            profile_config={"requires_onboarding": True},
+            active=True,
+        )
+        db.add(org)
+        await db.flush()
+        await db.refresh(org)
+
+    # 3. Create OrganizationUser record for new user (enforces org_user role unless bootstrap admin)
+    name_display = full_name or (email.split("@")[0].replace(".", " ").title() if email else "User")
+    assigned_role = "platform_admin" if is_bootstrap_admin else "org_user"
+    org_user = OrganizationUser(
+        id=uuid.uuid4(),
+        organization_id=org.id,
+        user_id=u_uuid,
+        email=email or f"{user_id}@smbflow.com",
+        full_name=name_display,
+        role=assigned_role,
+        created_at=datetime.utcnow(),
+    )
+    db.add(org_user)
+    await db.commit()
+    await db.refresh(org_user)
+
+    return org_user, org
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Organizations (new auth-layer table — distinct from legacy tenants table)
+# ─────────────────────────────────────────────────────────────────────────────
+
+async def get_organization_by_id(
+    db: AsyncSession, org_id: str
+) -> Optional[Organization]:
+    """Query organizations table by id (UUID string)."""
+    try:
+        result = await db.execute(
+            select(Organization).where(Organization.id == org_id)
+        )
+        return result.scalar_one_or_none()
+    except Exception:
+        return None
+
+
+async def update_organization_config(
+    db: AsyncSession, org_id: str, partial_config: dict
+) -> Optional[Organization]:
+    """Merge partial_config into organizations.profile_config."""
+    org = await get_organization_by_id(db, org_id)
+    if not org:
+        return None
+    merged = {**(org.profile_config or {}), **partial_config}
+    await db.execute(
+        update(Organization)
+        .where(Organization.id == org_id)
+        .values(profile_config=merged, updated_at=datetime.utcnow())
+    )
+    await db.commit()
+    return await get_organization_by_id(db, org_id)
+
+
+async def update_organization_profile(
+    db: AsyncSession,
+    org_id: str,
+    name: Optional[str] = None,
+    industry: Optional[str] = None,
+    profile_config: Optional[dict] = None,
+) -> Optional[Organization]:
+    """Update organization name, industry and/or profile_config."""
+    org = await get_organization_by_id(db, org_id)
+    if not org:
+        return None
+    values: dict = {"updated_at": datetime.utcnow()}
+    if name is not None:
+        values["name"] = name
+    if industry is not None:
+        values["industry"] = industry
+    if profile_config is not None:
+        values["profile_config"] = {**(org.profile_config or {}), **profile_config}
+    await db.execute(
+        update(Organization).where(Organization.id == org_id).values(**values)
+    )
+    await db.commit()
+    return await get_organization_by_id(db, org_id)
+
+
+async def resolve_tenant_config_bridge(
+    db: AsyncSession,
+    org_id: str,
+) -> tuple:
+    """
+    Option B Tenant Bridge — Phase 0.
+
+    The workflow orchestrator needs a Tenant record + config (from the legacy
+    ``tenants`` table).  The authenticated user's identity is anchored to the
+    ``organizations`` table.  These share the same physical DB but are separate
+    tables with different UUIDs.
+
+    Resolution strategy:
+      1. Try org_id directly against the ``tenants`` table (covers the case where
+         a Tenant was created with the same UUID during prior onboarding).
+      2. If not found, synthesize a minimal config dict from the Organization
+         record so the orchestrator can still run without modification.
+
+    Returns: (effective_tenant_id: str, config: dict)
+    """
+    # Step 1 — try legacy tenants table directly
+    legacy = await get_tenant(db, org_id)
+    if legacy:
+        return str(legacy.id), legacy.config or {}
+
+    # Step 2 — fall back to synthesizing from the organizations record
+    org = await get_organization_by_id(db, org_id)
+    if not org:
+        return org_id, {}
+
+    merged_profile = dict(org.profile_config or {})
+    synthesized_config: dict = {
+        "client_id":        str(org.id),
+        "client_name":      org.name or "SMBFlow Organization",
+        "industry":         org.industry or "saas",
+        "enabled_modules":  org.enabled_modules or [org.industry or "saas"],
+        "active_workflows": ["email_summarizer"],
+        "integrations":     {},
+        "business_rules":   merged_profile.get("business_rules") or {
+            "high_value_deal_threshold": 50000,
+            "sla_warning_threshold_hours": 24,
+            "escalate_urgency_level": "high",
+        },
+        "tone_profile":     merged_profile.get("tone_profile") or {
+            "brand_voice": "Professional, empathetic, and action-oriented",
+            "formality": "high",
+        },
+        "action_library":   merged_profile.get("action_library") or {
+            "actions": [
+                {
+                    "id": "action_sla_urgent_response",
+                    "action_type": "send_email",
+                    "description": "Send urgent SLA response to client",
+                    "required_approval": True,
+                },
+                {
+                    "id": "action_log_summary",
+                    "action_type": "log_event",
+                    "description": "Log email summary into audit records",
+                    "required_approval": False,
+                }
+            ]
+        },
+        "llm_overrides":    merged_profile.get("llm_overrides") or {},
+        **merged_profile,
+    }
+    # Strip internal onboarding flags that the orchestrator does not need
+    synthesized_config.pop("requires_onboarding", None)
+    synthesized_config.pop("_is_test_artifact", None)
+
+    return str(org.id), synthesized_config
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Workflow Definitions (organization-scoped, separate from filesystem DAGs)
+# ─────────────────────────────────────────────────────────────────────────────
+
+async def list_workflow_definitions(
+    db: AsyncSession,
+    organization_id: Optional[str] = None,
+    include_templates: bool = False,
+) -> list:
+    """
+    List WorkflowDefinitions scoped to an organization.
+
+    - organization_id: filter to this org's definitions.
+    - include_templates: also return platform templates
+      (organization_id IS NULL and is_template=True).
+    """
+    from db.models.core import WorkflowDefinition as WFDef
+    from sqlalchemy import or_
+
+    q = select(WFDef).where(WFDef.active.is_(True))
+
+    if organization_id and include_templates:
+        q = q.where(
+            or_(
+                WFDef.organization_id == organization_id,
+                WFDef.is_template.is_(True),
+            )
+        )
+    elif organization_id:
+        q = q.where(WFDef.organization_id == organization_id)
+    elif include_templates:
+        q = q.where(WFDef.is_template.is_(True))
+
+    q = q.order_by(WFDef.created_at.desc())
+    result = await db.execute(q)
+    return list(result.scalars().all())
+
+
+async def create_workflow_definition(
+    db: AsyncSession,
+    organization_id: str,
+    name: str,
+    industry: str,
+    dag_definition: dict,
+    version: str = "1.0.0",
+    is_template: bool = False,
+) -> object:
+    """Create a new WorkflowDefinition owned by an organization."""
+    from db.models.core import WorkflowDefinition as WFDef
+
+    wf = WFDef(
+        id=uuid.uuid4(),
+        organization_id=organization_id,
+        name=name,
+        industry=industry,
+        version=version,
+        dag_definition=dag_definition,
+        is_template=is_template,
+        active=True,
+        created_at=datetime.utcnow(),
+    )
+    db.add(wf)
+    await db.commit()
+    await db.refresh(wf)
+    return wf
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Approval Items & Processed Email Events (HITL & Idempotency)
+# ─────────────────────────────────────────────────────────────────────────────
+
+async def create_approval_item(
+    db: AsyncSession,
+    organization_id: str,
+    node_id: str = "evaluate_actions",
+    review_type: str = "approval",
+    reason: str = "Action requires human approval",
+    context_brief: str = "",
+    payload: Optional[dict] = None,
+    instance_id: Optional[str] = None,
+    required_signatures: int = 1,
+) -> object:
+    from db.models.core import ApprovalItem
+    org_uuid = uuid.UUID(organization_id) if isinstance(organization_id, str) else organization_id
+    inst_uuid = uuid.UUID(instance_id) if isinstance(instance_id, str) and instance_id else None
+    item = ApprovalItem(
+        id=uuid.uuid4(),
+        organization_id=org_uuid,
+        instance_id=inst_uuid,
+        node_id=node_id,
+        review_type=review_type,
+        reason=reason,
+        context_brief=context_brief,
+        payload=payload or {},
+        status="pending",
+        required_signatures=required_signatures,
+        signatures=[],
+        created_at=datetime.utcnow(),
+    )
+    db.add(item)
+    await db.commit()
+    await db.refresh(item)
+    return item
+
+
+async def list_approval_items(
+    db: AsyncSession,
+    organization_id: Optional[str] = None,
+    status: Optional[str] = "pending",
+) -> list:
+    from db.models.core import ApprovalItem
+    q = select(ApprovalItem)
+    if organization_id:
+        org_uuid = uuid.UUID(organization_id) if isinstance(organization_id, str) else organization_id
+        q = q.where(ApprovalItem.organization_id == org_uuid)
+    if status and status != "all":
+        q = q.where(ApprovalItem.status == status)
+    q = q.order_by(ApprovalItem.created_at.desc())
+    result = await db.execute(q)
+    return list(result.scalars().all())
+
+
+async def get_approval_item(db: AsyncSession, approval_id: str) -> Optional[object]:
+    from db.models.core import ApprovalItem
+    appr_uuid = uuid.UUID(approval_id) if isinstance(approval_id, str) else approval_id
+    result = await db.execute(select(ApprovalItem).where(ApprovalItem.id == appr_uuid))
+    return result.scalar_one_or_none()
+
+
+async def decide_approval_item(
+    db: AsyncSession,
+    approval_id: str,
+    decision_status: str,
+    decided_by: Optional[str] = "human_reviewer",
+    patch_payload: Optional[dict] = None,
+) -> Optional[object]:
+    from db.models.core import ApprovalItem
+    appr_uuid = uuid.UUID(approval_id) if isinstance(approval_id, str) else approval_id
+    result = await db.execute(select(ApprovalItem).where(ApprovalItem.id == appr_uuid))
+    item = result.scalar_one_or_none()
+    if not item:
+        return None
+    item.status = decision_status
+    item.decided_by = decided_by
+    item.decided_at = datetime.utcnow()
+    if patch_payload and isinstance(item.payload, dict):
+        item.payload = {**item.payload, **patch_payload}
+    await db.commit()
+    await db.refresh(item)
+    return item
+
+
+async def approval_item_to_dict(item) -> dict:
+    return {
+        "id": str(item.id),
+        "escalation_id": str(item.id),
+        "instance_id": str(item.instance_id) if item.instance_id else None,
+        "run_id": str(item.instance_id) if item.instance_id else None,
+        "node_id": item.node_id or "evaluate_actions",
+        "review_type": item.review_type or "approval",
+        "reason": item.reason or "Action requires human approval",
+        "recommended_action": (item.payload or {}).get("action_type") or "approve_draft",
+        "context_brief": item.context_brief or "",
+        "payload": item.payload or {},
+        "status": item.status,
+        "required_signatures": item.required_signatures or 1,
+        "signatures": item.signatures or [],
+        "decided_by": item.decided_by,
+        "decided_at": item.decided_at.isoformat() if item.decided_at else None,
+        "created_at": item.created_at.isoformat() if item.created_at else None,
+    }
+
+
+async def get_processed_email_ids(db: AsyncSession, source: Optional[str] = None) -> set[str]:
+    from db.models.core import ProcessedEmailEvent
+    q = select(ProcessedEmailEvent.message_id)
+    if source:
+        q = q.where(ProcessedEmailEvent.source == source)
+    result = await db.execute(q)
+    return set(result.scalars().all())
+
+
+async def record_processed_emails(
+    db: AsyncSession,
+    message_ids: list[str],
+    batch_id: Optional[str] = None,
+    instance_id: Optional[str] = None,
+    organization_id: Optional[str] = None,
+    source: str = "synthetic_fixture",
+) -> int:
+    from db.models.core import ProcessedEmailEvent
+    count = 0
+    org_uuid = uuid.UUID(organization_id) if isinstance(organization_id, str) and organization_id else None
+    inst_uuid = uuid.UUID(instance_id) if isinstance(instance_id, str) and instance_id else None
+    for mid in message_ids:
+        if not mid:
+            continue
+        evt = ProcessedEmailEvent(
+            id=uuid.uuid4(),
+            organization_id=org_uuid,
+            message_id=mid,
+            batch_id=batch_id,
+            instance_id=inst_uuid,
+            source=source,
+            processed_at=datetime.utcnow(),
+        )
+        db.add(evt)
+        count += 1
+    await db.commit()
+    return count
+
+

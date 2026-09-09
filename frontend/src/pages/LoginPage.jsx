@@ -1,30 +1,19 @@
 // frontend/src/pages/LoginPage.jsx
 // ─────────────────────────────────────────────────────────────────────────────
-// Approved Figma login presentation, wired to the REAL backend.
-//   • Calls POST /auth/login via the auth service (real credentials).
-//   • Verifies/hydrates the canonical profile via GET /auth/me before entering.
-//   • Token is held in memory only (AuthContext.login) — never localStorage.
-//   • Role authority is the backend: super_admin → /admin, tenant_user → /dashboard.
-//
-// Deliberate departures from the Figma mock (see integration plan §8):
-//   • NO setTimeout fake login — a real network call decides success/failure.
-//   • NO client-side "SMB Owner / Platform Admin" role toggle — the backend
-//     assigns the role; a client picker would be theatre.
-//   • NO "Remember me" — we intentionally do not persist the JWT.
+// Approved Figma login presentation, wired to the REAL backend & Supabase Auth.
+//   • Supports direct email/password sign-in and Supabase Google OAuth.
+//   • Role authority is the backend: super_admin / platform_admin → /admin, org_user → /dashboard.
 // ─────────────────────────────────────────────────────────────────────────────
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { Eye, EyeOff, AlertCircle, Info, Loader2 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { createApiClient } from '../api/client'
 import { createAuthService } from '../api/services/auth.service'
 
-// Map a backend/transport error to a safe, user-facing message. Raw backend
-// exception text is never shown; we distinguish the cases the user can act on.
 function classifyLoginError(err) {
   const status = err?.status
   const msg = String(err?.message || '')
-  // Backend returns 401 "Account disabled" specifically for deactivated users.
   if (status === 401 && /disabled|deactivat/i.test(msg)) {
     return 'This account has been deactivated. Contact your administrator for access.'
   }
@@ -34,26 +23,104 @@ function classifyLoginError(err) {
   if (/network error/i.test(msg)) {
     return 'Unable to reach the server. Check your connection and try again.'
   }
-  return 'Unable to sign in right now. Please try again.'
+  return msg || 'Unable to sign in right now. Please try again.'
+}
+
+function GoogleIcon() {
+  return (
+    <svg className="w-4 h-4" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        fill="#4285F4"
+        d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.29v3.14C3.26 21.3 7.31 24 12 24z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.59H1.29C.47 8.22 0 10.06 0 12s.47 3.78 1.29 5.41l3.99-3.14z"
+      />
+      <path
+        fill="#EA4335"
+        d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.59l3.99 3.14c.95-2.83 3.6-4.98 6.72-4.98z"
+      />
+    </svg>
+  )
 }
 
 export default function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { login, sessionExpired, clearSessionExpired } = useAuth()
+  const { user, token, loading: authLoading, login, sessionExpired, clearSessionExpired, supabase } = useAuth()
+
+  useEffect(() => {
+    if (!authLoading && token && user) {
+      if (user.requires_onboarding) {
+        navigate('/auth/signup', { replace: true })
+        return
+      }
+      const from = location.state?.from?.pathname
+      const isAdmin = user.role === 'super_admin' || user.role === 'platform_admin'
+      navigate(from || (isAdmin ? '/admin' : '/dashboard'), { replace: true })
+    }
+  }, [token, user, authLoading, navigate, location.state])
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
+        <div className="flex items-center gap-2.5 mb-4">
+          <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center">
+            <span className="text-white font-bold text-sm">S</span>
+          </div>
+          <span className="text-xl font-semibold text-slate-900">SMBFlow</span>
+        </div>
+        <div className="flex items-center gap-2 text-slate-500 text-sm">
+          <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+          <span>Verifying authentication...</span>
+        </div>
+      </div>
+    )
+  }
+
+
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
   const [error, setError] = useState('')
   const [touched, setTouched] = useState({ email: false, password: false })
 
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
   const passwordValid = password.length >= 6
-  const canSubmit = emailValid && passwordValid && !loading
+  const canSubmit = emailValid && passwordValid && !loading && !googleLoading
 
-  const roleHome = (role) => (role === 'super_admin' ? '/admin' : '/dashboard')
+  const roleHome = (role) =>
+    role === 'super_admin' || role === 'platform_admin' ? '/admin' : '/dashboard'
+
+  async function handleGoogleLogin() {
+    if (!supabase) {
+      setError('Supabase authentication client is not configured. Please check your setup.')
+      return
+    }
+    setGoogleLoading(true)
+    setError('')
+    clearSessionExpired()
+    try {
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      })
+      if (oauthError) throw oauthError
+    } catch (err) {
+      setError(classifyLoginError(err))
+      setGoogleLoading(false)
+    }
+  }
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -64,18 +131,14 @@ export default function LoginPage() {
     setError('')
     clearSessionExpired()
     try {
-      // Unauthenticated client for the login call itself (no token yet).
       const authApi = createAuthService(createApiClient(null))
       const { access_token, user } = await authApi.login(email.trim(), password)
 
-      // Verify the token and hydrate the canonical profile from the backend,
-      // which is the source of truth for role/tenant.
       const bound = createAuthService(createApiClient(access_token))
       const profile = await bound.me().catch(() => user)
 
       login(access_token, profile)
 
-      // Honor a redirect target captured by the route guard, else route by role.
       const from = location.state?.from?.pathname
       navigate(from || roleHome(profile.role), { replace: true })
     } catch (err) {
@@ -102,7 +165,7 @@ export default function LoginPage() {
             Access your workspace using your account credentials.
           </p>
 
-          {/* Session-expiry notice (shown after an authenticated 401 cleared auth) */}
+          {/* Session-expiry notice */}
           {sessionExpired && !error && (
             <div
               role="status"
@@ -123,6 +186,35 @@ export default function LoginPage() {
               <p className="text-sm text-red-700">{error}</p>
             </div>
           )}
+
+          {/* Google OAuth Button */}
+          <button
+            type="button"
+            onClick={handleGoogleLogin}
+            disabled={googleLoading || loading}
+            aria-label="Continue with Google"
+            className="w-full py-2.5 px-4 bg-white border border-slate-200 rounded-lg text-slate-700 text-sm font-medium hover:bg-slate-50 hover:border-slate-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 mb-5 shadow-2xs"
+          >
+            {googleLoading ? (
+              <>
+                <Loader2 size={16} className="animate-spin text-slate-500" />
+                <span>Connecting to Google...</span>
+              </>
+            ) : (
+              <>
+                <GoogleIcon />
+                <span>Continue with Google</span>
+              </>
+            )}
+          </button>
+
+          {/* Divider */}
+          <div className="relative flex items-center justify-center mb-5">
+            <div className="border-t border-slate-200 w-full" />
+            <span className="bg-white px-3 text-xs text-slate-400 font-medium uppercase tracking-wider absolute">
+              or
+            </span>
+          </div>
 
           <form onSubmit={handleSubmit} noValidate className="space-y-4">
             {/* Email */}

@@ -104,7 +104,7 @@ class ResearchAgent(BaseAgent):
             # Data quality gate: warn if zero entities were found
             entity_keys = (
                 "accounts", "patients", "transactions", "products",
-                "deals", "expenses",
+                "deals", "expenses", "messages", "emails",
                 # Real estate entities:
                 "listings", "leases", "buyers", "showings", "maintenance_tickets",
             )
@@ -920,15 +920,23 @@ class MemoryAgent(BaseAgent):
         try:
             text, call = await self._simple_call(system, user, input)
             output_data = self._parse_json_output(text)
- 
+            if not isinstance(output_data, dict):
+                output_data = {"patterns_to_store": [], "delta_analysis": {}, "summary": str(output_data)}
+
             patterns = output_data.get("patterns_to_store", [])
+            if not isinstance(patterns, list):
+                patterns = []
             delta    = output_data.get("delta_analysis", {})
+            if not isinstance(delta, dict):
+                delta = {}
             stored   = 0
             _learning_mode = cfg.get("learning_mode", "supervised")
             _auto_promote  = (_learning_mode == "autonomous")
- 
+
             if self._state and self._state._db is not None:
                 for pattern in patterns:
+                    if not isinstance(pattern, dict):
+                        continue
                     try:
                         pattern_key = f"{industry}_{pattern.get('key', 'unknown')}"
                         await self._state.upsert_pattern(
@@ -1225,3 +1233,229 @@ class DiscoveryAgent(BaseAgent):
         ]
         fallback = [n for n in fallback if n in self._tools._tools]
         return fallback or list(self._tools._tools.keys())[:6]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 8 REUSABLE AGENT CAPABILITIES (AGENT REGISTRY)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class CustomerOutreachAgent(BaseAgent):
+    """Customer Outreach Capability: Drafts external communication & outreach."""
+    agent_type = "customer_outreach_agent"
+
+    async def receive(self, input: AgentInput) -> AgentOutput:
+        start = time.time()
+        context = input.accumulated_context or {}
+        messages = [
+            LLMMessage(role="system", content="You are a Customer Outreach Agent capability. Draft clear, professional, personalized outreach messages. Return JSON with subject, body, recipient, and escalate flag."),
+            LLMMessage(role="user", content=f"Context for outreach:\n{json.dumps(context, default=str)[:3000]}"),
+        ]
+        text, call = await self._call_llm_with_fallback(messages, input)
+        output_dict = self._parse_json(text) or {
+            "subject": "Follow-up",
+            "body": text[:500],
+            "escalate": False,
+        }
+        return AgentOutput(
+            agent_type=self.agent_type,
+            output_dict=output_dict,
+            reasoning_chain=text,
+            tokens_in=call.tokens_in,
+            tokens_out=call.tokens_out,
+            cost_usd=call.cost_usd,
+            model_used=call.model,
+            duration_ms=int((time.time() - start) * 1000),
+            confidence=0.90,
+        )
+
+class CustomerSupportAgent(BaseAgent):
+    """Customer Support Capability: Constrained FAQ & inquiry response agent."""
+    agent_type = "customer_support_agent"
+
+    async def receive(self, input: AgentInput) -> AgentOutput:
+        start = time.time()
+        context = input.accumulated_context or {}
+        messages = [
+            LLMMessage(role="system", content="You are a Customer Support Agent capability. Answer user questions strictly using approved knowledge. If unsure or high risk, set escalate=true."),
+            LLMMessage(role="user", content=f"Inquiry context:\n{json.dumps(context, default=str)[:3000]}"),
+        ]
+        text, call = await self._call_llm_with_fallback(messages, input)
+        output_dict = self._parse_json(text) or {
+            "response": text[:500],
+            "escalate": False,
+            "confidence": 0.85,
+        }
+        return AgentOutput(
+            agent_type=self.agent_type,
+            output_dict=output_dict,
+            reasoning_chain=text,
+            tokens_in=call.tokens_in,
+            tokens_out=call.tokens_out,
+            cost_usd=call.cost_usd,
+            model_used=call.model,
+            duration_ms=int((time.time() - start) * 1000),
+            confidence=output_dict.get("confidence", 0.85),
+        )
+
+class MarketingOutreachAgent(BaseAgent):
+    """Marketing Outreach Capability: Brand content & campaign asset generator."""
+    agent_type = "marketing_outreach_agent"
+
+    async def receive(self, input: AgentInput) -> AgentOutput:
+        start = time.time()
+        context = input.accumulated_context or {}
+        messages = [
+            LLMMessage(role="system", content="You are a Marketing Outreach Agent capability. Draft marketing copy and content assets grounded in verified business information."),
+            LLMMessage(role="user", content=f"Campaign context:\n{json.dumps(context, default=str)[:3000]}"),
+        ]
+        text, call = await self._call_llm_with_fallback(messages, input)
+        output_dict = self._parse_json(text) or {"content_draft": text[:500]}
+        return AgentOutput(
+            agent_type=self.agent_type,
+            output_dict=output_dict,
+            reasoning_chain=text,
+            tokens_in=call.tokens_in,
+            tokens_out=call.tokens_out,
+            cost_usd=call.cost_usd,
+            model_used=call.model,
+            duration_ms=int((time.time() - start) * 1000),
+        )
+
+class SummarizerAgent(BaseAgent):
+    """Summarizer Capability: Synthesizes business documents, cases, or interaction logs."""
+    agent_type = "summarizer_agent"
+
+    async def receive(self, input: AgentInput) -> AgentOutput:
+        start = time.time()
+        context = input.accumulated_context or {}
+        messages = [
+            LLMMessage(role="system", content="You are a Summarizer Agent capability. Synthesize raw records into concise, structured briefs with citations."),
+            LLMMessage(role="user", content=f"Records to summarize:\n{json.dumps(context, default=str)[:4000]}"),
+        ]
+        text, call = await self._call_llm_with_fallback(messages, input)
+        output_dict = self._parse_json(text) or {
+            "summary": text[:500],
+            "key_points": [line.strip() for line in text.split("\n") if line.strip()][:5],
+        }
+        return AgentOutput(
+            success=True,
+            confidence=0.95,
+            output_data=output_dict,
+            reasoning_chain=text,
+            tokens_in=call.tokens_in,
+            tokens_out=call.tokens_out,
+            cost_usd=call.cost_usd,
+            model_used=call.model,
+            duration_ms=int((time.time() - start) * 1000),
+        )
+
+class RecommendationAgent(BaseAgent):
+    """Recommendation Capability: Suggests operational next steps (strictly non-clinical)."""
+    agent_type = "recommendation_agent"
+
+    async def receive(self, input: AgentInput) -> AgentOutput:
+        start = time.time()
+        context = input.accumulated_context or {}
+        messages = [
+            LLMMessage(role="system", content="You are an Operational Recommendation Agent capability. Suggest practical next steps and task priorities for business operations. NEVER provide clinical advice."),
+            LLMMessage(role="user", content=f"Operational context:\n{json.dumps(context, default=str)[:3000]}"),
+        ]
+        text, call = await self._call_llm_with_fallback(messages, input)
+        output_dict = self._parse_json(text) or {
+            "recommended_actions": ["Review task details", "Follow up with assignee"],
+            "urgency": "medium",
+        }
+        return AgentOutput(
+            success=True,
+            confidence=0.9,
+            output_data=output_dict,
+            reasoning_chain=text,
+            tokens_in=call.tokens_in,
+            tokens_out=call.tokens_out,
+            cost_usd=call.cost_usd,
+            model_used=call.model,
+            duration_ms=int((time.time() - start) * 1000),
+        )
+
+class ComparisonAgent(BaseAgent):
+    """Comparison Capability: Quote & data line-item normalization & comparison engine."""
+    agent_type = "comparison_agent"
+
+    async def receive(self, input: AgentInput) -> AgentOutput:
+        start = time.time()
+        context = input.accumulated_context or {}
+        messages = [
+            LLMMessage(role="system", content="You are a Comparison Agent capability. Normalize quote line items into canonical categories and generate side-by-side comparison tables."),
+            LLMMessage(role="user", content=f"Quotes & Data to compare:\n{json.dumps(context, default=str)[:4000]}"),
+        ]
+        text, call = await self._call_llm_with_fallback(messages, input)
+        output_dict = self._parse_json(text) or {
+            "normalized_comparison": text[:500],
+            "passed": True,
+        }
+        return AgentOutput(
+            success=True,
+            confidence=0.9,
+            output_data=output_dict,
+            reasoning_chain=text,
+            tokens_in=call.tokens_in,
+            tokens_out=call.tokens_out,
+            cost_usd=call.cost_usd,
+            model_used=call.model,
+            duration_ms=int((time.time() - start) * 1000),
+        )
+
+class HRAgent(BaseAgent):
+    """HR Capability: Internal business onboarding & internal task coordinator."""
+    agent_type = "hr_agent"
+
+    async def receive(self, input: AgentInput) -> AgentOutput:
+        start = time.time()
+        context = input.accumulated_context or {}
+        messages = [
+            LLMMessage(role="system", content="You are an HR Capability Agent. Process internal onboarding tasks and document checklists."),
+            LLMMessage(role="user", content=f"HR Context:\n{json.dumps(context, default=str)[:3000]}"),
+        ]
+        text, call = await self._call_llm_with_fallback(messages, input)
+        output_dict = self._parse_json(text) or {"status": "processed", "summary": text[:300]}
+        return AgentOutput(
+            success=True,
+            confidence=0.9,
+            output_data=output_dict,
+            reasoning_chain=text,
+            tokens_in=call.tokens_in,
+            tokens_out=call.tokens_out,
+            cost_usd=call.cost_usd,
+            model_used=call.model,
+            duration_ms=int((time.time() - start) * 1000),
+        )
+
+class OperationsAgent(BaseAgent):
+    """Operations Capability: Multi-step task & milestone coordinator."""
+    agent_type = "operations_agent"
+
+    async def receive(self, input: AgentInput) -> AgentOutput:
+        start = time.time()
+        context = input.accumulated_context or {}
+        messages = [
+            LLMMessage(role="system", content="You are an Operations Agent capability. Track workflow execution milestones, generate task checklists, and update case stages."),
+            LLMMessage(role="user", content=f"Workflow Execution Context:\n{json.dumps(context, default=str)[:3000]}"),
+        ]
+        text, call = await self._call_llm_with_fallback(messages, input)
+        output_dict = self._parse_json(text) or {
+            "status": "success",
+            "milestone": "step_completed",
+            "actions_taken": ["Logged stage completion"],
+        }
+        return AgentOutput(
+            success=True,
+            confidence=0.9,
+            output_data=output_dict,
+            reasoning_chain=text,
+            tokens_in=call.tokens_in,
+            tokens_out=call.tokens_out,
+            cost_usd=call.cost_usd,
+            model_used=call.model,
+            duration_ms=int((time.time() - start) * 1000),
+        )
+

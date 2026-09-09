@@ -1,28 +1,27 @@
 // frontend/src/api/services/integrations.service.js
 // ─────────────────────────────────────────────────────────────────────────────
-// Integrations: stored credentials, registered tools, and seed data.
-// Verified endpoints (api/main.py):
-//   GET  /credentials                 POST /credentials    DELETE /credentials/{id}
-//   GET  /credentials/schema/{name}
-//   GET  /tools                       POST /tools          DELETE /tools/{id}
-//   GET  /tools/local                 GET  /tools/available
-//   GET  /seed-data/status            POST /seed-data/generate[?industry=...]
+// Tool Connections: multi-tenant integration lifecycle & credential vault.
+// Verified endpoints (api/routers/connections.py):
+//   GET  /connections                 POST /connections            GET /connections/available
+//   GET  /connections/{id}            PATCH /connections/{id}      DELETE /connections/{id}
+//   POST /connections/{id}/test
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function createIntegrationsService(api) {
   return {
-    // ── Credentials ──────────────────────────────────────────────────────────
-    listCredentials: () => api.get('/credentials'),
-    getCredentialSchema: (name) => api.get(`/credentials/schema/${name}`),
-    createCredential: (payload) => api.post('/credentials', payload),
-    deleteCredential: (id) => api.delete(`/credentials/${id}`),
+    // ── Tool Connections API ───────────────────────────────────────────────────
+    listConnections: () => api.get('/connections'),
+    getAvailableConnectors: () => api.get('/connections/available'),
+    getConnection: (id) => api.get(`/connections/${id}`),
+    connectTool: (payload) => api.post('/connections', payload),
+    updateConnection: (id, payload) => api.patch(`/connections/${id}`, payload),
+    testConnection: (id) => api.post(`/connections/${id}/test`),
+    deleteConnection: (id) => api.delete(`/connections/${id}`),
 
-    // ── Tools ──────────────────────────────────────────────────────────────────
-    listTools: () => api.get('/tools'),
-    listLocalTools: () => api.get('/tools/local'),
-    listAvailableTools: () => api.get('/tools/available'),
-    createTool: (payload) => api.post('/tools', payload),
-    deleteTool: (id) => api.delete(`/tools/${id}`),
+    // ── Legacy Aliases ─────────────────────────────────────────────────────────
+    listCredentials: () => api.get('/connections'),
+    createCredential: (payload) => api.post('/connections', payload),
+    deleteCredential: (id) => api.delete(`/connections/${id}`),
 
     // ── Seed data ──────────────────────────────────────────────────────────────
     getSeedStatus: () => api.get('/seed-data/status'),
@@ -30,3 +29,4 @@ export function createIntegrationsService(api) {
       api.post(`/seed-data/generate${industry ? `?industry=${industry}` : ''}`),
   }
 }
+

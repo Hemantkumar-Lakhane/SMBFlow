@@ -82,32 +82,22 @@ class WorkflowInstance(Base):
     __tablename__ = "workflow_instances"
 
     id               = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    tenant_id        = Column(UUID(as_uuid=True), nullable=False)
+    tenant_id        = Column("organization_id", UUID(as_uuid=True), nullable=False)
     definition_id    = Column(UUID(as_uuid=True), nullable=True)
     workflow_name    = Column(String(255), nullable=False)
     status           = Column(String(50), nullable=False, default=WorkflowStatus.PENDING)
-    trigger_signal   = Column(JSONB, nullable=False)
+    trigger_signal   = Column("trigger_payload", JSONB, nullable=False)
     current_node     = Column(String(100))
     context          = Column(JSONB, default={})
     started_at       = Column(DateTime, default=datetime.utcnow)
     completed_at     = Column(DateTime)
     outcome          = Column(JSONB)
     error_log        = Column(Text)
-    agent_runs        = Column(JSONB, default=[])
-    
-    # --- ADD THESE FIELDS ---
-    tenant_config     = Column(JSONB)
-    suspension_data   = Column(JSONB)
-    triggered_by      = Column(UUID(as_uuid=True))
-    admin_signal      = Column(String(50))
-    loop_count        = Column(Integer, default=0)
-    # ------------------------
 
     # Cost tracking
     total_tokens_in  = Column(Integer, default=0)
     total_tokens_out = Column(Integer, default=0)
     total_cost_usd   = Column(Float, default=0.0)
-    epi_artifact_path = Column(String(500))
 
 
 class AgentRun(Base):
@@ -134,16 +124,14 @@ class AgentRun(Base):
 class AgentRunRecord(Base):
     """
     Normalised per-node agent run record.
-    BUG-002 FIX: Replaces the unbounded agent_runs JSONB array on WorkflowInstance.
-    The JSONB column is kept as a 10-row summary for dashboard display only.
-    Full history lives here.
+    Replaces the unbounded agent_runs JSONB array on WorkflowInstance.
     """
     __tablename__ = "agent_run_records"
- 
+
     id                = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     instance_id       = Column(UUID(as_uuid=True), nullable=False)
     node_id           = Column(String(100), nullable=False)
-    agent_type        = Column(String(100))
+    agent_type        = Column("agent_capability", String(100))
     status            = Column(String(50))
     cost_usd          = Column(Float, default=0.0)
     tokens_in         = Column(Integer, default=0)
@@ -153,15 +141,6 @@ class AgentRunRecord(Base):
     duration_ms       = Column(Integer)
     error             = Column(Text)
     tools_used        = Column(JSONB, default=list)
-    node_description  = Column(Text)
-    # Verification-specific
-    prosecutor_issues = Column(Integer)
-    judge_verdict     = Column(String(20))
-    prosecutor_faults = Column(JSONB, default=list)
-    # Memory-specific
-    delta_vs_history  = Column(String(50))
-    delta_trend       = Column(String(50))
-    delta_analysis    = Column(JSONB)
     completed_at      = Column(DateTime, default=datetime.utcnow)
 
 
@@ -352,6 +331,37 @@ class EmailQueue(Base):
     created_at       = Column(DateTime, default=datetime.utcnow)
 
 
+class ApprovalItem(Base):
+    __tablename__ = "approval_items"
+
+    id                  = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id     = Column(UUID(as_uuid=True), nullable=False)
+    instance_id         = Column(UUID(as_uuid=True), nullable=True)
+    node_id             = Column(String(100))
+    review_type         = Column(String(100), nullable=False)
+    reason              = Column(Text, nullable=False)
+    context_brief       = Column(Text, nullable=False)
+    payload             = Column(JSONB, default={})
+    status              = Column(String(50), default="pending")
+    required_signatures = Column(Integer, default=1)
+    signatures          = Column(JSONB, default=list)
+    decided_by          = Column(String(255))
+    decided_at          = Column(DateTime)
+    created_at          = Column(DateTime, default=datetime.utcnow)
+
+
+class ProcessedEmailEvent(Base):
+    __tablename__ = "processed_email_events"
+
+    id              = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id = Column(UUID(as_uuid=True), nullable=True)
+    message_id      = Column(String(255), unique=True, nullable=False, index=True)
+    batch_id        = Column(String(255), nullable=True, index=True)
+    instance_id     = Column(UUID(as_uuid=True), nullable=True)
+    source          = Column(String(100), default="synthetic_email")
+    processed_at    = Column(DateTime, default=datetime.utcnow)
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # State Manager
 # ─────────────────────────────────────────────────────────────────────────────
@@ -447,9 +457,10 @@ class StateManager:
         Called by the orchestrator's agent_run_callback in addition to (or
         instead of) the JSONB array append.
         """
+        instance_uuid = uuid.UUID(instance_id) if isinstance(instance_id, str) else instance_id
         record = AgentRunRecord(
             id=uuid.uuid4(),
-            instance_id=instance_id,
+            instance_id=instance_uuid,
             node_id=agent_run_data.get("node_id", ""),
             agent_type=agent_run_data.get("agent_type", ""),
             status=agent_run_data.get("status", ""),
@@ -461,13 +472,6 @@ class StateManager:
             duration_ms=agent_run_data.get("duration_ms"),
             error=agent_run_data.get("error"),
             tools_used=agent_run_data.get("tools_used", []),
-            node_description=agent_run_data.get("node_description", ""),
-            prosecutor_issues=agent_run_data.get("_prosecutor_issues"),
-            judge_verdict=agent_run_data.get("_judge_verdict"),
-            prosecutor_faults=agent_run_data.get("_prosecutor_faults", []),
-            delta_vs_history=agent_run_data.get("delta_vs_history"),
-            delta_trend=agent_run_data.get("delta_trend"),
-            delta_analysis=agent_run_data.get("delta_analysis"),
             completed_at=datetime.utcnow(),
         )
         self._db.add(record)
@@ -669,6 +673,110 @@ class StateManager:
             q = q.where(Escalation.tenant_id == tenant_id)
         result = await self._db.execute(q)
         return list(result.scalars().all())
+
+    # ── Approval Items (HITL Action Center) ──────────────────────────────────
+
+    async def create_approval_item(
+        self,
+        organization_id: str,
+        instance_id: Optional[str],
+        node_id: str,
+        review_type: str,
+        reason: str,
+        context_brief: str,
+        payload: Optional[dict] = None,
+        required_signatures: int = 1,
+    ) -> ApprovalItem:
+        org_uuid = uuid.UUID(organization_id) if isinstance(organization_id, str) else organization_id
+        inst_uuid = uuid.UUID(instance_id) if isinstance(instance_id, str) and instance_id else None
+        item = ApprovalItem(
+            id=uuid.uuid4(),
+            organization_id=org_uuid,
+            instance_id=inst_uuid,
+            node_id=node_id,
+            review_type=review_type,
+            reason=reason,
+            context_brief=context_brief,
+            payload=payload or {},
+            status="pending",
+            required_signatures=required_signatures,
+            signatures=[],
+            created_at=datetime.utcnow(),
+        )
+        self._db.add(item)
+        await self._db.commit()
+        await self._db.refresh(item)
+        log.info("ApprovalItem created", approval_id=str(item.id), review_type=review_type)
+        return item
+
+    async def get_pending_approvals(
+        self, organization_id: Optional[str] = None
+    ) -> list[ApprovalItem]:
+        q = select(ApprovalItem).where(ApprovalItem.status == "pending").order_by(ApprovalItem.created_at.desc())
+        if organization_id:
+            org_uuid = uuid.UUID(organization_id) if isinstance(organization_id, str) else organization_id
+            q = q.where(ApprovalItem.organization_id == org_uuid)
+        result = await self._db.execute(q)
+        return list(result.scalars().all())
+
+    async def decide_approval_item(
+        self,
+        approval_id: str,
+        decision_status: str,
+        decided_by: str,
+        patch_payload: Optional[dict] = None,
+    ) -> Optional[ApprovalItem]:
+        appr_uuid = uuid.UUID(approval_id) if isinstance(approval_id, str) else approval_id
+        result = await self._db.execute(select(ApprovalItem).where(ApprovalItem.id == appr_uuid))
+        item = result.scalar_one_or_none()
+        if not item:
+            return None
+
+        item.status = decision_status  # "approved" or "rejected"
+        item.decided_by = decided_by
+        item.decided_at = datetime.utcnow()
+        if patch_payload and isinstance(item.payload, dict):
+            item.payload = {**item.payload, **patch_payload}
+
+        await self._db.commit()
+        await self._db.refresh(item)
+        log.info("ApprovalItem decided", approval_id=str(item.id), status=decision_status, decided_by=decided_by)
+        return item
+
+    # ── Processed Email Events (Idempotency & Batching) ──────────────────────
+
+    async def get_processed_email_ids(self, source: str = "synthetic_email") -> set[str]:
+        q = select(ProcessedEmailEvent.message_id).where(ProcessedEmailEvent.source == source)
+        result = await self._db.execute(q)
+        return set(result.scalars().all())
+
+    async def record_processed_emails(
+        self,
+        message_ids: list[str],
+        batch_id: Optional[str] = None,
+        instance_id: Optional[str] = None,
+        organization_id: Optional[str] = None,
+        source: str = "synthetic_email",
+    ) -> int:
+        count = 0
+        org_uuid = uuid.UUID(organization_id) if isinstance(organization_id, str) and organization_id else None
+        inst_uuid = uuid.UUID(instance_id) if isinstance(instance_id, str) and instance_id else None
+        for mid in message_ids:
+            if not mid:
+                continue
+            evt = ProcessedEmailEvent(
+                id=uuid.uuid4(),
+                organization_id=org_uuid,
+                message_id=mid,
+                batch_id=batch_id,
+                instance_id=inst_uuid,
+                source=source,
+                processed_at=datetime.utcnow(),
+            )
+            self._db.add(evt)
+            count += 1
+        await self._db.commit()
+        return count
     async def suspend_workflow(
         self,
         instance_id: str,

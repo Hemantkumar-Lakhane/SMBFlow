@@ -28,7 +28,6 @@ function Section({ title, children }) {
 
 export default function GeneralSettings() {
   const { user, api } = useAuth()
-  const tenantId = user?.tenant_id
 
   const [form, setForm] = useState({
     orgName:   '',
@@ -47,14 +46,26 @@ export default function GeneralSettings() {
   const [error,   setError]   = useState('')
 
   const load = useCallback(async () => {
-    if (!tenantId) return
     try {
-      const t = await api.get(`/tenants/${tenantId}`)
-      if (t?.name)   setForm(f => ({ ...f, orgName: t.name }))
-      if (t?.industry) setForm(f => ({ ...f, industry: t.industry }))
-      if (t?.config?.timezone) setForm(f => ({ ...f, timezone: t.config.timezone }))
-    } catch { /* no data */ }
-  }, [api, tenantId])
+      // Use the canonical /organizations/me endpoint — queries organizations table
+      // from the authenticated user's membership, never the legacy tenants table.
+      const org = await api.get('/organizations/me')
+      if (org?.name)     setForm(f => ({ ...f, orgName: org.name }))
+      if (org?.industry) setForm(f => ({ ...f, industry: org.industry }))
+      if (org?.config?.timezone) setForm(f => ({ ...f, timezone: org.config.timezone }))
+      if (org?.config?.notifications) {
+        const n = org.config.notifications
+        setForm(f => ({
+          ...f,
+          emailNotif:    n.email    ?? f.emailNotif,
+          slackNotif:    n.slack    ?? f.slackNotif,
+          approvalAlerts: n.approvals ?? f.approvalAlerts,
+        }))
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to load organization settings')
+    }
+  }, [api])
 
   useEffect(() => { load() }, [load])
 
@@ -63,11 +74,22 @@ export default function GeneralSettings() {
   const save = async () => {
     setSaving(true); setError(''); setSuccess('')
     try {
-      if (tenantId) {
-        await api.put(`/tenants/${tenantId}/config`, {
-          config: { timezone: form.timezone, notifications: { email: form.emailNotif, slack: form.slackNotif, approvals: form.approvalAlerts } }
-        })
-      }
+      // Save name + industry to org profile
+      await api.put('/organizations/me/profile', {
+        name:     form.orgName   || undefined,
+        industry: form.industry  || undefined,
+      })
+      // Save runtime config (timezone, notifications) to profile_config
+      await api.put('/organizations/me/config', {
+        config: {
+          timezone: form.timezone,
+          notifications: {
+            email:    form.emailNotif,
+            slack:    form.slackNotif,
+            approvals: form.approvalAlerts,
+          },
+        },
+      })
       setSuccess('Settings saved successfully!')
       setTimeout(() => setSuccess(''), 3000)
     } catch (err) { setError(err.message) }

@@ -48,6 +48,7 @@ def check_status() -> dict:
         "re_listings.json",
         "re_leases.json",
         "re_buyers.json",
+        "email_messages.json",
     ]
     status = {}
     for fname in files:
@@ -66,8 +67,8 @@ def check_status() -> dict:
 
 def main():
     parser = argparse.ArgumentParser(description="OpsGrid Seed Data Generator")
-    parser.add_argument("--industry", choices=["saas", "retail", "healthcare", "finance"],
-                        help="Generate data for specific industry only")
+    parser.add_argument("--industry", choices=["saas", "retail", "healthcare", "finance", "email"],
+                        help="Generate data for specific industry or dataset only")
     parser.add_argument("--check", action="store_true", help="Check status without generating")
     args = parser.parse_args()
 
@@ -79,20 +80,21 @@ def main():
         status = check_status()
         print("\nSeed Data Status:")
         for fname, info in status.items():
-            icon = "✓" if info["exists"] else "✗"
+            icon = "[OK]" if info["exists"] else "[MISSING]"
             count_str = f"{info['records']} records  {info.get('kb', 0)} KB" if info["exists"] else "MISSING"
-            print(f"  {icon}  {fname:50s} {count_str}")
+            print(f"  {icon:10s}  {fname:45s} {count_str}")
         missing = sum(1 for v in status.values() if not v["exists"])
         print(f"\n{'All data ready.' if missing == 0 else f'{missing} files missing. Run without --check to generate.'}")
         return
 
     seed_dir = Path("db/seed")
     seeders = {
-        "saas":       seed_dir / "saas_seed.py",
-        "retail":     seed_dir / "retail_seed.py",
-        "healthcare": seed_dir / "healthcare_seed.py",
-        "finance":    seed_dir / "finance_seed.py",
-        "real estate":    seed_dir / "real_estate_seed.py",
+        "saas":        seed_dir / "saas_seed.py",
+        "retail":      seed_dir / "retail_seed.py",
+        "healthcare":  seed_dir / "healthcare_seed.py",
+        "finance":     seed_dir / "finance_seed.py",
+        "real estate": seed_dir / "real_estate_seed.py",
+        "email":       seed_dir / "email_seed.py",
     }
 
     to_run = {args.industry: seeders[args.industry]} if args.industry else seeders

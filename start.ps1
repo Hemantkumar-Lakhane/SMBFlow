@@ -4,17 +4,12 @@ Set-Location $PSScriptRoot
 
 Write-Host "Starting SMBFlow Local Environment..." -ForegroundColor Cyan
 
-# 1. Start Docker Infrastructure
-Write-Host "Ensuring PostgreSQL and Redis are running..."
-docker-compose up -d postgres redis
-
-# Wait for healthy to be safe
-$retryCount = 0
-while ($retryCount -lt 15) {
-    $status = docker inspect --format="{{if .State.Health}}{{.State.Health.Status}}{{end}}" opsgrid_postgres 2>$null
-    if ($status -eq "healthy") { break }
-    Start-Sleep -Seconds 2
-    $retryCount++
+# 1. Start Redis Infrastructure (Optional local pub/sub cache)
+Write-Host "Ensuring Redis container is running..." -ForegroundColor Gray
+try {
+    docker-compose up -d redis 2>$null
+} catch {
+    Write-Host "Notice: Docker not available or Redis already running natively." -ForegroundColor Yellow
 }
 
 # 2. Check and start Backend (Port 8000)
@@ -22,7 +17,7 @@ $backendRunning = Get-NetTCPConnection -LocalPort 8000 -State Listen -ErrorActio
 if ($backendRunning) {
     Write-Host "Backend API is already running on port 8000." -ForegroundColor Yellow
 } else {
-    Write-Host "Starting Backend API in a new window..."
+    Write-Host "Starting Backend API in a new window..." -ForegroundColor Green
     Start-Process powershell.exe -ArgumentList "-NoExit", "-Command", "& '.\venv\Scripts\python.exe' main.py api" -WorkingDirectory $PWD -WindowStyle Normal
 }
 
@@ -31,7 +26,7 @@ $frontendRunning = Get-NetTCPConnection -LocalPort 5173 -State Listen -ErrorActi
 if ($frontendRunning) {
     Write-Host "Frontend is already running on port 5173." -ForegroundColor Yellow
 } else {
-    Write-Host "Starting Frontend in a new window..."
+    Write-Host "Starting Frontend in a new window..." -ForegroundColor Green
     Start-Process powershell.exe -ArgumentList "-NoExit", "-Command", "cd frontend; npm run dev" -WorkingDirectory $PWD -WindowStyle Normal
 }
 
@@ -43,5 +38,4 @@ Write-Host "API Base URL:         http://127.0.0.1:8000"
 Write-Host "API Testing (Docs):   http://127.0.0.1:8000/docs"
 Write-Host "API Health Check:     http://127.0.0.1:8000/api/v1/health"
 Write-Host "API ReDoc View:       http://127.0.0.1:8000/redoc"
-Write-Host "API OpenAPI Schema:   http://127.0.0.1:8000/openapi.json"
 Write-Host "==========================================" -ForegroundColor Cyan

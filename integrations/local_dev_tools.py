@@ -667,6 +667,58 @@ async def re_get_buyers(
         "data_source": "local_dev_seed",
     }
 
+async def email_get_synthetic_messages(
+    limit: int = 40,
+    priority: Optional[str] = None,
+    scenario: Optional[str] = None,
+    search_query: Optional[str] = None,
+) -> dict:
+    """
+    Get synthetic email messages for workflow execution testing.
+    Loads from db/seed/data/email_messages.json fixture.
+    Zero external credentials required.
+
+    Args:
+        limit: Max messages to return (default 40)
+        priority: Filter by 'urgent' | 'high' | 'normal' | 'low'
+        scenario: Filter by specific scenario (e.g. 'invoice_payment_issue', 'customer_complaint')
+        search_query: Search text in subject or body
+    """
+    emails = _load_seed("email_messages.json")
+    if not emails:
+        return {
+            "messages": [],
+            "total_messages": 0,
+            "data_origin": "synthetic",
+            "is_test_data": True,
+            "dataset": "email_workflow_demo",
+            "note": "No email seed data found. Run: python db/seed/email_seed.py",
+        }
+
+    filtered = emails
+    if priority:
+        filtered = [e for e in filtered if e.get("priority") == priority.lower()]
+    if scenario:
+        filtered = [e for e in filtered if e.get("scenario") == scenario.lower()]
+    if search_query:
+        sq = search_query.lower()
+        filtered = [
+            e for e in filtered
+            if sq in (e.get("subject") or "").lower() or sq in (e.get("body") or "").lower()
+        ]
+
+    result_set = filtered[:limit]
+
+    return {
+        "messages": result_set,
+        "total_messages": len(emails),
+        "returned_count": len(result_set),
+        "data_origin": "synthetic",
+        "is_test_data": True,
+        "dataset": "email_workflow_demo",
+    }
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Schema + Function Registry
 # ─────────────────────────────────────────────────────────────────────────────
@@ -690,9 +742,26 @@ LOCAL_TOOL_FUNCTIONS: dict[str, Any] = {
     "re_get_maintenance_tickets": re_get_maintenance_tickets,
     "re_get_tenant_ledger":      re_get_tenant_ledger,
     "re_get_buyers":             re_get_buyers,
+    "email_get_synthetic_messages": email_get_synthetic_messages,
 }
 
 LOCAL_TOOL_SCHEMAS: dict[str, dict] = {
+    "email_get_synthetic_messages": {
+        "type": "function",
+        "function": {
+            "name": "email_get_synthetic_messages",
+            "description": "Retrieve synthetic business email messages for workflow execution testing. Allows filtering by priority, scenario, or text search.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "limit": {"type": "integer", "description": "Max email records to return", "default": 40},
+                    "priority": {"type": "string", "enum": ["urgent", "high", "normal", "low"], "description": "Filter by priority level"},
+                    "scenario": {"type": "string", "description": "Filter by operational scenario"},
+                    "search_query": {"type": "string", "description": "Search text in subject or body"},
+                },
+            },
+        },
+    },
     "product_api_usage": {
         "type": "function",
         "function": {

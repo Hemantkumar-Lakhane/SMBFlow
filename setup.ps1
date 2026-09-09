@@ -92,6 +92,7 @@ if ($status -ne "healthy") {
 # 7. Database Seeding (Idempotent Local JSON Generation)
 Write-Host "Generating local seed data JSON files (safe and idempotent)..."
 .\venv\Scripts\python.exe db/seed/saas_seed.py
+.\venv\Scripts\python.exe db/seed/email_seed.py
 
 # 8. Frontend Dependencies
 Write-Host "Installing frontend dependencies..."

@@ -661,7 +661,22 @@ class BaseAgent(ABC):
             return re.sub(r'\{([a-zA-Z0-9_.]+)\}', replacer, self.system_prompt_template)
         except Exception as e:
             self._log.warning("Prompt template format error", error=str(e))
-            return self.system_prompt_template
+    async def _call_llm_with_fallback(
+        self,
+        messages: list[LLMMessage],
+        input: AgentInput,
+    ) -> tuple[str, LLMCall]:
+        """Helper to invoke LLM with conversation messages."""
+        return await self._llm.call(
+            agent_name=self.agent_type,
+            messages=messages,
+            client_overrides=input.llm_overrides if input else None,
+        )
+
+    def _parse_json(self, text: str) -> Optional[dict]:
+        """Helper to parse JSON output safely."""
+        res = self._parse_json_output(text)
+        return res if res and not res.get("parse_error") else None
 
     def _parse_json_output(self, text: str) -> dict:
         """

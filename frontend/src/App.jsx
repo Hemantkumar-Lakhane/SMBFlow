@@ -7,6 +7,7 @@ import { ThemeProvider } from './contexts/ThemeContext'
 import { AppShell }      from './components/shell/AppShell'
 import LoginPage         from './pages/LoginPage'
 import SignupPage        from './pages/SignupPage'
+import AuthCallbackPage  from './pages/AuthCallbackPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import ResetPasswordPage  from './pages/ResetPasswordPage'
 import AccessDenied      from './components/shell/AccessDenied'
@@ -30,6 +31,9 @@ import AdminPlatformIntegrations from './pages/admin/AdminPlatformIntegrations'
 import AdminUsageCost            from './pages/admin/AdminUsageCost'
 import AdminAuditLog             from './pages/admin/AdminAuditLog'
 import AdminPlatformSettings     from './pages/admin/AdminPlatformSettings'
+
+import ConnectionsPage from './pages/setup/ConnectionsPage'
+import CasesPage from './pages/medical/CasesPage'
 
 // Client — new Figma-matched pages
 import Dashboard          from './pages/client/Dashboard'
@@ -64,18 +68,42 @@ const queryClient = new QueryClient({
   },
 })
 
+function FullScreenLoader() {
+  return (
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
+      <div className="flex items-center gap-2.5 mb-4">
+        <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center">
+          <span className="text-white font-bold text-sm">S</span>
+        </div>
+        <span className="text-xl font-semibold text-slate-900">SMBFlow</span>
+      </div>
+      <div className="flex items-center gap-2 text-slate-500 text-sm">
+        <Spinner className="w-4 h-4 text-blue-600 animate-spin" />
+        <span>Verifying authentication...</span>
+      </div>
+    </div>
+  )
+}
+
 function HomeRedirect() {
-  const { user, token } = useAuth()
+  const { user, token, loading } = useAuth()
+  if (loading) return <FullScreenLoader />
   if (!token || !user) return <Navigate to="/auth" replace />
-  return <Navigate to={user.role === 'super_admin' ? '/admin' : '/dashboard'} replace />
+  if (user.requires_onboarding) return <Navigate to="/auth/signup" replace />
+  const isAdmin = user.role === 'super_admin' || user.role === 'platform_admin'
+  return <Navigate to={isAdmin ? '/admin' : '/dashboard'} replace />
 }
 
 function ProtectedRoute({ children, adminOnly = false }) {
-  const { user, token } = useAuth()
+  const { user, token, loading } = useAuth()
+  if (loading) return <FullScreenLoader />
   if (!token || !user) return <Navigate to="/auth" replace />
-  if (adminOnly && user.role !== 'super_admin') return <AccessDenied />
+  if (user.requires_onboarding) return <Navigate to="/auth/signup" replace />
+  const isAdmin = user.role === 'super_admin' || user.role === 'platform_admin'
+  if (adminOnly && !isAdmin) return <AccessDenied />
   return children
 }
+
 
 function Wrap({ adminOnly = false, children }) {
   return (
@@ -91,6 +119,7 @@ function AppRoutes() {
       {/* Auth */}
       <Route path="/auth"                 element={<LoginPage />} />
       <Route path="/auth/signup"          element={<SignupPage />} />
+      <Route path="/auth/callback"        element={<AuthCallbackPage />} />
       <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/auth/reset-password"  element={<ResetPasswordPage />} />
       <Route path="/" element={<HomeRedirect />} />
@@ -114,19 +143,21 @@ function AppRoutes() {
       <Route path="/admin/fleet"            element={<Wrap adminOnly><AdminUsageCost /></Wrap>} />
 
       {/* Operations */}
-      <Route path="/dashboard"   element={<Wrap><Dashboard /></Wrap>} />
-      <Route path="/escalations" element={<Wrap><EscalationsPage /></Wrap>} />
-      <Route path="/workflows"   element={<Wrap><WorkflowsPage /></Wrap>} />
+      <Route path="/dashboard"         element={<Wrap><Dashboard /></Wrap>} />
+      <Route path="/setup/connections" element={<Wrap><ConnectionsPage /></Wrap>} />
+      <Route path="/integrations"      element={<Wrap><ConnectionsPage /></Wrap>} />
+      <Route path="/medical/cases"     element={<Wrap><CasesPage /></Wrap>} />
+      <Route path="/escalations"       element={<Wrap><EscalationsPage /></Wrap>} />
+      <Route path="/workflows"         element={<Wrap><WorkflowsPage /></Wrap>} />
 
       {/* Configuration */}
       <Route path="/workflow-library" element={<Wrap><WorkflowLibrary /></Wrap>} />
       <Route path="/ai-engine"        element={<Wrap><AIEngine /></Wrap>} />
-      <Route path="/integrations"     element={<Wrap><IntegrationsPage /></Wrap>} />
 
       {/* Settings */}
       <Route path="/settings/general"      element={<Wrap><GeneralSettings /></Wrap>} />
       <Route path="/settings/ai-engine"    element={<Wrap><AIEngineSettings /></Wrap>} />
-      <Route path="/settings/integrations" element={<Wrap><IntegrationSettings /></Wrap>} />
+      <Route path="/settings/integrations" element={<Wrap><ConnectionsPage /></Wrap>} />
       <Route path="/budget"                element={<Wrap><BudgetPage /></Wrap>} />
       <Route path="/evidence"              element={<Wrap><EvidencePage /></Wrap>} />
 

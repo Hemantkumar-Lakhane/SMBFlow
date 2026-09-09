@@ -22,7 +22,11 @@ export function createAuthService(api) {
     // current bearer token. Use to verify a token and hydrate the canonical profile.
     me: () => api.get('/auth/me'),
 
+    // Provision workspace details for current user
+    provision: (payload) => api.post('/auth/provision', payload),
+
     // Password reset (verified backend endpoints — api/main.py):
+
     //   POST /auth/forgot-password  → always returns the same generic message.
     //     In an explicitly-enabled non-production dev env with email
     //     unconfigured, the response may also carry { dev_reset_url }.

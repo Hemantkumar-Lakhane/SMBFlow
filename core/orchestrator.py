@@ -31,12 +31,13 @@ from pathlib import Path
 from typing import Any, Callable, Optional
 
 import aiofiles
-from core.cost_tracker import BudgetExceededError
 import structlog
 
 from agents.agents import (
     DraftingAgent, ExecutionAgent, MemoryAgent,
     ReasoningAgent, ResearchAgent, VerificationAgent,
+    CustomerOutreachAgent, CustomerSupportAgent, MarketingOutreachAgent,
+    SummarizerAgent, RecommendationAgent, ComparisonAgent, HRAgent, OperationsAgent
 )
 from agents.base_agent import ALLOWED_EDGE_CONDITIONS, AgentInput, AgentOutput, BaseAgent, ToolRegistry
 from core.llm_router import LLMRouter
@@ -45,7 +46,7 @@ from core.rag_engine import RAGEngine
 from epi.epi_manager import EPIManager
 from agents.consensus_agent import ConsensusAgent
 log = structlog.get_logger()
- 
+
 # Fix A: Per-process cache to avoid re-indexing tools on every workflow run.
 # Key  : tenant_id
 # Value: (unix_timestamp_of_last_index, frozenset_of_registered_tool_names)
@@ -54,13 +55,21 @@ _tool_index_cache: dict[str, tuple[float, frozenset]] = {}
 DEFAULT_MAX_A2A_ATTEMPTS: int = 3
 
 AGENT_MAP: dict[str, type[BaseAgent]] = {
-    "research_agent":      ResearchAgent,
-    "reasoning_agent":     ReasoningAgent,
-    "drafting_agent":      DraftingAgent,
-    "verification_agent":  VerificationAgent,
-    "execution_agent":     ExecutionAgent,
-    "memory_agent":        MemoryAgent,
-    "consensus_agent":     ConsensusAgent,
+    "research_agent":          ResearchAgent,
+    "reasoning_agent":         ReasoningAgent,
+    "drafting_agent":          DraftingAgent,
+    "verification_agent":      VerificationAgent,
+    "execution_agent":         ExecutionAgent,
+    "memory_agent":            MemoryAgent,
+    "consensus_agent":         ConsensusAgent,
+    "customer_outreach_agent": CustomerOutreachAgent,
+    "customer_support_agent":  CustomerSupportAgent,
+    "marketing_outreach_agent":MarketingOutreachAgent,
+    "summarizer_agent":        SummarizerAgent,
+    "recommendation_agent":    RecommendationAgent,
+    "comparison_agent":        ComparisonAgent,
+    "hr_agent":                HRAgent,
+    "operations_agent":        OperationsAgent,
 }
 
 class _AttrDict(dict):
@@ -928,11 +937,47 @@ class WorkflowOrchestrator:
                             agent_run_record["_judge_verdict"]     = output.output_data.get("_judge_verdict")
                             agent_run_record["_prosecutor_faults"] = output.output_data.get("_prosecutor_faults", [])
                     self._agent_run_log.append(agent_run_record)
+                    if self._state:
+                        try:
+                            await self._state.write_agent_run_record(run_id, agent_run_record)
+                        except Exception as _we:
+                            log.warning("Failed to write agent run record to DB", error=str(_we))
                     if self._agent_run_cb:
                         try:
                             await self._agent_run_cb(run_id, agent_run_record)
                         except Exception as cb_e:
                             log.warning("agent_run_callback error", error=str(cb_e))
+
+                    # ── HITL Action Center Approval Items ───────────────────────
+                    if output.success and isinstance(output.output_data, dict):
+                        appr_list = output.output_data.get("approval_items") or []
+                        if isinstance(appr_list, dict):
+                            appr_list = [appr_list]
+                        for appr in appr_list:
+                            if isinstance(appr, dict) and self._state:
+                                try:
+                                    created_appr = await self._state.create_approval_item(
+                                        organization_id=tenant_id,
+                                        instance_id=run_id,
+                                        node_id=node_id,
+                                        review_type=appr.get("action_type", "email_response"),
+                                        reason=appr.get("reason", "AI identified item requiring human approval"),
+                                        context_brief=appr.get("title", f"Approval required at {node_id}"),
+                                        payload=appr,
+                                        required_signatures=appr.get("required_signatures", 1),
+                                    )
+                                    await self._broadcast("approval_created", {
+                                        "approval_id": str(created_appr.id),
+                                        "id": str(created_appr.id),
+                                        "run_id": run_id,
+                                        "organization_id": tenant_id,
+                                        "tenant_id": tenant_id,
+                                        "review_type": created_appr.review_type,
+                                        "title": created_appr.context_brief,
+                                        "reason": created_appr.reason,
+                                    })
+                                except Exception as _ae:
+                                    log.warning("Failed to create ApprovalItem from agent output", error=str(_ae))
 
                     accumulated_context[node_id] = output.output_data
 
