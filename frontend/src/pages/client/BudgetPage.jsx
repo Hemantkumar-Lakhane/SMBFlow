@@ -1,334 +1,144 @@
 // frontend/src/pages/client/BudgetPage.jsx
-// Budget Governor settings: optimization level, caching, A2A, confidence thresholds.
+// Matches Figma: Budget & Billing — usage, cost tracking, billing info
 
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
-import { Card, Button, Toggle, Alert, Spinner, StatCard } from '../../components/ui'
-import { BUDGET_LEVELS } from '../../utils/helpers'
+import { DollarSign } from 'lucide-react'
+import { fmtCost } from '../../utils/helpers'
 
-// ── Level card ─────────────────────────────────────────────────────────────────
-function LevelCard({ level, selected, onClick }) {
-  const isSelected = selected === level.n
-  const borderCls = isSelected
-    ? 'border-blue-500 bg-blue-900/20'
-    : 'border-gray-700/50 bg-gray-800/20 hover:border-gray-600 cursor-pointer'
-
-  return (
-    <div
-      onClick={() => onClick(level.n)}
-      className={`rounded-xl border-2 p-4 transition-all ${borderCls}`}
-    >
-      <div className="flex items-center justify-between mb-2">
-        <span className={`text-sm font-bold ${level.color}`}>{level.name}</span>
-        <span className="text-xs text-gray-500">Level {level.n}</span>
-      </div>
-      <div className="flex items-center gap-3 mb-2">
-        <div>
-          <div className="text-xs text-gray-500">Cost Savings</div>
-          <div className={`text-lg font-bold ${level.color}`}>{level.savings}</div>
-        </div>
-        <div>
-          <div className="text-xs text-gray-500">Accuracy Impact</div>
-          <div className="text-sm text-white">{level.accuracy}</div>
-        </div>
-      </div>
-      <p className="text-xs text-gray-500 leading-relaxed">{level.desc}</p>
-      {isSelected && (
-        <div className="mt-3 flex items-center gap-1 text-xs text-blue-400">
-          <span>●</span> <span>Currently active</span>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ── Savings bar visual ─────────────────────────────────────────────────────────
-function SavingsBar({ level }) {
-  const info = BUDGET_LEVELS[level] || BUDGET_LEVELS[0]
-  const pct = parseInt(info.savings) || 0
-  return (
-    <div className="space-y-1">
-      <div className="flex justify-between text-xs text-gray-400">
-        <span>Est. Cost Savings</span>
-        <span className={`font-bold ${info.color}`}>{info.savings}</span>
-      </div>
-      <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
-        <div
-          className="h-full bg-gradient-to-r from-green-600 to-green-400 rounded-full transition-all duration-500"
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-    </div>
-  )
-}
-
-// ── Main BudgetPage ────────────────────────────────────────────────────────────
 export default function BudgetPage() {
   const { user, api } = useAuth()
   const tenantId = user?.tenant_id
 
-  const [settings, setSettings] = useState({
-    optimization_level:              1,
-    enable_caching:                  true,
-    cache_ttl_seconds:               3600,
-    max_context_tokens:              10000,
-    a2a_enabled:                     false,
-    auto_retry_on_low_confidence:    true,
-    confidence_retry_threshold:      0.6,
-    enable_map_reduce_summarization: false,
-  })
-  const [predictions, setPredictions] = useState({})
+  const [settings, setSettings] = useState(null)
   const [loading,  setLoading]  = useState(true)
   const [saving,   setSaving]   = useState(false)
-  const [error,    setError]    = useState('')
   const [success,  setSuccess]  = useState('')
+  const [error,    setError]    = useState('')
 
   const load = useCallback(async () => {
     if (!tenantId) { setLoading(false); return }
     try {
       const data = await api.get(`/tenants/${tenantId}/budget`)
-      setSettings(s => ({
-        ...s,
-        optimization_level:          data.optimization_level  ?? 1,
-        enable_caching:              data.enable_caching       ?? true,
-        cache_ttl_seconds:           data.cache_ttl_seconds    ?? 3600,
-        max_context_tokens:          data.max_context_tokens   ?? 10000,
-        a2a_enabled:                 data.a2a_enabled          ?? false,
-        auto_retry_on_low_confidence:data.auto_retry_on_low_confidence ?? true,
-        confidence_retry_threshold:  data.confidence_retry_threshold   ?? 0.6,
-        enable_map_reduce_summarization: data.enable_map_reduce_summarization ?? false,
-      }))
-      setPredictions(data.predicted_savings || {})
-      setError('')
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
-    }
+      setSettings(data)
+    } catch { /* no data yet */ }
+    finally { setLoading(false) }
   }, [api, tenantId])
 
   useEffect(() => { load() }, [load])
 
-  const set = (k, v) => setSettings(p => ({ ...p, [k]: v }))
-
   const save = async () => {
+    if (!settings || !tenantId) return
     setSaving(true); setError(''); setSuccess('')
     try {
-      await api.put(`/tenants/${tenantId}/budget`, settings)
+      // Send only the fields BudgetSettingsUpdate accepts — extra fields cause 422
+      await api.put(`/tenants/${tenantId}/budget`, {
+        optimization_level:              settings.optimization_level              ?? 1,
+        enable_caching:                  settings.enable_caching                  ?? true,
+        cache_ttl_seconds:               settings.cache_ttl_seconds               ?? 3600,
+        max_context_tokens:              settings.max_context_tokens              ?? 10000,
+        a2a_enabled:                     settings.a2a_enabled                     ?? false,
+        auto_retry_on_low_confidence:    settings.auto_retry_on_low_confidence    ?? true,
+        confidence_retry_threshold:      settings.confidence_retry_threshold      ?? 0.6,
+        enable_map_reduce_summarization: settings.enable_map_reduce_summarization ?? false,
+      })
       setSuccess('Budget settings saved!')
       setTimeout(() => setSuccess(''), 3000)
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setSaving(false)
-    }
+    } catch (err) { setError(err.message) }
+    finally { setSaving(false) }
   }
 
-  if (!tenantId) return (
-    <div className="flex items-center justify-center h-64 text-gray-500">No tenant assigned.</div>
-  )
-
-  if (loading) return <div className="flex items-center justify-center h-64"><Spinner size="lg" /></div>
-
-  const currentPrediction = predictions[settings.optimization_level] || {}
+  const noData = !loading && !settings
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 bg-gray-50 min-h-full">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-xl font-bold text-white">💡 Budget Governor</h1>
-          <p className="text-gray-400 text-xs mt-0.5">Control LLM cost vs accuracy trade-offs for your workflows</p>
-        </div>
-        <Button variant="success" loading={saving} onClick={save}>💾 Save Settings</Button>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Budget &amp; Billing</h1>
+        <p className="text-sm text-gray-500 mt-0.5">Usage, cost tracking and billing information</p>
       </div>
 
-      {error   && <Alert type="error"   onClose={() => setError('')}>{error}</Alert>}
-      {success && <Alert type="success" onClose={() => setSuccess('')}>{success}</Alert>}
+      {success && (
+        <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm">{success}</div>
+      )}
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">{error}</div>
+      )}
 
-      {/* Current level summary */}
-      <div className="grid grid-cols-3 gap-4">
-        <StatCard
-          icon="💰"
-          label="Est. Savings vs Level 0"
-          value={currentPrediction.savings_pct != null ? `${currentPrediction.savings_pct}%` : '—'}
-          color="text-yellow-400"
-        />
-        <StatCard
-          icon="🎯"
-          label="Accuracy Impact"
-          value={currentPrediction.accuracy_impact || '—'}
-          color={currentPrediction.accuracy_impact === 'None' ? 'text-green-400' : 'text-yellow-400'}
-        />
-        <StatCard
-          icon="⚡"
-          label="Active Level"
-          value={`Level ${settings.optimization_level}`}
-          color="text-blue-400"
-          sub={BUDGET_LEVELS[settings.optimization_level]?.name || '—'}
-        />
-      </div>
-
-      {/* Level selector */}
-      <Card title="Optimization Level">
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 mb-4">
-          {BUDGET_LEVELS.map(level => (
-            <LevelCard
-              key={level.n}
-              level={level}
-              selected={settings.optimization_level}
-              onClick={n => set('optimization_level', n)}
-            />
-          ))}
-        </div>
-        <SavingsBar level={settings.optimization_level} />
-      </Card>
-
-      {/* Caching */}
-      <Card title="Redis Caching">
-        <div className="space-y-5">
-          <Toggle
-            checked={settings.enable_caching}
-            onChange={v => set('enable_caching', v)}
-            label="Enable Semantic Caching"
-            description="Cache LLM responses for identical prompts. Reduces cost and latency significantly."
-          />
-          {settings.enable_caching && (
-            <div>
-              <label className="block text-xs text-gray-400 mb-2">
-                Cache TTL (seconds) — how long to keep cached responses
-              </label>
-              <div className="flex items-center gap-4">
-                <input
-                  type="range"
-                  min={300}
-                  max={86400}
-                  step={300}
-                  value={settings.cache_ttl_seconds}
-                  onChange={e => set('cache_ttl_seconds', parseInt(e.target.value))}
-                  className="flex-1 accent-blue-500"
-                />
-                <span className="text-white font-mono text-sm w-20 text-right">
-                  {settings.cache_ttl_seconds >= 3600
-                    ? `${(settings.cache_ttl_seconds / 3600).toFixed(1)}h`
-                    : `${settings.cache_ttl_seconds}s`}
-                </span>
-              </div>
-              <div className="flex justify-between text-xs text-gray-600 mt-1">
-                <span>5 min</span><span>1 hr</span><span>24 hr</span>
-              </div>
-            </div>
-          )}
-        </div>
-      </Card>
-
-      {/* Context settings */}
-      <Card title="Context Window Limits">
-        <div>
-          <label className="block text-xs text-gray-400 mb-2">
-            Max Context Tokens per Agent
-          </label>
-          <div className="flex items-center gap-4">
-            <input
-              type="range"
-              min={2000}
-              max={50000}
-              step={1000}
-              value={settings.max_context_tokens}
-              onChange={e => set('max_context_tokens', parseInt(e.target.value))}
-              className="flex-1 accent-blue-500"
-            />
-            <span className="text-white font-mono text-sm w-20 text-right">
-              {(settings.max_context_tokens / 1000).toFixed(0)}K
-            </span>
-          </div>
-          <p className="text-xs text-gray-600 mt-2">
-            Larger context = more accurate but more expensive. Aggressive/Budget modes summarise before hitting this limit.
-          </p>
-        </div>
-      </Card>
-
-      {/* Agent-to-Agent */}
-      <Card title="Agent-to-Agent (A2A) Protocol">
-        <div className="space-y-4">
-          <Toggle
-            checked={settings.a2a_enabled}
-            onChange={v => set('a2a_enabled', v)}
-            label="Allow A2A Refinement Requests"
-            description="Agents can ask a previous agent to re-run with refined instructions. You'll be asked for permission each time."
-          />
-          {settings.a2a_enabled && (
-            <div className="bg-blue-900/10 border border-blue-800/30 rounded-lg p-3 text-xs text-blue-300">
-              ℹ️ When an agent requests A2A, you'll see a notification in the workflow view asking for your approval before the extra run is allowed.
-            </div>
-          )}
-        </div>
-      </Card>
-
-      {/* Map-Reduce Summarization */}
-      <Card title="🗺️ Map-Reduce Summarization">
-        <div className="space-y-4">
-          <Toggle
-            checked={settings.enable_map_reduce_summarization}
-            onChange={v => set('enable_map_reduce_summarization', v)}
-            label="Enable Map-Reduce Context Summarization"
-            description={
-              'Recursively chunk → summarise → consolidate large research outputs before '
-              + 'passing to the Reasoning Agent. Reduces input tokens by up to 90 % and '
-              + 'enables &ldquo;infinite context&rdquo; workflows. '
-              + 'Works at ALL optimisation levels (even Level 0 / Max Accuracy).'
-            }
-          />
-          {settings.enable_map_reduce_summarization && (
-            <div className="bg-blue-900/10 border border-blue-800/30 rounded-lg p-3 text-xs text-blue-300 space-y-1">
-              <div className="font-semibold">How it works</div>
-              <div>1. Research output is split into ~3 000-token chunks.</div>
-              <div>2. Each chunk is summarised in parallel (mini model).</div>
-              <div>3. Summaries are merged; if still large the step recurses.</div>
-              <div>4. A final Consolidated Anomaly Report is handed to the Reasoning Agent.</div>
-            </div>
-          )}
-          {!settings.enable_map_reduce_summarization && (
-            <p className="text-xs text-gray-600">
-              Auto-triggers at Level 2+, or when raw data exceeds ~10 K tokens even at Level 0.
-              Toggle on to force it at all levels.
+      {/* Stat cards */}
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        {[
+          { label: 'Current spend', value: settings?.current_spend },
+          { label: 'Budget limit',  value: settings?.budget_limit },
+          { label: 'Runs this month', value: settings?.runs_this_month },
+        ].map(({ label, value }) => (
+          <div key={label} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+            <p className="text-xs font-medium text-gray-500 mb-2">{label}</p>
+            <p className={`text-sm font-semibold ${value != null ? 'text-gray-900' : 'text-blue-500 italic'}`}>
+              {value != null ? (typeof value === 'number' ? fmtCost(value) : value) : 'No data available'}
             </p>
-          )}
-        </div>
-      </Card>
+          </div>
+        ))}
+      </div>
 
-      {/* Just-in-time accuracy */}
-      <Card title="Just-in-Time Accuracy Retry">
-        <div className="space-y-5">
-          <Toggle
-            checked={settings.auto_retry_on_low_confidence}
-            onChange={v => set('auto_retry_on_low_confidence', v)}
-            label="Auto-retry with Heavy Model on Low Confidence"
-            description="If a cheap model returns low confidence, automatically retry once with the heavy tier."
-          />
-          {settings.auto_retry_on_low_confidence && (
+      {/* Usage History */}
+      <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
+        <h2 className="text-base font-bold text-gray-900 mb-5">Usage History</h2>
+
+        {loading ? (
+          <div className="flex items-center justify-center h-40 text-gray-400 text-sm">Loading…</div>
+        ) : noData ? (
+          <div className="flex flex-col items-center justify-center h-40 gap-3">
+            <DollarSign className="w-10 h-10 text-gray-300" />
+            <div className="text-center">
+              <p className="text-sm font-medium text-gray-500">No billing data available</p>
+              <p className="text-xs text-gray-400 mt-1">
+                Cost and usage data will appear here once workflows start running and the billing API is connected.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {/* Optimization level */}
             <div>
-              <label className="block text-xs text-gray-400 mb-2">
-                Confidence Retry Threshold (retry if below this)
-              </label>
-              <div className="flex items-center gap-4">
-                <input
-                  type="range"
-                  min={0.3}
-                  max={0.9}
-                  step={0.05}
-                  value={settings.confidence_retry_threshold}
-                  onChange={e => set('confidence_retry_threshold', parseFloat(e.target.value))}
-                  className="flex-1 accent-blue-500"
-                />
-                <span className="text-white font-mono text-sm w-16 text-right">
-                  {(settings.confidence_retry_threshold * 100).toFixed(0)}%
-                </span>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Optimization Level</label>
+              <div className="grid grid-cols-4 gap-2">
+                {[0,1,2,3].map(n => {
+                  const labels = ['Max Accuracy','Balanced','Aggressive','Budget First']
+                  const active = settings?.optimization_level === n
+                  return (
+                    <button key={n} onClick={() => setSettings(s => ({ ...s, optimization_level: n }))}
+                      className={`py-2 px-3 rounded-lg text-xs font-semibold border transition-colors ${
+                        active ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300'
+                      }`}>
+                      {labels[n]}
+                    </button>
+                  )
+                })}
               </div>
             </div>
-          )}
-        </div>
-      </Card>
+
+            {/* Caching toggle */}
+            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100">
+              <div>
+                <p className="text-sm font-medium text-gray-700">Semantic Caching</p>
+                <p className="text-xs text-gray-400 mt-0.5">Reduce costs by caching similar LLM responses</p>
+              </div>
+              <button
+                onClick={() => setSettings(s => ({ ...s, enable_caching: !s.enable_caching }))}
+                className={`relative w-10 h-5 rounded-full transition-colors ${settings?.enable_caching ? 'bg-blue-600' : 'bg-gray-300'}`}
+              >
+                <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${settings?.enable_caching ? 'translate-x-5' : 'translate-x-0.5'}`} />
+              </button>
+            </div>
+
+            <button onClick={save} disabled={saving}
+              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors">
+              {saving ? 'Saving…' : 'Save Settings'}
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

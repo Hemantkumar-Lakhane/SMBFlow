@@ -1,67 +1,88 @@
 // frontend/src/components/shell/Sidebar.jsx
-// ─────────────────────────────────────────────────────────────────────────────
-// Approved Figma sidebar presentation, ported to this repo:
-//   • react-router-dom v6 (NavLink), not react-router v8
-//   • real identity from useAuth() (no hardcoded "Sarah Adams")
-//   • real logout via AuthContext
-//   • nav targets are the EXISTING routes in App.jsx (nothing points at an
-//     unmigrated route); role split uses backend roles (isAdmin === super_admin)
-//   • Action Center shows the live pending badge (escalations + a2a)
-// ─────────────────────────────────────────────────────────────────────────────
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
   Home, Inbox, Workflow, BookOpen, Bot, Plug, Settings,
   CreditCard, FileSearch, LayoutDashboard, Users,
   Activity, DollarSign, LogOut,
+  Building2, GitBranch, GitMerge, Link, FileText, Cpu,
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 
-// Owner nav — every `to` is a real route registered in App.jsx.
+// Owner nav
 const ownerNav = [
   {
     title: 'Operations',
     items: [
-      { label: 'Home', to: '/dashboard', icon: Home },
-      { label: 'Action Center', to: '/escalations', icon: Inbox, badge: 'actions' },
-      { label: 'Workflows', to: '/workflows/builder', icon: Workflow },
+      { label: 'Home',          to: '/dashboard',        icon: Home },
+      { label: 'Action Center', to: '/escalations',      icon: Inbox,    badge: 'actions' },
+      { label: 'Workflows',     to: '/workflows',        icon: Workflow },
     ],
   },
   {
     title: 'Configuration',
     items: [
-      { label: 'Workflow Library', to: '/workflows/builder', icon: BookOpen },
-      { label: 'AI Engine', to: '/models', icon: Bot },
-      { label: 'Integrations', to: '/tools', icon: Plug },
+      { label: 'Workflow Library', to: '/workflow-library', icon: BookOpen },
+      { label: 'AI Engine',        to: '/ai-engine',        icon: Bot },
+      { label: 'Integrations',     to: '/integrations',     icon: Plug },
     ],
   },
   {
     title: 'Settings',
     items: [
-      { label: 'General', to: '/config', icon: Settings },
-      { label: 'Budget & Billing', to: '/budget', icon: CreditCard },
-      { label: 'Evidence', to: '/evidence', icon: FileSearch },
+      { label: 'General',          to: '/settings/general',       icon: Settings },
+      { label: 'AI Engine',        to: '/settings/ai-engine',     icon: Bot },
+      { label: 'Integrations',     to: '/settings/integrations',  icon: Plug },
+      { label: 'Budget & Billing', to: '/budget',                 icon: CreditCard },
+      { label: 'Evidence',         to: '/evidence',               icon: FileSearch },
     ],
   },
 ]
 
-// Admin nav — only routes that exist today.
+// Admin nav — full spec
 const adminNav = [
   {
     title: 'Overview',
-    items: [{ label: 'Platform Overview', to: '/admin', icon: LayoutDashboard }],
-  },
-  {
-    title: 'Management',
     items: [
-      { label: 'Users', to: '/admin/users', icon: Users },
-      { label: 'Fleet Cost', to: '/admin/fleet', icon: DollarSign },
+      { label: 'Platform Overview', to: '/admin', icon: LayoutDashboard },
     ],
   },
   {
-    title: 'Operations',
+    title: 'Organization Management',
     items: [
-      { label: 'Action Center', to: '/escalations', icon: Inbox, badge: 'actions' },
-      { label: 'System Health', to: '/models', icon: Activity },
+      { label: 'Organizations', to: '/admin/organizations', icon: Building2 },
+      { label: 'Users',         to: '/admin/users',         icon: Users },
+    ],
+  },
+  {
+    title: 'Workflow Operations',
+    items: [
+      { label: 'Workflows',     to: '/admin/workflows',     icon: Workflow },
+      { label: 'Workflow Runs', to: '/admin/runs',          icon: GitBranch },
+      { label: 'Review Queue',  to: '/admin/reviews',       icon: Inbox },
+    ],
+  },
+  {
+    title: 'AI Platform',
+    items: [
+      { label: 'AI Services',           to: '/admin/ai-services', icon: Bot },
+      { label: 'Provider Connections',  to: '/admin/providers',   icon: Plug },
+      { label: 'Models',                to: '/admin/models',      icon: Cpu },
+      { label: 'Routing & Assignments', to: '/admin/routing',     icon: GitMerge },
+    ],
+  },
+  {
+    title: 'Platform Operations',
+    items: [
+      { label: 'System Health', to: '/admin/health',       icon: Activity },
+      { label: 'Integrations',  to: '/admin/integrations', icon: Link },
+      { label: 'Usage & Cost',  to: '/admin/usage',        icon: DollarSign },
+      { label: 'Audit Log',     to: '/admin/audit',        icon: FileText },
+    ],
+  },
+  {
+    title: 'Configuration',
+    items: [
+      { label: 'Platform Settings', to: '/admin/settings', icon: Settings },
     ],
   },
 ]

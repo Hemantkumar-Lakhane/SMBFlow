@@ -924,6 +924,9 @@ async def get_evidence_file_content(
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Workflows
+# NOTE: /workflows/trigger and /workflows/estimate-cost MUST be registered
+# before /workflows/{run_id}/... routes so FastAPI does not swallow static
+# path segments as run_id values.
 # ─────────────────────────────────────────────────────────────────────────────
 
 @app.post("/api/v1/workflows/trigger", tags=["Workflows"])
@@ -971,6 +974,94 @@ async def trigger_workflow(
                            "tenant_id": body.tenant_id})
     return {"run_id": run_id, "status": "pending",
             "message": f"Workflow '{body.workflow_name}' queued."}
+
+
+@app.get("/api/v1/workflows/estimate-cost", tags=["Workflows"])
+async def estimate_workflow_cost(
+    tenant_id: str,
+    workflow_name: str,
+    current_user: TokenData = Depends(require_any_auth),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Pre-trigger cost forecast.
+
+    Analyzes the last completed run for this workflow+tenant, extracts data size,
+    and estimates cost at the current optimization level.
+
+    Returns: { estimated_cost_usd, estimated_duration_min, accounts_count,
+               breakdown_by_agent, optimization_level, confidence }
+    """
+    assert_tenant_access(current_user, tenant_id)
+
+    # Find last completed run
+    instances = await crud.list_workflow_instances(db, tenant_id=tenant_id, limit=50)
+    last_run = next(
+        (i for i in instances
+         if i.workflow_name == workflow_name and i.status == "completed"),
+        None
+    )
+
+    if not last_run:
+        return {
+            "estimated_cost_usd": None,
+            "confidence": "low",
+            "message": "No previous completed run found for this workflow. Run it once to get estimates.",
+            "workflow_name": workflow_name,
+        }
+
+    # Get budget settings
+    budget = await crud.get_budget_settings(db, tenant_id) or {}
+    opt_level = budget.get("optimization_level", 1)
+
+    # Extract data size from last run context
+    context = last_run.context or {}
+    research = context.get("research", {})
+    account_count = len(
+        research.get("accounts") or
+        research.get("deals") or
+        research.get("patients") or
+        research.get("transactions") or []
+    )
+
+    # Use actual last run cost as baseline
+    last_cost = last_run.total_cost_usd or 0.0
+
+    # Apply optimization level savings estimate
+    from core.llm_router import LLMRouter
+    router = LLMRouter()
+    savings = router.get_predicted_savings(opt_level)
+    savings_pct = savings.get("savings_pct", 0) / 100.0
+
+    estimated_cost = last_cost * (1.0 - savings_pct)
+
+    # Per-agent breakdown from last run's agent_runs
+    agent_runs = last_run.agent_runs or []
+    breakdown = {}
+    for run in agent_runs:
+        if isinstance(run, dict):
+            node_id = run.get("node_id", "?")
+            breakdown[node_id] = {
+                "agent_type": run.get("agent_type", "?"),
+                "last_cost_usd": round(run.get("cost_usd", 0.0), 6),
+                "estimated_cost_usd": round(run.get("cost_usd", 0.0) * (1.0 - savings_pct), 6),
+                "model_last_used": run.get("model_used", "?"),
+            }
+
+    return {
+        "workflow_name": workflow_name,
+        "tenant_id": tenant_id,
+        "optimization_level": opt_level,
+        "optimization_strategy": savings.get("description", ""),
+        "estimated_cost_usd": round(estimated_cost, 5),
+        "last_run_cost_usd": round(last_cost, 5),
+        "estimated_savings_pct": savings_pct * 100,
+        "estimated_duration_minutes": 5,
+        "accounts_in_last_run": account_count,
+        "confidence": "high" if last_cost > 0.001 else "low",
+        "breakdown_by_agent": breakdown,
+        "note": f"Estimate based on last completed run ({str(last_run.id)[:8]}). Actual cost varies with data volume.",
+    }
 
 
 @app.get("/api/v1/workflows/{run_id}/status", tags=["Workflows"])
@@ -1469,7 +1560,51 @@ async def delete_credential(
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Custom Tools
+# NOTE: /tools/local and /tools/available MUST be registered before
+# /tools/{tool_id} so FastAPI does not swallow "local"/"available" as a tool_id.
 # ─────────────────────────────────────────────────────────────────────────────
+
+@app.get("/api/v1/tools/local", tags=["Tools"])
+async def list_local_tools(current_user: TokenData = Depends(require_any_auth)):
+    from integrations.local_dev_tools import LOCAL_TOOL_SCHEMAS, SEED_DIR
+    tools = []
+    for name, schema in LOCAL_TOOL_SCHEMAS.items():
+        fn_schema = schema.get("function", {})
+        tools.append({
+            "name": name,
+            "description": fn_schema.get("description", ""),
+            "parameters": fn_schema.get("parameters", {}).get("properties", {}),
+            "type": "local_dev", "is_active": True,
+        })
+    return {"tools": tools, "total": len(tools),
+            "note": "Local dev tools — run seed scripts to populate data."}
+
+
+@app.get("/api/v1/tools/available", tags=["Tools"])
+async def get_available_tools(
+    current_user: TokenData = Depends(require_any_auth),
+    db: AsyncSession = Depends(get_db),
+):
+    from integrations.local_dev_tools import LOCAL_TOOL_SCHEMAS
+    local = [
+        {"name": n, "description": s.get("function", {}).get("description", ""),
+         "type": "local_dev",
+         "parameters": list(s.get("function", {}).get("parameters", {}).get("properties", {}).keys())}
+        for n, s in LOCAL_TOOL_SCHEMAS.items()
+    ]
+    utility = [
+        {"name": "db_write_outcome", "description": "Log outcome", "type": "utility", "parameters": ["tenant_id", "action_taken"]},
+        {"name": "db_update_pattern", "description": "Update pattern", "type": "utility", "parameters": ["tenant_id", "pattern_key", "pattern_data"]},
+    ]
+    filter_tid = get_tenant_filter(current_user)
+    custom_tools = await crud.list_custom_tools(db, tenant_id=filter_tid)
+    custom = [
+        {"name": t.tool_name, "description": t.description or "", "type": "custom_rest", "parameters": ["filters"]}
+        for t in custom_tools
+    ]
+    return {"local_dev": local, "utility": utility, "custom_rest": custom,
+            "all": [t["name"] for t in local + utility + custom]}
+
 
 @app.get("/api/v1/tools", tags=["Tools"])
 async def list_tools(
@@ -1638,94 +1773,7 @@ async def update_budget_settings(
     await broadcast_event("budget_updated", {"tenant_id": tenant_id, "level": body.optimization_level})
     return {"message": "Budget settings updated", "settings": settings}
 
-@app.get("/api/v1/workflows/estimate-cost", tags=["Workflows"])
-async def estimate_workflow_cost(
-    tenant_id: str,
-    workflow_name: str,
-    current_user: TokenData = Depends(require_any_auth),
-    db: AsyncSession = Depends(get_db),
-):
-    """
-    Pre-trigger cost forecast.
-    
-    Analyzes the last completed run for this workflow+tenant, extracts data size,
-    and estimates cost at the current optimization level.
-    
-    Returns: { estimated_cost_usd, estimated_duration_min, accounts_count,
-               breakdown_by_agent, optimization_level, confidence }
-    """
-    assert_tenant_access(current_user, tenant_id)
-    
-    # Find last completed run
-    instances = await crud.list_workflow_instances(db, tenant_id=tenant_id, limit=50)
-    last_run = next(
-        (i for i in instances
-         if i.workflow_name == workflow_name and i.status == "completed"),
-        None
-    )
-    
-    if not last_run:
-        return {
-            "estimated_cost_usd": None,
-            "confidence": "low",
-            "message": "No previous completed run found for this workflow. Run it once to get estimates.",
-            "workflow_name": workflow_name,
-        }
-    
-    # Get budget settings
-    budget = await crud.get_budget_settings(db, tenant_id) or {}
-    opt_level = budget.get("optimization_level", 1)
-    
-    # Extract data size from last run context
-    context = last_run.context or {}
-    research = context.get("research", {})
-    account_count = len(
-        research.get("accounts") or
-        research.get("deals") or
-        research.get("patients") or
-        research.get("transactions") or []
-    )
-    
-    # Use actual last run cost as baseline
-    last_cost = last_run.total_cost_usd or 0.0
-    last_tokens_in = last_run.total_tokens_in or 0
-    
-    # Apply optimization level savings estimate
-    from core.llm_router import LLMRouter
-    router = LLMRouter()
-    savings = router.get_predicted_savings(opt_level)
-    savings_pct = savings.get("savings_pct", 0) / 100.0
-    
-    estimated_cost = last_cost * (1.0 - savings_pct)
-    
-    # Per-agent breakdown from last run's agent_runs
-    agent_runs = last_run.agent_runs or []
-    breakdown = {}
-    for run in agent_runs:
-        if isinstance(run, dict):
-            node_id = run.get("node_id", "?")
-            breakdown[node_id] = {
-                "agent_type": run.get("agent_type", "?"),
-                "last_cost_usd": round(run.get("cost_usd", 0.0), 6),
-                "estimated_cost_usd": round(run.get("cost_usd", 0.0) * (1.0 - savings_pct), 6),
-                "model_last_used": run.get("model_used", "?"),
-            }
-    
-    return {
-        "workflow_name": workflow_name,
-        "tenant_id": tenant_id,
-        "optimization_level": opt_level,
-        "optimization_strategy": savings.get("description", ""),
-        "estimated_cost_usd": round(estimated_cost, 5),
-        "last_run_cost_usd": round(last_cost, 5),
-        "estimated_savings_pct": savings_pct * 100,
-        "estimated_duration_minutes": 5,  # workflow-specific, approximation
-        "accounts_in_last_run": account_count,
-        "confidence": "high" if last_cost > 0.001 else "low",
-        "breakdown_by_agent": breakdown,
-        "note": f"Estimate based on last completed run ({str(last_run.id)[:8]}). Actual cost varies with data volume.",
-    }
-    
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Analytics
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1738,6 +1786,21 @@ async def get_dashboard(
 ):
     assert_tenant_access(current_user, tenant_id)
     return await crud.get_dashboard_data(db, tenant_id)
+
+
+# NOTE: /analytics/admin/fleet MUST be registered before /analytics/{tenant_id}
+# so FastAPI does not swallow "admin" as a tenant_id parameter.
+@app.get("/api/v1/analytics/admin/fleet", tags=["Analytics"])
+async def get_fleet_analytics(
+    _: TokenData = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    analytics = await crud.get_fleet_analytics(db)
+    tenants = await crud.list_tenants(db)
+    tenant_map = {str(t.id): t.name for t in tenants}
+    for tid in analytics.get("by_tenant", {}):
+        analytics["by_tenant"][tid]["tenant_name"] = tenant_map.get(tid, "Unknown")
+    return analytics
 
 
 @app.get("/api/v1/analytics/{tenant_id}", tags=["Analytics"])
@@ -1763,19 +1826,6 @@ async def get_analytics(
         "estimated_hours_saved": round(len(completed) * 0.75, 1),
         "success_rate": round(len(completed) / max(len(instances), 1), 3),
     }
-
-
-@app.get("/api/v1/analytics/admin/fleet", tags=["Analytics"])
-async def get_fleet_analytics(
-    _: TokenData = Depends(require_admin),
-    db: AsyncSession = Depends(get_db),
-):
-    analytics = await crud.get_fleet_analytics(db)
-    tenants = await crud.list_tenants(db)
-    tenant_map = {str(t.id): t.name for t in tenants}
-    for tid in analytics.get("by_tenant", {}):
-        analytics["by_tenant"][tid]["tenant_name"] = tenant_map.get(tid, "Unknown")
-    return analytics
 
 
 @app.post("/api/v1/outcomes/{tenant_id}/check-pending", tags=["Analytics"])
@@ -2197,48 +2247,6 @@ async def create_prompt(
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text(body.content, encoding="utf-8")
     return {"message": "Prompt created", "path": prompt_path}
-
-
-@app.get("/api/v1/tools/local", tags=["Tools"])
-async def list_local_tools(current_user: TokenData = Depends(require_any_auth)):
-    from integrations.local_dev_tools import LOCAL_TOOL_SCHEMAS, SEED_DIR
-    tools = []
-    for name, schema in LOCAL_TOOL_SCHEMAS.items():
-        fn_schema = schema.get("function", {})
-        tools.append({
-            "name": name,
-            "description": fn_schema.get("description", ""),
-            "parameters": fn_schema.get("parameters", {}).get("properties", {}),
-            "type": "local_dev", "is_active": True,
-        })
-    return {"tools": tools, "total": len(tools),
-            "note": "Local dev tools — run seed scripts to populate data."}
-
-
-@app.get("/api/v1/tools/available", tags=["Tools"])
-async def get_available_tools(
-    current_user: TokenData = Depends(require_any_auth),
-    db: AsyncSession = Depends(get_db),
-):
-    from integrations.local_dev_tools import LOCAL_TOOL_SCHEMAS
-    local = [
-        {"name": n, "description": s.get("function", {}).get("description", ""),
-         "type": "local_dev",
-         "parameters": list(s.get("function", {}).get("parameters", {}).get("properties", {}).keys())}
-        for n, s in LOCAL_TOOL_SCHEMAS.items()
-    ]
-    utility = [
-        {"name": "db_write_outcome", "description": "Log outcome", "type": "utility", "parameters": ["tenant_id", "action_taken"]},
-        {"name": "db_update_pattern", "description": "Update pattern", "type": "utility", "parameters": ["tenant_id", "pattern_key", "pattern_data"]},
-    ]
-    filter_tid = get_tenant_filter(current_user)
-    custom_tools = await crud.list_custom_tools(db, tenant_id=filter_tid)
-    custom = [
-        {"name": t.tool_name, "description": t.description or "", "type": "custom_rest", "parameters": ["filters"]}
-        for t in custom_tools
-    ]
-    return {"local_dev": local, "utility": utility, "custom_rest": custom,
-            "all": [t["name"] for t in local + utility + custom]}
 
 
 @app.get("/api/v1/seed-data/status", tags=["SeedData"])

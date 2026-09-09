@@ -69,11 +69,11 @@ export function AppShell({ children }) {
   }, [loadCounts, subscribe, incEscalations, decEscalations, incA2A, decA2A])
 
   return (
-    <div className="flex h-screen bg-slate-100 overflow-hidden">
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
       <Sidebar isAdmin={isAdmin} getBadge={getBadge} />
       <div className="flex flex-col flex-1 min-w-0">
         <TopHeader />
-        <main className="flex-1 overflow-y-auto">{children}</main>
+        <main className="flex-1 overflow-y-auto bg-gray-50">{children}</main>
       </div>
     </div>
   )
