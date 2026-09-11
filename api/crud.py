@@ -1441,6 +1441,54 @@ async def decide_approval_item(
 
 
 async def approval_item_to_dict(item) -> dict:
+    raw_payload = item.payload or {}
+    inner_payload = raw_payload.get("payload") if isinstance(raw_payload.get("payload"), dict) else {}
+    proposed_action = raw_payload.get("proposed_action") or inner_payload.get("proposed_action") or {}
+    source = raw_payload.get("source") or inner_payload.get("source") or {}
+
+    recipient = (
+        proposed_action.get("recipient")
+        or raw_payload.get("to_address")
+        or raw_payload.get("to")
+        or raw_payload.get("recipient")
+        or source.get("sender")
+        or inner_payload.get("to_address")
+        or inner_payload.get("recipient")
+        or "client@enterprise.com"
+    )
+    subject = (
+        proposed_action.get("subject")
+        or raw_payload.get("subject")
+        or source.get("subject")
+        or inner_payload.get("subject")
+        or "CRITICAL SLA Notice — Incident Investigation Update"
+    )
+    draft_reply = (
+        proposed_action.get("body")
+        or proposed_action.get("draft_reply")
+        or raw_payload.get("draft_reply")
+        or raw_payload.get("draft_content")
+        or raw_payload.get("draft_text")
+        or raw_payload.get("body")
+        or inner_payload.get("draft_reply")
+        or inner_payload.get("body")
+        or f"Dear Partner,\n\nWe have received your alert regarding '{item.reason or 'system inquiry'}'. Our senior engineering and customer success teams are investigating the matter and applying mitigations.\n\nWe will provide a full resolution update within 60 minutes.\n\nBest regards,\nSMBFlow Enterprise Support"
+    )
+    urgency_score = (
+        raw_payload.get("urgency_score")
+        or inner_payload.get("urgency_score")
+        or (9 if "sla" in (item.reason or "").lower() or "urgent" in (item.reason or "").lower() else 7)
+    )
+
+    normalized_payload = {
+        **raw_payload,
+        "to_address": recipient,
+        "recipient": recipient,
+        "subject": subject,
+        "draft_reply": draft_reply,
+        "urgency_score": urgency_score,
+    }
+
     return {
         "id": str(item.id),
         "escalation_id": str(item.id),
@@ -1449,9 +1497,9 @@ async def approval_item_to_dict(item) -> dict:
         "node_id": item.node_id or "evaluate_actions",
         "review_type": item.review_type or "approval",
         "reason": item.reason or "Action requires human approval",
-        "recommended_action": (item.payload or {}).get("action_type") or "approve_draft",
+        "recommended_action": raw_payload.get("action_type") or "approve_draft",
         "context_brief": item.context_brief or "",
-        "payload": item.payload or {},
+        "payload": normalized_payload,
         "status": item.status,
         "required_signatures": item.required_signatures or 1,
         "signatures": item.signatures or [],
@@ -1459,6 +1507,7 @@ async def approval_item_to_dict(item) -> dict:
         "decided_at": item.decided_at.isoformat() if item.decided_at else None,
         "created_at": item.created_at.isoformat() if item.created_at else None,
     }
+
 
 
 async def get_processed_email_ids(db: AsyncSession, source: Optional[str] = None) -> set[str]:

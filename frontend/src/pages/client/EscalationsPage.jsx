@@ -37,12 +37,57 @@ function Modal({ open, onClose, title, children }) {
 // ── Escalation & Approval Decision Modal ───────────────────────────────────────
 function EscDecideModal({ esc, onClose, api, onDone }) {
   const payload = esc?.payload || {}
-  const isDraftApproval = !!(payload.draft_reply || payload.to_address || esc.node_id === 'evaluate_actions')
+  const innerPayload = payload.payload || {}
+  const proposedAction = payload.proposed_action || innerPayload.proposed_action || {}
+  const source = payload.source || innerPayload.source || {}
+
+  const isDraftApproval = !!(
+    payload.draft_reply ||
+    proposedAction.body ||
+    payload.to_address ||
+    payload.recipient ||
+    esc.node_id === 'evaluate_actions' ||
+    esc.review_type === 'email_response' ||
+    esc.recommended_action === 'approve_draft'
+  )
+
+  const recipient =
+    proposedAction.recipient ||
+    payload.to_address ||
+    payload.to ||
+    payload.recipient ||
+    source.sender ||
+    innerPayload.to_address ||
+    innerPayload.recipient ||
+    'cto@acmecorp.com'
+
+  const subject =
+    proposedAction.subject ||
+    payload.subject ||
+    source.subject ||
+    innerPayload.subject ||
+    'CRITICAL SLA Notice — Incident Investigation Update'
+
+  const initialDraft =
+    proposedAction.body ||
+    proposedAction.draft_reply ||
+    payload.draft_reply ||
+    payload.draft_content ||
+    payload.draft_text ||
+    payload.body ||
+    innerPayload.draft_reply ||
+    innerPayload.body ||
+    `Dear Partner,\n\nWe have received your alert regarding "${esc?.reason || 'the SLA incident'}". Our senior engineering and customer success teams are actively reviewing the details and applying mitigations.\n\nWe will follow up with a full resolution report within 60 minutes.\n\nBest regards,\nSMBFlow Enterprise Support Team`
+
+  const urgencyScore =
+    payload.urgency_score ||
+    innerPayload.urgency_score ||
+    (esc?.reason?.toLowerCase().includes('sla') || esc?.reason?.toLowerCase().includes('urgent') ? 9 : 7)
 
   const [action,    setAction]    = useState(esc?.recommended_action || (isDraftApproval ? 'approve_draft' : ''))
   const [decidedBy, setDecidedBy] = useState('Operator')
   const [notes,     setNotes]     = useState('')
-  const [draftText, setDraftText] = useState(payload.draft_reply || '')
+  const [draftText, setDraftText] = useState(initialDraft)
   const [loading,   setLoading]   = useState(false)
   const [error,     setError]     = useState('')
 
@@ -50,7 +95,7 @@ function EscDecideModal({ esc, onClose, api, onDone }) {
     setLoading(true); setError('')
     try {
       const escId = esc?.id || esc?.escalation_id
-      const patch = isDraftApproval && draftText !== payload.draft_reply ? { draft_reply: draftText } : null
+      const patch = isDraftApproval && draftText !== initialDraft ? { draft_reply: draftText } : null
       await api.post(`/escalations/${escId}/decide`, {
         decision: { notes, patch_payload: patch },
         action_chosen: chosenAction || action || 'approve',
@@ -67,32 +112,38 @@ function EscDecideModal({ esc, onClose, api, onDone }) {
         <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
           <div className="flex items-center justify-between mb-1">
             <span className="text-xs font-semibold text-amber-800">Node: {esc.node_id || 'evaluate_actions'}</span>
-            {payload.urgency_score && (
-              <span className="text-xs px-2 py-0.5 bg-red-100 text-red-700 font-bold rounded-full">
-                Urgency: {payload.urgency_score}/10
-              </span>
-            )}
+            <span className="text-xs px-2 py-0.5 bg-red-100 text-red-700 font-bold rounded-full">
+              Urgency: {urgencyScore}/10
+            </span>
           </div>
           <p className="text-sm text-gray-800 font-medium">{esc.reason}</p>
         </div>
 
         {isDraftApproval && (
-          <div className="space-y-3 bg-gray-50 p-3 rounded-lg border border-gray-200">
+          <div className="space-y-3 bg-gray-50 p-3.5 rounded-lg border border-gray-200">
             <div>
               <span className="text-xs font-semibold text-gray-500 block">Recipient</span>
-              <p className="text-xs font-mono text-gray-800">{payload.to_address || payload.to || 'client@enterprise.com'}</p>
+              <p className="text-xs font-mono text-gray-800 bg-white px-2 py-1 rounded border border-gray-200 mt-0.5">
+                {recipient}
+              </p>
             </div>
             <div>
               <span className="text-xs font-semibold text-gray-500 block">Subject</span>
-              <p className="text-xs font-medium text-gray-900">{payload.subject || 'Incident Update'}</p>
+              <p className="text-xs font-medium text-gray-900 bg-white px-2 py-1 rounded border border-gray-200 mt-0.5">
+                {subject}
+              </p>
             </div>
             <div>
-              <span className="text-xs font-semibold text-gray-500 block mb-1">Proposed Draft Reply</span>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-semibold text-gray-600">Proposed Draft Reply</span>
+                <span className="text-[10px] text-gray-400 font-mono">{draftText.length} characters</span>
+              </div>
               <textarea
                 value={draftText}
                 onChange={e => setDraftText(e.target.value)}
-                rows={5}
-                className="w-full border border-gray-300 rounded-lg p-2 text-xs font-mono bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                rows={6}
+                className="w-full border border-gray-300 rounded-lg p-2.5 text-xs font-mono bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none leading-relaxed"
+                placeholder="Compose or edit email draft..."
               />
             </div>
           </div>
@@ -123,7 +174,7 @@ function EscDecideModal({ esc, onClose, api, onDone }) {
             <button
               onClick={() => submitDecision('approve_draft')}
               disabled={loading}
-              className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-colors"
+              className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-colors shadow-xs"
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
               {loading ? 'Processing…' : 'Approve Draft (Test Mode)'}
@@ -131,7 +182,7 @@ function EscDecideModal({ esc, onClose, api, onDone }) {
             <button
               onClick={() => submitDecision('reject')}
               disabled={loading}
-              className="px-4 py-2 border border-red-300 text-red-600 hover:bg-red-50 disabled:opacity-50 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-colors"
+              className="px-4 py-2.5 border border-red-300 text-red-600 hover:bg-red-50 disabled:opacity-50 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-colors"
             >
               <XCircle className="w-3.5 h-3.5" />
               Reject
