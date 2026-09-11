@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import {
   Plug, CheckCircle2, XCircle, AlertTriangle, RefreshCw, Settings, ShieldCheck,
-  ExternalLink, Mail, Sliders, Lock, Check
+  ExternalLink, Mail, Calendar, HardDrive, Sliders, Lock, Check, Info, Loader2, Sparkles
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 
@@ -14,8 +14,17 @@ export default function ConnectionsPage() {
 
   // Modals & Drawers
   const [connectModalTool, setConnectModalTool] = useState(null)
+  const [googleConsentModal, setGoogleConsentModal] = useState(false)
   const [configModalConn, setConfigModalConn] = useState(null)
   const [capabilitiesModalConn, setCapabilitiesModalConn] = useState(null)
+  const [devSetupModal, setDevSetupModal] = useState(false)
+
+  // Google Scope Selection Form
+  const [googleScopes, setGoogleScopes] = useState({
+    email: true,
+    calendar: true,
+    drive: true,
+  })
 
   // Form states
   const [fieldValues, setFieldValues] = useState({})
@@ -23,8 +32,14 @@ export default function ConnectionsPage() {
   const [errorMsg, setErrorMsg] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
+  // OAuth Processing state
+  const [oauthProcessing, setOauthProcessing] = useState(false)
+  const [oauthStatusMsg, setOauthStatusMsg] = useState('')
+  const [successToast, setSuccessToast] = useState(null)
+
   useEffect(() => {
     loadData()
+    handleOAuthCallback()
   }, [])
 
   const loadData = async () => {
@@ -42,10 +57,50 @@ export default function ConnectionsPage() {
     }
   }
 
+  // Handle Google OAuth return callback
+  const handleOAuthCallback = async () => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const code = urlParams.get('code')
+    const error = urlParams.get('error')
+
+    if (error) {
+      setErrorMsg(`Google authorization was cancelled or failed: ${error}`)
+      window.history.replaceState({}, document.title, window.location.pathname)
+      return
+    }
+
+    if (code) {
+      setOauthProcessing(true)
+      setOauthStatusMsg('Exchanging authorization code with Google...')
+      try {
+        const redirectUri = window.location.origin + window.location.pathname
+        const res = await api.post('/connections/oauth/google/exchange', {
+          code,
+          redirect_uri: redirectUri,
+        })
+        setOauthStatusMsg('Encrypting credentials in MultiFernet Vault and verifying health...')
+        setSuccessToast(`Successfully connected Google Account (${res.connected_email || 'Verified'})!`)
+        setTimeout(() => setSuccessToast(null), 6000)
+        await loadData()
+      } catch (err) {
+        setErrorMsg(err.message || 'Failed to complete Google OAuth exchange.')
+      } finally {
+        setOauthProcessing(false)
+        window.history.replaceState({}, document.title, window.location.pathname)
+      }
+    }
+  }
+
   const handleTest = async (connId) => {
     setTestingId(connId)
     try {
-      await api.post(`/connections/${connId}/test`)
+      const res = await api.post(`/connections/${connId}/test`)
+      if (res.success) {
+        setSuccessToast(`Health check passed for ${res.tool_name || 'integration'}!`)
+        setTimeout(() => setSuccessToast(null), 4000)
+      } else {
+        alert(`Connection test reported an issue: ${res.message || 'Provider unreachable'}`)
+      }
       await loadData()
     } catch (err) {
       alert(`Connection test failed: ${err.message}`)
@@ -54,28 +109,81 @@ export default function ConnectionsPage() {
     }
   }
 
-  // Initial Connection Trigger (OAuth or API Key)
-  const handleOpenConnect = (tool) => {
-    setConnectModalTool(tool)
+  // Trigger Connect Flow
+  const handleOpenConnect = async (tool) => {
     setErrorMsg('')
+    if (tool.tool_name === 'gmail' || tool.tool_name === 'google_workspace') {
+      setSubmitting(true)
+      try {
+        const redirectUri = window.location.origin + window.location.pathname
+        const queryParams = new URLSearchParams({
+          redirect_uri: redirectUri,
+          scopes: 'email,calendar,drive',
+        }).toString()
+        const res = await api.get(`/connections/oauth/google/authorize?${queryParams}`)
+
+        if (res && res.url) {
+          // Direct 1-Click Redirect to Google Consent Screen
+          window.location.href = res.url
+        } else {
+          throw new Error('Google authorization URL was not returned by server.')
+        }
+      } catch (err) {
+        setErrorMsg(err.message || 'Failed to initialize Google connection.')
+        alert(err.message || 'Failed to initialize Google connection. Ensure backend is running.')
+      } finally {
+        setSubmitting(false)
+      }
+      return
+    }
+
+    setConnectModalTool(tool)
     const initial = {}
     const fields = tool.required_fields || []
     fields.forEach(f => { initial[f] = '' })
     setFieldValues(initial)
   }
 
+  // Developer Fast-Connect Simulation for local testing
+  const handleDevSimulatedConnect = async () => {
+    setSubmitting(true)
+    setErrorMsg('')
+    try {
+      await api.post('/connections', {
+        tool_name: 'gmail',
+        display_name: 'Gmail / Email',
+        credentials: {
+          access_token: 'mock_local_dev_token_' + Date.now(),
+          refresh_token: 'mock_refresh_token',
+          expires_at: Math.floor(Date.now() / 1000) + 3600,
+        },
+        config: {
+          connected_email: user?.email || 'dev.user@smbflow.local',
+          sender_alias: user?.email || 'dev.user@smbflow.local',
+          sender_name: user?.full_name || 'SMBFlow Coordinator',
+          queue_for_approval: true,
+          mode: 'development_simulated',
+        },
+      })
+      setDevSetupModal(false)
+      setSuccessToast('Local development Google connection enabled!')
+      setTimeout(() => setSuccessToast(null), 5000)
+      await loadData()
+    } catch (err) {
+      setErrorMsg(err.message || 'Simulation failed')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   const handleConnectSubmit = async (e) => {
     e.preventDefault()
     if (!connectModalTool) return
 
-    const isOAuth = connectModalTool.auth_type === 'oauth2' || (connectModalTool.required_fields || []).length === 0
-
-    if (!isOAuth) {
-      const missing = (connectModalTool.required_fields || []).filter(f => !fieldValues[f]?.trim())
-      if (missing.length > 0) {
-        setErrorMsg(`Required field(s) missing: ${missing.join(', ')}`)
-        return
-      }
+    const missing = (connectModalTool.required_fields || []).filter(f => !fieldValues[f]?.trim())
+    if (missing.length > 0) {
+      setErrorMsg(`Required field(s) missing: ${missing.join(', ')}`)
+      return
     }
 
     setSubmitting(true)
@@ -86,16 +194,12 @@ export default function ConnectionsPage() {
       const config = {}
 
       Object.entries(fieldValues).forEach(([k, v]) => {
-        if (['sender_alias', 'cs_alerts_channel', 'base_url'].includes(k)) {
+        if (['sender_alias', 'cs_alerts_channel', 'sales_channel', 'base_url', 'pipeline_id'].includes(k)) {
           config[k] = v
         } else {
           credentials[k] = v
         }
       })
-
-      if (isOAuth) {
-        config.connected_email = user?.email || 'authenticated_user'
-      }
 
       await api.post('/connections', {
         tool_name: connectModalTool.tool_name,
@@ -106,6 +210,8 @@ export default function ConnectionsPage() {
 
       setConnectModalTool(null)
       setFieldValues({})
+      setSuccessToast(`Connected ${connectModalTool.display_name}!`)
+      setTimeout(() => setSuccessToast(null), 4000)
       await loadData()
     } catch (err) {
       setErrorMsg(err.message || 'Connection failed')
@@ -132,6 +238,8 @@ export default function ConnectionsPage() {
         config: configValues,
       })
       setConfigModalConn(null)
+      setSuccessToast('Settings saved successfully!')
+      setTimeout(() => setSuccessToast(null), 4000)
       await loadData()
     } catch (err) {
       setErrorMsg(err.message || 'Failed to update configuration')
@@ -141,9 +249,11 @@ export default function ConnectionsPage() {
   }
 
   const handleDisconnect = async (connId) => {
-    if (!window.confirm('Disconnect this integration? Stored tokens and credentials will be permanently removed.')) return
+    if (!window.confirm('Disconnect this integration? Stored credentials and tokens will be permanently purged from the vault.')) return
     try {
       await api.delete(`/connections/${connId}`)
+      setSuccessToast('Integration disconnected.')
+      setTimeout(() => setSuccessToast(null), 4000)
       await loadData()
     } catch (err) {
       alert(`Disconnect failed: ${err.message}`)
@@ -151,26 +261,58 @@ export default function ConnectionsPage() {
   }
 
   const getConnForTool = (toolName) => connections.find(c => c.tool_name === toolName)
+  const allScopesSelected = googleScopes.email && googleScopes.calendar && googleScopes.drive
 
-  if (loading) {
+  const toggleSelectAll = () => {
+    const nextVal = !allScopesSelected
+    setGoogleScopes({
+      email: nextVal,
+      calendar: nextVal,
+      drive: nextVal,
+    })
+  }
+
+  if (loading && !oauthProcessing) {
     return (
-      <div className="p-8 text-center text-gray-400 text-sm">
-        Loading tool connections...
+      <div className="p-12 text-center text-gray-500 text-sm flex flex-col items-center justify-center space-y-3">
+        <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />
+        <span>Loading authenticated tool connections...</span>
       </div>
     )
   }
 
   return (
     <div className="p-6 bg-gray-50 min-h-full max-w-7xl mx-auto space-y-6">
+      {/* Toast Notification */}
+      {successToast && (
+        <div className="fixed top-6 right-6 z-50 bg-emerald-600 text-white text-xs font-semibold px-4 py-3 rounded-xl shadow-lg flex items-center gap-2.5 animate-bounce">
+          <CheckCircle2 className="w-4 h-4 text-white" />
+          <span>{successToast}</span>
+        </div>
+      )}
+
+      {/* OAuth Processing Banner */}
+      {oauthProcessing && (
+        <div className="bg-blue-600 text-white rounded-xl p-4 shadow-md flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Loader2 className="w-5 h-5 text-white animate-spin flex-shrink-0" />
+            <div>
+              <p className="font-bold text-sm">Completing Google Connection</p>
+              <p className="text-xs text-blue-100">{oauthStatusMsg}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Tool Connections</h1>
         <p className="text-sm text-gray-500 mt-0.5">
-          Establish authenticated tool connections, configure settings, and manage capability permissions for agents.
+          Establish authenticated tool connections, configure permission scopes, and manage AI agent execution capabilities.
         </p>
       </div>
 
-      {/* Connection Architecture Banner */}
+      {/* Security Architecture Banner */}
       <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm flex items-center justify-between text-xs text-gray-600 gap-4">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center flex-shrink-0">
@@ -178,7 +320,7 @@ export default function ConnectionsPage() {
           </div>
           <div>
             <p className="font-semibold text-gray-900 text-sm">MultiFernet Vault Encryption & Policy Boundary</p>
-            <p className="text-gray-500">Credentials remain backend-only. Workflow agents inherit strictly granted tool capabilities.</p>
+            <p className="text-gray-500">API keys and OAuth tokens are AES-encrypted server-side. AI agents only receive granted scoped capabilities.</p>
           </div>
         </div>
       </div>
@@ -201,7 +343,13 @@ export default function ConnectionsPage() {
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <div className="flex items-center gap-2.5">
                     <div className="w-9 h-9 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center flex-shrink-0">
-                      <Plug className="w-4.5 h-4.5 text-blue-600" />
+                      {tool.tool_name === 'gmail' ? (
+                        <Mail className="w-4.5 h-4.5 text-blue-600" />
+                      ) : tool.tool_name === 'google_workspace' ? (
+                        <Calendar className="w-4.5 h-4.5 text-blue-600" />
+                      ) : (
+                        <Plug className="w-4.5 h-4.5 text-blue-600" />
+                      )}
                     </div>
                     <div>
                       <h3 className="font-bold text-gray-900 text-base">{tool.display_name}</h3>
@@ -211,14 +359,14 @@ export default function ConnectionsPage() {
                   <span
                     className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold flex items-center gap-1 border ${
                       isConnected
-                        ? 'bg-green-50 text-green-700 border-green-200'
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                         : isError
                         ? 'bg-red-50 text-red-700 border-red-200'
                         : 'bg-gray-50 text-gray-500 border-gray-200'
                     }`}
                   >
                     {isConnected ? (
-                      <CheckCircle2 className="w-3 h-3 text-green-600" />
+                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                     ) : isError ? (
                       <AlertTriangle className="w-3 h-3 text-red-600" />
                     ) : (
@@ -234,13 +382,13 @@ export default function ConnectionsPage() {
                 {isConnected && (
                   <div className="mt-3 p-2.5 bg-gray-50 rounded-lg border border-gray-100 space-y-1">
                     <p className="text-xs text-gray-700 font-medium flex items-center justify-between">
-                      <span className="text-gray-400">Connected account:</span>
-                      <span className="font-mono text-gray-900">{connectedEmail}</span>
+                      <span className="text-gray-400">Account:</span>
+                      <span className="font-mono text-gray-900 text-[11px] truncate max-w-[200px]">{connectedEmail}</span>
                     </p>
                     {conn?.last_tested_at && (
                       <p className="text-[11px] text-gray-400 flex items-center justify-between">
-                        <span>Last verified:</span>
-                        <span>{new Date(conn.last_tested_at).toLocaleString()}</span>
+                        <span>Verified:</span>
+                        <span>{new Date(conn.last_tested_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                       </p>
                     )}
                   </div>
@@ -251,12 +399,12 @@ export default function ConnectionsPage() {
               {tool.capabilities && tool.capabilities.length > 0 && (
                 <div>
                   <div className="flex items-center justify-between text-[11px] font-semibold text-gray-400 mb-1.5 uppercase tracking-wider">
-                    <span>Capabilities</span>
+                    <span>Agent Permissions</span>
                     <button
                       onClick={() => setCapabilitiesModalConn(conn || { tool_name: tool.tool_name, display_name: tool.display_name, capabilities: tool.capabilities })}
                       className="text-blue-600 hover:underline flex items-center gap-1"
                     >
-                      <ShieldCheck className="w-3 h-3" /> Manage Access
+                      <ShieldCheck className="w-3 h-3" /> View Scopes
                     </button>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
@@ -290,7 +438,7 @@ export default function ConnectionsPage() {
                       onClick={() => handleOpenConfig(conn)}
                       className="py-1.5 px-2.5 border border-gray-200 hover:bg-gray-50 text-gray-700 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1"
                     >
-                      <Sliders className="w-3 h-3 text-gray-500" /> Configure
+                      <Sliders className="w-3 h-3 text-gray-500" /> Settings
                     </button>
                     <button
                       onClick={() => handleDisconnect(conn.id)}
@@ -304,18 +452,18 @@ export default function ConnectionsPage() {
                     onClick={() => handleOpenConnect(tool)}
                     className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors flex items-center justify-center gap-2"
                   >
-                    {tool.auth_type === 'oauth2' ? (
+                    {tool.tool_name === 'gmail' || tool.tool_name === 'google_workspace' ? (
                       <>
                         <svg className="w-4 h-4" viewBox="0 0 24 24">
-                          <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                          <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                          <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
-                          <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+                          <path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.7 14.8 1 12 1 7.4 1 3.5 3.7 1.7 7.5l3.7 2.8C6.3 7.3 8.9 5 12 5z" />
+                          <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.6h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.9z" />
+                          <path fill="#FBBC05" d="M5.4 14.7c-.2-.7-.4-1.5-.4-2.3s.2-1.6.4-2.3L1.7 7.3C.6 9.5 0 11.9 0 14.4s.6 4.9 1.7 7.1l3.7-6.8z" />
+                          <path fill="#34A853" d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3.1 0-5.7-2.3-6.6-5.3L1.7 15.8C3.5 19.6 7.4 23 12 23z" />
                         </svg>
-                        Connect with Google
+                        <span>Connect with Google</span>
                       </>
                     ) : (
-                      'Connect Tool'
+                      <span>Connect Tool</span>
                     )}
                   </button>
                 )}
@@ -325,10 +473,12 @@ export default function ConnectionsPage() {
         })}
       </div>
 
-      {/* INITIAL CONNECT MODAL */}
+      {/* ─────────────────────────────────────────────────────────────────── */}
+      {/* STANDARD TOOL CONNECT MODAL (API Keys for Slack, HubSpot, Stripe)   */}
+      {/* ─────────────────────────────────────────────────────────────────── */}
       {connectModalTool && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
-          <div className="bg-white border border-gray-200 rounded-xl shadow-xl p-6 max-w-md w-full space-y-4 text-gray-900">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white border border-gray-200 rounded-2xl shadow-2xl p-6 max-w-md w-full space-y-4 text-gray-900">
             <div className="flex items-center justify-between border-b border-gray-100 pb-3">
               <h3 className="text-base font-bold text-gray-900">Connect {connectModalTool.display_name}</h3>
               <button
@@ -341,42 +491,21 @@ export default function ConnectionsPage() {
             <p className="text-xs text-gray-500 leading-relaxed">{connectModalTool.description}</p>
 
             <form onSubmit={handleConnectSubmit} className="space-y-4">
-              {connectModalTool.auth_type === 'oauth2' || (connectModalTool.required_fields || []).length === 0 ? (
-                <div className="p-4 bg-blue-50/60 border border-blue-100 rounded-lg space-y-3 text-center">
-                  <p className="text-xs text-gray-700">
-                    Authenticate securely with your provider account. Tokens will be encrypted and refreshed backend-side.
-                  </p>
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors flex items-center justify-center gap-2"
-                  >
-                    <svg className="w-4 h-4" viewBox="0 0 24 24">
-                      <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                      <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                      <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
-                      <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
-                    </svg>
-                    {submitting ? 'Authenticating…' : `Connect ${connectModalTool.display_name}`}
-                  </button>
+              {(connectModalTool.required_fields || ['api_key']).map(field => (
+                <div key={field}>
+                  <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">
+                    {field.replace(/_/g, ' ')}
+                  </label>
+                  <input
+                    type={field.includes('key') || field.includes('token') || field.includes('secret') ? 'password' : 'text'}
+                    value={fieldValues[field] || ''}
+                    onChange={(e) => setFieldValues({ ...fieldValues, [field]: e.target.value })}
+                    placeholder={`Enter ${field.replace(/_/g, ' ')}`}
+                    className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
                 </div>
-              ) : (
-                (connectModalTool.required_fields || ['api_key']).map(field => (
-                  <div key={field}>
-                    <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">
-                      {field.replace(/_/g, ' ')}
-                    </label>
-                    <input
-                      type={field.includes('key') || field.includes('token') || field.includes('secret') ? 'password' : 'text'}
-                      value={fieldValues[field] || ''}
-                      onChange={(e) => setFieldValues({ ...fieldValues, [field]: e.target.value })}
-                      placeholder={`Enter ${field.replace(/_/g, ' ')}`}
-                      className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      required
-                    />
-                  </div>
-                ))
-              )}
+              ))}
 
               {errorMsg && (
                 <p className="text-xs text-red-600 bg-red-50 p-2.5 rounded-lg border border-red-100">{errorMsg}</p>
@@ -390,25 +519,25 @@ export default function ConnectionsPage() {
                 >
                   Cancel
                 </button>
-                {connectModalTool.auth_type !== 'oauth2' && (
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors"
-                  >
-                    {submitting ? 'Saving…' : 'Save Connection'}
-                  </button>
-                )}
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors"
+                >
+                  {submitting ? 'Saving…' : 'Save Connection'}
+                </button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* PROVIDER SETTINGS CONFIGURATION MODAL */}
+      {/* ─────────────────────────────────────────────────────────────────── */}
+      {/* PROVIDER SETTINGS CONFIGURATION MODAL                               */}
+      {/* ─────────────────────────────────────────────────────────────────── */}
       {configModalConn && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
-          <div className="bg-white border border-gray-200 rounded-xl shadow-xl p-6 max-w-md w-full space-y-4 text-gray-900">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white border border-gray-200 rounded-2xl shadow-2xl p-6 max-w-md w-full space-y-4 text-gray-900">
             <div className="flex items-center justify-between border-b border-gray-100 pb-3">
               <h3 className="text-base font-bold text-gray-900">Configure {configModalConn.display_name} Settings</h3>
               <button onClick={() => setConfigModalConn(null)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
@@ -436,7 +565,7 @@ export default function ConnectionsPage() {
                       type="text"
                       value={configValues.sender_name || ''}
                       onChange={e => setConfigValues({ ...configValues, sender_name: e.target.value })}
-                      placeholder="Patient Care Team"
+                      placeholder="SMBFlow Coordinator"
                       className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-xs text-gray-900 focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
@@ -518,48 +647,100 @@ export default function ConnectionsPage() {
         </div>
       )}
 
-      {/* CAPABILITIES & ACCESS MANAGEMENT MODAL */}
+      {/* ─────────────────────────────────────────────────────────────────── */}
+      {/* CAPABILITIES & ACCESS MANAGEMENT MODAL                              */}
+      {/* ─────────────────────────────────────────────────────────────────── */}
+      {/* ─────────────────────────────────────────────────────────────────── */}
+      {/* CAPABILITIES & ACCESS MANAGEMENT MODAL                              */}
+      {/* ─────────────────────────────────────────────────────────────────── */}
       {capabilitiesModalConn && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
-          <div className="bg-white border border-gray-200 rounded-xl shadow-xl p-6 max-w-lg w-full space-y-4 text-gray-900">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-blue-600" />
-                <h3 className="text-base font-bold text-gray-900">{capabilitiesModalConn.display_name} Capabilities</h3>
-              </div>
-              <button onClick={() => setCapabilitiesModalConn(null)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
-            </div>
-            <p className="text-xs text-gray-500 leading-relaxed">
-              Specific tools exposed by this provider connection. Workflow agents inherit strictly granted capability permissions.
-            </p>
-
-            <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
-              {(capabilitiesModalConn.capabilities || []).map(cap => (
-                <div key={cap.id} className="p-3 bg-gray-50 border border-gray-200 rounded-lg flex items-start justify-between gap-3">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-xs text-gray-900">{cap.name}</span>
-                      <span className="font-mono text-[10px] text-gray-400">({cap.id})</span>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-0.5">{cap.desc}</p>
-                  </div>
-                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border whitespace-nowrap ${
-                    cap.requires_hitl || cap.risk === 'high'
-                      ? 'bg-amber-50 text-amber-700 border-amber-200'
-                      : 'bg-green-50 text-green-700 border-green-200'
-                  }`}>
-                    {cap.requires_hitl ? 'Approval Required' : 'Allowed'}
-                  </span>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-white border border-gray-100 rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden text-gray-900">
+            {/* Modal Header */}
+            <div className="p-5 border-b border-gray-100 bg-gradient-to-r from-blue-50/70 via-indigo-50/40 to-white flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-sm font-semibold">
+                  <ShieldCheck className="w-5 h-5 text-white" />
                 </div>
-              ))}
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-gray-900">{capabilitiesModalConn.display_name}</h3>
+                    <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                      Policy Boundary
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-0.5">Enforced tool execution permissions for workflow agents</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setCapabilitiesModalConn(null)}
+                className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+              >
+                ✕
+              </button>
             </div>
 
-            <div className="flex justify-end pt-2">
+            {/* Modal Content */}
+            <div className="p-5 space-y-4">
+              {/* Security Policy Notice Banner */}
+              <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl flex items-start gap-2.5">
+                <Lock className="w-4 h-4 text-slate-600 shrink-0 mt-0.5" />
+                <div className="text-[11px] text-slate-600 leading-relaxed">
+                  <span className="font-semibold text-slate-800">MultiFernet Vault Encrypted:</span> Raw API keys & tokens are never exposed to agents or frontend. Agents only inherit scoped tool calls.
+                </div>
+              </div>
+
+              {/* Capabilities List */}
+              <div className="space-y-2.5 max-h-80 overflow-y-auto pr-1">
+                {(capabilitiesModalConn.capabilities || []).map(cap => {
+                  const isApprovalRequired = cap.requires_hitl || cap.risk === 'high'
+                  return (
+                    <div
+                      key={cap.id}
+                      className="p-3.5 bg-white border border-gray-200/80 rounded-xl shadow-xs hover:border-blue-200 transition-colors flex items-start justify-between gap-3"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-xs text-gray-900">{cap.name}</span>
+                          <span className="font-mono text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">
+                            {cap.id}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-600 leading-snug">{cap.desc}</p>
+                      </div>
+
+                      <div className="shrink-0 flex flex-col items-end gap-1">
+                        {isApprovalRequired ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 shadow-xs">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                            Approval Required
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-xs">
+                            <Check className="w-3 h-3 text-emerald-600" />
+                            Allowed
+                          </span>
+                        )}
+                        <span className="text-[10px] text-gray-400">
+                          {isApprovalRequired ? 'Human Guardrail' : 'Auto-Executed'}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
+              <span className="text-xs text-gray-500 font-medium">
+                {(capabilitiesModalConn.capabilities || []).length} capabilities active
+              </span>
               <button
                 onClick={() => setCapabilitiesModalConn(null)}
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors"
               >
-                Done
+                Close
               </button>
             </div>
           </div>
@@ -568,5 +749,6 @@ export default function ConnectionsPage() {
     </div>
   )
 }
+
 
 

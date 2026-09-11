@@ -390,6 +390,190 @@ class GmailConnector(BaseConnector):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Google Workspace Connector (Calendar & Drive)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class GoogleWorkspaceConnector(BaseConnector):
+    """
+    Google Workspace for Calendar scheduling and Drive document storage.
+    Auth: OAuth2 via Google. Reuses token refresh logic from GmailConnector.
+    """
+
+    CALENDAR_BASE_URL = "https://www.googleapis.com/calendar/v3"
+    DRIVE_BASE_URL = "https://www.googleapis.com/drive/v3"
+
+    def __init__(self, credentials: dict, config: dict = None, on_token_refreshed: Optional[Any] = None):
+        super().__init__(credentials, config)
+        self._access_token = credentials.get("access_token")
+        self._refresh_token = credentials.get("refresh_token")
+        self._client_id = credentials.get("client_id") or os.getenv("GOOGLE_CLIENT_ID")
+        self._client_secret = credentials.get("client_secret") or os.getenv("GOOGLE_CLIENT_SECRET")
+        self._expires_at = float(credentials.get("expires_at", 0))
+        self._default_folder_id = (config or {}).get("default_folder_id", "")
+        self._on_token_refreshed = on_token_refreshed
+
+    async def refresh_access_token(self) -> bool:
+        """Exchange refresh_token for a new access_token using Google OAuth token endpoint."""
+        refresh_token = self._refresh_token or self.credentials.get("refresh_token")
+        client_id = self._client_id or os.getenv("GOOGLE_CLIENT_ID")
+        client_secret = self._client_secret or os.getenv("GOOGLE_CLIENT_SECRET")
+
+        if not (refresh_token and client_id and client_secret):
+            self._log.warning("Token refresh skipped — missing credentials")
+            return False
+
+        try:
+            async with httpx.AsyncClient(timeout=15) as client:
+                resp = await client.post(
+                    "https://oauth2.googleapis.com/token",
+                    data={
+                        "client_id": client_id,
+                        "client_secret": client_secret,
+                        "refresh_token": refresh_token,
+                        "grant_type": "refresh_token",
+                    }
+                )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    new_token = data.get("access_token")
+                    expires_in = int(data.get("expires_in", 3600))
+                    if new_token:
+                        self._access_token = new_token
+                        self.credentials["access_token"] = new_token
+                        self._expires_at = time.time() + expires_in
+                        self.credentials["expires_at"] = self._expires_at
+
+                        if self._client:
+                            await self._client.aclose()
+                            self._client = None
+
+                        if callable(self._on_token_refreshed):
+                            try:
+                                res = self._on_token_refreshed(self.credentials)
+                                if hasattr(res, "__await__"):
+                                    await res
+                            except Exception as ex:
+                                self._log.error("Token refreshed callback error", error=str(ex))
+
+                        return True
+                return False
+        except Exception as e:
+            self._log.error("Google Workspace token refresh failed", error=str(e))
+            return False
+
+    async def _ensure_valid_token(self) -> bool:
+        if not self._access_token:
+            return await self.refresh_access_token()
+        if self._expires_at > 0 and time.time() >= self._expires_at - 60:
+            return await self.refresh_access_token()
+        return True
+
+    async def authenticate(self) -> bool:
+        try:
+            await self._ensure_valid_token()
+            if not self._access_token:
+                return False
+            if not self._client:
+                self._client = httpx.AsyncClient(
+                    headers={"Authorization": f"Bearer {self._access_token}"}, timeout=30
+                )
+            resp = await self._client.get(f"{self.CALENDAR_BASE_URL}/users/me/calendarList", params={"maxResults": 1})
+            return resp.status_code in (200, 403, 404)  # 200 if calendar scope granted, 403 if only drive/email granted
+        except Exception as e:
+            self._log.error("Google Workspace authenticate failed", error=str(e))
+            return False
+
+    async def read(self, resource: str, filters: dict = None) -> list[dict]:
+        """Read Calendar events or Drive files. resource: 'events' | 'files'"""
+        filters = filters or {}
+        limit = filters.get("limit", 20)
+        await self._ensure_valid_token()
+        if not self._access_token:
+            return []
+
+        try:
+            if not self._client:
+                self._client = httpx.AsyncClient(
+                    headers={"Authorization": f"Bearer {self._access_token}"}, timeout=30
+                )
+
+            if resource == "events":
+                calendar_id = filters.get("calendar_id", "primary")
+                resp = await self._client.get(
+                    f"{self.CALENDAR_BASE_URL}/calendars/{calendar_id}/events",
+                    params={"maxResults": limit, "orderBy": "startTime", "singleEvents": "true"}
+                )
+                if resp.status_code == 200:
+                    return resp.json().get("items", [])
+            elif resource == "files":
+                q = filters.get("q", "trashed = false")
+                resp = await self._client.get(
+                    f"{self.DRIVE_BASE_URL}/files",
+                    params={"pageSize": limit, "q": q, "fields": "files(id, name, mimeType, modifiedTime, webViewLink)"}
+                )
+                if resp.status_code == 200:
+                    return resp.json().get("files", [])
+            return []
+        except Exception as e:
+            self._log.error("Google Workspace read failed", resource=resource, error=str(e))
+            return []
+
+    async def write(self, resource: str, data: dict) -> dict:
+        """Write Calendar event or upload metadata."""
+        await self._ensure_valid_token()
+        if resource == "events":
+            return await self.schedule_event(
+                summary=data.get("summary", "Appointment"),
+                description=data.get("description", ""),
+                start_iso=data.get("start_iso", ""),
+                end_iso=data.get("end_iso", ""),
+                attendees=data.get("attendees", []),
+            )
+        raise NotImplementedError(f"Resource {resource} write not supported")
+
+    async def schedule_event(
+        self,
+        summary: str,
+        description: str,
+        start_iso: str,
+        end_iso: str,
+        attendees: Optional[list[str]] = None,
+        calendar_id: str = "primary",
+    ) -> dict:
+        """Schedule a meeting in Google Calendar."""
+        await self._ensure_valid_token()
+        if not self._access_token:
+            return {"error": "Authentication token missing"}
+
+        payload: dict[str, Any] = {
+            "summary": summary,
+            "description": description,
+            "start": {"dateTime": start_iso},
+            "end": {"dateTime": end_iso},
+        }
+        if attendees:
+            payload["attendees"] = [{"email": a} for a in attendees]
+
+        try:
+            if not self._client:
+                self._client = httpx.AsyncClient(
+                    headers={"Authorization": f"Bearer {self._access_token}"}, timeout=30
+                )
+            resp = await self._client.post(
+                f"{self.CALENDAR_BASE_URL}/calendars/{calendar_id}/events",
+                json=payload
+            )
+            resp.raise_for_status()
+            return resp.json()
+        except Exception as e:
+            self._log.error("Google Calendar schedule event failed", error=str(e))
+            raise
+
+    async def health_check(self) -> bool:
+        return await self.authenticate()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Slack Connector
 # ─────────────────────────────────────────────────────────────────────────────
 

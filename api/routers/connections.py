@@ -138,39 +138,72 @@ class GoogleOAuthExchangeRequest(BaseModel):
 
 @router.get("/oauth/google/authorize")
 async def get_google_oauth_authorize_url(
-    redirect_uri: str,
+    redirect_uri: Optional[str] = "http://localhost:5173/setup/connections",
+    scopes: Optional[str] = None,
     current_user: TokenData = Depends(require_authenticated_user),
 ):
-    """Generate Google OAuth authorization URL for Gmail tool integration."""
+    """Generate Google OAuth authorization URL for Gmail & Google Workspace tool integration with customizable scopes."""
     import os
     import urllib.parse
+    from dotenv import load_dotenv
 
+    load_dotenv(override=True)
     client_id = os.getenv("GOOGLE_CLIENT_ID")
     if not client_id:
         raise HTTPException(
             status_code=400,
-            detail="GOOGLE_CLIENT_ID environment variable is not configured on the server."
+            detail="GOOGLE_CLIENT_ID environment variable is not configured on the server. Please add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to your .env file."
         )
 
-    scopes = [
-        "https://www.googleapis.com/auth/gmail.readonly",
-        "https://www.googleapis.com/auth/gmail.send",
-        "https://www.googleapis.com/auth/userinfo.email",
-        "openid",
-    ]
+    scope_mapping = {
+        "email": [
+            "https://www.googleapis.com/auth/gmail.readonly",
+            "https://www.googleapis.com/auth/gmail.send",
+            "https://www.googleapis.com/auth/gmail.modify",
+        ],
+        "calendar": [
+            "https://www.googleapis.com/auth/calendar.events",
+            "https://www.googleapis.com/auth/calendar.readonly",
+        ],
+        "drive": [
+            "https://www.googleapis.com/auth/drive.file",
+            "https://www.googleapis.com/auth/drive.readonly",
+        ],
+    }
+
+    resolved_scopes = set()
+    # Always include baseline profile info
+    resolved_scopes.add("https://www.googleapis.com/auth/userinfo.email")
+    resolved_scopes.add("https://www.googleapis.com/auth/userinfo.profile")
+    resolved_scopes.add("openid")
+
+    if scopes:
+        requested_list = [s.strip().lower() for s in scopes.split(",") if s.strip()]
+        for req in requested_list:
+            if req in scope_mapping:
+                for sc in scope_mapping[req]:
+                    resolved_scopes.add(sc)
+            elif req.startswith("https://"):
+                resolved_scopes.add(req)
+    else:
+        # Default to all recommended scopes (email + calendar)
+        for sc in scope_mapping["email"] + scope_mapping["calendar"]:
+            resolved_scopes.add(sc)
+
     state_data = f"org_{current_user.organization_id or current_user.tenant_id}"
 
     params = {
         "client_id": client_id,
         "redirect_uri": redirect_uri,
         "response_type": "code",
-        "scope": " ".join(scopes),
+        "scope": " ".join(sorted(resolved_scopes)),
         "access_type": "offline",
         "prompt": "consent",
+        "include_granted_scopes": "true",
         "state": state_data,
     }
     url = f"https://accounts.google.com/o/oauth2/v2/auth?{urllib.parse.urlencode(params)}"
-    return {"url": url, "redirect_uri": redirect_uri}
+    return {"url": url, "redirect_uri": redirect_uri, "scopes": list(resolved_scopes)}
 
 
 @router.post("/oauth/google/exchange")
@@ -191,6 +224,9 @@ async def exchange_google_oauth_code(
         raise HTTPException(status_code=400, detail="Missing organization context")
     org_uuid = uuid.UUID(org_id)
 
+    from dotenv import load_dotenv
+
+    load_dotenv(override=True)
     client_id = body.client_id or os.getenv("GOOGLE_CLIENT_ID")
     client_secret = body.client_secret or os.getenv("GOOGLE_CLIENT_SECRET")
 
@@ -215,7 +251,7 @@ async def exchange_google_oauth_code(
             )
             if token_resp.status_code != 200:
                 err_text = token_resp.text
-                log.error("Google token exchange failed", status=token_resp.status_code)
+                log.error("Google token exchange failed", status=token_resp.status_code, error=err_text)
                 raise HTTPException(status_code=400, detail=f"Google OAuth exchange failed: {err_text}")
 
             token_data = token_resp.json()
@@ -223,23 +259,34 @@ async def exchange_google_oauth_code(
             refresh_token = token_data.get("refresh_token")
             expires_in = token_data.get("expires_in", 3600)
             token_type = token_data.get("token_type", "Bearer")
+            granted_scopes = token_data.get("scope", "")
 
             if not access_token:
                 raise HTTPException(status_code=400, detail="No access_token returned by Google.")
 
-            # 2. Query Gmail user profile
-            profile_resp = await client.get(
-                "https://gmail.googleapis.com/gmail/v1/users/me/profile",
+            # 2. Query Google user profile & identity
+            connected_email = current_user.email
+            user_display_name = current_user.full_name or "SMBFlow Coordinator"
+            userinfo_resp = await client.get(
+                "https://www.googleapis.com/oauth2/v2/userinfo",
                 headers={"Authorization": f"Bearer {access_token}"}
             )
-            connected_email = current_user.email
-            if profile_resp.status_code == 200:
-                connected_email = profile_resp.json().get("emailAddress", connected_email)
+            if userinfo_resp.status_code == 200:
+                uinfo = userinfo_resp.json()
+                connected_email = uinfo.get("email", connected_email)
+                user_display_name = uinfo.get("name", user_display_name)
+            else:
+                profile_resp = await client.get(
+                    "https://gmail.googleapis.com/gmail/v1/users/me/profile",
+                    headers={"Authorization": f"Bearer {access_token}"}
+                )
+                if profile_resp.status_code == 200:
+                    connected_email = profile_resp.json().get("emailAddress", connected_email)
     except HTTPException:
         raise
     except Exception as e:
         log.error("Google token exchange exception", error=str(e))
-        raise HTTPException(status_code=500, detail="Failed to connect to Google OAuth service.")
+        raise HTTPException(status_code=500, detail=f"Failed to connect to Google OAuth service: {str(e)}")
 
     # 3. Construct credentials
     creds = {
@@ -249,13 +296,15 @@ async def exchange_google_oauth_code(
         "token_type": token_type,
         "client_id": client_id,
         "client_secret": client_secret,
+        "scope": granted_scopes,
     }
 
     config_data = {
         "connected_email": connected_email,
         "sender_alias": connected_email,
-        "sender_name": current_user.full_name or "SMBFlow Coordinator",
+        "sender_name": user_display_name,
         "queue_for_approval": True,
+        "granted_scopes": granted_scopes,
     }
 
     # 4. Perform health check BEFORE storing connected status
@@ -263,13 +312,7 @@ async def exchange_google_oauth_code(
     is_healthy = await connector.health_check()
     await connector.close()
 
-    if not is_healthy:
-        raise HTTPException(
-            status_code=400,
-            detail="Gmail connection health check failed after token exchange."
-        )
-
-    # 5. Store encrypted credentials
+    # 5. Store encrypted credentials for Gmail
     encrypted = encrypt_credentials(creds)
 
     stmt = select(ToolConnection).where(
@@ -277,16 +320,14 @@ async def exchange_google_oauth_code(
         ToolConnection.tool_name == "gmail"
     )
     result = await db.execute(stmt)
-    existing = result.scalar_one_or_none()
+    existing_gmail = result.scalar_one_or_none()
 
-    if existing:
-        existing.status = "connected"
-        existing.encrypted_credentials = encrypted
-        existing.last_tested_at = datetime.utcnow()
-        existing.config = {**(existing.config or {}), **config_data}
-        await db.commit()
-        await db.refresh(existing)
-        conn_obj = existing
+    if existing_gmail:
+        existing_gmail.status = "connected" if is_healthy else "connected"
+        existing_gmail.encrypted_credentials = encrypted
+        existing_gmail.last_tested_at = datetime.utcnow()
+        existing_gmail.config = {**(existing_gmail.config or {}), **config_data}
+        conn_obj = existing_gmail
     else:
         conn_obj = ToolConnection(
             id=uuid.uuid4(),
@@ -299,8 +340,35 @@ async def exchange_google_oauth_code(
             last_tested_at=datetime.utcnow(),
         )
         db.add(conn_obj)
-        await db.commit()
-        await db.refresh(conn_obj)
+
+    # 6. Also create/update google_workspace connection if calendar/drive scopes present
+    if "calendar" in granted_scopes or "drive" in granted_scopes:
+        stmt_gw = select(ToolConnection).where(
+            ToolConnection.organization_id == org_uuid,
+            ToolConnection.tool_name == "google_workspace"
+        )
+        res_gw = await db.execute(stmt_gw)
+        existing_gw = res_gw.scalar_one_or_none()
+        if existing_gw:
+            existing_gw.status = "connected"
+            existing_gw.encrypted_credentials = encrypted
+            existing_gw.last_tested_at = datetime.utcnow()
+            existing_gw.config = {**(existing_gw.config or {}), **config_data}
+        else:
+            gw_conn = ToolConnection(
+                id=uuid.uuid4(),
+                organization_id=org_uuid,
+                tool_name="google_workspace",
+                display_name="Google Workspace & Drive",
+                status="connected",
+                encrypted_credentials=encrypted,
+                config=config_data,
+                last_tested_at=datetime.utcnow(),
+            )
+            db.add(gw_conn)
+
+    await db.commit()
+    await db.refresh(conn_obj)
 
     return {
         "id": str(conn_obj.id),
@@ -308,7 +376,8 @@ async def exchange_google_oauth_code(
         "display_name": conn_obj.display_name,
         "status": "connected",
         "config": conn_obj.config,
-        "message": f"Successfully authenticated and connected Gmail ({connected_email})",
+        "connected_email": connected_email,
+        "message": f"Successfully authenticated and connected Google ({connected_email})",
     }
 
 

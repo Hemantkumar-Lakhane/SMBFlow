@@ -75,7 +75,19 @@ export function createApiClient(token) {
   const call = (path, opts) => apiCall(path, opts, token)
 
   return {
-    get:    (path)        => call(path, { method: 'GET' }),
+    get: (path, params) => {
+      let finalPath = path
+      const queryObj = (params && typeof params === 'object' && params.params) ? params.params : params
+      if (queryObj && typeof queryObj === 'object') {
+        const q = new URLSearchParams()
+        Object.entries(queryObj).forEach(([k, v]) => {
+          if (v !== undefined && v !== null) q.append(k, v)
+        })
+        const qs = q.toString()
+        if (qs) finalPath += (finalPath.includes('?') ? '&' : '?') + qs
+      }
+      return call(finalPath, { method: 'GET' })
+    },
     post:   (path, data)  => call(path, { method: 'POST',   body: JSON.stringify(data) }),
     put:    (path, data)  => call(path, { method: 'PUT',    body: JSON.stringify(data) }),
     patch:  (path, data)  => call(path, { method: 'PATCH',  body: JSON.stringify(data) }),

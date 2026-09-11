@@ -20,8 +20,8 @@ import structlog
 
 from agents.base_agent import ToolRegistry
 from integrations.connectors import (
-    GenericRESTConnector, GmailConnector, HubSpotConnector,
-    SlackConnector, StripeConnector,
+    GenericRESTConnector, GmailConnector, GoogleWorkspaceConnector,
+    HubSpotConnector, SlackConnector, StripeConnector,
 )
 from integrations.local_dev_tools import LOCAL_TOOL_FUNCTIONS, LOCAL_TOOL_SCHEMAS
 
@@ -60,6 +60,16 @@ def build_registry(tenant_config: dict, credentials: dict) -> ToolRegistry:
         )
         _register_gmail_tools(registry, gm)
         log.info("Gmail tools registered")
+
+    # ── Google Workspace (Calendar / Drive) ───────────────────────────────
+    gw_creds = credentials.get("google_workspace") or credentials.get("gmail")
+    if (integrations.get("google_workspace", {}).get("enabled") or integrations.get("gmail", {}).get("enabled")) and gw_creds:
+        gw = GoogleWorkspaceConnector(
+            credentials=gw_creds,
+            config=integrations.get("google_workspace", {}),
+        )
+        _register_google_workspace_tools(registry, gw)
+        log.info("Google Workspace tools registered")
 
     # ── Slack ─────────────────────────────────────────────────────────────
     if integrations.get("slack", {}).get("enabled") and "slack" in credentials:
@@ -257,6 +267,75 @@ def _register_gmail_tools(registry: ToolRegistry, gm: GmailConnector) -> None:
                 "properties": {
                     "query": {"type": "string", "default": "in:sent"},
                     "limit": {"type": "integer", "default": 10},
+                },
+            },
+        },
+    })
+
+
+def _register_google_workspace_tools(registry: ToolRegistry, gw: GoogleWorkspaceConnector) -> None:
+
+    async def google_calendar_schedule_event(
+        summary: str, description: str, start_iso: str, end_iso: str, attendees: list = None
+    ) -> dict:
+        return await gw.schedule_event(
+            summary=summary,
+            description=description,
+            start_iso=start_iso,
+            end_iso=end_iso,
+            attendees=attendees or [],
+        )
+
+    async def google_calendar_read_events(calendar_id: str = "primary", limit: int = 15) -> list:
+        return await gw.read("events", {"calendar_id": calendar_id, "limit": limit})
+
+    async def google_drive_read_files(query: str = "trashed = false", limit: int = 20) -> list:
+        return await gw.read("files", {"q": query, "limit": limit})
+
+    registry.register("google_calendar_schedule_event", google_calendar_schedule_event, {
+        "type": "function",
+        "function": {
+            "name": "google_calendar_schedule_event",
+            "description": "Schedule a consultation, appointment, or meeting on Google Calendar",
+            "parameters": {
+                "type": "object",
+                "required": ["summary", "start_iso", "end_iso"],
+                "properties": {
+                    "summary": {"type": "string", "description": "Event title or summary"},
+                    "description": {"type": "string", "description": "Details or agenda"},
+                    "start_iso": {"type": "string", "description": "ISO 8601 start datetime string"},
+                    "end_iso": {"type": "string", "description": "ISO 8601 end datetime string"},
+                    "attendees": {"type": "array", "items": {"type": "string"}, "description": "List of attendee email addresses"},
+                },
+            },
+        },
+    })
+
+    registry.register("google_calendar_read_events", google_calendar_read_events, {
+        "type": "function",
+        "function": {
+            "name": "google_calendar_read_events",
+            "description": "Read upcoming calendar events and meetings from Google Calendar",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "calendar_id": {"type": "string", "default": "primary"},
+                    "limit": {"type": "integer", "default": 15},
+                },
+            },
+        },
+    })
+
+    registry.register("google_drive_read_files", google_drive_read_files, {
+        "type": "function",
+        "function": {
+            "name": "google_drive_read_files",
+            "description": "Query patient or client document records and reports from Google Drive",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "default": "trashed = false"},
+                    "limit": {"type": "integer", "default": 20},
                 },
             },
         },
