@@ -1,6 +1,6 @@
 // frontend/src/pages/client/WorkflowBuilder.jsx
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   ReactFlow, Controls, Background, MiniMap, addEdge, MarkerType,
   useNodesState, useEdgesState, Handle, Position,
@@ -541,6 +541,7 @@ function FlowCanvas({ workflowName, dag, allTools, promptFiles, onSave, isSaving
 // ── Main WorkflowBuilder ───────────────────────────────────────────────────────
 export default function WorkflowBuilder() {
   const navigate          = useNavigate()
+  const [searchParams]    = useSearchParams()
   const { api, user }     = useAuth()
   const [workflows, setWorkflows] = useState([])
   const [selected, setSelected]   = useState(null)
@@ -588,6 +589,21 @@ export default function WorkflowBuilder() {
       setSelected(name); setDag(d)
     } catch (e) { setError(e.message) }
   }
+
+  // Preselect a workflow when arriving via ?wf=<name> (e.g. tapping a card on the
+  // Workflows list or Dashboard). Fires once after the workflow list has loaded so
+  // the builder opens directly on the chosen DAG instead of the empty picker.
+  const didPreselectRef = useRef(false)
+  useEffect(() => {
+    if (didPreselectRef.current || loading) return
+    const wf = searchParams.get('wf')
+    if (!wf) return
+    if (workflows.some(w => w.name === wf)) {
+      didPreselectRef.current = true
+      selectWorkflow(wf)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, loading, workflows])
 
   const handleSave = async (dagData) => {
     setSaving(true); setError(''); setSuccess('')
@@ -743,11 +759,10 @@ export default function WorkflowBuilder() {
             placeholder="saas_churn_prevention"
             hint="Becomes the file name and workflow ID"
           />
-          <Select
-            label={`Industry${user?.industry ? ` (org: ${user.industry})` : ''}`}
-            value={newIndustry}
-            onChange={e => setNewIndustry(e.target.value)}
-            options={INDUSTRIES.map(i => ({ value: i, label: i.toUpperCase() }))}
+          <Input
+            label={`Industry (org: ${user?.industry || newIndustry})`}
+            value={user?.industry || newIndustry}
+            disabled
           />
           <div className="flex gap-2">
             <Button variant="gradient" className="flex-1" onClick={createWorkflow} disabled={!newName.trim()}>

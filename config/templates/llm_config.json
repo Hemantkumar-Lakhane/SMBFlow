@@ -66,6 +66,7 @@
     "research_agent":      { "tier": "fast" },
     "reasoning_agent":     { "tier": "heavy" },
     "drafting_agent":      { "tier": "heavy" },
+    "humanizer_agent":     { "tier": "balanced" },
     "verification_agent":  { "tier": "mini" },
     "execution_agent":     { "tier": "mini" },
     "memory_agent":        { "tier": "balanced" },

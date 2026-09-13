@@ -37,7 +37,8 @@ from agents.agents import (
     DraftingAgent, ExecutionAgent, MemoryAgent,
     ReasoningAgent, ResearchAgent, VerificationAgent,
     CustomerOutreachAgent, CustomerSupportAgent, MarketingOutreachAgent,
-    SummarizerAgent, RecommendationAgent, ComparisonAgent, HRAgent, OperationsAgent
+    SummarizerAgent, RecommendationAgent, ComparisonAgent, HRAgent, OperationsAgent,
+    HumanizerAgent
 )
 from agents.base_agent import ALLOWED_EDGE_CONDITIONS, AgentInput, AgentOutput, BaseAgent, ToolRegistry
 from core.llm_router import LLMRouter
@@ -66,6 +67,7 @@ AGENT_MAP: dict[str, type[BaseAgent]] = {
     "customer_support_agent":  CustomerSupportAgent,
     "marketing_outreach_agent":MarketingOutreachAgent,
     "summarizer_agent":        SummarizerAgent,
+    "humanizer_agent":         HumanizerAgent,
     "recommendation_agent":    RecommendationAgent,
     "comparison_agent":        ComparisonAgent,
     "hr_agent":                HRAgent,
@@ -163,6 +165,91 @@ def _prune_context_for_storage(
 
     return pruned
 
+
+# Keys whose VALUES must never be persisted or surfaced to the UI. Matched
+# case-insensitively as substrings so "api_key", "X-Api-Key", "access_token",
+# "authorization" all trip. Business content (email bodies, subjects, names,
+# summaries) is intentionally NOT redacted — that is what the UI must show.
+_SECRET_KEY_MARKERS = (
+    "api_key", "apikey", "secret", "password", "passwd", "token",
+    "authorization", "auth_header", "bearer", "private_key", "client_secret",
+    "credential", "access_key", "session_key", "encryption_key",
+)
+
+
+def _redact_secrets(value):
+    """Recursively replace secret-looking values with a redaction marker."""
+    if isinstance(value, dict):
+        out = {}
+        for k, v in value.items():
+            key_l = str(k).lower()
+            if any(marker in key_l for marker in _SECRET_KEY_MARKERS):
+                out[k] = "***REDACTED***"
+            else:
+                out[k] = _redact_secrets(v)
+        return out
+    if isinstance(value, list):
+        return [_redact_secrets(v) for v in value]
+    return value
+
+
+def _prepare_output_for_persistence(
+    output_data,
+    max_json_bytes: int = 512_000,
+) -> Optional[dict]:
+    """
+    Prepare a node's structured output for durable persistence in the
+    agent_run_records.output_data column.
+
+    Guarantees, in order:
+      1. Secrets are redacted (never persist credentials — see _redact_secrets).
+      2. The payload stays under a JSONB size cap; if a run produced something
+         enormous, large lists/strings are truncated with an explicit marker
+         rather than dropped silently.
+
+    Business data (the 40 fetched emails, drafts, summaries) is preserved intact
+    under the cap — that is exactly what the redesigned UI renders.
+    """
+    if output_data is None:
+        return None
+    if not isinstance(output_data, dict):
+        output_data = {"value": output_data}
+
+    safe = _redact_secrets(output_data)
+
+    try:
+        raw = json.dumps(safe, default=str)
+    except Exception:
+        return {"_unserializable": True, "_note": "output could not be JSON-encoded"}
+
+    if len(raw.encode()) <= max_json_bytes:
+        return safe
+
+    # Over cap: truncate the largest offenders (long lists / strings) but keep
+    # structure and an explicit truncation marker so the UI can say so honestly.
+    trimmed: dict = {}
+    for key, val in safe.items():
+        if isinstance(val, list) and len(val) > 25:
+            trimmed[key] = val[:25] + [{"_truncated": True, "total": len(val)}]
+        elif isinstance(val, str) and len(val) > 20_000:
+            trimmed[key] = val[:20_000] + " …[truncated]"
+        else:
+            trimmed[key] = val
+    trimmed["_output_truncated"] = True
+    trimmed["_original_bytes"] = len(raw.encode())
+    # Final safety: if still over cap, store a compact marker instead.
+    try:
+        if len(json.dumps(trimmed, default=str).encode()) > max_json_bytes:
+            return {
+                "_output_truncated": True,
+                "_original_bytes": len(raw.encode()),
+                "_note": "output exceeded persistence cap; see live logs / EPI evidence for full payload",
+            }
+    except Exception:
+        pass
+    return trimmed
+
+
 class WorkflowOrchestrator:
     """
     Stateless per-execution orchestrator.
@@ -195,6 +282,10 @@ class WorkflowOrchestrator:
         # Pause events per run_id (asyncio.Event — no busy-wait)
         self._pause_events: dict[str, asyncio.Event] = {}
         self._agent_run_log: list[dict] = []
+        # Nodes that completed but in a degraded/unreliable way (LLM fallback/mock,
+        # verification FAIL, or a swallowed error). Used to compute an honest
+        # completion_quality at the end of the run. Reset per run alongside _agent_run_log.
+        self._degraded_nodes: list[dict] = []
         #   # Cost tracker and system logger (set per-run in run_workflow)
         self._cost_tracker = None
         self._sys_logger = None
@@ -271,6 +362,7 @@ class WorkflowOrchestrator:
         self._llm.set_budget_config(bs, tenant_id=tenant_id)   # Fix D
         self._llm.reset_session()
         self._agent_run_log = []
+        self._degraded_nodes = []
 
         accumulated_context: dict = {
             "trigger_signal": trigger_signal,
@@ -327,6 +419,7 @@ class WorkflowOrchestrator:
 
         self._llm.reset_session()
         self._agent_run_log = []
+        self._degraded_nodes = []
 
         return await self._run_segment(
             run_id=instance_id,
@@ -356,6 +449,7 @@ class WorkflowOrchestrator:
         self._llm.set_budget_config(bs, tenant_id=tenant_id)
         self._llm.reset_session()
         self._agent_run_log = []
+        self._degraded_nodes = []
 
         dag = await self._load_dag(workflow_name)
         if not dag:
@@ -860,6 +954,15 @@ class WorkflowOrchestrator:
                             _preview_data = dict(list(output.output_data.items())[:5])
                         _output_preview = json.dumps(_preview_data, default=str)[:350]
 
+                    # Classify error for developer visibility
+                    _error_info = None
+                    if output.error:
+                        try:
+                            from core.llm_router import LLMRouter
+                            _error_info = LLMRouter.classify_llm_error(Exception(output.error))
+                        except Exception:
+                            _error_info = {"error_type": "unknown", "error_message": str(output.error)[:200], "provider": "unknown", "safe_detail": str(output.error)[:300]}
+
                     await self._broadcast("agent_completed", {
                         "run_id":              run_id,
                         "node_id":             node_id,
@@ -874,6 +977,12 @@ class WorkflowOrchestrator:
                         "output_preview":      _output_preview,
                         "tools_used":          list(node.get("tools", [])),
                         "duration_ms":         node_dur_ms,
+                        "error":               output.error,
+                        "error_type":          _error_info.get("error_type") if _error_info else None,
+                        "error_message":       _error_info.get("error_message") if _error_info else None,
+                        "error_provider":      _error_info.get("provider") if _error_info else None,
+                        "error_safe_detail":   _error_info.get("safe_detail") if _error_info else None,
+                        "llm_attempted":       output.model_used is not None and output.model_used != "",
                         "_prosecutor_issues":  output.output_data.get("_prosecutor_issues") if output.success and isinstance(output.output_data, dict) else None,
                         "_judge_verdict":      output.output_data.get("_judge_verdict")     if output.success and isinstance(output.output_data, dict) else None,
                         "delta_analysis":      output.output_data.get("delta_analysis")     if output.success and isinstance(output.output_data, dict) else None,
@@ -922,6 +1031,11 @@ class WorkflowOrchestrator:
                         "tokens_in": output.tokens_in, "tokens_out": output.tokens_out,
                         "cost_usd": output.cost_usd, "model_used": output.model_used,
                         "duration_ms": node_dur_ms, "error": output.error,
+                        "error_type": _error_info.get("error_type") if _error_info else None,
+                        "error_message": _error_info.get("error_message") if _error_info else None,
+                        "error_provider": _error_info.get("provider") if _error_info else None,
+                        "error_safe_detail": _error_info.get("safe_detail") if _error_info else None,
+                        "llm_attempted": output.model_used is not None and output.model_used != "",
                         "completed_at": datetime.utcnow().isoformat(),
                         "tools_used": list(node.get("tools", [])),
                         "node_description": node.get("description", ""),
@@ -950,7 +1064,7 @@ class WorkflowOrchestrator:
 
                     # ── HITL Action Center Approval Items ───────────────────────
                     if output.success and isinstance(output.output_data, dict):
-                        appr_list = output.output_data.get("approval_items") or []
+                        appr_list = [] if node.get("suppress_approval_creation") else output.output_data.get("approval_items") or []
                         if isinstance(appr_list, dict):
                             appr_list = [appr_list]
                         for appr in appr_list:

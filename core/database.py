@@ -27,6 +27,12 @@ DATABASE_URL: str = os.getenv(
     "postgresql+asyncpg://opsgrid:postgres@localhost:5432/opsgrid",
 )
 
+_connect_args: dict = {}
+# asyncpg defaults to SSL which fails for local Docker PostgreSQL.
+# Only enable SSL for remote hosts (e.g. Supabase pooler).
+if "localhost" in DATABASE_URL or "127.0.0.1" in DATABASE_URL:
+    _connect_args["ssl"] = False
+
 engine = create_async_engine(
     DATABASE_URL,
     echo=False,
@@ -34,6 +40,7 @@ engine = create_async_engine(
     max_overflow=int(os.getenv("DB_MAX_OVERFLOW", "20")),
     pool_pre_ping=True,
     pool_recycle=3600,
+    connect_args=_connect_args,
 )
 
 AsyncSessionLocal = async_sessionmaker(

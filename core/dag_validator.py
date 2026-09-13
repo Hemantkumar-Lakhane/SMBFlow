@@ -59,6 +59,7 @@ BUILTIN_TOOL_NAMES = {
     "finance_get_expenses",
     "finance_get_employees",
     "email_get_synthetic_messages",
+    "crm_get_synthetic_leads",
     "auto",  # Discovery agent wildcard
 }
 

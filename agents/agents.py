@@ -518,6 +518,86 @@ class DraftingAgent(BaseAgent):
 # Rule checker. Fast/mini model. Deterministic checks.
 # ─────────────────────────────────────────────────────────────────────────────
 
+class HumanizerAgent(BaseAgent):
+    """
+    Refines machine-generated email actions into warmer, review-ready drafts
+    while preserving the underlying approval metadata.
+    """
+
+    agent_type = "humanizer_agent"
+
+    async def receive(self, input: AgentInput) -> AgentOutput:
+        start = time.time()
+        node_data = input.node_specific_data
+        prompt_file = node_data.get("prompt_file", "")
+        prompt_template = await _load_prompt(prompt_file) if prompt_file else self._default_humanizer_prompt()
+
+        cfg = input.tenant_config
+        evaluate_output = input.accumulated_context.get("evaluate_actions", {})
+        summary_output = input.accumulated_context.get("summarize_emails", {})
+
+        try:
+            system = safe_format_template(
+                prompt_template,
+                tenant_name=cfg.get("client_name", "the company"),
+                tone_profile_json=json.dumps(cfg.get("tone_profile", {}), indent=2),
+            )
+        except Exception as e:
+            log.warning("Humanizer prompt template key error", error=str(e))
+            system = self._default_humanizer_prompt()
+
+        user = (
+            "Email batch summary:\n"
+            f"{json.dumps(summary_output, indent=2, default=str)}\n\n"
+            "Raw action recommendations and drafts:\n"
+            f"{json.dumps(evaluate_output, indent=2, default=str)}\n\n"
+            "Return ONLY valid JSON."
+        )
+
+        try:
+            text, call = await self._simple_call(system, user, input)
+            output_data = self._parse_json_output(text)
+            if not isinstance(output_data, dict):
+                output_data = {"approval_items": [], "summary": str(output_data)}
+
+            return AgentOutput(
+                success=True,
+                confidence=float(output_data.get("confidence", 0.92)),
+                output_data=output_data,
+                reasoning_chain=(
+                    f"Humanized {len(output_data.get('approval_items', []))} approval drafts "
+                    "with XAI metadata."
+                ),
+                tokens_in=call.tokens_in,
+                tokens_out=call.tokens_out,
+                cost_usd=call.cost_usd,
+                model_used=call.model,
+                duration_ms=int((time.time() - start) * 1000),
+            )
+        except Exception as e:
+            log.error("Humanizer agent failed", error=str(e))
+            return AgentOutput(
+                success=False,
+                confidence=0.0,
+                output_data={},
+                reasoning_chain="",
+                error=str(e),
+                duration_ms=int((time.time() - start) * 1000),
+            )
+
+    def _default_humanizer_prompt(self) -> str:
+        return (
+            "You are a Humanizer Agent for {tenant_name}.\n"
+            "Refine raw AI email drafts so they sound natural, empathetic, specific, "
+            "and professionally accountable. Remove robotic phrasing and vague filler. "
+            "Preserve all facts, recipients, subjects, urgency, categories, and safety limits.\n"
+            "Tone profile: {tone_profile_json}\n\n"
+            "Return JSON with approval_items, routine_items_count, batch_intelligence, "
+            "and summary. Every approval item must include category, urgency_score, "
+            "detected_sentiment, trigger_keywords, and xai_explanation."
+        )
+
+
 class VerificationAgent(BaseAgent):
     """
     Checks drafts against business rules. Fast model — deterministic checking.
@@ -1458,4 +1538,3 @@ class OperationsAgent(BaseAgent):
             model_used=call.model,
             duration_ms=int((time.time() - start) * 1000),
         )
-

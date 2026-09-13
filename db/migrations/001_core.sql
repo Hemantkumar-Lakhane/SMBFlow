@@ -90,6 +90,9 @@ CREATE TABLE IF NOT EXISTS agent_run_records (
     duration_ms INT,
     error TEXT,
     tools_used JSONB DEFAULT '[]'::jsonb,
+    -- Full structured output of the node (business result the UI renders),
+    -- tied to (instance_id, node_id). Secrets redacted / size-capped by the app.
+    output_data JSONB,
     completed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 

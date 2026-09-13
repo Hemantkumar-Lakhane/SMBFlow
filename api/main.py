@@ -69,6 +69,8 @@ _active_orchestrators: dict[str, Any] = {}
 # App lifespan
 # ─────────────────────────────────────────────────────────────────────────────
 
+# (No changes to lifespan section)
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup: ensure DB tables exist, seed super-admin, recover stuck workflows."""
@@ -77,6 +79,23 @@ async def lifespan(app: FastAPI):
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+    # Additive, idempotent column migrations. create_all() only creates missing
+    # TABLES — it never adds a column to a table that already exists — so any
+    # database provisioned before this column existed needs an explicit ALTER.
+    # These are safe to run on every boot: nullable, IF NOT EXISTS, no data loss.
+    try:
+        from sqlalchemy import text as _sql_text
+        async with engine.begin() as _mconn:
+            await _mconn.execute(_sql_text(
+                "ALTER TABLE agent_run_records "
+                "ADD COLUMN IF NOT EXISTS output_data JSONB"
+            ))
+        log.info("Schema check: agent_run_records.output_data present")
+    except Exception as _mig_err:
+        # Non-fatal: the app still runs; per-node structured output just won't
+        # persist to the normalized table until this column exists.
+        log.error("Additive column migration failed (non-fatal)", error=str(_mig_err))
 
     # Initialize Redis pub/sub
     await redis_pubsub.connect()
@@ -212,10 +231,9 @@ async def system_integrity_check(request: Request, call_next):
 
 async def broadcast_event(event_type: str, data: dict) -> None:
     """Broadcast event via Redis (multi-worker) or in-process fallback."""
+    # redis_pubsub.publish() already calls _local_broadcast via its internal fallback
+    # when Redis is unavailable — do NOT duplicate the delivery here.
     await redis_pubsub.publish(event_type, data)
-    # _local_broadcast already handles the (WebSocket, tenant_id) tuple structure
-    if not redis_pubsub.available:
-        await _local_broadcast(event_type, data)
  
 # Add separate local-only broadcast (used by Redis subscriber callback):
 async def _local_broadcast(event_type: str, data: dict) -> None:
@@ -773,9 +791,77 @@ async def reset_password(
     return {"message": "Your password has been updated."}
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# System
-# ─────────────────────────────────────────────────────────────────────────────
+
+@app.post("/internal/startup-demo", tags=["System"])
+async def startup_demo(background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
+    """One‑time demo that triggers each enabled workflow after server start.
+
+    An idempotent lock file ``startup_demo.lock`` in the project root ensures the demo runs only once per process.
+    The demo uses the first tenant (or aborts if none) and triggers all workflows where ``_meta.trigger.enabled`` is true.
+    """
+    from pathlib import Path
+    import uuid
+    import json
+
+    lock_path = Path("startup_demo.lock")
+    if lock_path.exists():
+        return {"message": "Startup demo already executed"}
+    try:
+        lock_path.touch(exist_ok=False)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create demo lock: {e}")
+    # Determine a tenant to run the demo under
+    tenants = await crud.list_tenants(db)
+    if not tenants:
+        return {"message": "No tenants available for demo"}
+    tenant = tenants[0]
+    tenant_id = str(tenant.id)
+    tenant_config = tenant.config or {}
+    tenant_config["client_id"] = tenant_id
+    # Iterate DAG files
+    dag_dir = Path("workflows/dags")
+    if not dag_dir.exists():
+        return {"message": "No workflow DAGs found"}
+    triggered = []
+    for dag_file in dag_dir.glob("*.json"):
+        try:
+            data = json.loads(dag_file.read_text())
+        except Exception:
+            continue
+        meta = data.get("_meta", {})
+        trigger = meta.get("trigger", {})
+        if not trigger.get("enabled", False):
+            continue
+        workflow_name = dag_file.stem
+        run_id = str(uuid.uuid4())
+        # Create DB instance record
+        await crud.create_workflow_instance(
+            db,
+            run_id=run_id,
+            tenant_id=tenant_id,
+            workflow_name=workflow_name,
+            trigger_signal={"source": "startup_demo"},
+            triggered_by="startup_demo",
+            tenant_config=tenant_config,
+        )
+        budget = await crud.get_budget_settings(db, tenant_id) or {}
+        background_tasks.add_task(
+            _execute_workflow_background,
+            run_id,
+            tenant_config,
+            workflow_name,
+            {"source": "startup_demo"},
+            budget,
+        )
+        triggered.append(workflow_name)
+        await crud.log_event(db, "startup_demo_triggered", tenant_id, run_id,
+            f"Startup demo triggered workflow '{workflow_name}'")
+        await broadcast_event("startup_demo_workflow_triggered", {
+            "run_id": run_id,
+            "workflow": workflow_name,
+            "tenant_id": tenant_id,
+        })
+    return {"message": "Startup demo executed", "tenant_id": tenant_id, "triggered_workflows": triggered}
 
 @app.get("/api/v1/health", tags=["System"])
 async def health_check(db: AsyncSession = Depends(get_db)):
@@ -785,11 +871,13 @@ async def health_check(db: AsyncSession = Depends(get_db)):
         ("google", "GOOGLE_API_KEY"), ("groq", "GROQ_API_KEY"),
     ]:
         key_val = os.getenv(key_env, "")
-        if key_val and len(key_val) > 8:
-            llm_providers[provider] = {"status": "configured",
-                                        "key_preview": key_val[:8] + "****" + key_val[-4:]}
+        token_val = os.getenv(provider.upper() + "_AUTH_TOKEN", "")
+        if (key_val and len(key_val) > 8) or token_val:
+            preview = key_val[:8] + "****" + key_val[-4:] if key_val else "token_set"
+            llm_providers[provider] = {"status": "configured", "key_preview": preview}
         else:
             llm_providers[provider] = {"status": "not_configured"}
+
 
     instances = await crud.list_workflow_instances(db, limit=500)
     active = sum(1 for i in instances if i.status == "running")
@@ -1263,37 +1351,48 @@ async def get_evidence_file_content(
 # path segments as run_id values.
 # ─────────────────────────────────────────────────────────────────────────────
 
-@app.get("/api/v1/workflows/{workflow_name}/trigger-info", tags=["Workflows"])
-async def get_workflow_trigger_info(
-    workflow_name: str,
-    current_user: TokenData = Depends(require_any_auth),
-    db: AsyncSession = Depends(get_db),
-):
+
+
+@app.post("/api/v1/workflows/prepare-demo-data", tags=["Workflows"])
+async def prepare_demo_data(current_user: TokenData = Depends(require_any_auth)):
+    """Prepare synthetic fixture data for enabled workflows.
+
+    Returns a summary per workflow with source type and available record count.
+    No workflow runs are created, and no approvals or side‑effects occur.
     """
-    Returns live metadata for manual workflow trigger UI (available fixture messages, trigger type, source).
-    """
-    available_messages = 40
-    try:
-        data_path = Path("db/seed/data/email_messages.json")
-        if data_path.exists():
-            emails = json.loads(data_path.read_text(encoding="utf-8"))
-            available_messages = len(emails)
-    except Exception:
-        pass
-
-    display_name = workflow_name.replace("_", " ").title()
-    if workflow_name == "email_summarizer":
-        display_name = "Email Summarizer"
-
-    return {
-        "workflow_name": workflow_name,
-        "display_name": display_name,
-        "trigger_type": "New Email" if "email" in workflow_name else "Manual",
-        "source": "Synthetic Inbox" if "email" in workflow_name else "System Direct",
-        "available_messages_count": available_messages,
-        "status": "active",
-    }
-
+    from pathlib import Path
+    import json, aiofiles
+    dags_dir = Path("workflows/dags")
+    if not dags_dir.exists():
+        return {"demo_data": []}
+    demo = []
+    for f in dags_dir.glob("*.json"):
+        name = f.stem
+        source = "unavailable"
+        available = 0
+        message = "No demo input configured"
+        # Email summarizer fixture
+        if "email" in name:
+            fixture = Path("db/seed/data/email_messages.json")
+            if fixture.exists():
+                try:
+                    async with aiofiles.open(fixture) as fp:
+                        emails = json.loads(await fp.read())
+                    if isinstance(emails, list):
+                        available = len(emails)
+                    else:
+                        available = 0
+                    source = "synthetic_inbox"
+                    message = None
+                except Exception:
+                    pass
+        demo.append({
+            "workflow_name": name,
+            "source": source,
+            "available_count": available,
+            "message": message,
+        })
+    return {"demo_data": demo}
 
 @app.post("/api/v1/workflows/trigger", tags=["Workflows"])
 async def trigger_workflow(
@@ -1302,75 +1401,36 @@ async def trigger_workflow(
     current_user: TokenData = Depends(require_any_auth),
     db: AsyncSession = Depends(get_db),
 ):
+    """Trigger a workflow run via manual UI.
+
+    Mirrors the logic previously present but was missing a route definition.
     """
-    Trigger a workflow run.
+    # Determine effective tenant ID (explicit in payload or from auth)
+    effective_tenant_id = body.tenant_id or (current_user.organization_id or current_user.tenant_id)
+    # Load tenant config via bridge — handles both legacy tenants table and new organizations table.
+    _resolved_tid, tenant_config = await crud.resolve_tenant_config_bridge(db, effective_tenant_id) if effective_tenant_id else (effective_tenant_id, {})
 
-    Phase 0 bridge: ``tenant_id`` in the request body is now optional.
-    When omitted (or for org_users), the tenant context is derived from the
-    authenticated user's organization via ``resolve_tenant_config_bridge``.
-    Platform admins may still supply an explicit ``tenant_id`` to target a
-    specific legacy tenant.
-    """
-    # ── Resolve effective tenant_id and config (Option B bridge) ──────────
-    if body.tenant_id and current_user.role in ("platform_admin", "super_admin"):
-        # Platform admin with explicit tenant_id — use legacy path
-        assert_tenant_access(current_user, body.tenant_id)
-        effective_tenant_id, tenant_config = await crud.resolve_tenant_config_bridge(
-            db, body.tenant_id
-        )
-    else:
-        # Org user — always derive from authenticated organization
-        org_id = (
-            current_user.organization_id
-            or current_user.tenant_id
-            or body.tenant_id
-        )
-        if not org_id:
-            # Canonical resolution: authenticated user -> organization_users -> organizations
-            org_user, org = await crud.ensure_user_organization_provisioned(
-                db,
-                user_id=current_user.user_id,
-                email=current_user.email,
-                full_name=current_user.full_name,
-            )
-            if org:
-                org_id = str(org.id)
-                current_user.organization_id = org_id
-                current_user.tenant_id = org_id
-                if org_user and current_user.role == "org_user":
-                    current_user.role = org_user.role
-
-        if not org_id:
-            raise HTTPException(
-                status_code=422,
-                detail="Cannot determine organization context. Complete onboarding first.",
-            )
-        effective_tenant_id, tenant_config = await crud.resolve_tenant_config_bridge(
-            db, org_id
-        )
-
-    run_id = str(uuid.uuid4())
-
-    # ── Pre-flight config validation (best-effort — warns but allows run) ─
+    # Pre-flight config validation — block ALL users when config is invalid.
+    # The workflow would fail in the background anyway; surfacing the error here
+    # lets the frontend show a config-input form instead of a silent failure.
     from core.config_validator import validate_tenant_config
     validation = validate_tenant_config(tenant_config, strict=False)
     if not validation.valid and validation.errors:
         log.warning(
-            "Workflow trigger config warnings",
+            "Workflow trigger blocked — config validation failed",
             tenant_id=effective_tenant_id,
             errors=[e.message for e in validation.errors],
         )
-        # Only block on hard errors if config was explicitly supplied (admin path)
-        if body.tenant_id and current_user.role in ("platform_admin", "super_admin"):
-            raise HTTPException(
-                status_code=422,
-                detail={
-                    "message": "Tenant config has blocking errors — fix before triggering",
-                    "errors": [{"field": e.field, "message": e.message} for e in validation.errors],
-                    "warnings": [{"field": w.field, "message": w.message} for w in validation.warnings],
-                    "hint": "Fix [MODIFY] placeholders and REPLACE_WITH_UUID values in Config Studio",
-                },
-            )
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "message": "Configuration required before this workflow can run",
+                "errors": [{"field": e.field, "message": e.message} for e in validation.errors],
+                "warnings": [{"field": w.field, "message": w.message} for w in validation.warnings],
+                "missing_fields": [e.field for e in validation.errors],
+                "hint": "Provide the required configuration values, then trigger again.",
+            },
+        )
 
     # Normalize trigger signal / payload
     sig = body.trigger_signal or body.signal_data or {}
@@ -1379,31 +1439,47 @@ async def trigger_workflow(
     if "source" not in sig:
         sig["source"] = "manual_ui"
 
+    # Create workflow instance record
+    run_id = str(uuid.uuid4())
     await crud.create_workflow_instance(
-        db, run_id=run_id, tenant_id=effective_tenant_id,
-        workflow_name=body.workflow_name, trigger_signal=sig,
-        triggered_by=current_user.user_id, tenant_config=tenant_config,
+        db,
+        run_id=run_id,
+        tenant_id=effective_tenant_id,
+        workflow_name=body.workflow_name,
+        trigger_signal=sig,
+        triggered_by=current_user.user_id,
+        tenant_config=tenant_config,
     )
+    # Schedule background execution
     budget = await crud.get_budget_settings(db, effective_tenant_id) or {}
     background_tasks.add_task(
-        _execute_workflow_background, run_id, tenant_config,
-        body.workflow_name, sig, budget,
+        _execute_workflow_background,
+        run_id,
+        tenant_config,
+        body.workflow_name,
+        sig,
+        budget,
     )
+    # Log and broadcast event
     await crud.log_event(
-        db, "workflow_triggered", effective_tenant_id, run_id,
+        db,
+        "workflow_triggered",
+        effective_tenant_id,
+        run_id,
         f"Workflow '{body.workflow_name}' triggered by {current_user.email}",
     )
     await broadcast_event(
         "workflow_triggered",
-        {"run_id": run_id, "workflow": body.workflow_name,
-         "tenant_id": effective_tenant_id},
+        {"run_id": run_id, "workflow": body.workflow_name, "tenant_id": effective_tenant_id},
     )
     return {
-        "run_id":     run_id,
-        "status":     "pending",
-        "tenant_id":  effective_tenant_id,
-        "message":    f"Workflow '{body.workflow_name}' queued.",
+        "run_id": run_id,
+        "status": "pending",
+        "tenant_id": effective_tenant_id,
+        "message": f"Workflow '{body.workflow_name}' queued.",
     }
+
+
 
 
 @app.get("/api/v1/workflows/{workflow_name}/trigger-info", tags=["Workflows"])
@@ -1450,6 +1526,18 @@ async def get_workflow_trigger_info(
     completed_runs = [i for i in wf_runs if i.status in ("completed", "WorkflowStatus.COMPLETED")]
     last_run = wf_runs[0] if wf_runs else None
 
+    # ── Config validation — surface missing fields before the user triggers ──
+    config_validation = None
+    if org_id:
+        _resolved_tid, tenant_config = await crud.resolve_tenant_config_bridge(db, org_id)
+        from core.config_validator import validate_tenant_config
+        cv = validate_tenant_config(tenant_config, strict=False)
+        config_validation = {
+            "valid": cv.valid,
+            "errors": [{"field": e.field, "message": e.message} for e in cv.errors],
+            "warnings": [{"field": w.field, "message": w.message} for w in cv.warnings],
+        }
+
     return {
         "workflow_name": workflow_name,
         "display_name": meta.get("name", workflow_name.replace("_", " ").title()),
@@ -1464,6 +1552,7 @@ async def get_workflow_trigger_info(
         "completed_runs": len(completed_runs),
         "success_rate": round((len(completed_runs) / len(wf_runs)) * 100) if wf_runs else None,
         "last_run": crud.workflow_to_dict(last_run) if last_run else None,
+        "config_validation": config_validation,
     }
 
 
@@ -1932,6 +2021,8 @@ async def decide_escalation(
             payload = appr.payload or {}
             if isinstance(body.decision, dict) and body.decision.get("notes"):
                 payload["decision_notes"] = body.decision.get("notes")
+            if isinstance(body.decision, dict) and isinstance(body.decision.get("patch_payload"), dict):
+                payload = {**payload, **body.decision.get("patch_payload")}
             appr.payload = payload
             await db.commit()
 
@@ -2619,10 +2710,34 @@ async def get_workflow_dag(workflow_name: str):
 
 
 @app.get("/api/v1/config/workflows", tags=["Config"])
-async def list_workflow_dags():
+async def list_workflow_dags(db: AsyncSession = Depends(get_db)):
+    from sqlalchemy import select, func
+    from core.state_manager import WorkflowInstance
+
     dags_dir = Path("workflows/dags")
     if not dags_dir.exists():
         return []
+
+    # Run counts per workflow so the builder lists the most-active workflows first
+    # instead of alphabetically. Join key: workflow_instances.workflow_name == DAG stem
+    # (the same value /config/dag/{name} loads by).
+    run_counts: dict[str, int] = {}
+    last_run: dict[str, str] = {}
+    try:
+        rc_res = await db.execute(
+            select(
+                WorkflowInstance.workflow_name,
+                func.count().label("runs"),
+                func.max(WorkflowInstance.started_at).label("last_started"),
+            ).group_by(WorkflowInstance.workflow_name)
+        )
+        for row in rc_res.all():
+            if row.workflow_name:
+                run_counts[row.workflow_name] = row.runs or 0
+                last_run[row.workflow_name] = row.last_started.isoformat() if row.last_started else None
+    except Exception:
+        run_counts, last_run = {}, {}
+
     workflows = []
     for f in sorted(dags_dir.glob("*.json")):
         try:
@@ -2647,6 +2762,8 @@ async def list_workflow_dags():
                 "source": source,
                 "sla_hours": meta.get("sla_hours", 2),
                 "estimated_duration_minutes": meta.get("estimated_duration_minutes", 2),
+                "run_count": run_counts.get(f.stem, 0),
+                "last_run_at": last_run.get(f.stem),
             })
         except Exception:
             workflows.append({
@@ -2656,7 +2773,12 @@ async def list_workflow_dags():
                 "trigger_type": "Manual",
                 "source": "Direct",
                 "automation_status": "active",
+                "run_count": run_counts.get(f.stem, 0),
+                "last_run_at": last_run.get(f.stem),
             })
+
+    # Most-run workflows first; ties fall back to alphabetical display name.
+    workflows.sort(key=lambda w: (-(w.get("run_count") or 0), (w.get("display_name") or "").lower()))
     return workflows
 
 

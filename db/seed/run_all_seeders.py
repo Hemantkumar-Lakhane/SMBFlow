@@ -49,6 +49,17 @@ def check_status() -> dict:
         "re_leases.json",
         "re_buyers.json",
         "email_messages.json",
+        "campaign_orchestrator.json",
+        "founder_content_requests.json",
+        "product_launch_briefs.json",
+        "weekly_growth_brief_data.json",
+        "case_studies.json",
+        "investor_updates.json",
+        "pipeline_content_requests.json",
+        "account_signals.json",
+        "sla_monitor_events.json",
+        "account_based_campaigns.json",
+        "finance_operations.json",
     ]
     status = {}
     for fname in files:

@@ -2,6 +2,7 @@
 // Workflow Library — browse templates + active automations
 
 import { useState, useEffect, useCallback } from 'react'
+import { getDisplayName } from '../../utils/workflowDisplayNames'
 import { useNavigate } from 'react-router-dom'
 import { BookOpen, ArrowRight, Play, Mail, Zap, CheckCircle2, Layers } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
@@ -26,6 +27,43 @@ function ToolChip({ label }) {
   )
 }
 
+function UserWorkflowCard({ wf }) {
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm hover:border-blue-300 transition-colors flex flex-col">
+      <div className="flex items-start justify-between mb-2">
+        <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+          <BookOpen className="w-4 h-4 text-blue-600" />
+        </div>
+        <span className="text-[11px] font-medium text-gray-400">Custom</span>
+      </div>
+      <h3 className="text-sm font-bold text-gray-900 mt-2 mb-1">{getDisplayName(wf.name, wf.display_name)}</h3>
+      <p className="text-xs text-gray-500 leading-relaxed flex-1">{wf.description || ''}</p>
+      <div className="flex gap-2 mt-4">
+        <button
+          onClick={() => {
+            // Trigger run via parent handler
+            const event = new CustomEvent('runWorkflow', { detail: wf });
+            window.dispatchEvent(event);
+          }}
+          className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors"
+        >
+          <Play className="w-4 h-4" /> Run Now
+        </button>
+        <button
+          onClick={() => {
+            // navigate to builder for this workflow
+            const url = `/workflows/builder?wf=${encodeURIComponent(wf.name)}`;
+            window.location.href = url;
+          }}
+          className="flex items-center gap-1.5 px-3.5 py-2 border border-gray-200 hover:border-blue-300 text-sm font-semibold text-gray-700 hover:text-blue-600 rounded-lg transition-colors"
+        >
+          Configure <ArrowRight className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function TemplateCard({ template, onUse }) {
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm hover:border-blue-300 transition-colors flex flex-col">
@@ -47,7 +85,7 @@ function TemplateCard({ template, onUse }) {
         Use template <ArrowRight className="w-3.5 h-3.5" />
       </button>
     </div>
-  )
+  );
 }
 
 export default function WorkflowLibrary() {
@@ -58,6 +96,8 @@ export default function WorkflowLibrary() {
   const [loading,     setLoading]     = useState(true)
   const [modalOpen,   setModalOpen]   = useState(false)
   const [selectedWf,  setSelectedWf]  = useState({ name: 'email_summarizer', displayName: 'Email Summarizer' })
+  const [demoData, setDemoData] = useState(null)
+  const [demoLoading, setDemoLoading] = useState(false)
 
   const load = useCallback(async () => {
     try {
@@ -81,9 +121,21 @@ export default function WorkflowLibrary() {
   const handleRunNow = (wf) => {
     setSelectedWf({
       name: wf.name || 'email_summarizer',
-      displayName: wf.display_name || wf.name || 'Email Summarizer',
+      displayName: getDisplayName(wf.name, wf.display_name),
     })
     setModalOpen(true)
+  }
+
+  const handlePrepareDemoData = async () => {
+    setDemoLoading(true)
+    try {
+      const resp = await api.get('/workflows/prepare-demo-data')
+      setDemoData(Array.isArray(resp?.demo_data) ? resp.demo_data : [])
+    } catch {
+      setDemoData([])
+    } finally {
+      setDemoLoading(false)
+    }
   }
 
   const emailSummarizerWf = activeWfs.find(w => w.name === 'email_summarizer' || w.name?.includes('email'))
@@ -111,57 +163,35 @@ export default function WorkflowLibrary() {
         >
           + Create Custom
         </button>
+        <button
+          onClick={handlePrepareDemoData}
+          disabled={demoLoading}
+          className="ml-2 flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm"
+        >
+          {demoLoading ? 'Preparing...' : 'Prepare Demo Data'}
+        </button>
       </div>
 
-      {/* Active Autonomous Pipeline Banner */}
-      {!loading && emailSummarizerWf && (
+      {demoData && demoData.length > 0 && (
+  <div className="mb-6 p-4 bg-white border border-gray-200 rounded-xl shadow-sm">
+    <h2 className="text-sm font-bold text-gray-900 mb-2">Demo Data Summary</h2>
+    <ul className="list-disc list-inside text-sm text-gray-700">
+      {demoData.map(d => (
+        <li key={d.workflow_name}>
+          {d.workflow_name}: {d.message ? d.message : `${d.available_count} ${d.source === 'synthetic_inbox' ? 'emails' : 'records'} available`}
+        </li>
+      ))}
+    </ul>
+  </div>
+)}
+{/* Your Workflows */}
+      {!loading && activeWfs.length > 0 && (
         <div className="mb-6">
-          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">Active Production Workflow</p>
-          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-start gap-4">
-              <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
-                <Mail className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2 flex-wrap mb-1">
-                  <h3 className="text-sm font-bold text-gray-900">{emailSummarizerWf.display_name || 'Email Summarizer'}</h3>
-                  <span className="text-[11px] font-semibold px-2 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded-full flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-500" /> Active
-                  </span>
-                  <span className="text-[11px] font-semibold px-2 py-0.5 bg-purple-50 text-purple-700 border border-purple-200 rounded-full">
-                    Trigger: New Email
-                  </span>
-                  <span className="text-[11px] font-semibold px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full">
-                    Source: Synthetic Inbox
-                  </span>
-                  <span className="text-[11px] font-semibold px-2 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full">
-                    Automation: Enabled
-                  </span>
-                </div>
-                <p className="text-xs text-gray-500 max-w-2xl leading-relaxed">
-                  {emailSummarizerWf.description || 'Continuously monitors inbox for incoming synthetic messages, analyzes priorities, evaluates actionable escalations, and persists summaries.'}
-                </p>
-                <div className="flex gap-1.5 mt-2.5">
-                  {['Research Agent', 'Summarizer Agent', 'Drafting Agent', 'Memory Agent', 'EPI Signing'].map(t => (
-                    <ToolChip key={t} label={t} />
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2.5 flex-shrink-0">
-              <button
-                onClick={() => handleRunNow(emailSummarizerWf)}
-                className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors"
-              >
-                <Play className="w-4 h-4 fill-white" /> Run Now
-              </button>
-              <button
-                onClick={() => navigate('/workflows/builder')}
-                className="flex items-center gap-1.5 px-3.5 py-2 border border-gray-200 hover:border-blue-300 text-sm font-semibold text-gray-700 hover:text-blue-600 rounded-lg transition-colors whitespace-nowrap"
-              >
-                Configure <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
+          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">Your Workflows</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {activeWfs.map(wf => (
+              <UserWorkflowCard key={wf.name} wf={wf} />
+            ))}
           </div>
         </div>
       )}

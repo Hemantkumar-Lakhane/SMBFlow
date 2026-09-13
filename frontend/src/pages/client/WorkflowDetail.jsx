@@ -1,5 +1,6 @@
 // frontend/src/pages/client/WorkflowDetail.jsx
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { getDisplayName } from '../../utils/workflowDisplayNames'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -61,6 +62,15 @@ function buildEventsFromRuns(agentRuns) {
     model_used: r.model_used || '', cost_usd: r.cost_usd || 0,
     tokens_in: r.tokens_in || 0, tokens_out: r.tokens_out || 0,
     confidence: r.confidence, ts: r.completed_at || new Date().toISOString(), _fromDB: true,
+    error: r.error || null,
+    error_type: r.error_type || null,
+    error_message: r.error_message || null,
+    error_provider: r.error_provider || null,
+    error_safe_detail: r.error_safe_detail || null,
+    llm_attempted: r.llm_attempted ?? true,
+    tools_used: r.tools_used || [],
+    duration_ms: r.duration_ms || 0,
+    node_description: r.node_description || '',
   }))
 }
 
@@ -128,6 +138,11 @@ function StatusBanner({ status, workflow, liveStats, navigate }) {
 
   if (!cfg) return null
 
+  // Extract error info from outcome or error_log
+  const failedError = workflow?.outcome?.error || workflow?.error || null
+  const failedNode = workflow?.outcome?.failed_node || null
+  const engineError = workflow?.outcome?.status === 'engine_error'
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
@@ -142,6 +157,19 @@ function StatusBanner({ status, workflow, liveStats, navigate }) {
         </p>
         {status === 'escalated' && workflow?.outcome?.reason && (
           <p className="text-xs text-[rgb(var(--text-secondary))] mt-1">{workflow.outcome.reason}</p>
+        )}
+        {status === 'failed' && failedError && (
+          <div className="mt-2 space-y-1">
+            <p className="text-xs font-semibold text-danger">{failedNode ? `Failed at node: ${failedNode}` : 'Workflow error'}</p>
+            <p className="text-xs text-[rgb(var(--text-secondary))] font-mono bg-danger/5 rounded-lg px-2 py-1.5 border border-danger/10 max-h-24 overflow-y-auto">
+              {failedError}
+            </p>
+          </div>
+        )}
+        {status === 'failed' && engineError && (
+          <p className="text-xs text-warning mt-1">
+            LLM call was not attempted — workflow failed before agent execution.
+          </p>
         )}
       </div>
       {status === 'escalated' && (
@@ -305,7 +333,7 @@ export default function WorkflowDetail() {
 
         setAgents(p => ({
           ...p,
-          [d.node_id]: { ...(p[d.node_id]||{}), status: resolveAgentStatus(d), tokens_in: d.tokens_in||0, tokens_out: d.tokens_out||0, cost_usd: d.cost_usd||0, model_used: d.model_used||'', confidence: d.confidence, agent_type: d.agent_type||(p[d.node_id]?.agent_type), tools_used: d.tools_used||[], _prosecutor_issues: d._prosecutor_issues, _judge_verdict: d._judge_verdict, delta_analysis: d.delta_analysis, delta_vs_history: d.delta_vs_history, delta_trend: d.delta_trend },
+          [d.node_id]: { ...(p[d.node_id]||{}), status: resolveAgentStatus(d), tokens_in: d.tokens_in||0, tokens_out: d.tokens_out||0, cost_usd: d.cost_usd||0, model_used: d.model_used||'', confidence: d.confidence, agent_type: d.agent_type||(p[d.node_id]?.agent_type), tools_used: d.tools_used||[], _prosecutor_issues: d._prosecutor_issues, _judge_verdict: d._judge_verdict, delta_analysis: d.delta_analysis, delta_vs_history: d.delta_vs_history, delta_trend: d.delta_trend, error: d.error||null, error_type: d.error_type||null, error_message: d.error_message||null, error_provider: d.error_provider||null, error_safe_detail: d.error_safe_detail||null, llm_attempted: d.llm_attempted ?? true, },
         }))
         addEvent('agent_completed', d)
         setSeededFromDB(true)
@@ -381,6 +409,7 @@ export default function WorkflowDetail() {
 
   const dagNodes  = (dag?.nodes || []).map(n => ({ id: n.id, agent: n.agent }))
   const nodes     = dagNodes.length > 0 ? dagNodes : DEFAULT_NODES
+  const dagEdges  = (dag?.edges || []).map(e => ({ from: e.from, to: e.to }))
   const isRunning = workflow?.status === 'running'
   const isTerminal = TERMINAL_STATUSES.has(workflow?.status || '')
   const activeTotalCost = activeEstimate.input_cost + activeEstimate.tokens_out * activeEstimate.output_cost_per_token
@@ -430,7 +459,7 @@ export default function WorkflowDetail() {
           <ArrowLeft className="w-4 h-4" />
         </button>
         <div className="flex-1 min-w-0">
-          <h1 className="text-xl font-bold text-[rgb(var(--text-primary))] truncate">{workflow?.workflow_name}</h1>
+          <h1 className="text-xl font-bold text-[rgb(var(--text-primary))] truncate">{getDisplayName(workflow?.workflow_name, workflow?.display_name)}</h1>
           <div className="flex items-center gap-2.5 mt-1 flex-wrap text-xs text-[rgb(var(--text-muted))]">
             <span className="font-mono bg-[rgb(var(--bg-card))] px-2 py-0.5 rounded border border-[rgb(var(--border))]">{runId?.slice(0, 8)}</span>
             <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{timeAgo(workflow?.started_at)}</span>
@@ -472,6 +501,71 @@ export default function WorkflowDetail() {
       {/* Status banner */}
       {isTerminal && <StatusBanner status={workflow.status} workflow={workflow} liveStats={liveStats} navigate={navigate} />}
 
+      {/* Developer Debug Panel — failed runs only */}
+      {workflow?.status === 'failed' && (workflow?.error || workflow?.outcome?.error) && (() => {
+        const errorMsg = workflow?.error || workflow?.outcome?.error || ''
+        const isConfigFailure = errorMsg.includes('blocking error') || errorMsg.includes('Configuration required') || errorMsg.includes('Tenant config')
+        const configMissingFields = isConfigFailure ? errorMsg.split(': ').slice(1).join('; ').split('; ').map(s => s.trim()).filter(Boolean) : []
+        const llmAttempted = workflow?.outcome?.llm_attempted ?? !isConfigFailure
+
+        return (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="border border-orange-200 bg-orange-50/50 rounded-2xl p-4"
+          >
+            <details open>
+              <summary className="text-xs font-bold text-orange-700 cursor-pointer select-none flex items-center gap-1.5">
+                <span>🔧</span> Developer Debug — Failure Details
+              </summary>
+              <div className="mt-3 space-y-2 text-xs font-mono">
+                <div className="grid grid-cols-2 gap-2">
+                  <div><span className="text-orange-600 font-semibold">Workflow:</span> <span className="text-gray-800">{workflow?.workflow_name}</span></div>
+                  <div><span className="text-orange-600 font-semibold">Run ID:</span> <span className="text-gray-800">{runId?.slice(0, 8)}...</span></div>
+                  <div><span className="text-orange-600 font-semibold">Failure Type:</span> <span className="text-gray-800">{isConfigFailure ? 'Configuration Validation' : (workflow?.outcome?.error_type || workflow?.outcome?.status || 'Runtime Error')}</span></div>
+                  <div><span className="text-orange-600 font-semibold">Failed Before Node Execution:</span> <span className="text-gray-800">{isConfigFailure ? 'Yes' : 'No'}</span></div>
+                  <div><span className="text-orange-600 font-semibold">Failed Node:</span> <span className="text-gray-800">{workflow?.outcome?.failed_node || (isConfigFailure ? '— (pre-execution)' : '—')}</span></div>
+                  <div><span className="text-orange-600 font-semibold">Agent Type:</span> <span className="text-gray-800">{agents[workflow?.outcome?.failed_node]?.agent_type || '—'}</span></div>
+                  <div><span className="text-orange-600 font-semibold">Status:</span> <span className="text-gray-800">{workflow?.status}</span></div>
+                  <div><span className="text-orange-600 font-semibold">LLM Call Attempted:</span> <span className="text-gray-800">{llmAttempted ? 'Yes' : 'No — workflow failed before agent execution'}</span></div>
+                  <div><span className="text-orange-600 font-semibold">Provider:</span> <span className="text-gray-800">{workflow?.outcome?.error_provider || '—'}</span></div>
+                  <div><span className="text-orange-600 font-semibold">Timestamp:</span> <span className="text-gray-800">{workflow?.completed_at || '—'}</span></div>
+                </div>
+                {isConfigFailure && configMissingFields.length > 0 && (
+                  <div>
+                    <span className="text-orange-600 font-semibold">Missing Fields:</span>
+                    <ul className="mt-1 space-y-0.5 text-gray-800">
+                      {configMissingFields.map((f, i) => (
+                        <li key={i} className="flex items-start gap-1.5">
+                          <span className="text-orange-500">•</span>
+                          <span>{f}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {(workflow?.error || workflow?.outcome?.error) && (
+                  <div>
+                    <span className="text-orange-600 font-semibold">Error:</span>
+                    <pre className="mt-1 p-2 bg-white border border-orange-200 rounded-lg text-[11px] text-gray-800 whitespace-pre-wrap max-h-40 overflow-y-auto">
+                      {workflow?.error || workflow?.outcome?.error}
+                    </pre>
+                  </div>
+                )}
+                {workflow?.outcome?.error_safe_detail && (
+                  <div>
+                    <span className="text-orange-600 font-semibold">Safe Detail:</span>
+                    <pre className="mt-1 p-2 bg-white border border-orange-200 rounded-lg text-[11px] text-gray-800 whitespace-pre-wrap max-h-32 overflow-y-auto">
+                      {workflow.outcome.error_safe_detail}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            </details>
+          </motion.div>
+        )
+      })()}
+
       {/* Running indicator */}
       {isRunning && workflow?.current_node && (
         <div className="flex items-center gap-2 text-sm text-success">
@@ -503,6 +597,7 @@ export default function WorkflowDetail() {
             <Card title="Agent Pipeline" subtitle="Live execution flow">
               <NodePipeline
                 nodes={nodes}
+                edges={dagEdges}
                 agents={agents}
                 agentRuns={workflow?.agent_runs || []}
                 currentNode={activeNode}

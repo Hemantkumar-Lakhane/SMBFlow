@@ -66,6 +66,14 @@ NEVER_DOWNGRADE_BELOW = {
 }
 
 
+def _extract_provider(err_str: str) -> str:
+    """Extract provider name from error string without exposing keys."""
+    for prov in ("anthropic", "openai", "openrouter", "groq", "gemini", "google"):
+        if prov in err_str:
+            return prov
+    return "unknown"
+
+
 @dataclass
 class LLMCall:
     call_id: str
@@ -80,6 +88,11 @@ class LLMCall:
     cache_hit: bool = False
     timestamp: datetime = field(default_factory=datetime.utcnow)
     error: Optional[str] = None
+    # True when this "call" is NOT a real model response but a deterministic
+    # mock/fallback produced because every provider in the chain failed (e.g.
+    # auth/401) or the router is in mock mode. Downstream must NOT treat a
+    # fallback as a genuine AI result — the UI labels it as degraded.
+    is_fallback: bool = False
 
 
 @dataclass
@@ -686,7 +699,81 @@ class LLMRouter:
             tier_override="mini",
         )
         return f"[COMPRESSED TOOL RESULTS]\n{text}"
-    
+
+    @staticmethod
+    def classify_llm_error(error: Exception) -> dict:
+        """
+        Classify an LLM/SDK exception into a developer-friendly error type.
+        Returns {error_type, error_message, provider, safe_detail}.
+        Never exposes API keys, tokens, or credentials.
+        """
+        err_str = str(error).lower()
+        err_type = type(error).__name__
+
+        # ── Rate limit / quota ──────────────────────────────────────────────
+        if any(kw in err_str for kw in ("rate limit", "ratelimit", "429", "quota", "too many requests", "tpm", "rpm")):
+            return {
+                "error_type": "rate_limit",
+                "error_message": "Rate limit / quota exceeded",
+                "provider": _extract_provider(err_str),
+                "safe_detail": str(error)[:300],
+            }
+        # ── Authentication / invalid key ────────────────────────────────────
+        if any(kw in err_str for kw in ("auth", "invalid key", "invalid api key", "unauthorized", "401", "api_key", "invalid_request_error")):
+            return {
+                "error_type": "invalid_api_key",
+                "error_message": "Invalid or expired API key",
+                "provider": _extract_provider(err_str),
+                "safe_detail": str(error)[:300],
+            }
+        # ── Model not found / unavailable ───────────────────────────────────
+        if any(kw in err_str for kw in ("model not found", "model not available", "does not exist", "model_not_found", "404")) or ("model" in err_str and "not found" in err_str):
+            return {
+                "error_type": "model_unavailable",
+                "error_message": "Model unavailable",
+                "provider": _extract_provider(err_str),
+                "safe_detail": str(error)[:300],
+            }
+        # ── Timeout ─────────────────────────────────────────────────────────
+        if any(kw in err_str for kw in ("timeout", "timed out", "deadline exceeded", "context deadline")):
+            return {
+                "error_type": "timeout",
+                "error_message": "Provider timeout",
+                "provider": _extract_provider(err_str),
+                "safe_detail": str(error)[:300],
+            }
+        # ── Overloaded / 503 ────────────────────────────────────────────────
+        if any(kw in err_str for kw in ("overloaded", "503", "service unavailable", "server is overloaded")):
+            return {
+                "error_type": "provider_overloaded",
+                "error_message": "Provider overloaded — try again shortly",
+                "provider": _extract_provider(err_str),
+                "safe_detail": str(error)[:300],
+            }
+        # ── Content policy / safety ─────────────────────────────────────────
+        if any(kw in err_str for kw in ("content_policy", "safety", "blocked", "content filter", "nsfw")):
+            return {
+                "error_type": "content_policy",
+                "error_message": "Content policy violation — output blocked by provider",
+                "provider": _extract_provider(err_str),
+                "safe_detail": str(error)[:300],
+            }
+        # ── Context length ──────────────────────────────────────────────────
+        if any(kw in err_str for kw in ("context length", "context_length", "max_tokens", "token limit", "too long")):
+            return {
+                "error_type": "context_length_exceeded",
+                "error_message": "Input exceeds model context window",
+                "provider": _extract_provider(err_str),
+                "safe_detail": str(error)[:300],
+            }
+        # ── Generic LLM / provider error ────────────────────────────────────
+        return {
+            "error_type": "provider_error",
+            "error_message": "LLM provider error",
+            "provider": _extract_provider(err_str),
+            "safe_detail": str(error)[:300],
+        }
+
     def _inject_anthropic_cache_control(self, messages: list[dict], model: str) -> list[dict]:
         """
         Inject Anthropic cache_control breakpoints for provider-level prompt caching.
@@ -1102,6 +1189,13 @@ class LLMRouter:
         self._calls.clear()
         self._agent_totals.clear()
         self._cache_hits = 0
+        self._fallback_call_count = 0
+
+    def get_fallback_call_count(self) -> int:
+        """Cumulative number of deterministic fallback/mock responses returned
+        this session. The orchestrator samples this before/after each node to
+        detect whether that node ran on degraded (non-LLM) output."""
+        return getattr(self, "_fallback_call_count", 0)
 
     def get_predicted_savings(self, level: int) -> dict:
         """Return estimated savings and accuracy impact for a given optimization level."""
@@ -1229,6 +1323,8 @@ class LLMRouter:
 
     def _record_call(self, call: LLMCall) -> None:
         self._calls.append(call)
+        if getattr(call, "is_fallback", False):
+            self._fallback_call_count = getattr(self, "_fallback_call_count", 0) + 1
         agent = call.agent_name
         if agent not in self._agent_totals:
             self._agent_totals[agent] = {"calls": 0, "tokens_in": 0, "tokens_out": 0,
@@ -1331,6 +1427,98 @@ class LLMRouter:
                     "confidence": 0.95,
                     "reasoning_confidence": 0.95
                 })
+            elif agent_name in ("humanizer_agent", "humanize_draft"):
+                content = json.dumps({
+                    "approval_items": [
+                        {
+                            "action_type": "email_response",
+                            "status": "pending",
+                            "title": "Customer response required: Enterprise SLA Warning from Acme Corp",
+                            "reason": "AI identified high-urgency SLA notice requiring executive response.",
+                            "category": "sla_risk",
+                            "category_label": "SLA Risk",
+                            "urgency_score": 9,
+                            "detected_sentiment": "urgent_negative",
+                            "trigger_keywords": ["URGENT", "SLA warning", "latency issue"],
+                            "source": {
+                                "message_id": "msg-synth-002",
+                                "subject": "URGENT: Enterprise SLA warning",
+                                "sender": "cto@acmecorp.com"
+                            },
+                            "proposed_action": {
+                                "type": "gmail_draft",
+                                "recipient": "cto@acmecorp.com",
+                                "subject": "Re: URGENT: Enterprise SLA warning - Investigation Update",
+                                "body": "Hi Acme Team,\n\nThank you for flagging this so quickly. I understand how disruptive latency can be for your team, especially under your SLA commitments.\n\nOur senior engineering team is actively investigating the issue now, and Customer Success is coordinating updates from the incident lead. We will send you a clear status update within 60 minutes, including current impact, next steps, and the path to resolution.\n\nBest,\nSMBFlow Enterprise Support"
+                            },
+                            "xai_explanation": {
+                                "trigger_rationale": "The email contained urgent SLA language and referenced a customer-impacting latency issue.",
+                                "strategy_rationale": "The safest response is an accountable incident acknowledgement with a near-term update window and no unverified root-cause claims.",
+                                "confidence_metrics": {
+                                    "intent_match": 0.96,
+                                    "sentiment_confidence": 0.94,
+                                    "safety_boundary_cleared": 0.98
+                                }
+                            },
+                            "confidence": 0.96
+                        },
+                        {
+                            "action_type": "email_response",
+                            "status": "pending",
+                            "title": "Billing dispute response required for finance partner",
+                            "reason": "Invoice dispute mentions duplicate charge and renewal risk.",
+                            "category": "billing_dispute",
+                            "category_label": "Billing Dispute",
+                            "urgency_score": 8,
+                            "detected_sentiment": "concerned",
+                            "trigger_keywords": ["duplicate charge", "invoice", "renewal"],
+                            "source": {
+                                "message_id": "msg-synth-014",
+                                "subject": "Duplicate charge on enterprise invoice",
+                                "sender": "finance@northstar.example"
+                            },
+                            "proposed_action": {
+                                "type": "gmail_draft",
+                                "recipient": "finance@northstar.example",
+                                "subject": "Re: Duplicate charge on enterprise invoice",
+                                "body": "Hi Northstar Finance Team,\n\nThanks for calling this out. I can see why a possible duplicate charge needs quick attention, especially this close to renewal.\n\nWe are reviewing the invoice and payment records now. I will follow up with a confirmed adjustment path or a clear explanation of the charge by end of business today.\n\nBest,\nSMBFlow Billing Support"
+                            },
+                            "xai_explanation": {
+                                "trigger_rationale": "The message references a duplicate charge and renewal timing, which increases business risk.",
+                                "strategy_rationale": "Billing disputes need a calm acknowledgement, ownership, and a concrete review timeline before making financial commitments.",
+                                "confidence_metrics": {
+                                    "intent_match": 0.93,
+                                    "sentiment_confidence": 0.91,
+                                    "safety_boundary_cleared": 0.97
+                                }
+                            },
+                            "confidence": 0.93
+                        }
+                    ],
+                    "routine_items_count": 38,
+                    "batch_intelligence": {
+                        "total_volume": 40,
+                        "sentiment_distribution": {
+                            "positive": 9,
+                            "neutral": 20,
+                            "concerned": 8,
+                            "urgent_negative": 3
+                        },
+                        "category_breakdown": {
+                            "sla_risk": 1,
+                            "billing_dispute": 1,
+                            "service_outage": 1,
+                            "routine_inquiry": 37
+                        },
+                        "critical_kpis": {
+                            "pending_approval_count": 2,
+                            "avg_urgency_score": 8.5,
+                            "highest_urgency_score": 9,
+                            "estimated_response_sla_minutes": 60
+                        }
+                    },
+                    "summary": "Humanized 2 urgent customer response drafts and attached explainability metadata."
+                })
             elif agent_name in ("drafting_agent", "evaluate_actions"):
                 content = json.dumps({
                     "approval_items": [
@@ -1391,6 +1579,7 @@ class LLMRouter:
             cost_usd=0.0,
             duration_ms=duration_ms,
             success=True,
+            is_fallback=True,   # deterministic mock — NOT a real model response
         )
         self._record_call(call)
         return content, call

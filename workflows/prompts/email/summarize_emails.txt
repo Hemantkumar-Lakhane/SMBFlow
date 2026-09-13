@@ -22,12 +22,24 @@ Return structured JSON matching this schema:
     }
   ],
   "categories": {
-    "customer": <int>,
-    "finance": <int>,
-    "sales": <int>,
-    "operations": <int>,
-    "scheduling": <int>,
+    "sla_risk": <int>,
+    "billing_dispute": <int>,
+    "service_outage": <int>,
+    "routine_inquiry": <int>,
+    "executive_partner": <int>,
     "other": <int>
+  },
+  "sentiment_distribution": {
+    "positive": <int>,
+    "neutral": <int>,
+    "concerned": <int>,
+    "urgent_negative": <int>
+  },
+  "critical_kpis": {
+    "pending_approval_count": <int>,
+    "avg_urgency_score": <number>,
+    "highest_urgency_score": <int>,
+    "estimated_response_sla_minutes": <int>
   }
 }
 

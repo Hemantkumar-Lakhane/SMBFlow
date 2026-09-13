@@ -31,7 +31,6 @@ const ownerNav = [
     items: [
       { label: 'General',          to: '/settings/general',       icon: Settings },
       { label: 'AI Engine',        to: '/settings/ai-engine',     icon: Bot },
-      { label: 'Integrations',     to: '/settings/integrations',  icon: Plug },
       { label: 'Budget & Billing', to: '/budget',                 icon: CreditCard },
       { label: 'Evidence',         to: '/evidence',               icon: FileSearch },
     ],

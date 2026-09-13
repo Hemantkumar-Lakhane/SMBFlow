@@ -1,0 +1,80 @@
+{
+  "_meta": {
+    "workflow_id": "product_launch_sprint",
+    "name": "Product Launch Sprint Engine",
+    "industry": "startup",
+    "version": "1.0.0",
+    "description": "Generates a launch plan (calendar, assets, UTM, stakeholder assignments) from a launch brief and persists results for tracking.",
+    "trigger_types": ["manual", "event"],
+    "trigger": {"type": "manual", "enabled": true},
+    "sla_hours": 4,
+    "estimated_duration_minutes": 3
+  },
+  "nodes": [
+    {
+      "id": "fetch_brief",
+      "agent": "research_agent",
+      "name": "Fetch Launch Brief",
+      "description": "Retrieve synthetic launch briefs for planning.",
+      "prompt_file": "startup/product_launch_sprint.txt",
+      "tools": ["product_launch_get_briefs"],
+      "timeout_seconds": 60
+    },
+    {
+      "id": "plan_launch",
+      "agent": "reasoning_agent",
+      "name": "Plan Launch",
+      "description": "Create campaign calendar, asset checklist, and UTM parameters.",
+      "prompt_file": "startup/product_launch_sprint.txt",
+      "tools": [],
+      "timeout_seconds": 120
+    },
+    {
+      "id": "verify_plan",
+      "agent": "verification_agent",
+      "name": "Verify Plan & Policy",
+      "description": "Validate launch plan completeness and enforce policy (e.g., budget caps).",
+      "prompt_file": "startup/product_launch_sprint.txt",
+      "depends_on": ["plan_launch"],
+      "tools": [],
+      "timeout_seconds": 90
+    },
+    {
+      "id": "draft_assets",
+      "agent": "drafting_agent",
+      "name": "Draft Launch Assets",
+      "description": "Generate drafts for presentation, email, social posts, etc.",
+      "prompt_file": "startup/product_launch_sprint.txt",
+      "depends_on": ["verify_plan", "plan_launch"],
+      "tools": ["db_write_outcome"],
+      "timeout_seconds": 150
+    },
+    {
+      "id": "route_and_approve",
+      "agent": "execution_agent",
+      "name": "Route & Request Approval",
+      "description": "Assign owners, create approval request for launch execution.",
+      "prompt_file": "startup/product_launch_sprint.txt",
+      "depends_on": ["verify_plan"],
+      "tools": ["db_write_outcome"],
+      "timeout_seconds": 90
+    },
+    {
+      "id": "persist_results",
+      "agent": "memory_agent",
+      "name": "Persist Launch Attribution",
+      "description": "Store launch plan metrics and asset metadata for dashboards.",
+      "prompt_file": "startup/product_launch_sprint.txt",
+      "tools": ["db_write_outcome"],
+      "timeout_seconds": 30
+    }
+  ],
+  "edges": [
+    {"from": "fetch_brief", "to": "plan_launch"},
+    {"from": "plan_launch", "to": "verify_plan"},
+    {"from": "verify_plan", "to": "draft_assets"},
+    {"from": "draft_assets", "to": "route_and_approve"},
+    {"from": "route_and_approve", "to": "persist_results"}
+  ],
+  "escalation_config": {"sla_hours": 4, "resume_after_decision": true}
+}

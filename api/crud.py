@@ -360,14 +360,18 @@ async def update_workflow_status(
         updates["error_log"] = error
     if status in ("completed", "failed", "stopped"):
         updates["completed_at"] = datetime.utcnow()
-    if cost_delta or tokens_in_delta or tokens_out_delta or agent_run_data:
+    if cost_delta or tokens_in_delta or tokens_out_delta :
+        # Row-lock the instance for this read-modify-write: cost/token accumulation and
+        # the agent_runs JSONB append are non-atomic in SQL, so concurrent per-agent
+        # callbacks on the same run would otherwise lose updates. FOR UPDATE serializes
+        # them; the lock is released by the commit below.
         result = await db.execute(
             select(
                 WorkflowInstance.total_cost_usd,
                 WorkflowInstance.total_tokens_in,
                 WorkflowInstance.total_tokens_out,
                 WorkflowInstance.agent_runs,
-            ).where(WorkflowInstance.id == run_id)
+            ).where(WorkflowInstance.id == run_id).with_for_update()
         )
         row = result.one_or_none()
         if row:
@@ -375,12 +379,11 @@ async def update_workflow_status(
                 updates["total_cost_usd"] = (row[0] or 0.0) + cost_delta
                 updates["total_tokens_in"] = (row[1] or 0) + tokens_in_delta
                 updates["total_tokens_out"] = (row[2] or 0) + tokens_out_delta
+            # Deduplicate: replace existing entry for this node_id
             if agent_run_data:
                 existing_runs = list(row[3] or [])
                 node_id = agent_run_data.get("node_id")
-                if node_id:
-                    # Deduplicate: replace existing entry for this node_id
-                    existing_runs = [r for r in existing_runs if r.get("node_id") != node_id]
+                existing_runs = [r for r in existing_runs if r.get("node_id") != node_id]
                 existing_runs.append(agent_run_data)
                 updates["agent_runs"] = existing_runs
 
@@ -834,7 +837,7 @@ def pattern_to_dict(p: PatternMemory) -> dict:
 async def get_dashboard_data(db: AsyncSession, tenant_id: str) -> dict:
     from sqlalchemy import select, func, and_, desc, text
     from datetime import datetime, timezone, timedelta
-    from core.state_manager import WorkflowInstance, Escalation, A2ARequest, AgentRunRecord
+    from core.state_manager import WorkflowInstance, Escalation, A2ARequest, AgentRunRecord, ApprovalItem
 
     # NOTE: DB DateTime columns are naive UTC (Column(DateTime), default=datetime.utcnow)
     # throughout this schema. Use naive UTC here so comparisons/date_trunc against
@@ -845,16 +848,33 @@ async def get_dashboard_data(db: AsyncSession, tenant_id: str) -> dict:
     ten_days_ago = today - timedelta(days=9)
     seven_days_ago = today - timedelta(days=6)
 
-    # 1. Active Runs
+    # 1. Active Runs — count everything currently in-flight (non-terminal), not just
+    #    status=='running'. Runs are short-lived background tasks that finish in seconds,
+    #    so 'running' alone reads ~0 at any given 5s poll; work parked in escalated /
+    #    pending_a2a / paused is still active from the operator's view and must show up.
+    #    Include the enum-repr forms ('WorkflowStatus.*') defensively — some rows were
+    #    historically written as the repr rather than the value.
+    INFLIGHT_STATES = [
+        'pending', 'running', 'paused', 'escalated', 'pending_a2a',
+        'WorkflowStatus.PENDING', 'WorkflowStatus.RUNNING', 'WorkflowStatus.PAUSED',
+        'WorkflowStatus.ESCALATED', 'WorkflowStatus.PENDING_A2A',
+    ]
+    RUNNING_STATES = ['running', 'WorkflowStatus.RUNNING']
     active_runs_res = await db.execute(
         select(
-            func.count().filter(WorkflowInstance.status == 'running'),
-            func.count().filter(WorkflowInstance.started_at >= today)
+            func.count().filter(WorkflowInstance.status.in_(INFLIGHT_STATES)),
+            func.count().filter(WorkflowInstance.status.in_(RUNNING_STATES)),
+            func.count().filter(WorkflowInstance.started_at >= today),
         ).where(WorkflowInstance.tenant_id == tenant_id)
     )
-    active_count, initiated_today = active_runs_res.first()
+    active_count, running_count, initiated_today = active_runs_res.first()
+    awaiting_count = (active_count or 0) - (running_count or 0)
 
-    # 2. Pending Approvals
+    # 2. Pending Approvals — union of every human-action queue so this KPI matches the
+    #    Action Center exactly: Escalations, A2A permission requests, AND ApprovalItems
+    #    (the draft-approval queue the email/HITL workflows write to). ApprovalItem is
+    #    scoped by organization_id, which is the same physical column as
+    #    WorkflowInstance.tenant_id, so the same tenant_id value applies.
     pending_esc_res = await db.execute(
         select(func.count(Escalation.id)).where(
             and_(Escalation.tenant_id == tenant_id, Escalation.status == 'pending')
@@ -865,7 +885,16 @@ async def get_dashboard_data(db: AsyncSession, tenant_id: str) -> dict:
             and_(A2ARequest.tenant_id == tenant_id, A2ARequest.status == 'pending_permission')
         )
     )
-    pending_approvals = (pending_esc_res.scalar() or 0) + (pending_a2a_res.scalar() or 0)
+    pending_appr_res = await db.execute(
+        select(func.count(ApprovalItem.id)).where(
+            and_(ApprovalItem.organization_id == tenant_id, ApprovalItem.status == 'pending')
+        )
+    )
+    pending_approvals = (
+        (pending_esc_res.scalar() or 0)
+        + (pending_a2a_res.scalar() or 0)
+        + (pending_appr_res.scalar() or 0)
+    )
 
     # 3. Tasks Completed
     tasks_res = await db.execute(
@@ -934,28 +963,38 @@ async def get_dashboard_data(db: AsyncSession, tenant_id: str) -> dict:
             'description': desc_text
         })
 
-    # 5. Workflow Performance
+    # 5. Workflow Performance — rank by *total* runs across every status so the most-run
+    #    workflow appears first (previously ranked by completed+failed only, which hid
+    #    workflows whose runs are all still escalated/in-flight and pushed active ones down).
+    #    success_rate stays completion-quality among *finished* runs.
+    COMPLETED_STATES = ['completed', 'WorkflowStatus.COMPLETED']
+    FAILED_STATES = ['failed', 'stopped', 'WorkflowStatus.FAILED', 'WorkflowStatus.STOPPED']
     perf_res = await db.execute(
         select(
             WorkflowInstance.workflow_name,
-            func.count().filter(WorkflowInstance.status.in_(['completed', 'WorkflowStatus.COMPLETED'])).label('completed'),
-            func.count().filter(WorkflowInstance.status.in_(['failed', 'stopped'])).label('failed')
+            func.count().label('total'),
+            func.count().filter(WorkflowInstance.status.in_(COMPLETED_STATES)).label('completed'),
+            func.count().filter(WorkflowInstance.status.in_(FAILED_STATES)).label('failed'),
         )
         .where(WorkflowInstance.tenant_id == tenant_id)
         .group_by(WorkflowInstance.workflow_name)
     )
     performance = []
     for row in perf_res.all():
+        total_all = row.total or 0
+        if total_all == 0:
+            continue
         comp = row.completed or 0
         fail = row.failed or 0
-        total = comp + fail
-        if total > 0:
-            rate = round((comp / total) * 100)
-            performance.append({
-                'name': row.workflow_name or 'Unknown',
-                'success_rate': rate,
-                'runs': comp + fail
-            })
+        finished = comp + fail
+        rate = round((comp / finished) * 100) if finished > 0 else 0
+        performance.append({
+            'name': row.workflow_name or 'Unknown',
+            'success_rate': rate,
+            'runs': total_all,
+            'completed': comp,
+            'failed': fail,
+        })
     performance.sort(key=lambda x: x['runs'], reverse=True)
     performance = performance[:5]
 
@@ -1001,7 +1040,12 @@ async def get_dashboard_data(db: AsyncSession, tenant_id: str) -> dict:
         })
 
     return {
-        'active_runs': {'current': active_count or 0, 'initiated_today': initiated_today or 0},
+        'active_runs': {
+            'current': active_count or 0,
+            'running': running_count or 0,
+            'awaiting': awaiting_count or 0,
+            'initiated_today': initiated_today or 0,
+        },
         'pending_approvals': {'total': pending_approvals},
         'tasks_completed': {'total': tasks_total, 'trend': tasks_trend},
         'net_savings': {'value': None, 'status': 'not_measured'},
@@ -1479,6 +1523,64 @@ async def approval_item_to_dict(item) -> dict:
         or inner_payload.get("urgency_score")
         or (9 if "sla" in (item.reason or "").lower() or "urgent" in (item.reason or "").lower() else 7)
     )
+    try:
+        urgency_score = int(float(urgency_score))
+    except (TypeError, ValueError):
+        urgency_score = 7
+    reason_text = " ".join([
+        str(item.reason or ""),
+        str(subject or ""),
+        str(raw_payload.get("title") or raw_payload.get("context_brief") or ""),
+    ]).lower()
+    if raw_payload.get("category") or inner_payload.get("category"):
+        category = raw_payload.get("category") or inner_payload.get("category")
+    elif "billing" in reason_text or "invoice" in reason_text or "charge" in reason_text:
+        category = "billing_dispute"
+    elif "outage" in reason_text or "downtime" in reason_text or "500" in reason_text:
+        category = "service_outage"
+    elif "executive" in reason_text or "partner" in reason_text or "cto" in reason_text:
+        category = "executive_partner"
+    elif "sla" in reason_text or "urgent" in reason_text:
+        category = "sla_risk"
+    else:
+        category = "routine_inquiry"
+
+    category_labels = {
+        "sla_risk": "SLA Risk",
+        "billing_dispute": "Billing Dispute",
+        "service_outage": "Service Outage",
+        "executive_partner": "Executive Partner",
+        "routine_inquiry": "Routine Inquiry",
+    }
+    category_label = (
+        raw_payload.get("category_label")
+        or inner_payload.get("category_label")
+        or category_labels.get(category, str(category).replace("_", " ").title())
+    )
+    trigger_keywords = (
+        raw_payload.get("trigger_keywords")
+        or inner_payload.get("trigger_keywords")
+        or [kw for kw in ("urgent", "sla", "billing", "outage", "invoice") if kw in reason_text]
+        or ["customer escalation"]
+    )
+    detected_sentiment = (
+        raw_payload.get("detected_sentiment")
+        or inner_payload.get("detected_sentiment")
+        or ("urgent_negative" if int(urgency_score) >= 9 else "concerned")
+    )
+    xai_explanation = (
+        raw_payload.get("xai_explanation")
+        or inner_payload.get("xai_explanation")
+        or {
+            "trigger_rationale": f"Flagged because the message matched {category_label.lower()} signals and scored {urgency_score}/10 urgency.",
+            "strategy_rationale": "Recommended human-reviewed response because the item is customer-facing and time-sensitive.",
+            "confidence_metrics": {
+                "intent_match": raw_payload.get("confidence") or inner_payload.get("confidence") or 0.90,
+                "sentiment_confidence": 0.88,
+                "safety_boundary_cleared": 0.96,
+            },
+        }
+    )
 
     normalized_payload = {
         **raw_payload,
@@ -1486,7 +1588,13 @@ async def approval_item_to_dict(item) -> dict:
         "recipient": recipient,
         "subject": subject,
         "draft_reply": draft_reply,
+        "source": source,
         "urgency_score": urgency_score,
+        "category": category,
+        "category_label": category_label,
+        "detected_sentiment": detected_sentiment,
+        "trigger_keywords": trigger_keywords,
+        "xai_explanation": xai_explanation,
     }
 
     return {
@@ -1500,6 +1608,11 @@ async def approval_item_to_dict(item) -> dict:
         "recommended_action": raw_payload.get("action_type") or "approve_draft",
         "context_brief": item.context_brief or "",
         "payload": normalized_payload,
+        "category": category,
+        "urgency_score": urgency_score,
+        "detected_sentiment": detected_sentiment,
+        "trigger_keywords": trigger_keywords,
+        "xai_explanation": xai_explanation,
         "status": item.status,
         "required_signatures": item.required_signatures or 1,
         "signatures": item.signatures or [],

@@ -77,10 +77,21 @@ function TimelineItem({ run, isLast }) {
 }
 
 // ── Progress Row ──────────────────────────────────────────────────────────────
-function ProgressRow({ name, pct, color }) {
+function ProgressRow({ name, pct, color, runs, onOpen }) {
   return (
-    <div>
-      <p className="text-sm font-semibold text-gray-900 mb-2 truncate">{name}</p>
+    <div
+      onClick={onOpen}
+      className={onOpen ? 'cursor-pointer group -mx-2 px-2 py-1.5 rounded-lg hover:bg-gray-50 transition-colors' : undefined}
+      title={onOpen ? `Open ${name} in builder` : undefined}
+    >
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <p className={`text-sm font-semibold text-gray-900 truncate${onOpen ? ' group-hover:text-blue-600 transition-colors' : ''}`}>{name}</p>
+        {runs != null && (
+          <span className="text-[11px] font-semibold text-gray-500 whitespace-nowrap">
+            {runs} {runs === 1 ? 'run' : 'runs'}
+          </span>
+        )}
+      </div>
       <div className="flex items-center gap-3">
         <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
           <div className={`h-full rounded-full transition-all duration-500 ${color}`} style={{ width: `${pct}%` }} />
@@ -143,6 +154,8 @@ export default function Dashboard() {
   const sparkData = data?.tasks_completed?.trend?.map((v, idx) => ({ idx, v })) || []
 
   const activeRuns    = data?.active_runs?.current ?? 0
+  const activeRunning = data?.active_runs?.running ?? 0
+  const activeAwait   = data?.active_runs?.awaiting ?? 0
   const pendingAppr   = data?.pending_approvals?.total ?? 0
   const tasksComp     = data?.tasks_completed?.total ?? 0
   const netSavings    = data?.net_savings?.value != null ? fmtCost(data.net_savings.value) : '—'
@@ -170,8 +183,14 @@ export default function Dashboard() {
         <KpiCard
           title="Active Runs"
           icon={<Activity className="w-4 h-4" />}
-          value={loading ? '—' : activeRuns || <span className="text-gray-400">No data</span>}
-          sub={activeRuns ? `${data?.active_runs?.initiated_today || 0} initiated today` : 'No runs yet'}
+          value={loading ? '—' : activeRuns}
+          sub={
+            loading
+              ? ''
+              : activeRuns > 0
+                ? `${activeRunning} running · ${activeAwait} awaiting`
+                : `${data?.active_runs?.initiated_today || 0} initiated today`
+          }
         />
         <KpiCard
           title="Pending Approvals"
@@ -274,7 +293,7 @@ export default function Dashboard() {
               <div className="space-y-4">
                 {performance.slice(0, 5).map((p, i) => {
                   const colors = ['bg-green-500', 'bg-blue-500', 'bg-blue-400', 'bg-amber-500', 'bg-red-400']
-                  return <ProgressRow key={p.name} name={p.name} pct={p.success_rate || 0} color={colors[i] || 'bg-blue-500'} />
+                  return <ProgressRow key={p.name} name={p.name} pct={p.success_rate || 0} color={colors[i] || 'bg-blue-500'} runs={p.runs} onOpen={() => navigate(`/workflows/builder?wf=${encodeURIComponent(p.name)}`)} />
                 })}
               </div>
             )}

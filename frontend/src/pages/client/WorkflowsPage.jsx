@@ -9,6 +9,8 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { timeAgo, fmtCost, fmtTokens } from '../../utils/helpers'
+import { getDisplayName } from '../../utils/workflowDisplayNames'
+import { Modal } from '../../components/ui'
 import RunWorkflowModal from '../../components/workflow/RunWorkflowModal'
 
 const STATUS_OPTS = ['All statuses', 'active', 'draft', 'paused', 'stopped']
@@ -55,6 +57,8 @@ export default function WorkflowsPage() {
   const [loading,     setLoading]     = useState(true)
   const [modalOpen,   setModalOpen]   = useState(false)
   const [targetWf,    setTargetWf]    = useState({ name: 'email_summarizer', displayName: 'Email Summarizer' })
+  const [selectModalOpen, setSelectModalOpen] = useState(false)
+  const openSelectModal = () => setSelectModalOpen(true)
 
   const load = useCallback(async () => {
     try {
@@ -91,7 +95,9 @@ export default function WorkflowsPage() {
   })
 
   const filteredWorkflows = enriched.filter(w => {
-    const matchSearch = !search || w.name.toLowerCase().includes(search.toLowerCase()) || (w.display_name || '').toLowerCase().includes(search.toLowerCase())
+    const norm = (str) => (str || '').toLowerCase().replace(/[\s_]+/g, '')
+    const normSearch = norm(search)
+    const matchSearch = !search || norm(w.name).includes(normSearch) || norm(w.display_name).includes(normSearch)
     const matchStatus = statusFilter === 'All statuses' || w.displayStatus === statusFilter
     return matchSearch && matchStatus
   })
@@ -109,7 +115,7 @@ export default function WorkflowsPage() {
     if (e) e.stopPropagation()
     setTargetWf({
       name: wf.name || 'email_summarizer',
-      displayName: wf.display_name || wf.name || 'Email Summarizer',
+      displayName: getDisplayName(wf.name, wf.display_name),
     })
     setModalOpen(true)
   }
@@ -127,7 +133,45 @@ export default function WorkflowsPage() {
         }}
       />
 
-      {/* Header */}
+      {/* Trigger Workflow Selection Modal */}
+      <Modal
+        open={selectModalOpen}
+        onClose={() => setSelectModalOpen(false)}
+        title="Trigger Workflow"
+        width="max-w-lg"
+      >
+        <div className="space-y-4">
+          {enriched.length === 0 ? (
+            <p className="text-sm text-gray-500">No workflows available.</p>
+          ) : (
+            <div className="max-h-96 overflow-y-auto">
+              {enriched.map(wf => (
+                <button
+                  key={wf.name}
+                  className="flex items-center justify-between w-full px-3 py-2 text-sm hover:bg-gray-100 rounded"
+                  onClick={() => {
+                    setTargetWf({ name: wf.name, displayName: getDisplayName(wf.name, wf.display_name) })
+                    setModalOpen(true)
+                    setSelectModalOpen(false)
+                  }}
+                >
+                  <div className="flex flex-col items-start">
+                    <span className="font-medium">{getDisplayName(wf.name, wf.display_name)}</span>
+                    <span className="text-xs text-gray-500">{wf.name}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2">
+                      <StatusBadge status={wf.displayStatus} />
+                      <TriggerBadge triggerType={wf.triggerType} />
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </Modal>
+
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Workflows</h1>
@@ -135,10 +179,10 @@ export default function WorkflowsPage() {
         </div>
         <div className="flex items-center gap-2.5">
           <button
-            onClick={() => openRunModal({ name: 'email_summarizer', display_name: 'Email Summarizer' })}
+            onClick={openSelectModal}
             className="flex items-center gap-1.5 px-3.5 py-2 bg-white border border-blue-200 text-blue-700 hover:bg-blue-50 text-sm font-semibold rounded-lg transition-colors shadow-sm"
           >
-            <Play className="w-4 h-4 text-blue-600 fill-blue-600" /> Run Email Summarizer
+            <Play className="w-4 h-4 text-blue-600 fill-blue-600" /> Trigger Workflow
           </button>
           <button
             onClick={() => navigate('/workflows/builder')}
@@ -238,12 +282,12 @@ export default function WorkflowsPage() {
                 filteredWorkflows.map(wf => (
                   <tr
                     key={wf.name}
-                    onClick={() => navigate('/workflows/builder')}
+                    onClick={() => navigate(`/workflows/builder?wf=${encodeURIComponent(wf.name)}`)}
                     className="border-b border-gray-50 hover:bg-gray-50/80 cursor-pointer transition-colors last:border-0 group"
                   >
                     <td className="px-5 py-4">
                       <p className="text-sm font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
-                        {wf.display_name || wf.name}
+                        {getDisplayName(wf.name, wf.display_name)}
                       </p>
                       <p className="text-xs text-gray-400 mt-0.5 font-mono">{wf.name}</p>
                     </td>
