@@ -139,6 +139,70 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
+_jwks_cache: dict[str, Any] = {"keys": None, "fetched_at": 0}
+
+
+def get_supabase_jwks() -> Optional[dict]:
+    """Fetch and cache Supabase Auth JWKS public keys."""
+    import time
+    now = time.time()
+    if _jwks_cache["keys"] and (now - _jwks_cache["fetched_at"] < 3600):
+        return _jwks_cache["keys"]
+
+    supabase_url = os.getenv("SUPABASE_URL") or os.getenv("VITE_SUPABASE_URL")
+    if not supabase_url:
+        return None
+    url = f"{supabase_url.rstrip('/')}/auth/v1/.well-known/jwks.json"
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "SMBFlow-Auth"})
+        with urllib.request.urlopen(req, timeout=5.0) as resp:
+            if resp.status == 200:
+                data = json.loads(resp.read().decode("utf-8"))
+                _jwks_cache["keys"] = data
+                _jwks_cache["fetched_at"] = now
+                return data
+    except Exception as e:
+        log.debug("Failed to fetch Supabase JWKS", error=str(e))
+    return None
+
+
+def _verify_supabase_jwks(token: str) -> Optional[dict]:
+    """
+    Cryptographically verify Supabase Auth ES256/RS256 JWT signature using JWKS.
+    """
+    try:
+        from jose import jwk
+        header = jwt.get_unverified_header(token)
+        alg = header.get("alg", "ES256")
+        kid = header.get("kid")
+        jwks = get_supabase_jwks()
+        if not jwks or "keys" not in jwks:
+            return None
+
+        target_key = None
+        if kid:
+            for k in jwks["keys"]:
+                if k.get("kid") == kid:
+                    target_key = k
+                    break
+        if not target_key and jwks["keys"]:
+            target_key = jwks["keys"][0]
+
+        if not target_key:
+            return None
+
+        key_obj = jwk.construct(target_key, alg)
+        return jwt.decode(
+            token,
+            key_obj,
+            algorithms=[alg, "ES256", "RS256", "HS256"],
+            options={"verify_aud": False}
+        )
+    except Exception as e:
+        log.debug("Supabase JWKS signature verification skipped/failed", error=str(e))
+        return None
+
+
 def _verify_supabase_token_online(token: str) -> Optional[dict]:
     """
     Cryptographically validates a Supabase Auth Bearer token by querying the
@@ -175,17 +239,40 @@ def decode_token(token: str) -> TokenData:
     Strictly verifies and decodes a Bearer JWT access token.
     
     Verification hierarchy (ALL require cryptographic proof):
-    1. Direct HMAC-SHA256 signature verification using SUPABASE_JWT_SECRET
-    2. Direct HMAC-SHA256 signature verification using SECRET_KEY
-    3. Server-side token validation against Supabase Auth API (/auth/v1/user)
+    1. Direct ES256/RS256 signature verification using Supabase JWKS
+    2. Direct HMAC-SHA256 signature verification using SUPABASE_JWT_SECRET
+    3. Direct HMAC-SHA256 signature verification using SECRET_KEY
+    4. Server-side token validation against Supabase Auth API (/auth/v1/user)
     
     Unverified claims are NEVER accepted. Invalid or forged tokens return HTTP 401.
     """
+    # 1. Attempt ES256/RS256 signature verification via Supabase JWKS
+    payload = _verify_supabase_jwks(token)
+    if payload:
+        user_id = payload.get("sub") or payload.get("user_id")
+        email = payload.get("email", f"{user_id}@smbflow.com")
+        user_meta = payload.get("user_metadata") or {}
+        role = payload.get("role") or user_meta.get("role", "org_user")
+        if role == "super_admin":
+            role = "platform_admin"
+        elif role in ("tenant_user", "authenticated"):
+            role = "org_user"
+        org_id = payload.get("organization_id") or payload.get("tenant_id") or user_meta.get("organization_id") or user_meta.get("tenant_id")
+        full_name = payload.get("full_name") or user_meta.get("full_name") or user_meta.get("name")
+        return TokenData(
+            user_id=str(user_id),
+            email=email,
+            role=role,
+            organization_id=str(org_id) if org_id else None,
+            tenant_id=str(org_id) if org_id else None,
+            full_name=full_name,
+        )
+
     key = get_supabase_jwt_secret()
 
-    # 1. Attempt signature verification using SUPABASE_JWT_SECRET
+    # 2. Attempt signature verification using SUPABASE_JWT_SECRET
     try:
-        payload = jwt.decode(token, key, algorithms=[ALGORITHM], options={"verify_aud": False})
+        payload = jwt.decode(token, key, algorithms=["HS256", "ES256", "RS256"], options={"verify_aud": False})
         user_id = payload.get("sub") or payload.get("user_id")
         email = payload.get("email", "user@smbflow.com")
         role = payload.get("role") or payload.get("user_metadata", {}).get("role", "org_user")
@@ -207,10 +294,10 @@ def decode_token(token: str) -> TokenData:
     except JWTError:
         pass
 
-    # 2. Attempt signature verification using local SECRET_KEY (if distinct from key)
+    # 3. Attempt signature verification using local SECRET_KEY (if distinct from key)
     if key != SECRET_KEY:
         try:
-            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM], options={"verify_aud": False})
+            payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256", "ES256", "RS256"], options={"verify_aud": False})
             role = payload.get("role", "org_user")
             if role == "super_admin":
                 role = "platform_admin"
@@ -228,7 +315,7 @@ def decode_token(token: str) -> TokenData:
         except JWTError:
             pass
 
-    # 3. Server-side online validation against Supabase Auth API (/auth/v1/user)
+    # 4. Server-side online validation against Supabase Auth API (/auth/v1/user)
     user_data = _verify_supabase_token_online(token)
     if user_data and user_data.get("id"):
         user_id = user_data["id"]

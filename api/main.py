@@ -280,15 +280,19 @@ async def _local_broadcast(event_type: str, data: dict) -> None:
 @app.websocket("/ws/{session_id}")
 async def websocket_endpoint(websocket: WebSocket, session_id: str):
     token = websocket.query_params.get("token")
+    if not token:
+        await websocket.close(code=4001)
+        return
     try:
-        from api.auth import decode_token
-        token_data = decode_token(token) if token else None
-    except Exception:
+        from api.deps.auth import get_current_user_from_token
+        token_data = await get_current_user_from_token(token)
+    except Exception as e:
+        log.warning("WebSocket authentication failed", error=str(e), session_id=session_id)
         await websocket.close(code=4001)
         return
  
     await websocket.accept()
-    user_tenant = getattr(token_data, "tenant_id", None)
+    user_tenant = getattr(token_data, "tenant_id", None) or getattr(token_data, "organization_id", None)
     user_role   = getattr(token_data, "role", "anon")
     _ws_connections[session_id] = (websocket, user_tenant)
  
@@ -1457,11 +1461,48 @@ async def trigger_workflow(
         )
 
     # Normalize trigger signal / payload
-    sig = body.trigger_signal or body.signal_data or {}
+    sig = body.trigger_signal or body.signal_data or getattr(body, "trigger_payload", None) or {}
     if not isinstance(sig, dict):
         sig = {}
-    if "source" not in sig:
-        sig["source"] = "manual_ui"
+
+    req_source = sig.get("source")
+    if body.workflow_name == "email_summarizer":
+        if req_source not in ("real_gmail", "synthetic_demo"):
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "error_code": "INVALID_SOURCE",
+                    "message": "Explicit 'source' parameter required for email_summarizer. Allowed values: 'real_gmail' or 'synthetic_demo'.",
+                },
+            )
+
+        if req_source == "real_gmail":
+            org_id = effective_tenant_id or current_user.organization_id or current_user.tenant_id
+            gmail_conn_ok = False
+            if org_id:
+                try:
+                    from sqlalchemy import select
+                    from db.models.core import ToolConnection
+                    org_uuid = uuid.UUID(str(org_id))
+                    conn_stmt = select(ToolConnection).where(
+                        ToolConnection.organization_id == org_uuid,
+                        ToolConnection.tool_name == "gmail",
+                        ToolConnection.status == "connected",
+                    )
+                    tc_res = await db.execute(conn_stmt)
+                    if tc_res.scalar_one_or_none():
+                        gmail_conn_ok = True
+                except Exception as _check_err:
+                    log.warning("Failed checking Gmail connection status", error=str(_check_err))
+
+            if not gmail_conn_ok:
+                raise HTTPException(
+                    status_code=400,
+                    detail={
+                        "error_code": "GMAIL_CONNECTION_REQUIRED",
+                        "message": "Real Gmail source requested, but no active connected Gmail connection was found for this organization. Please connect Gmail in Settings -> Tool Connections.",
+                    },
+                )
 
     # Create workflow instance record
     run_id = str(uuid.uuid4())
@@ -1509,12 +1550,15 @@ async def trigger_workflow(
 @app.get("/api/v1/workflows/{workflow_name}/trigger-info", tags=["Workflows"])
 async def get_workflow_trigger_info(
     workflow_name: str,
+    date_range: Optional[str] = "Today",
+    scope: Optional[str] = "Inbox",
+    batch_size: Optional[int] = 10,
     current_user: TokenData = Depends(require_any_auth),
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Returns real runtime trigger information, available message counts from fixtures,
-    and execution statistics for the given workflow.
+    Returns real runtime trigger information, available message counts from fixtures or real Gmail,
+    filtered counts, preview messages, and connection health status for the given workflow.
     """
     safe_name = workflow_name.replace("/", "_").replace("..", "")
     dag_path = Path("workflows/dags") / f"{safe_name}.json"
@@ -1545,6 +1589,83 @@ async def get_workflow_trigger_info(
 
     # Compute stats for authenticated org / tenant
     org_id = current_user.organization_id or current_user.tenant_id
+    real_messages_count = 0
+    total_inbox_count = 0
+    real_gmail_connected = False
+    real_gmail_status = "not_connected"
+    real_gmail_error = None
+    connected_email = None
+    preview_messages = []
+
+    def _build_gmail_query(dr: str = "Today", sc: str = "Inbox") -> str:
+        parts = []
+        sc_lower = (sc or "").lower()
+        if sc_lower == "unread":
+            parts.append("is:unread in:inbox")
+        elif sc_lower == "important":
+            parts.append("is:important in:inbox")
+        elif sc_lower == "starred":
+            parts.append("is:starred in:inbox")
+        else:
+            parts.append("in:inbox")
+
+        dr_lower = (dr or "").lower()
+        if "today" in dr_lower:
+            parts.append("newer_than:1d")
+        elif "7" in dr_lower:
+            parts.append("newer_than:7d")
+        elif "30" in dr_lower:
+            parts.append("newer_than:30d")
+        
+        return " ".join(parts)
+
+    if org_id and (workflow_name == "email_summarizer" or "email" in workflow_name):
+        try:
+            from sqlalchemy import select
+            from db.models.core import ToolConnection
+            from integrations.key_vault import decrypt_credentials
+            from integrations.connectors import GmailConnector
+
+            org_uuid = uuid.UUID(str(org_id)) if isinstance(org_id, str) else org_id
+            conn_stmt = select(ToolConnection).where(
+                ToolConnection.organization_id == org_uuid,
+                ToolConnection.tool_name == "gmail",
+                ToolConnection.status == "connected"
+            )
+            c_res = await db.execute(conn_stmt)
+            conn_obj = c_res.scalar_one_or_none()
+
+            if conn_obj and conn_obj.encrypted_credentials:
+                raw_creds = decrypt_credentials(conn_obj.encrypted_credentials)
+                if raw_creds:
+                    real_gmail_connected = True
+                    connected_email = (conn_obj.config or {}).get("connected_email") or (conn_obj.config or {}).get("sender_alias")
+                    gc = GmailConnector(raw_creds, config=conn_obj.config or {})
+                    
+                    inbox_stubs = await gc.read("messages", {"q": "in:inbox", "limit": 100})
+                    err_info = gc.get_last_error_info() if hasattr(gc, "get_last_error_info") else {}
+
+                    if err_info.get("error_code") in (401, 403, 500) or err_info.get("error"):
+                        real_gmail_status = "reauth_required" if err_info.get("error_code") in (401, 403) else "error"
+                        real_gmail_error = err_info.get("error") or "Gmail API read error"
+                        real_messages_count = 0
+                        total_inbox_count = 0
+                    else:
+                        real_gmail_status = "ok"
+                        total_inbox_count = len(inbox_stubs)
+                        query_q = _build_gmail_query(date_range, scope)
+                        if query_q == "in:inbox":
+                            filter_stubs = inbox_stubs
+                        else:
+                            filter_stubs = await gc.read("messages", {"q": query_q, "limit": 100})
+                        
+                        real_messages_count = len(filter_stubs)
+                        prev_limit = min(max(1, batch_size or 10), 5)
+                        preview_messages = await gc.read_detailed_messages(query=query_q, limit=prev_limit)
+        except Exception as ex:
+            log.warning("Failed to query real Gmail count for trigger info", error=str(ex))
+            real_gmail_error = str(ex)
+
     instances = await crud.list_workflow_instances(db, tenant_id=org_id, limit=200)
     wf_runs = [i for i in instances if i.workflow_name == workflow_name]
     completed_runs = [i for i in wf_runs if i.status in ("completed", "WorkflowStatus.COMPLETED")]
@@ -1572,6 +1693,17 @@ async def get_workflow_trigger_info(
         "trigger_type": trigger_type,
         "source": source,
         "available_messages_count": available_messages_count,
+        "synthetic_messages_count": available_messages_count,
+        "real_messages_count": real_messages_count,
+        "total_inbox_count": total_inbox_count,
+        "real_gmail_connected": real_gmail_connected,
+        "real_gmail_status": real_gmail_status,
+        "real_gmail_error": real_gmail_error,
+        "connected_email": connected_email,
+        "preview_messages": preview_messages,
+        "date_range": date_range,
+        "scope": scope,
+        "batch_size": batch_size,
         "total_runs": len(wf_runs),
         "completed_runs": len(completed_runs),
         "success_rate": round((len(completed_runs) / len(wf_runs)) * 100) if wf_runs else None,
@@ -3406,6 +3538,58 @@ async def dismiss_auto_eval_suggestion(
 # Background execution (creates own DB sessions)
 # ─────────────────────────────────────────────────────────────────────────────
 
+async def _load_stored_credentials_for_workflow(db: AsyncSession, tenant_config: dict) -> dict:
+    """
+    Fetch stored credentials for workflow execution from both:
+    1. Legacy IntegrationCredential rows (by client_id / tenant_id)
+    2. First-Class ToolConnection rows (by organization_id / client_id)
+    """
+    client_id = tenant_config.get("client_id")
+    org_id = tenant_config.get("organization_id") or client_id
+    stored_creds = {}
+
+    # 1. Legacy IntegrationCredential table
+    if client_id:
+        try:
+            creds_rows = await crud.list_credentials(db, tenant_id=client_id)
+            for c in creds_rows:
+                raw = (c.credentials or {}).get("encrypted", "")
+                if raw:
+                    try:
+                        stored_creds[c.tool_name] = decrypt_credentials(raw)
+                    except Exception as _e:
+                        log.warning("Failed to decrypt legacy credential", tool=c.tool_name, error=str(_e))
+        except Exception as _leg_err:
+            log.warning("Failed reading legacy credentials", error=str(_leg_err))
+
+    # 2. Canonical ToolConnection table
+    if org_id:
+        try:
+            import uuid
+            from sqlalchemy import select
+            from db.models.core import ToolConnection
+            org_uuid = uuid.UUID(str(org_id))
+            conn_stmt = select(ToolConnection).where(
+                ToolConnection.organization_id == org_uuid,
+                ToolConnection.status == "connected"
+            )
+            tc_result = await db.execute(conn_stmt)
+            for tc in tc_result.scalars().all():
+                if tc.encrypted_credentials:
+                    try:
+                        dec = decrypt_credentials(tc.encrypted_credentials)
+                        if isinstance(dec, dict):
+                            if tc.config and isinstance(tc.config, dict):
+                                dec = {**tc.config, **dec}
+                            stored_creds[tc.tool_name] = dec
+                    except Exception as _tc_dec_err:
+                        log.warning("Failed to decrypt ToolConnection credentials", tool=tc.tool_name, error=str(_tc_dec_err))
+        except Exception as _tc_err:
+            log.warning("Failed querying ToolConnection table for credentials", error=str(_tc_err))
+
+    return stored_creds
+
+
 async def _execute_workflow_background(
     run_id: str,
     tenant_config: dict,
@@ -3427,13 +3611,7 @@ async def _execute_workflow_background(
     async with db:
         try:
             llm_router = LLMRouter()
-            creds_rows = await crud.list_credentials(db, tenant_id=tenant_config.get("client_id"))
-            stored_creds = {}
-            for c in creds_rows:
-                raw = (c.credentials or {}).get("encrypted", "")
-                if raw:
-                    stored_creds[c.tool_name] = decrypt_credentials(raw)
-
+            stored_creds = await _load_stored_credentials_for_workflow(db, tenant_config)
             tool_registry = build_registry(tenant_config, credentials=stored_creds)
             state_manager = StateManager(session=db)
             rag_engine = RAGEngine(db_session=db, llm_router=llm_router)
@@ -3543,13 +3721,7 @@ async def _resume_workflow_background(
                 return
 
             llm_router = LLMRouter()
-            creds_rows = await crud.list_credentials(db, tenant_id=tenant_config.get("client_id"))
-            stored_creds = {}
-            for c in creds_rows:
-                raw = (c.credentials or {}).get("encrypted", "")
-                if raw:
-                    stored_creds[c.tool_name] = decrypt_credentials(raw)
-
+            stored_creds = await _load_stored_credentials_for_workflow(db, tenant_config)
             tool_registry = build_registry(tenant_config, credentials=stored_creds)
             rag_engine = RAGEngine(db_session=db, llm_router=llm_router)
 
@@ -3642,13 +3814,7 @@ async def _fork_workflow_background(
             accumulated_context["_fork_node"] = from_node_id
 
             llm_router = LLMRouter()
-            creds_rows = await crud.list_credentials(db, tenant_id=tenant_config.get("client_id"))
-            stored_creds = {}
-            for c in creds_rows:
-                raw = (c.credentials or {}).get("encrypted", "")
-                if raw:
-                    stored_creds[c.tool_name] = decrypt_credentials(raw)
-
+            stored_creds = await _load_stored_credentials_for_workflow(db, tenant_config)
             tool_registry = build_registry(tenant_config, credentials=stored_creds)
             state_manager = StateManager(session=db)
             rag_engine = RAGEngine(db_session=db, llm_router=llm_router)

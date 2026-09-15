@@ -871,6 +871,17 @@ class WorkflowOrchestrator:
                                     continue
                             except Exception as _tz_err:
                                 log.debug("Operating hours check failed (non-fatal)", error=str(_tz_err))
+                    # ── Phase 3: Strict Runtime Tool Isolation based on trigger_signal.source ─────
+                    req_source = (trigger_signal or {}).get("source") or accumulated_context.get("trigger_signal", {}).get("source")
+                    if workflow_name == "email_summarizer" or node_id == "fetch_emails":
+                        if req_source == "real_gmail":
+                            if "gmail_read_messages" not in self._tools._tools:
+                                log.error("GMAIL_SOURCE_UNAVAILABLE: Real Gmail requested but gmail_read_messages missing from registry", run=run_id[:8])
+                                raise RuntimeError("GMAIL_SOURCE_UNAVAILABLE: Real Gmail could not be accessed. No synthetic data was used.")
+                            node = {**node, "tools": ["gmail_read_messages"]}
+                        elif req_source == "synthetic_demo":
+                            node = {**node, "tools": ["email_get_synthetic_messages"]}
+
                     # ── Build input & run agent ───────────────────────────────────────
                     agent_input = AgentInput(
                         workflow_instance_id=run_id,
@@ -920,6 +931,14 @@ class WorkflowOrchestrator:
                             reasoning_chain="", error=str(e),
                             provider_attempts=getattr(e, "attempts", None),
                         )
+
+                    # ── Phase 3 & 9: Strict Real Gmail Failure Check (Zero Synthetic Fallback) ──────
+                    if (workflow_name == "email_summarizer" or node_id == "fetch_emails") and req_source == "real_gmail":
+                        _is_synth = isinstance(output.output_data, dict) and output.output_data.get("data_origin") == "synthetic"
+                        if not output.success or output.error or _is_synth:
+                            err_msg = output.error or ("Returned synthetic data instead of Real Gmail" if _is_synth else "Gmail API failure")
+                            log.error("GMAIL_SOURCE_UNAVAILABLE: Real Gmail execution failed", run=run_id[:8], error=err_msg)
+                            raise RuntimeError(f"GMAIL_SOURCE_UNAVAILABLE: Real Gmail could not be accessed ({err_msg}). No synthetic data was used.")
                     
                     # ── Parse-error self-healing: retry once with conciseness hint ──────
                     # If the LLM hit max_tokens and output was truncated (even after

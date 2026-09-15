@@ -209,6 +209,16 @@ class GmailConnector(BaseConnector):
         self._sender_name = (config or {}).get("sender_name", "OpsGrid")
         self._queue_for_approval = (config or {}).get("queue_for_approval", True)
         self._on_token_refreshed = on_token_refreshed
+        self._last_error = None
+        self._last_error_code = None
+        self._last_error_reason = None
+
+    def get_last_error_info(self) -> dict:
+        return {
+            "error_code": self._last_error_code,
+            "error": self._last_error,
+            "error_reason": self._last_error_reason,
+        }
 
     async def refresh_access_token(self) -> bool:
         """Exchange refresh_token for a new access_token using Google OAuth token endpoint."""
@@ -218,6 +228,9 @@ class GmailConnector(BaseConnector):
 
         if not (refresh_token and client_id and client_secret):
             self._log.warning("Token refresh skipped — missing refresh_token, client_id, or client_secret")
+            self._last_error_code = 401
+            self._last_error = "Missing refresh token or Google OAuth client configuration."
+            self._last_error_reason = "missing_credentials"
             return False
 
         try:
@@ -255,9 +268,21 @@ class GmailConnector(BaseConnector):
 
                         self._log.info("Successfully refreshed Google OAuth access token")
                         return True
-                self._log.error("Google token refresh failed", status=resp.status_code)
+                
+                err_msg = f"HTTP {resp.status_code} token refresh failed"
+                try:
+                    err_msg = resp.json().get("error_description") or resp.json().get("error") or err_msg
+                except Exception:
+                    pass
+                self._last_error_code = resp.status_code
+                self._last_error = err_msg
+                self._last_error_reason = "refresh_failed"
+                self._log.error("Google token refresh failed", status=resp.status_code, error=err_msg)
                 return False
         except Exception as e:
+            self._last_error_code = 500
+            self._last_error = str(e)
+            self._last_error_reason = "exception"
             self._log.error("Token refresh exception", error=str(e))
             return False
 
@@ -274,8 +299,8 @@ class GmailConnector(BaseConnector):
 
     async def authenticate(self) -> bool:
         try:
-            await self._ensure_valid_token()
-            if not self._access_token:
+            valid_tok = await self._ensure_valid_token()
+            if not valid_tok or not self._access_token:
                 return False
 
             if not self._client:
@@ -294,19 +319,38 @@ class GmailConnector(BaseConnector):
                     )
                     resp = await self._client.get(f"{self.BASE_URL}/users/me/profile")
 
+            if resp.status_code != 200:
+                err_detail = {}
+                try:
+                    err_detail = resp.json().get("error", {})
+                except Exception:
+                    pass
+                msg = err_detail.get("message") or f"HTTP {resp.status_code} error from Gmail API profile check"
+                self._last_error_code = resp.status_code
+                self._last_error = msg
+                self._last_error_reason = err_detail.get("errors", [{}])[0].get("reason", "auth_failed")
+
             return resp.status_code == 200
         except Exception as e:
+            self._last_error = str(e)
             self._log.error("Gmail authenticate failed", error=str(e))
             return False
 
     async def read(self, resource: str, filters: dict = None) -> list[dict]:
         """Read recent emails. resource: 'messages' | 'threads'"""
         filters = filters or {}
-        q = filters.get("q", "in:sent")
+        q = filters.get("q", "in:inbox")
         limit = filters.get("limit", 10)
+        self._last_error = None
+        self._last_error_code = None
+        self._last_error_reason = None
         try:
-            await self._ensure_valid_token()
-            if not self._access_token:
+            valid_tok = await self._ensure_valid_token()
+            if not valid_tok or not self._access_token:
+                if not self._last_error:
+                    self._last_error_code = 401
+                    self._last_error = "Missing or expired Google OAuth access token"
+                    self._last_error_reason = "token_expired"
                 return []
 
             if not self._client:
@@ -327,10 +371,33 @@ class GmailConnector(BaseConnector):
                         f"{self.BASE_URL}/users/me/{resource}",
                         params={"q": q, "maxResults": limit}
                     )
+                else:
+                    if not self._last_error:
+                        self._last_error_code = 401
+                        self._last_error = "Google OAuth token refresh failed or token revoked"
+                        self._last_error_reason = "refresh_failed"
+                    return []
 
-            resp.raise_for_status()
+            if resp.status_code != 200:
+                err_detail = {}
+                try:
+                    err_detail = resp.json().get("error", {})
+                except Exception:
+                    pass
+                msg = err_detail.get("message") or f"HTTP {resp.status_code} error from Gmail API"
+                errors_list = err_detail.get("errors", [])
+                reason = errors_list[0].get("reason") if errors_list else ("accessNotConfigured" if "disabled" in msg.lower() else "forbidden")
+
+                self._last_error_code = resp.status_code
+                self._last_error = f"HTTP {resp.status_code}: {msg}"
+                self._last_error_reason = reason
+                self._log.error("Gmail read API error", status=resp.status_code, reason=reason, message=msg[:200])
+                return []
+
             return resp.json().get("messages", [])
         except Exception as e:
+            self._last_error = str(e)
+            self._last_error_code = 500
             self._log.error("Gmail read failed", error=str(e))
             return []
 
@@ -349,7 +416,7 @@ class GmailConnector(BaseConnector):
                 resp = await self._client.get(f"{self.BASE_URL}/users/me/messages/{msg_id}?format=full")
                 if resp.status_code == 200:
                     data = resp.json()
-                    headers = {h.get("name", "").lower(): h.get("value", "") for h in data.get("payload", {}) .get("headers", [])}
+                    headers = {h.get("name", "").lower(): h.get("value", "") for h in data.get("payload", {}).get("headers", [])}
                     snippet = data.get("snippet", "")
                     detailed.append({
                         "email_id": msg_id,

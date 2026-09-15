@@ -65,36 +65,68 @@ export default function EmailSummarizerPage({ runIdOverride }) {
   const [editingReply, setEditingReply] = useState(null) // { id, text, recipient, subject }
   const [editedReplyText, setEditedReplyText] = useState('')
 
+  // Detailed Gmail state
+  const [realGmailStatus, setRealGmailStatus] = useState('not_connected') // 'ok' | 'reauth_required' | 'error' | 'not_connected'
+  const [realGmailError, setRealGmailError] = useState(null)
+  const [totalInboxCount, setTotalInboxCount] = useState(0)
+  const [previewMessages, setPreviewMessages] = useState([])
+
   // 1. Load Trigger Info & Connected Account info
-  const loadTriggerInfo = useCallback(async () => {
+  const loadTriggerInfo = useCallback(async (dr = dateRange, sc = emailScope, bs = batchSize) => {
     try {
-      const info = await api.get('/workflows/email_summarizer/trigger-info').catch(() => null)
+      const qParams = new URLSearchParams({
+        date_range: dr,
+        scope: sc,
+        batch_size: bs,
+      }).toString()
+
+      const info = await api.get(`/workflows/email_summarizer/trigger-info?${qParams}`).catch(() => null)
       if (info) {
         setTriggerInfo(info)
-        setAvailableCount(info.available_messages_count || 40)
-      }
-      
-      // Fetch connection status if available
-      const creds = await api.get('/setup/credentials').catch(() => null)
-      if (Array.isArray(creds)) {
-        const gmail = creds.find(c => c.provider === 'gmail' || c.name?.toLowerCase().includes('gmail'))
-        if (gmail && gmail.status === 'active') {
+        setRealGmailStatus(info.real_gmail_status || 'not_connected')
+        setRealGmailError(info.real_gmail_error || null)
+        setTotalInboxCount(info.total_inbox_count || 0)
+        setPreviewMessages(info.preview_messages || [])
+
+        if (info.real_gmail_connected) {
+          const acctEmail = info.connected_email || 'Connected OAuth Account'
           setConnectedAccount({
-            email: gmail.account_email || gmail.client_email || 'connected.user@gmail.com',
-            status: 'Connected',
-            isReal: true
+            email: acctEmail,
+            status: info.real_gmail_status === 'ok' ? 'Connected' : 'Action Required',
+            isReal: true,
           })
-          setDataSource('real_gmail')
+          setAvailableCount(info.real_messages_count || 0)
+        } else {
+          setConnectedAccount({ email: 'No Connected Account', status: 'Not Connected', isReal: false })
+          setAvailableCount(info.synthetic_messages_count || 40)
         }
       }
     } catch (e) {
       console.warn('Failed to load trigger info:', e)
     }
-  }, [api])
+  }, [api, dateRange, emailScope, batchSize])
 
   useEffect(() => {
-    loadTriggerInfo()
-  }, [loadTriggerInfo])
+    loadTriggerInfo(dateRange, emailScope, batchSize)
+  }, [dateRange, emailScope, batchSize, loadTriggerInfo])
+
+  const handleReconnectGmail = async () => {
+    try {
+      const redirectUri = window.location.origin + '/setup/connections'
+      const queryParams = new URLSearchParams({
+        redirect_uri: redirectUri,
+        scopes: 'email,calendar,drive',
+      }).toString()
+      const res = await api.get(`/connections/oauth/google/authorize?${queryParams}`)
+      if (res && res.url) {
+        window.location.href = res.url
+      } else {
+        throw new Error('Server did not return a valid Google authorization URL.')
+      }
+    } catch (err) {
+      alert('Failed to initialize Google reauthorization: ' + (err.message || 'Unknown error'))
+    }
+  }
 
   // 2. Fetch Run Data & Status
   const fetchRunData = useCallback(async (rid) => {
@@ -108,12 +140,15 @@ export default function EmailSummarizerPage({ runIdOverride }) {
           setMode('analyzing')
         } else if (statusStr === 'completed' || statusStr === 'workflowstatus.completed') {
           setMode('results')
-        } else if (statusStr === 'failed' || statusStr === 'ai_provider_unavailable') {
+        } else if (statusStr === 'failed' || statusStr === 'ai_provider_unavailable' || statusStr.includes('failed')) {
           setMode('results')
+          if (data.error) {
+            setError(data.error)
+          }
         }
       }
       
-      // FIX TASK 10: Load pending approvals from /escalations?status=pending
+      // Load pending approvals from /escalations?status=pending
       const apprs = await api.get('/escalations?status=pending').catch(() => [])
       if (Array.isArray(apprs)) {
         setApprovals(apprs)
@@ -147,12 +182,13 @@ export default function EmailSummarizerPage({ runIdOverride }) {
     try {
       const payload = {
         workflow_name: 'email_summarizer',
-        trigger_payload: {
+        signal_data: {
+          source: dataSource === 'real_gmail' ? 'real_gmail' : 'synthetic_demo',
           data_source: dataSource,
-          source: dataSource === 'real_gmail' ? 'real_gmail' : 'synthetic_inbox',
           date_range: dateRange,
           scope: emailScope,
-          focus_areas: Object.keys(focusAreas).filter(k => focusAreas[k]),
+          focus: Object.keys(focusAreas).filter(k => focusAreas[k]),
+          batch_size: batchSize,
           limit: batchSize,
         }
       }
@@ -387,24 +423,118 @@ export default function EmailSummarizerPage({ runIdOverride }) {
                     {dataSource === 'real_gmail' ? (connectedAccount.email || 'connected.user@gmail.com') : 'Synthetic Demo Inbox'}
                   </div>
                   <div className="text-[11px] text-slate-500 font-medium">
-                    {dataSource === 'real_gmail' ? 'Real Connected Gmail' : 'Controlled Synthetic Evaluation Fixture'}
+                    {dataSource === 'real_gmail'
+                      ? (realGmailStatus === 'ok' ? 'Real Connected Gmail' : 'Gmail Connection Needs Attention')
+                      : 'Controlled Synthetic Evaluation Fixture'}
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-semibold">
-                <Check className="w-3.5 h-3.5 stroke-[3]" />
-                <span>{dataSource === 'real_gmail' ? `${batchSize} real Gmail emails` : `${batchSize} synthetic demo emails`}</span>
+              <div className={cn(
+                "flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border",
+                dataSource === 'real_gmail' && realGmailStatus !== 'ok'
+                  ? "bg-amber-50 text-amber-800 border-amber-200"
+                  : "bg-emerald-50 text-emerald-700 border-emerald-200"
+              )}>
+                {dataSource === 'real_gmail' && realGmailStatus !== 'ok' ? (
+                  <>
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Action Required</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-3.5 h-3.5 stroke-[3]" />
+                    <span>{dataSource === 'real_gmail' ? `${availableCount} matching emails` : `${batchSize} synthetic demo emails`}</span>
+                  </>
+                )}
               </div>
             </div>
           </div>
+
+          {/* Re-auth Warning Card when Gmail Access is revoked/expired or missing scopes */}
+          {dataSource === 'real_gmail' && realGmailStatus !== 'ok' && (
+            <div className="bg-amber-50/90 border border-amber-200 rounded-xl p-4 space-y-3">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <h4 className="text-xs font-bold text-amber-900">Gmail access needs attention</h4>
+                  <p className="text-xs text-amber-800 leading-relaxed">
+                    Read-only Gmail access (<code className="bg-amber-100 px-1 py-0.5 rounded text-[11px] font-mono">https://www.googleapis.com/auth/gmail.readonly</code>) is required to inspect your inbox.
+                  </p>
+                  {realGmailError && (
+                    <div className="text-[11px] text-amber-900 font-mono bg-amber-100/70 p-2 rounded border border-amber-200/80 mt-1 max-h-24 overflow-y-auto">
+                      {realGmailError}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={handleReconnectGmail}
+                  className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg shadow-sm transition-colors flex items-center gap-1.5"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Reconnect Gmail / Grant Access</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Real Gmail Breakdown & Preview */}
+          {dataSource === 'real_gmail' && realGmailStatus === 'ok' && (
+            <div className="space-y-3 pt-1">
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center">
+                  <div className="text-[11px] font-semibold text-slate-500">Inbox Total</div>
+                  <div className="text-base font-bold text-slate-900">{totalInboxCount} msgs</div>
+                </div>
+                <div className="bg-blue-50/80 border border-blue-100 rounded-xl p-3 text-center">
+                  <div className="text-[11px] font-semibold text-blue-700">Matches Filter</div>
+                  <div className="text-base font-bold text-blue-900">{availableCount} msgs</div>
+                </div>
+                <div className="bg-indigo-50/80 border border-indigo-100 rounded-xl p-3 text-center">
+                  <div className="text-[11px] font-semibold text-indigo-700">Batch Limit</div>
+                  <div className="text-base font-bold text-indigo-900">Up to {batchSize}</div>
+                </div>
+              </div>
+
+              {availableCount === 0 && (
+                <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>No Gmail messages match the selected filters ({dateRange} · {emailScope}). Try selecting 'Last 30 days' or 'Inbox'.</span>
+                </div>
+              )}
+
+              {previewMessages.length > 0 && (
+                <div className="space-y-2 pt-1">
+                  <div className="text-xs font-semibold text-slate-700 flex items-center justify-between">
+                    <span>Matching Email Preview</span>
+                    <span className="text-[11px] text-slate-400 font-normal">Sample from real connected inbox</span>
+                  </div>
+                  <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
+                    {previewMessages.map((pm, idx) => (
+                      <div key={pm.email_id || idx} className="p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs space-y-0.5">
+                        <div className="flex items-center justify-between font-semibold text-slate-900">
+                          <span className="truncate max-w-[220px]">{pm.from || pm.sender}</span>
+                          <span className="text-[10px] text-slate-400 font-normal">{pm.received_at || pm.timestamp}</span>
+                        </div>
+                        <div className="font-medium text-slate-800 truncate">{pm.subject}</div>
+                        {pm.snippet && <div className="text-[11px] text-slate-500 truncate">{pm.snippet}</div>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Development Batch Size Selection */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-xs font-semibold text-slate-700 block">Development Batch Size</label>
               <span className="text-[11px] font-semibold text-slate-500">
-                {dataSource === 'real_gmail' ? `${batchSize} real Gmail emails` : `${batchSize} synthetic demo emails`}
+                {dataSource === 'real_gmail' ? `Up to ${batchSize} real Gmail emails` : `${batchSize} synthetic demo emails`}
               </span>
             </div>
             <div className="grid grid-cols-3 gap-2">
@@ -498,9 +628,15 @@ export default function EmailSummarizerPage({ runIdOverride }) {
           <div className="flex items-center justify-between p-3.5 bg-blue-50/60 border border-blue-100 rounded-xl text-xs text-blue-900">
             <div className="flex items-center gap-2 font-medium">
               <Mail className="w-4 h-4 text-blue-600" />
-              <span><strong className="font-bold">{availableCount} emails</strong> available to review</span>
+              <span>
+                <strong className="font-bold">
+                  {dataSource === 'real_gmail' ? availableCount : (triggerInfo?.synthetic_messages_count ?? 40)} emails
+                </strong> available to review
+              </span>
             </div>
-            <span className="text-[11px] text-blue-700 font-semibold">Gmail · {emailScope}</span>
+            <span className="text-[11px] text-blue-700 font-semibold">
+              {dataSource === 'real_gmail' ? 'Real Gmail' : 'Synthetic Demo Data'} · {emailScope}
+            </span>
           </div>
 
           {error && (
@@ -509,18 +645,32 @@ export default function EmailSummarizerPage({ runIdOverride }) {
 
           {/* Primary Submit Button */}
           <div className="pt-2 flex items-center gap-3">
-            <button
-              onClick={handleStartAnalysis}
-              disabled={loading || availableCount === 0}
-              className="flex-1 inline-flex items-center justify-center gap-2 py-3 px-6 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold text-sm rounded-xl shadow-md shadow-blue-600/20 transition-all"
-            >
-              {loading ? (
-                <Spinner className="w-4 h-4 text-white animate-spin" />
-              ) : (
-                <Sparkles className="w-4 h-4" />
-              )}
-              <span>Analyze Emails</span>
-            </button>
+            {dataSource === 'real_gmail' && realGmailStatus !== 'ok' ? (
+              <button
+                onClick={handleReconnectGmail}
+                className="flex-1 inline-flex items-center justify-center gap-2 py-3 px-6 bg-amber-600 hover:bg-amber-700 text-white font-bold text-sm rounded-xl shadow-md shadow-amber-600/20 transition-all"
+              >
+                <RefreshCw className="w-4 h-4" />
+                <span>Reconnect Gmail / Grant Access</span>
+              </button>
+            ) : (
+              <button
+                onClick={handleStartAnalysis}
+                disabled={loading || (dataSource === 'real_gmail' && availableCount === 0)}
+                className="flex-1 inline-flex items-center justify-center gap-2 py-3 px-6 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold text-sm rounded-xl shadow-md shadow-blue-600/20 transition-all"
+              >
+                {loading ? (
+                  <Spinner className="w-4 h-4 text-white animate-spin" />
+                ) : (
+                  <Sparkles className="w-4 h-4" />
+                )}
+                <span>
+                  {dataSource === 'real_gmail' && availableCount === 0
+                    ? 'No Matching Emails to Analyze'
+                    : 'Analyze Emails'}
+                </span>
+              </button>
+            )}
 
             <button
               onClick={() => navigate('/workflows')}
