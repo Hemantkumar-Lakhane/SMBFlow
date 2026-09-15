@@ -24,6 +24,7 @@ import asyncio
 import json
 import time
 import uuid
+import traceback
 import pytz
 from datetime import datetime
 from datetime import datetime
@@ -531,23 +532,51 @@ class WorkflowOrchestrator:
             self._pause_events[run_id] = asyncio.Event()
         self._pause_events[run_id].set()
 
+        log.info("[WORKFLOW_SETUP_START]", run_id=run_id[:8], workflow=workflow_name)
         # ── Index tool schemas for RAG-based DiscoveryAgent (versioned) ─────
         # Only re-index when the registered tool set or the CustomTool DB table
         # has changed since the last index, saving embedding API calls.
         if self._rag:
             try:
-                if await self._needs_tool_reindex(tenant_id):
+                log.info("[TOOL_REINDEX_CHECK]", run_id=run_id[:8], tenant=tenant_id[:8])
+                reindex_required = await asyncio.wait_for(
+                    self._needs_tool_reindex(tenant_id), timeout=5
+                )
+                log.info(
+                    "[TOOL_REINDEX_REQUIRED]",
+                    run_id=run_id[:8],
+                    required=reindex_required,
+                )
+                if reindex_required:
                     from integrations.tool_registry_builder import index_tools_in_rag
-                    await index_tools_in_rag(self._tools, self._rag, tenant_id)
+                    log.info("[TOOL_REINDEX_START]", run_id=run_id[:8])
+                    indexed = await asyncio.wait_for(
+                        index_tools_in_rag(self._tools, self._rag, tenant_id),
+                        timeout=10,
+                    )
                     _tool_index_cache[tenant_id] = (
                         time.time(),
                         frozenset(self._tools._tools.keys()),
                     )
-                    log.info("Tool schemas re-indexed in RAG", tenant=tenant_id[:8])
+                    log.info(
+                        "[TOOL_REINDEX_COMPLETE]",
+                        run_id=run_id[:8],
+                        tenant=tenant_id[:8],
+                        indexed=indexed,
+                    )
                 else:
                     log.debug("Tool schemas up-to-date, skipping reindex", tenant=tenant_id[:8])
             except Exception as _idx_err:
-                log.warning("Tool RAG indexing skipped (non-fatal)", error=str(_idx_err))
+                if self._state and self._state._db is not None:
+                    try:
+                        await asyncio.wait_for(self._state._db.rollback(), timeout=2)
+                    except Exception as _rollback_err:
+                        log.debug("Optional tool RAG rollback failed", error=str(_rollback_err))
+                log.warning(
+                    "Tool RAG indexing skipped (non-fatal)",
+                    error_type=type(_idx_err).__name__,
+                    error=str(_idx_err)[:200],
+                )
 
         dag = await self._load_dag(workflow_name)
         if not dag:
@@ -571,6 +600,13 @@ class WorkflowOrchestrator:
                     node = nodes[i]
                     node_id = node["id"]
                     agent_type = node["agent"]
+                    if i == start_node_index:
+                        log.info(
+                            "[FIRST_NODE_START]",
+                            run_id=run_id[:8],
+                            node_id=node_id,
+                            agent_type=agent_type,
+                        )
 
                     # ── Stop check ────────────────────────────────────────
                     if self._state.should_stop(run_id):
@@ -869,7 +905,7 @@ class WorkflowOrchestrator:
                         "tenant_id":             tenant_id,
                         "model_estimate":        est_model,
                         "tokens_in_estimate":    est_tokens_in,
-                        "input_cost_estimate":   round(est_input_cost, 6),
+                        "input_cost_estimate":   round(est_input_cost, 6) if est_input_cost is not None else None,
                         "output_cost_per_token": output_cost_per_token,
                     })
 
@@ -882,6 +918,7 @@ class WorkflowOrchestrator:
                             success=False, confidence=0.0,
                             output_data={"recovery_hints": recovery},
                             reasoning_chain="", error=str(e),
+                            provider_attempts=getattr(e, "attempts", None),
                         )
                     
                     # ── Parse-error self-healing: retry once with conciseness hint ──────
@@ -989,15 +1026,23 @@ class WorkflowOrchestrator:
                         "delta_vs_history":    output.output_data.get("delta_vs_history")   if output.success and isinstance(output.output_data, dict) else None,
                         "delta_trend":         output.output_data.get("delta_trend")        if output.success and isinstance(output.output_data, dict) else None,
                     })
-                    await epi_ctx.log_agent_run(
-                        node_id=node_id, agent_type=agent_type,
-                        input_summary={"context_keys": list(pruned.keys())},
-                        output_summary=output.output_data,
-                        confidence=output.confidence,
-                        reasoning=output.reasoning_chain,
-                        tokens_in=output.tokens_in, tokens_out=output.tokens_out,
-                        cost_usd=output.cost_usd, model=output.model_used,
-                    )
+                    try:
+                        await epi_ctx.log_agent_run(
+                            node_id=node_id, agent_type=agent_type,
+                            input_summary={"context_keys": list(pruned.keys())},
+                            output_summary=output.output_data,
+                            confidence=output.confidence,
+                            reasoning=output.reasoning_chain,
+                            tokens_in=output.tokens_in, tokens_out=output.tokens_out,
+                            cost_usd=output.cost_usd, model=output.model_used,
+                        )
+                    except Exception as _epi_err:
+                        log.warning(
+                            "EPI agent-step recording skipped (non-fatal)",
+                            node=node_id,
+                            error_type=type(_epi_err).__name__,
+                            error=str(_epi_err)[:200],
+                        )
                     # Streaming evidence: persist agent step immediately
                     try:
                         from api import crud as _crud
@@ -1024,12 +1069,34 @@ class WorkflowOrchestrator:
                     except Exception:
                         pass  # Non-fatal
 
+                    _persisted_output = _prepare_output_for_persistence(output.output_data)
+                    if isinstance(_persisted_output, dict):
+                        _persisted_output["_runtime"] = {
+                            "provider": output.provider,
+                            "model": output.model_used or None,
+                            "input_tokens": output.tokens_in,
+                            "output_tokens": output.tokens_out,
+                            "cached_tokens": output.cached_tokens,
+                            "cost_usd": output.cost_usd,
+                            "latency_ms": node_dur_ms,
+                            "fallback_used": output.fallback_used,
+                            "fallback_from": output.fallback_from,
+                            "fallback_reason": output.fallback_reason,
+                            "provider_attempts": output.provider_attempts,
+                        }
                     agent_run_record = {
                         "node_id": node_id, "agent_type": agent_type,
                         "status": "success" if output.success else "failed",
                         "confidence": output.confidence,
                         "tokens_in": output.tokens_in, "tokens_out": output.tokens_out,
                         "cost_usd": output.cost_usd, "model_used": output.model_used,
+                        "provider": output.provider,
+                        "cached_tokens": output.cached_tokens,
+                        "fallback_used": output.fallback_used,
+                        "fallback_from": output.fallback_from,
+                        "fallback_reason": output.fallback_reason,
+                        "provider_attempts": output.provider_attempts,
+                        "output_data": _persisted_output,
                         "duration_ms": node_dur_ms, "error": output.error,
                         "error_type": _error_info.get("error_type") if _error_info else None,
                         "error_message": _error_info.get("error_message") if _error_info else None,
@@ -1165,7 +1232,7 @@ class WorkflowOrchestrator:
                             break  # Exit segment — API will resume on decision
 
                     # ── Escalation — event-driven, NO POLLING ────────────
-                    if output.escalate:
+                    if output.escalate and not node.get("suppress_approval_creation"):
                         esc_id = await self._create_escalation(
                             run_id=run_id, tenant_id=tenant_id, node_id=node_id,
                             output=output, accumulated_context=accumulated_context, dag=dag,
@@ -1194,6 +1261,14 @@ class WorkflowOrchestrator:
 
                     # ── Failure check + Reflexion Self-Healing ─────────────────────────────
                     if not output.success:
+                        if output.error in ("AI_PROVIDER_UNAVAILABLE", "INPUT_CONTEXT_MISSING"):
+                            workflow_status = WorkflowStatus.FAILED
+                            outcome = {
+                                "error": output.error,
+                                "failed_node": node_id,
+                                "status": output.error,
+                            }
+                            break
                         MAX_REFLEXION = 3
                         last_error    = output.error or "unknown error"
 
@@ -1287,7 +1362,7 @@ class WorkflowOrchestrator:
                         "nodes_completed": len([n for n in nodes if n["id"] in accumulated_context]),
                         "total_tokens_in": live["total_tokens_in"],
                         "total_tokens_out": live["total_tokens_out"],
-                        "total_cost_usd": round(live["total_cost_usd"], 6),
+                        "total_cost_usd": round(lc, 6) if (lc := live.get("total_cost_usd")) is not None else None,
                         "cache_hits": live.get("cache_hits", 0),
                         "optimization_level": live.get("optimization_level", 1),
                         "by_agent": live["by_agent"],
@@ -1339,9 +1414,18 @@ class WorkflowOrchestrator:
                     })
 
             except Exception as e:
-                log.error("Workflow engine error", error=str(e), workflow=workflow_name)
+                log.error(
+                    "Workflow engine error",
+                    error=str(e),
+                    workflow=workflow_name,
+                    traceback=traceback.format_exc(limit=8),
+                )
                 workflow_status = WorkflowStatus.FAILED
-                outcome = {"error": str(e), "status": "engine_error"}
+                outcome = {
+                    "error": str(e),
+                    "status": "engine_error",
+                    "traceback": traceback.format_exc(limit=8),
+                }
                 await self._broadcast("workflow_failed",
                                       {"run_id": run_id, "error": str(e), "tenant_id": tenant_id})
             finally:

@@ -323,14 +323,16 @@ def agent_run_record_to_dict(r) -> dict:
         "node_id":            r.node_id,
         "agent_type":         r.agent_type,
         "status":             r.status,
-        "cost_usd":           r.cost_usd or 0.0,
-        "tokens_in":          r.tokens_in or 0,
-        "tokens_out":         r.tokens_out or 0,
+        "cost_usd":           r.cost_usd,
+        "tokens_in":          r.tokens_in,
+        "tokens_out":         r.tokens_out,
         "model_used":         r.model_used,
+        "provider":           getattr(r, "provider", None),
         "confidence":         r.confidence,
         "duration_ms":        r.duration_ms,
         "error":              r.error,
         "tools_used":         r.tools_used or [],
+        "output_data":        r.output_data,
         "_prosecutor_issues": r.prosecutor_issues,
         "_judge_verdict":     r.judge_verdict,
         "delta_vs_history":   r.delta_vs_history,
@@ -1052,8 +1054,8 @@ async def get_dashboard_data(db: AsyncSession, tenant_id: str) -> dict:
         'recent_activity': recent_activity,
         'workflow_performance': performance,
         'cost_overview': {
-            'mtd_spend': round(mtd_spend, 6),
-            'avg_cost_per_run': round(avg_cost, 6),
+            'mtd_spend': round(mtd_spend, 6) if mtd_spend is not None else 0.0,
+            'avg_cost_per_run': round(avg_cost, 6) if avg_cost is not None else 0.0,
             'daily_trend': daily_trend
         }
     }

@@ -113,8 +113,13 @@ export default function WorkflowsPage() {
 
   const openRunModal = (wf, e) => {
     if (e) e.stopPropagation()
+    const name = wf.name || 'email_summarizer'
+    if (name === 'email_summarizer' || name.includes('email')) {
+      navigate('/workflows/email_summarizer')
+      return
+    }
     setTargetWf({
-      name: wf.name || 'email_summarizer',
+      name: name,
       displayName: getDisplayName(wf.name, wf.display_name),
     })
     setModalOpen(true)

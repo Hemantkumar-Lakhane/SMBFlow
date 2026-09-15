@@ -334,6 +334,39 @@ class GmailConnector(BaseConnector):
             self._log.error("Gmail read failed", error=str(e))
             return []
 
+    async def read_detailed_messages(self, query: str = "in:inbox", limit: int = 40) -> list[dict]:
+        """Fetch and normalize detailed Gmail messages."""
+        msg_stubs = await self.read("messages", {"q": query, "limit": limit})
+        if not msg_stubs:
+            return []
+
+        detailed = []
+        for stub in msg_stubs:
+            msg_id = stub.get("id")
+            if not msg_id:
+                continue
+            try:
+                resp = await self._client.get(f"{self.BASE_URL}/users/me/messages/{msg_id}?format=full")
+                if resp.status_code == 200:
+                    data = resp.json()
+                    headers = {h.get("name", "").lower(): h.get("value", "") for h in data.get("payload", {}) .get("headers", [])}
+                    snippet = data.get("snippet", "")
+                    detailed.append({
+                        "email_id": msg_id,
+                        "thread_id": data.get("threadId", ""),
+                        "from": headers.get("from", "Unknown Sender"),
+                        "to": headers.get("to", ""),
+                        "subject": headers.get("subject", "(No Subject)"),
+                        "body": snippet,
+                        "received_at": headers.get("date", ""),
+                        "labels": data.get("labelIds", []),
+                        "data_origin": "real_gmail"
+                    })
+            except Exception as e:
+                self._log.warning("Failed to fetch detailed message", msg_id=msg_id, error=str(e))
+        return detailed
+
+
     async def write(self, resource: str, data: dict) -> dict:
         """Send an email. data: {to, subject, body}"""
         return await self.send_email(

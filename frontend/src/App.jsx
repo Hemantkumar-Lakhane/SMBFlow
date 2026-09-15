@@ -35,6 +35,8 @@ import AdminPlatformSettings     from './pages/admin/AdminPlatformSettings'
 import ConnectionsPage from './pages/setup/ConnectionsPage'
 import CasesPage from './pages/medical/CasesPage'
 
+import EmailSummarizerPage from './pages/client/EmailSummarizerPage'
+
 // Client — new Figma-matched pages
 import Dashboard          from './pages/client/Dashboard'
 import EscalationsPage    from './pages/client/EscalationsPage'
@@ -148,7 +150,9 @@ function AppRoutes() {
       <Route path="/integrations"      element={<Wrap><ConnectionsPage /></Wrap>} />
       <Route path="/medical/cases"     element={<Wrap><CasesPage /></Wrap>} />
       <Route path="/escalations"       element={<Wrap><EscalationsPage /></Wrap>} />
-      <Route path="/workflows"         element={<Wrap><WorkflowsPage /></Wrap>} />
+      <Route path="/workflows"                  element={<Wrap><WorkflowsPage /></Wrap>} />
+      <Route path="/workflows/email_summarizer" element={<Wrap><EmailSummarizerPage /></Wrap>} />
+      <Route path="/email-summarizer"           element={<Wrap><EmailSummarizerPage /></Wrap>} />
 
       {/* Configuration */}
       <Route path="/workflow-library" element={<Wrap><WorkflowLibrary /></Wrap>} />

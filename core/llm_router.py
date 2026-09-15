@@ -93,6 +93,21 @@ class LLMCall:
     # auth/401) or the router is in mock mode. Downstream must NOT treat a
     # fallback as a genuine AI result — the UI labels it as degraded.
     is_fallback: bool = False
+    provider: Optional[str] = None
+    cached_tokens: Optional[int] = None
+    fallback_used: bool = False
+    fallback_from: Optional[str] = None
+    fallback_reason: Optional[str] = None
+    tool_calls: Optional[int] = None
+
+
+class LLMProviderUnavailableError(RuntimeError):
+    """Raised when no real provider returned an LLM response."""
+
+    def __init__(self, agent_name: str, attempts: list[dict]):
+        self.agent_name = agent_name
+        self.attempts = attempts
+        super().__init__("AI_PROVIDER_UNAVAILABLE")
 
 
 @dataclass
@@ -215,16 +230,19 @@ class LLMRouter:
         lm_messages = [{"role": m.role, "content": m.content} for m in messages]
         model_config = self._task_models.get(tier, self._task_models["balanced"])
 
+        if not any(
+            message.get("role") == "user" and str(message.get("content", "")).strip()
+            for message in lm_messages
+        ):
+            raise ValueError("INPUT_CONTEXT_MISSING: at least one non-empty user message is required")
+
         # Fast mock mode check for testing/offline execution
         if os.getenv("MOCK_LLM", "false").lower() in ("true", "1"):
-            return self._generate_mock_fallback_response(
-                agent_name=agent_name,
-                lm_messages=lm_messages,
-                tools=tools,
-                attempt_model=model,
-                tier=tier,
-                start_ms=int(time.time() * 1000),
-                call_id=str(uuid.uuid4())[:8],
+            raise LLMProviderUnavailableError(
+                agent_name,
+                [{"attempt": 1, "model": model,
+                  "provider": self._provider_for_model(model),
+                  "error_type": "mock_mode_disabled"}],
             )
 
         # ── Cache check (Level >= 1) ──────────────────────────────────────
@@ -282,7 +300,9 @@ class LLMRouter:
                 log.debug("Tiktoken pre-flight failed (non-fatal)", error=str(e))
 
         # ── Try models in fallback chain ──────────────────────────────────
-        for attempt, attempt_model in enumerate(self._get_fallback_chain(model, tier)):
+        fallback_models = self._get_fallback_chain(model, tier)
+        attempts: list[dict] = []
+        for attempt, attempt_model in enumerate(fallback_models):
             start_ms = int(time.time() * 1000)
             call_id = str(uuid.uuid4())[:8]
 
@@ -356,6 +376,7 @@ class LLMRouter:
                             cost_usd=cost,
                             duration_ms=duration_ms,
                             success=True,
+                            provider=self._provider_for_model(attempt_model),
                         )
                         self._record_call(call)
                         text = full_text
@@ -409,8 +430,8 @@ class LLMRouter:
                 response = await acompletion(**kwargs)
 
                 usage = response.usage
-                tokens_in = usage.prompt_tokens if usage else 0
-                tokens_out = usage.completion_tokens if usage else 0
+                tokens_in = getattr(usage, "prompt_tokens", None) if usage else None
+                tokens_out = getattr(usage, "completion_tokens", None) if usage else None
 
                 # Unified cost calculation logic (Fixes BUG-001)
                 if usage:
@@ -427,7 +448,7 @@ class LLMRouter:
                         savings = (rates.get('input', 0) - rates.get('cache_read', 0)) * cache_read_tokens / 1e6
                         self._workflow_logger.mark_provider_cache_hit(cache_read_tokens, savings)
                 else:
-                    cost = 0.0
+                    cost = None
 
                 duration_ms = int(time.time() * 1000) - start_ms
     
@@ -441,6 +462,7 @@ class LLMRouter:
                     cost_usd=cost,
                     duration_ms=duration_ms,
                     success=True,
+                    provider=self._provider_for_model(attempt_model),
                 )
                 self._record_call(call)
     
@@ -510,26 +532,29 @@ class LLMRouter:
                             error=str(e), attempt=attempt + 1)
                 call = LLMCall(
                     call_id=call_id, agent_name=agent_name, model=attempt_model,
-                    tier=tier, tokens_in=0, tokens_out=0, cost_usd=0.0,
+                    tier=tier, tokens_in=None, tokens_out=None, cost_usd=None,
                     duration_ms=duration_ms, success=False, error=str(e),
+                    provider=self._provider_for_model(attempt_model),
                 )
                 self._record_call(call)
-
-                if attempt == len(self._get_fallback_chain(model, tier)) - 1:
+                classified = self.classify_llm_error(e)
+                attempts.append({
+                    "attempt": attempt + 1,
+                    "model": attempt_model,
+                    "provider": self._provider_for_model(attempt_model),
+                    "error_type": classified.get("error_type"),
+                    "safe_detail": classified.get("safe_detail"),
+                })
+                if attempt == len(fallback_models) - 1:
                     log.warning(
-                        "All network LLM models failed, generating deterministic fallback response for workflow execution",
+                        "All real LLM providers failed",
                         agent=agent_name,
-                        last_error=str(e),
+                        attempts=[
+                            {"provider": a["provider"], "model": a["model"], "error_type": a["error_type"]}
+                            for a in attempts
+                        ],
                     )
-                    return self._generate_mock_fallback_response(
-                        agent_name=agent_name,
-                        lm_messages=lm_messages,
-                        tools=tools,
-                        attempt_model=attempt_model,
-                        tier=tier,
-                        start_ms=start_ms,
-                        call_id=call_id,
-                    )
+                    raise LLMProviderUnavailableError(agent_name, attempts) from e
                 continue
 
         raise RuntimeError(f"Exhausted fallback models for {agent_name}")
@@ -544,6 +569,13 @@ class LLMRouter:
         start_ms: int,
         call_id: str,
     ) -> tuple[str, LLMCall]:
+        raise LLMProviderUnavailableError(
+            agent_name,
+            [{"attempt": 1, "model": attempt_model,
+              "provider": self._provider_for_model(attempt_model),
+              "error_type": "deterministic_fallback_disabled"}],
+        )
+
         # Check if conversation already contains tool results
         has_tool_result = any(
             isinstance(m, dict) and (m.get("role") == "tool" or "Tool:" in str(m.get("content", "")))
@@ -718,19 +750,19 @@ class LLMRouter:
                 "provider": _extract_provider(err_str),
                 "safe_detail": str(error)[:300],
             }
+        # ── Model not found / unavailable ───────────────────────────────────
+        if any(kw in err_str for kw in ("model not found", "model not available", "does not exist", "model_not_found", "not_found", "404")) or ("model" in err_str and "not found" in err_str):
+            return {
+                "error_type": "model_unavailable",
+                "error_message": "Model unavailable",
+                "provider": _extract_provider(err_str),
+                "safe_detail": str(error)[:300],
+            }
         # ── Authentication / invalid key ────────────────────────────────────
         if any(kw in err_str for kw in ("auth", "invalid key", "invalid api key", "unauthorized", "401", "api_key", "invalid_request_error")):
             return {
                 "error_type": "invalid_api_key",
                 "error_message": "Invalid or expired API key",
-                "provider": _extract_provider(err_str),
-                "safe_detail": str(error)[:300],
-            }
-        # ── Model not found / unavailable ───────────────────────────────────
-        if any(kw in err_str for kw in ("model not found", "model not available", "does not exist", "model_not_found", "404")) or ("model" in err_str and "not found" in err_str):
-            return {
-                "error_type": "model_unavailable",
-                "error_message": "Model unavailable",
                 "provider": _extract_provider(err_str),
                 "safe_detail": str(error)[:300],
             }
@@ -1268,6 +1300,10 @@ class LLMRouter:
                 return tier
         return "balanced"
 
+    @staticmethod
+    def _provider_for_model(model: str) -> str:
+        return model.split("/", 1)[0] if "/" in model else "anthropic"
+
     def _get_fallback_chain(self, primary_model: str, tier: str) -> list[str]:
         """
         Build fallback chain from config.
@@ -1331,9 +1367,9 @@ class LLMRouter:
                                           "cost_usd": 0.0, "last_model": ""}
         t = self._agent_totals[agent]
         t["calls"] += 1
-        t["tokens_in"] += call.tokens_in
-        t["tokens_out"] += call.tokens_out
-        t["cost_usd"] += call.cost_usd
+        t["tokens_in"] += call.tokens_in or 0
+        t["tokens_out"] += call.tokens_out or 0
+        t["cost_usd"] += call.cost_usd or 0.0
         t["last_model"] = call.model
 
     def _build_cache_key(self, agent_name: str, messages: list[dict]) -> str:
@@ -1390,6 +1426,13 @@ class LLMRouter:
         start_ms: int,
         call_id: str,
     ) -> tuple[str, LLMCall]:
+        raise LLMProviderUnavailableError(
+            agent_name,
+            [{"attempt": 1, "model": attempt_model,
+              "provider": self._provider_for_model(attempt_model),
+              "error_type": "deterministic_fallback_disabled"}],
+        )
+
         """Generate deterministic mock response when MOCK_LLM=true or offline."""
         has_tool_result = any("Tool:" in m.get("content", "") or "Result:" in m.get("content", "") for m in lm_messages if isinstance(m, dict))
 

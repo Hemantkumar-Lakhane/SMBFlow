@@ -12,7 +12,9 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
+import re
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -57,6 +59,29 @@ from integrations.key_vault import (
 from core.redis_pubsub import pubsub as redis_pubsub
 from core.dag_validator import validate_dag
 log = structlog.get_logger()
+
+
+class _RedactWebSocketTokenFilter(logging.Filter):
+    """Keep bearer tokens and credentials out of uvicorn access-log request paths and fix status code string formatting."""
+
+    _token_pattern = re.compile(r"([?&](?:token|jwt|access_token|api_key|auth|authorization|credentials|secret)=)[^&\s\"]+", re.IGNORECASE)
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if isinstance(record.msg, str):
+            record.msg = self._token_pattern.sub(r"\1[REDACTED]", record.msg)
+        if record.args:
+            args_list = list(record.args)
+            for idx, arg in enumerate(args_list):
+                if isinstance(arg, str):
+                    args_list[idx] = self._token_pattern.sub(r"\1[REDACTED]", arg)
+            # Fix uvicorn access log '%s - "%s %s HTTP/%s" %d' error when 5th arg is str digit
+            if len(args_list) >= 5 and isinstance(args_list[4], str) and args_list[4].isdigit():
+                args_list[4] = int(args_list[4])
+            record.args = tuple(args_list)
+        return True
+
+
+logging.getLogger("uvicorn.access").addFilter(_RedactWebSocketTokenFilter())
 
 # ─────────────────────────────────────────────────────────────────────────────
 # In-memory (ONLY transient, process-local state)
@@ -873,8 +898,7 @@ async def health_check(db: AsyncSession = Depends(get_db)):
         key_val = os.getenv(key_env, "")
         token_val = os.getenv(provider.upper() + "_AUTH_TOKEN", "")
         if (key_val and len(key_val) > 8) or token_val:
-            preview = key_val[:8] + "****" + key_val[-4:] if key_val else "token_set"
-            llm_providers[provider] = {"status": "configured", "key_preview": preview}
+            llm_providers[provider] = {"status": "configured"}
         else:
             llm_providers[provider] = {"status": "not_configured"}
 
@@ -1621,10 +1645,11 @@ async def estimate_workflow_cost(
     for run in agent_runs:
         if isinstance(run, dict):
             node_id = run.get("node_id", "?")
+            run_c = run.get("cost_usd")
             breakdown[node_id] = {
                 "agent_type": run.get("agent_type", "?"),
-                "last_cost_usd": round(run.get("cost_usd", 0.0), 6),
-                "estimated_cost_usd": round(run.get("cost_usd", 0.0) * (1.0 - savings_pct), 6),
+                "last_cost_usd": round(run_c, 6) if run_c is not None else None,
+                "estimated_cost_usd": round(run_c * (1.0 - savings_pct), 6) if run_c is not None else None,
                 "model_last_used": run.get("model_used", "?"),
             }
 
@@ -1842,7 +1867,7 @@ async def get_workflow_system_log(
                 "agent_type": r.get("agent_type"),
                 "status": r.get("status"),
                 "model": r.get("model_used", "?"),
-                "cost_usd": round(r.get("cost_usd", 0.0), 6),
+                "cost_usd": round(r_c, 6) if (r_c := r.get("cost_usd")) is not None else None,
                 "tokens_in": r.get("tokens_in", 0),
                 "tokens_out": r.get("tokens_out", 0),
                 "confidence": r.get("confidence"),

@@ -39,7 +39,7 @@
     "mini": {
       "description": "Lightweight verification & extraction — Haiku 3.5",
       "provider": "anthropic",
-      "model": "claude-haiku-4-5-20251001",
+      "model": "anthropic/claude-haiku-4-5-20251001",
       "max_tokens": 4096,
       "temperature": 0.1,
       "timeout_seconds": 60
@@ -79,13 +79,13 @@
   },
 
   "fallback_chain": {
-    "_comment": "Order: Anthropic Native -> OpenRouter Proxy (Same Model) -> Secondary Anthropic Tier",
-    "heavy":        ["anthropic/claude-sonnet-4-6",   "openrouter/anthropic/claude-sonnet-4-6", "anthropic/claude-sonnet-4-20250514"],
-    "budget_heavy": ["anthropic/claude-haiku-4-5-20251001", "openrouter/anthropic/claude-haiku-4-5", "claude-haiku-4-5-20251001"],
-    "fast":         ["anthropic/claude-haiku-4-5-20251001", "openrouter/anthropic/claude-haiku-4-5", "claude-haiku-4-5-20251001"],
-    "balanced":     ["anthropic/claude-haiku-4-5-20251001", "openrouter/anthropic/claude-haiku-4-5", "anthropic/claude-sonnet-4-6"],
-    "mini":         ["claude-haiku-4-5-20251001", "openrouter/anthropic/claude-3-haiku", "claude-haiku-4-5-20251001"],
-    "reasoning":    ["anthropic/claude-sonnet-4-6",   "openrouter/anthropic/claude-sonnet-4-6", "anthropic/claude-opus-4-6-20260205"]
+    "_comment": "Order: Anthropic -> Google Gemini -> Groq -> OpenRouter",
+    "heavy":        ["anthropic/claude-sonnet-4-6", "gemini/gemini-2.5-pro", "groq/openai/gpt-oss-120b", "openrouter/openai/gpt-4o"],
+    "budget_heavy": ["anthropic/claude-haiku-4-5-20251001", "gemini/gemini-2.5-flash", "groq/openai/gpt-oss-20b", "openrouter/openai/gpt-4o-mini"],
+    "fast":         ["anthropic/claude-haiku-4-5-20251001", "gemini/gemini-2.5-flash", "groq/openai/gpt-oss-20b", "openrouter/openai/gpt-4o-mini"],
+    "balanced":     ["anthropic/claude-haiku-4-5-20251001", "gemini/gemini-2.5-flash", "groq/openai/gpt-oss-20b", "openrouter/openai/gpt-4o-mini"],
+    "mini":         ["anthropic/claude-haiku-4-5-20251001", "gemini/gemini-3.6-flash", "groq/openai/gpt-oss-20b", "openrouter/mistralai/mistral-small"],
+    "reasoning":    ["anthropic/claude-sonnet-4-6", "gemini/gemini-2.5-pro", "groq/openai/gpt-oss-120b", "openrouter/openai/gpt-4o"]
   },
 
   "budget_tier_maps": {
@@ -136,12 +136,12 @@
     "google": [
       { "id": "gemini/gemini-2.5-pro",   "label": "Gemini 2.5 Pro",        "tier_suggestion": "heavy",        "context_window": 1000000, "note": "Near-Opus quality, 1M context" },
       { "id": "gemini/gemini-2.5-flash", "label": "Gemini 2.5 Flash",      "tier_suggestion": "balanced",     "context_window": 1000000, "note": "Better quality Flash, 1M context" },
-      { "id": "gemini/gemini-2.0-flash", "label": "Gemini 2.0 Flash",      "tier_suggestion": "mini",         "context_window": 1000000, "note": "Ultra-cheap, 1M context. 10x cheaper than Haiku." }
+      { "id": "gemini/gemini-3.6-flash", "label": "Gemini 3.6 Flash",      "tier_suggestion": "mini",         "context_window": 1000000, "note": "Current lightweight Gemini fallback." }
     ],
 
     "groq": [
-      { "id": "groq/llama-3.3-70b-versatile", "label": "Llama 3.3 70B (Groq)", "tier_suggestion": "fast", "context_window": 131072, "note": "Fallback only — good speed, weaker JSON schema adherence" },
-      { "id": "groq/llama-3.1-8b-instant",    "label": "Llama 3.1 8B Instant", "tier_suggestion": "mini", "context_window": 131072, "note": "Emergency fallback only — NOT for complex structured outputs" }
+      { "id": "groq/openai/gpt-oss-120b", "label": "GPT OSS 120B (Groq)", "tier_suggestion": "heavy", "context_window": 131072, "note": "Verified Groq fallback model" },
+      { "id": "groq/openai/gpt-oss-20b", "label": "GPT OSS 20B (Groq)", "tier_suggestion": "mini", "context_window": 131072, "note": "Verified lightweight Groq fallback model" }
     ],
 
     "openrouter": [
@@ -164,9 +164,9 @@
     "deepseek/deepseek-r1":                 { "input": 0.55,  "cache_read": 0.055, "output": 2.19 },
     "gemini/gemini-2.5-pro":                { "input": 1.25,  "output": 10.00 },
     "gemini/gemini-2.5-flash":              { "input": 0.30,  "output": 2.50  },
-    "gemini/gemini-2.0-flash":              { "input": 0.10,  "output": 0.40  },
-    "groq/llama-3.3-70b-versatile":         { "input": 0.59,  "output": 0.79  },
-    "groq/llama-3.1-8b-instant":            { "input": 0.05,  "output": 0.08  },
+    "gemini/gemini-3.6-flash":              { "input": 0.10,  "output": 0.40  },
+    "groq/openai/gpt-oss-120b":             { "input": 0.15,  "output": 0.60  },
+    "groq/openai/gpt-oss-20b":              { "input": 0.10,  "output": 0.50  },
     "openrouter/openai/gpt-4o":             { "input": 2.50,  "output": 10.00 },
     "openrouter/openai/gpt-4o-mini":        { "input": 0.15,  "output": 0.60  },
     "openrouter/mistralai/mistral-small":   { "input": 0.10,  "output": 0.30  }

@@ -23,6 +23,7 @@ import CostRibbon      from '../../components/workflow/CostRibbon'
 import DecisionPortal  from '../../components/workflow/DecisionPortal'
 import TrendIndicator  from '../../components/workflow/TrendIndicator'
 import WorkflowSummary from '../../components/workflow/WorkflowSummary'
+import EmailSummarizerPage from './EmailSummarizerPage'
 
 const DEFAULT_NODES = [
   { id: 'research',     agent: 'research_agent' },
@@ -432,6 +433,10 @@ export default function WorkflowDetail() {
   )
 
   if (wfError) return <Alert type="error">{wfError.message}</Alert>
+
+  if (workflow?.workflow_name === 'email_summarizer' || workflow?.workflow_name?.includes('email')) {
+    return <EmailSummarizerPage runIdOverride={runId} />
+  }
 
   return (
     <div className="space-y-5">

@@ -216,17 +216,17 @@ class WorkflowSystemLogger:
             "run_id": self._run_id,
             "workflow_name": self._workflow_name,
             "tenant_id": self._tenant_id[:16],
-            "duration_seconds": round(elapsed, 1),
+            "duration_seconds": round(elapsed, 1) if elapsed is not None else None,
             "generated_at": datetime.utcnow().isoformat(),
 
             # Cost breakdown
             "cost_summary": {
-                "total_usd": round(tracked_cost, 6),
-                "by_source": {k: round(v, 6) for k, v in self._cost_breakdown.items()},
-                "provider_cache_savings_usd": round(self._feature_log.provider_cache_savings_usd, 6),
+                "total_usd": round(tracked_cost, 6) if tracked_cost is not None else None,
+                "by_source": {k: (round(v, 6) if v is not None else None) for k, v in self._cost_breakdown.items()},
+                "provider_cache_savings_usd": round(pcs, 6) if (pcs := getattr(self._feature_log, "provider_cache_savings_usd", None)) is not None else None,
                 "previously_untracked_sources": {
-                    "hyde_rag": round(self._feature_log.hyde_cost_usd, 6),
-                    "map_reduce": round(self._feature_log.map_reduce_cost_usd, 6),
+                    "hyde_rag": round(hc, 6) if (hc := getattr(self._feature_log, "hyde_cost_usd", None)) is not None else None,
+                    "map_reduce": round(mc, 6) if (mc := getattr(self._feature_log, "map_reduce_cost_usd", None)) is not None else None,
                 },
             },
 

@@ -272,6 +272,31 @@ def _register_gmail_tools(registry: ToolRegistry, gm: GmailConnector) -> None:
         },
     })
 
+    async def gmail_read_messages(query: str = "in:inbox", limit: int = 40) -> dict:
+        msgs = await gm.read_detailed_messages(query=query, limit=limit)
+        return {
+            "messages": msgs,
+            "total_messages": len(msgs),
+            "data_origin": "real_gmail",
+            "is_test_data": False,
+        }
+
+    registry.register("gmail_read_messages", gmail_read_messages, {
+        "type": "function",
+        "function": {
+            "name": "gmail_read_messages",
+            "description": "Fetch real incoming email messages from the user's connected Gmail account",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "default": "in:inbox"},
+                    "limit": {"type": "integer", "default": 40},
+                },
+            },
+        },
+    })
+
+
 
 def _register_google_workspace_tools(registry: ToolRegistry, gw: GoogleWorkspaceConnector) -> None:
 
