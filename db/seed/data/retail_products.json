@@ -1,6 +1,6 @@
 [
   {
-    "id": "50c79b4d-351a-422b-a097-63fb4aeb7bd3",
+    "id": "90df9c56-1d1f-47fb-9959-bebf5da761a6",
     "sku": "SKU-81482",
     "name": "ProTech Apparel Product 1",
     "brand": "ProTech",
@@ -17,11 +17,11 @@
     "supplier": "Supplier-1",
     "lead_time_days": 5,
     "buyer": "Bob Martinez",
-    "last_reorder_date": "2026-04-15",
+    "last_reorder_date": "2026-08-23",
     "_risk_label": "stockout"
   },
   {
-    "id": "47e8995c-257d-4522-8ba6-f01e5f3a8400",
+    "id": "42b4e623-29b1-4429-9085-90f61d472591",
     "sku": "SKU-87236",
     "name": "ActiveGear Electronics Product 2",
     "brand": "ActiveGear",
@@ -38,11 +38,11 @@
     "supplier": "Supplier-6",
     "lead_time_days": 16,
     "buyer": "Carol Johnson",
-    "last_reorder_date": "2026-04-12",
+    "last_reorder_date": "2026-08-20",
     "_risk_label": "healthy"
   },
   {
-    "id": "77cadb8c-fdcb-4418-86f3-8692a4f716a5",
+    "id": "f8eee860-c314-40a1-be70-06286f1e2d6b",
     "sku": "SKU-55082",
     "name": "ActiveGear Home & Garden Product 3",
     "brand": "ActiveGear",
@@ -59,11 +59,11 @@
     "supplier": "Supplier-15",
     "lead_time_days": 20,
     "buyer": "Alice Chen",
-    "last_reorder_date": "2026-04-05",
+    "last_reorder_date": "2026-08-13",
     "_risk_label": "overstock"
   },
   {
-    "id": "24d40f7a-4959-422e-8ad8-33636a7308ac",
+    "id": "b751602e-b4c8-4235-b766-698838cbb51a",
     "sku": "SKU-16006",
     "name": "GlowBeauty Apparel Product 4",
     "brand": "GlowBeauty",
@@ -80,11 +80,11 @@
     "supplier": "Supplier-3",
     "lead_time_days": 10,
     "buyer": "Alice Chen",
-    "last_reorder_date": "2026-04-05",
+    "last_reorder_date": "2026-08-13",
     "_risk_label": "overstock"
   },
   {
-    "id": "70ec878d-ea16-4b22-8def-7f7c473fbb0d",
+    "id": "9f374040-943e-4725-b266-e7c751299fe6",
     "sku": "SKU-37460",
     "name": "WorkSmart Beauty Product 5",
     "brand": "WorkSmart",
@@ -101,11 +101,11 @@
     "supplier": "Supplier-3",
     "lead_time_days": 8,
     "buyer": "Emma Wilson",
-    "last_reorder_date": "2026-03-14",
+    "last_reorder_date": "2026-07-22",
     "_risk_label": "healthy"
   },
   {
-    "id": "40ce402e-0af8-491e-b0dd-7367469a3dd5",
+    "id": "69bc7874-1277-455e-b914-637007799ae5",
     "sku": "SKU-93886",
     "name": "HomeBase Sports Product 6",
     "brand": "HomeBase",
@@ -122,11 +122,11 @@
     "supplier": "Supplier-11",
     "lead_time_days": 4,
     "buyer": "Bob Martinez",
-    "last_reorder_date": "2026-03-08",
+    "last_reorder_date": "2026-07-16",
     "_risk_label": "healthy"
   },
   {
-    "id": "04a1b510-8ca2-48c3-abdd-7cd9cf49dc6e",
+    "id": "dbf91eef-ab8e-4901-a961-eb3ab6b76e5a",
     "sku": "SKU-84341",
     "name": "FreshFarm Electronics Product 7",
     "brand": "FreshFarm",
@@ -143,11 +143,11 @@
     "supplier": "Supplier-16",
     "lead_time_days": 15,
     "buyer": "Dave Patel",
-    "last_reorder_date": "2026-04-20",
+    "last_reorder_date": "2026-08-28",
     "_risk_label": "healthy"
   },
   {
-    "id": "871752bf-0e0e-4ddd-9d50-602a94fdf053",
+    "id": "fa37a9b7-9658-446f-84ad-4b83bcf9d53b",
     "sku": "SKU-62350",
     "name": "HomeBase Beauty Product 8",
     "brand": "HomeBase",
@@ -164,11 +164,11 @@
     "supplier": "Supplier-5",
     "lead_time_days": 19,
     "buyer": "Dave Patel",
-    "last_reorder_date": "2026-04-24",
+    "last_reorder_date": "2026-09-01",
     "_risk_label": "stockout"
   },
   {
-    "id": "a9d0406f-ff64-4e4a-a7c3-86efb9236b0a",
+    "id": "fba4abcb-82c1-4f0b-8552-758403951487",
     "sku": "SKU-65333",
     "name": "StyleCo Electronics Product 9",
     "brand": "StyleCo",
@@ -185,11 +185,11 @@
     "supplier": "Supplier-20",
     "lead_time_days": 17,
     "buyer": "Emma Wilson",
-    "last_reorder_date": "2026-04-13",
+    "last_reorder_date": "2026-08-21",
     "_risk_label": "healthy"
   },
   {
-    "id": "f8dc4eac-0a1b-4041-ace7-714b47e27d0f",
+    "id": "127a581b-e1c7-4a2c-bef2-88dfbf934a33",
     "sku": "SKU-48469",
     "name": "StyleCo Electronics Product 10",
     "brand": "StyleCo",
@@ -206,11 +206,11 @@
     "supplier": "Supplier-9",
     "lead_time_days": 19,
     "buyer": "Bob Martinez",
-    "last_reorder_date": "2026-03-28",
+    "last_reorder_date": "2026-08-05",
     "_risk_label": "overstock"
   },
   {
-    "id": "262c5939-fc8b-41a6-8053-4bb3983baa60",
+    "id": "e78c05ec-a0fe-4f62-96e4-97e3f1ffcbf1",
     "sku": "SKU-80697",
     "name": "GlowBeauty Apparel Product 11",
     "brand": "GlowBeauty",
@@ -227,11 +227,11 @@
     "supplier": "Supplier-1",
     "lead_time_days": 13,
     "buyer": "Dave Patel",
-    "last_reorder_date": "2026-04-28",
+    "last_reorder_date": "2026-09-05",
     "_risk_label": "overstock"
   },
   {
-    "id": "bbd79bdd-3994-41a8-9975-0126089ffdca",
+    "id": "019bd409-92f0-4b04-b63d-06602c2748c1",
     "sku": "SKU-20322",
     "name": "FreshFarm Apparel Product 12",
     "brand": "FreshFarm",
@@ -248,11 +248,11 @@
     "supplier": "Supplier-3",
     "lead_time_days": 20,
     "buyer": "Bob Martinez",
-    "last_reorder_date": "2026-04-21",
+    "last_reorder_date": "2026-08-29",
     "_risk_label": "overstock"
   },
   {
-    "id": "286e4291-b2ee-4cdb-9a2d-6ff3006050a5",
+    "id": "54487fa6-6067-4a55-8ced-34e484bfa91a",
     "sku": "SKU-80686",
     "name": "HomeBase Office Product 13",
     "brand": "HomeBase",
@@ -269,11 +269,11 @@
     "supplier": "Supplier-10",
     "lead_time_days": 15,
     "buyer": "Carol Johnson",
-    "last_reorder_date": "2026-04-01",
+    "last_reorder_date": "2026-08-09",
     "_risk_label": "healthy"
   },
   {
-    "id": "054165c1-3454-45ef-b05d-fb41af95175c",
+    "id": "1230e601-8edb-4e80-be28-3ddbe21a4804",
     "sku": "SKU-87110",
     "name": "StyleCo Office Product 14",
     "brand": "StyleCo",
@@ -290,11 +290,11 @@
     "supplier": "Supplier-1",
     "lead_time_days": 5,
     "buyer": "Alice Chen",
-    "last_reorder_date": "2026-04-15",
+    "last_reorder_date": "2026-08-23",
     "_risk_label": "healthy"
   },
   {
-    "id": "e12362f4-499f-412a-bdb1-ecb23b45dbfc",
+    "id": "ad16c2f8-59c0-4674-82aa-dbbcc3a7524a",
     "sku": "SKU-73624",
     "name": "ProTech Apparel Product 15",
     "brand": "ProTech",
@@ -311,11 +311,11 @@
     "supplier": "Supplier-19",
     "lead_time_days": 21,
     "buyer": "Dave Patel",
-    "last_reorder_date": "2026-04-14",
+    "last_reorder_date": "2026-08-22",
     "_risk_label": "stockout"
   },
   {
-    "id": "4e1d0411-9547-4d4d-a79f-e6842057351d",
+    "id": "b4acc813-86b5-42eb-9c78-0489b5e91608",
     "sku": "SKU-56438",
     "name": "FunZone Office Product 16",
     "brand": "FunZone",
@@ -332,11 +332,11 @@
     "supplier": "Supplier-2",
     "lead_time_days": 6,
     "buyer": "Alice Chen",
-    "last_reorder_date": "2026-04-04",
+    "last_reorder_date": "2026-08-12",
     "_risk_label": "healthy"
   },
   {
-    "id": "52c164b6-094e-49c4-acc2-63c6bec6b99c",
+    "id": "06b1c56b-2171-448c-b166-4ba67e8461a9",
     "sku": "SKU-28373",
     "name": "StyleCo Food & Beverage Product 17",
     "brand": "StyleCo",
@@ -353,11 +353,11 @@
     "supplier": "Supplier-8",
     "lead_time_days": 5,
     "buyer": "Dave Patel",
-    "last_reorder_date": "2026-03-09",
+    "last_reorder_date": "2026-07-17",
     "_risk_label": "healthy"
   },
   {
-    "id": "3d13dcdf-638a-4f37-886b-1b9e1cf57511",
+    "id": "f5b7689d-91f0-475b-b32b-2245eb3ee6f9",
     "sku": "SKU-40982",
     "name": "ProTech Apparel Product 18",
     "brand": "ProTech",
@@ -374,11 +374,11 @@
     "supplier": "Supplier-7",
     "lead_time_days": 15,
     "buyer": "Alice Chen",
-    "last_reorder_date": "2026-04-19",
+    "last_reorder_date": "2026-08-27",
     "_risk_label": "healthy"
   },
   {
-    "id": "9ca7715d-da18-48eb-9483-6f8660678d66",
+    "id": "b1c76cba-ebc7-49cd-9651-25c395bac5a3",
     "sku": "SKU-82845",
     "name": "ProTech Toys Product 19",
     "brand": "ProTech",
@@ -395,11 +395,11 @@
     "supplier": "Supplier-7",
     "lead_time_days": 12,
     "buyer": "Bob Martinez",
-    "last_reorder_date": "2026-04-26",
+    "last_reorder_date": "2026-09-03",
     "_risk_label": "overstock"
   },
   {
-    "id": "301c09bb-d854-4e72-94d0-cd27ed7c1347",
+    "id": "8101bfaf-5c15-4c6e-accd-f769f67082af",
     "sku": "SKU-79615",
     "name": "FreshFarm Electronics Product 20",
     "brand": "FreshFarm",
@@ -416,11 +416,11 @@
     "supplier": "Supplier-3",
     "lead_time_days": 8,
     "buyer": "Alice Chen",
-    "last_reorder_date": "2026-03-22",
+    "last_reorder_date": "2026-07-30",
     "_risk_label": "healthy"
   },
   {
-    "id": "17792930-213b-493d-a51d-d3fb2dac5fc5",
+    "id": "3591c334-f908-44cd-95fa-7cb549934445",
     "sku": "SKU-87924",
     "name": "ActiveGear Apparel Product 21",
     "brand": "ActiveGear",
@@ -437,11 +437,11 @@
     "supplier": "Supplier-19",
     "lead_time_days": 21,
     "buyer": "Emma Wilson",
-    "last_reorder_date": "2026-04-09",
+    "last_reorder_date": "2026-08-17",
     "_risk_label": "healthy"
   },
   {
-    "id": "2a5e4090-d9e8-43ea-a9eb-d65ba178cf34",
+    "id": "d004e612-ceac-4289-b625-7a4f601bba4c",
     "sku": "SKU-94607",
     "name": "ActiveGear Beauty Product 22",
     "brand": "ActiveGear",
@@ -458,11 +458,11 @@
     "supplier": "Supplier-3",
     "lead_time_days": 3,
     "buyer": "Dave Patel",
-    "last_reorder_date": "2026-03-21",
+    "last_reorder_date": "2026-07-29",
     "_risk_label": "stockout"
   },
   {
-    "id": "431f80c9-be2a-463c-866b-b4ee24393761",
+    "id": "cb4d21ec-34e1-4016-9278-84bed9211214",
     "sku": "SKU-55745",
     "name": "StyleCo Apparel Product 23",
     "brand": "StyleCo",
@@ -479,11 +479,11 @@
     "supplier": "Supplier-12",
     "lead_time_days": 12,
     "buyer": "Bob Martinez",
-    "last_reorder_date": "2026-04-01",
+    "last_reorder_date": "2026-08-09",
     "_risk_label": "healthy"
   },
   {
-    "id": "dc341e7e-7845-4cd8-934c-9072610342b0",
+    "id": "d1b785a1-cd5a-4a41-90d9-5896e2664b10",
     "sku": "SKU-23577",
     "name": "ProTech Beauty Product 24",
     "brand": "ProTech",
@@ -500,11 +500,11 @@
     "supplier": "Supplier-4",
     "lead_time_days": 6,
     "buyer": "Emma Wilson",
-    "last_reorder_date": "2026-04-20",
+    "last_reorder_date": "2026-08-28",
     "_risk_label": "healthy"
   },
   {
-    "id": "49b15ae5-d104-4aa9-b83e-3bd0865f7474",
+    "id": "b9823041-3717-433f-8c2f-c83647148bca",
     "sku": "SKU-93130",
     "name": "GlowBeauty Beauty Product 25",
     "brand": "GlowBeauty",
@@ -521,11 +521,11 @@
     "supplier": "Supplier-9",
     "lead_time_days": 4,
     "buyer": "Alice Chen",
-    "last_reorder_date": "2026-03-20",
+    "last_reorder_date": "2026-07-28",
     "_risk_label": "healthy"
   },
   {
-    "id": "d4d7802f-62c1-49e3-bf88-f2ccd448a914",
+    "id": "8d9210c0-25fa-48c6-9c06-d6e11ea4d27e",
     "sku": "SKU-93507",
     "name": "GlowBeauty Toys Product 26",
     "brand": "GlowBeauty",
@@ -542,11 +542,11 @@
     "supplier": "Supplier-15",
     "lead_time_days": 20,
     "buyer": "Dave Patel",
-    "last_reorder_date": "2026-03-25",
+    "last_reorder_date": "2026-08-02",
     "_risk_label": "healthy"
   },
   {
-    "id": "823910be-2c42-42a6-8243-fff57af7e512",
+    "id": "f968d99c-c461-4530-a4d2-af39de6ec70d",
     "sku": "SKU-58393",
     "name": "StyleCo Electronics Product 27",
     "brand": "StyleCo",
@@ -563,11 +563,11 @@
     "supplier": "Supplier-5",
     "lead_time_days": 4,
     "buyer": "Carol Johnson",
-    "last_reorder_date": "2026-04-06",
+    "last_reorder_date": "2026-08-14",
     "_risk_label": "healthy"
   },
   {
-    "id": "d98d1b89-0729-4f18-8085-b1bca9d1649e",
+    "id": "6b877f85-4dd1-47a1-9835-48f5c494edc8",
     "sku": "SKU-91351",
     "name": "FreshFarm Electronics Product 28",
     "brand": "FreshFarm",
@@ -584,11 +584,11 @@
     "supplier": "Supplier-8",
     "lead_time_days": 8,
     "buyer": "Bob Martinez",
-    "last_reorder_date": "2026-04-03",
+    "last_reorder_date": "2026-08-11",
     "_risk_label": "overstock"
   },
   {
-    "id": "afa111d0-abe3-4b86-b25e-b1c77d612414",
+    "id": "ffdcc6a5-cd00-4eea-8cf3-57e9ea1198bd",
     "sku": "SKU-30866",
     "name": "HomeBase Electronics Product 29",
     "brand": "HomeBase",
@@ -605,11 +605,11 @@
     "supplier": "Supplier-2",
     "lead_time_days": 18,
     "buyer": "Bob Martinez",
-    "last_reorder_date": "2026-04-17",
+    "last_reorder_date": "2026-08-25",
     "_risk_label": "stockout"
   },
   {
-    "id": "b5a79509-e02c-4cd1-be1b-7dbeaeef9ed4",
+    "id": "7e688144-ba88-4375-a2a3-da34308eb78c",
     "sku": "SKU-35313",
     "name": "FreshFarm Office Product 30",
     "brand": "FreshFarm",
@@ -626,11 +626,11 @@
     "supplier": "Supplier-3",
     "lead_time_days": 11,
     "buyer": "Carol Johnson",
-    "last_reorder_date": "2026-03-19",
+    "last_reorder_date": "2026-07-27",
     "_risk_label": "healthy"
   },
   {
-    "id": "c368a1b5-1813-4960-ba6c-79156298bcfc",
+    "id": "9c2690ea-932e-474b-8b1f-70218514f6bb",
     "sku": "SKU-86099",
     "name": "FreshFarm Toys Product 31",
     "brand": "FreshFarm",
@@ -647,11 +647,11 @@
     "supplier": "Supplier-4",
     "lead_time_days": 16,
     "buyer": "Carol Johnson",
-    "last_reorder_date": "2026-03-14",
+    "last_reorder_date": "2026-07-22",
     "_risk_label": "overstock"
   },
   {
-    "id": "d388c774-53ec-46fa-bcae-1a4006a8aaf0",
+    "id": "bddbd2d4-0426-4ffa-a1bf-ec0a7ad0af34",
     "sku": "SKU-85574",
     "name": "FunZone Food & Beverage Product 32",
     "brand": "FunZone",
@@ -668,11 +668,11 @@
     "supplier": "Supplier-14",
     "lead_time_days": 3,
     "buyer": "Emma Wilson",
-    "last_reorder_date": "2026-03-09",
+    "last_reorder_date": "2026-07-17",
     "_risk_label": "healthy"
   },
   {
-    "id": "8938fa73-2e70-469c-9946-fd14fd79259e",
+    "id": "293e5d7f-f592-4fa8-a33b-484d23a81265",
     "sku": "SKU-96951",
     "name": "FreshFarm Sports Product 33",
     "brand": "FreshFarm",
@@ -689,11 +689,11 @@
     "supplier": "Supplier-10",
     "lead_time_days": 19,
     "buyer": "Carol Johnson",
-    "last_reorder_date": "2026-03-18",
+    "last_reorder_date": "2026-07-26",
     "_risk_label": "healthy"
   },
   {
-    "id": "80152177-b870-4d7f-9907-93255a90bb6f",
+    "id": "a0204daf-ff44-4c7e-8b20-2e14b7998cb5",
     "sku": "SKU-65108",
     "name": "FreshFarm Toys Product 34",
     "brand": "FreshFarm",
@@ -710,11 +710,11 @@
     "supplier": "Supplier-6",
     "lead_time_days": 21,
     "buyer": "Carol Johnson",
-    "last_reorder_date": "2026-04-04",
+    "last_reorder_date": "2026-08-12",
     "_risk_label": "healthy"
   },
   {
-    "id": "2d7b6da7-28b8-4686-9866-f1f1106b7ed4",
+    "id": "cfa34b92-27b5-46de-8a10-999b7be13e94",
     "sku": "SKU-89516",
     "name": "GlowBeauty Electronics Product 35",
     "brand": "GlowBeauty",
@@ -731,11 +731,11 @@
     "supplier": "Supplier-15",
     "lead_time_days": 9,
     "buyer": "Emma Wilson",
-    "last_reorder_date": "2026-03-30",
+    "last_reorder_date": "2026-08-07",
     "_risk_label": "healthy"
   },
   {
-    "id": "33f00493-816b-4c03-9441-486f28ad1d4f",
+    "id": "f6e49e11-e284-4736-8a2e-0140d9774fbe",
     "sku": "SKU-50687",
     "name": "StyleCo Home & Garden Product 36",
     "brand": "StyleCo",
@@ -752,11 +752,11 @@
     "supplier": "Supplier-1",
     "lead_time_days": 4,
     "buyer": "Bob Martinez",
-    "last_reorder_date": "2026-03-30",
+    "last_reorder_date": "2026-08-07",
     "_risk_label": "stockout"
   },
   {
-    "id": "754fb79b-8f75-4c58-92b0-7de096820085",
+    "id": "ad6b29be-a651-457f-94d6-0aad77033735",
     "sku": "SKU-74799",
     "name": "WorkSmart Apparel Product 37",
     "brand": "WorkSmart",
@@ -773,11 +773,11 @@
     "supplier": "Supplier-1",
     "lead_time_days": 6,
     "buyer": "Dave Patel",
-    "last_reorder_date": "2026-04-15",
+    "last_reorder_date": "2026-08-23",
     "_risk_label": "overstock"
   },
   {
-    "id": "39a8655a-f146-42e3-b3d5-1c5709c5b96c",
+    "id": "4da260b7-9ae7-42fd-b506-095280017dbf",
     "sku": "SKU-25906",
     "name": "WorkSmart Home & Garden Product 38",
     "brand": "WorkSmart",
@@ -794,11 +794,11 @@
     "supplier": "Supplier-17",
     "lead_time_days": 20,
     "buyer": "Emma Wilson",
-    "last_reorder_date": "2026-04-09",
+    "last_reorder_date": "2026-08-17",
     "_risk_label": "healthy"
   },
   {
-    "id": "9220d7dc-ad81-4dde-aac8-d1e479d0471e",
+    "id": "e0ecb097-b7df-46cc-9c74-f4984df4cd5f",
     "sku": "SKU-68991",
     "name": "FunZone Office Product 39",
     "brand": "FunZone",
@@ -815,11 +815,11 @@
     "supplier": "Supplier-9",
     "lead_time_days": 19,
     "buyer": "Dave Patel",
-    "last_reorder_date": "2026-03-20",
+    "last_reorder_date": "2026-07-28",
     "_risk_label": "overstock"
   },
   {
-    "id": "e28a0258-b87e-46b0-951d-7cdfac22ac06",
+    "id": "cfe1bf21-5d59-4f21-92af-707ca60ed8cd",
     "sku": "SKU-54020",
     "name": "GlowBeauty Sports Product 40",
     "brand": "GlowBeauty",
@@ -836,11 +836,11 @@
     "supplier": "Supplier-5",
     "lead_time_days": 7,
     "buyer": "Bob Martinez",
-    "last_reorder_date": "2026-04-05",
+    "last_reorder_date": "2026-08-13",
     "_risk_label": "healthy"
   },
   {
-    "id": "81dd35f6-f459-498c-9c27-b0d26efdf5d1",
+    "id": "f4756cef-b6cb-4324-a406-ab8aa49c65e6",
     "sku": "SKU-71069",
     "name": "ActiveGear Home & Garden Product 41",
     "brand": "ActiveGear",
@@ -857,11 +857,11 @@
     "supplier": "Supplier-14",
     "lead_time_days": 15,
     "buyer": "Emma Wilson",
-    "last_reorder_date": "2026-03-16",
+    "last_reorder_date": "2026-07-24",
     "_risk_label": "healthy"
   },
   {
-    "id": "1bb6a751-60e6-47ca-910e-1a070d6460cb",
+    "id": "1a5d24a4-64e0-4b2b-9509-4ba58dd39c72",
     "sku": "SKU-61116",
     "name": "FunZone Electronics Product 42",
     "brand": "FunZone",
@@ -878,11 +878,11 @@
     "supplier": "Supplier-14",
     "lead_time_days": 20,
     "buyer": "Emma Wilson",
-    "last_reorder_date": "2026-03-09",
+    "last_reorder_date": "2026-07-17",
     "_risk_label": "healthy"
   },
   {
-    "id": "987ade03-269d-4a35-aea4-546475128b0a",
+    "id": "08cd2041-0b9b-4dea-97a4-7e26cf69f4d2",
     "sku": "SKU-97670",
     "name": "WorkSmart Sports Product 43",
     "brand": "WorkSmart",
@@ -899,11 +899,11 @@
     "supplier": "Supplier-6",
     "lead_time_days": 17,
     "buyer": "Bob Martinez",
-    "last_reorder_date": "2026-03-21",
+    "last_reorder_date": "2026-07-29",
     "_risk_label": "stockout"
   },
   {
-    "id": "e4d5d1b3-68ac-4584-9cfa-8a7769bfe364",
+    "id": "8f583419-32fc-4ebf-b596-59a03c059417",
     "sku": "SKU-66179",
     "name": "FunZone Electronics Product 44",
     "brand": "FunZone",
@@ -920,11 +920,11 @@
     "supplier": "Supplier-2",
     "lead_time_days": 11,
     "buyer": "Dave Patel",
-    "last_reorder_date": "2026-04-09",
+    "last_reorder_date": "2026-08-17",
     "_risk_label": "healthy"
   },
   {
-    "id": "a951c463-152f-4032-b4f4-4d1c0a39ec11",
+    "id": "9f07b53b-dde1-4364-a985-ec4d8cf01449",
     "sku": "SKU-65255",
     "name": "WorkSmart Sports Product 45",
     "brand": "WorkSmart",
@@ -941,11 +941,11 @@
     "supplier": "Supplier-1",
     "lead_time_days": 20,
     "buyer": "Alice Chen",
-    "last_reorder_date": "2026-04-07",
+    "last_reorder_date": "2026-08-15",
     "_risk_label": "healthy"
   },
   {
-    "id": "4a6df383-2018-4e04-a489-64ba071b9ed7",
+    "id": "2ab11cf3-3094-4ff2-8ce3-5df97dff8604",
     "sku": "SKU-91439",
     "name": "StyleCo Sports Product 46",
     "brand": "StyleCo",
@@ -962,11 +962,11 @@
     "supplier": "Supplier-4",
     "lead_time_days": 21,
     "buyer": "Bob Martinez",
-    "last_reorder_date": "2026-03-31",
+    "last_reorder_date": "2026-08-08",
     "_risk_label": "overstock"
   },
   {
-    "id": "1399f2c1-a21d-482c-b869-e8f7147fd9c1",
+    "id": "2c6b6919-66b2-44df-8ad8-3ae90661045f",
     "sku": "SKU-31465",
     "name": "FreshFarm Beauty Product 47",
     "brand": "FreshFarm",
@@ -983,11 +983,11 @@
     "supplier": "Supplier-1",
     "lead_time_days": 12,
     "buyer": "Emma Wilson",
-    "last_reorder_date": "2026-03-17",
+    "last_reorder_date": "2026-07-25",
     "_risk_label": "healthy"
   },
   {
-    "id": "174b6151-08e6-48ab-a75a-f1f7509c30bc",
+    "id": "f3ac4202-6458-4254-8d29-e2f302741246",
     "sku": "SKU-41830",
     "name": "FunZone Toys Product 48",
     "brand": "FunZone",
@@ -1004,11 +1004,11 @@
     "supplier": "Supplier-20",
     "lead_time_days": 6,
     "buyer": "Emma Wilson",
-    "last_reorder_date": "2026-03-10",
+    "last_reorder_date": "2026-07-18",
     "_risk_label": "overstock"
   },
   {
-    "id": "9b142c99-1513-4c03-a070-07b6412ad4cc",
+    "id": "d82af8db-49c8-43e6-b81d-f1e4c219264b",
     "sku": "SKU-94874",
     "name": "FreshFarm Electronics Product 49",
     "brand": "FreshFarm",
@@ -1025,11 +1025,11 @@
     "supplier": "Supplier-16",
     "lead_time_days": 6,
     "buyer": "Dave Patel",
-    "last_reorder_date": "2026-04-06",
+    "last_reorder_date": "2026-08-14",
     "_risk_label": "healthy"
   },
   {
-    "id": "5ecd03c3-facc-4e98-baac-1162eae3f5f0",
+    "id": "af4ddd42-73c9-4956-a75b-b4f2499a5f87",
     "sku": "SKU-80539",
     "name": "HomeBase Office Product 50",
     "brand": "HomeBase",
@@ -1046,11 +1046,11 @@
     "supplier": "Supplier-19",
     "lead_time_days": 11,
     "buyer": "Carol Johnson",
-    "last_reorder_date": "2026-04-14",
+    "last_reorder_date": "2026-08-22",
     "_risk_label": "stockout"
   },
   {
-    "id": "48f28f1a-4152-4c48-b781-d1de9236899c",
+    "id": "988438d6-a714-43c8-87ac-b4641000ed24",
     "sku": "SKU-97580",
     "name": "GlowBeauty Apparel Product 51",
     "brand": "GlowBeauty",
@@ -1067,11 +1067,11 @@
     "supplier": "Supplier-11",
     "lead_time_days": 8,
     "buyer": "Dave Patel",
-    "last_reorder_date": "2026-04-16",
+    "last_reorder_date": "2026-08-24",
     "_risk_label": "overstock"
   },
   {
-    "id": "631f5171-89b5-4424-a28b-4589938d7399",
+    "id": "1cb16e76-bff5-4ff7-8b0c-e7cd10d3e7a6",
     "sku": "SKU-77715",
     "name": "GlowBeauty Food & Beverage Product 52",
     "brand": "GlowBeauty",
@@ -1088,11 +1088,11 @@
     "supplier": "Supplier-14",
     "lead_time_days": 18,
     "buyer": "Emma Wilson",
-    "last_reorder_date": "2026-03-12",
+    "last_reorder_date": "2026-07-20",
     "_risk_label": "healthy"
   },
   {
-    "id": "85c7d6e1-926b-4db4-a5a0-a3e86d310be5",
+    "id": "5bc9949a-41c9-4db5-8433-9a2fa3b71981",
     "sku": "SKU-22196",
     "name": "WorkSmart Sports Product 53",
     "brand": "WorkSmart",
@@ -1109,11 +1109,11 @@
     "supplier": "Supplier-8",
     "lead_time_days": 12,
     "buyer": "Emma Wilson",
-    "last_reorder_date": "2026-04-06",
+    "last_reorder_date": "2026-08-14",
     "_risk_label": "healthy"
   },
   {
-    "id": "e0777b3d-0411-403c-b760-e49a144ca726",
+    "id": "a6fe69be-5706-40e3-beba-faf2ee108350",
     "sku": "SKU-69473",
     "name": "FreshFarm Office Product 54",
     "brand": "FreshFarm",
@@ -1130,11 +1130,11 @@
     "supplier": "Supplier-4",
     "lead_time_days": 9,
     "buyer": "Carol Johnson",
-    "last_reorder_date": "2026-04-22",
+    "last_reorder_date": "2026-08-30",
     "_risk_label": "healthy"
   },
   {
-    "id": "4eb2c26a-1668-4e93-9f4b-cdb07c99ca4b",
+    "id": "0970f3ae-b630-4ff5-b91a-0201410f8e47",
     "sku": "SKU-78765",
     "name": "ActiveGear Home & Garden Product 55",
     "brand": "ActiveGear",
@@ -1151,11 +1151,11 @@
     "supplier": "Supplier-7",
     "lead_time_days": 12,
     "buyer": "Bob Martinez",
-    "last_reorder_date": "2026-04-06",
+    "last_reorder_date": "2026-08-14",
     "_risk_label": "overstock"
   },
   {
-    "id": "7f5bbeb7-90fe-4b58-9d74-be3176d93dc9",
+    "id": "0539dcc2-c47c-4d7f-96e9-ad01501c12b1",
     "sku": "SKU-48290",
     "name": "GlowBeauty Home & Garden Product 56",
     "brand": "GlowBeauty",
@@ -1172,11 +1172,11 @@
     "supplier": "Supplier-16",
     "lead_time_days": 6,
     "buyer": "Alice Chen",
-    "last_reorder_date": "2026-03-24",
+    "last_reorder_date": "2026-08-01",
     "_risk_label": "stockout"
   },
   {
-    "id": "697a1d1b-921d-4548-9aee-5cb22973bafa",
+    "id": "2f9afb1d-0487-483e-9602-9c0c67f53df8",
     "sku": "SKU-72616",
     "name": "WorkSmart Beauty Product 57",
     "brand": "WorkSmart",
@@ -1193,11 +1193,11 @@
     "supplier": "Supplier-16",
     "lead_time_days": 5,
     "buyer": "Emma Wilson",
-    "last_reorder_date": "2026-03-20",
+    "last_reorder_date": "2026-07-28",
     "_risk_label": "stockout"
   },
   {
-    "id": "c144c1e1-cc98-4e5e-a162-1df0b1c22482",
+    "id": "af7a85c3-155b-4668-a03a-4a9783042d59",
     "sku": "SKU-42530",
     "name": "HomeBase Electronics Product 58",
     "brand": "HomeBase",
@@ -1214,11 +1214,11 @@
     "supplier": "Supplier-20",
     "lead_time_days": 10,
     "buyer": "Emma Wilson",
-    "last_reorder_date": "2026-04-05",
+    "last_reorder_date": "2026-08-13",
     "_risk_label": "healthy"
   },
   {
-    "id": "b179a11f-1cc7-4486-8df1-a94bb8645db2",
+    "id": "1659122d-88b8-454c-b80b-74ba7927f20a",
     "sku": "SKU-91399",
     "name": "WorkSmart Office Product 59",
     "brand": "WorkSmart",
@@ -1235,11 +1235,11 @@
     "supplier": "Supplier-4",
     "lead_time_days": 9,
     "buyer": "Bob Martinez",
-    "last_reorder_date": "2026-04-13",
+    "last_reorder_date": "2026-08-21",
     "_risk_label": "healthy"
   },
   {
-    "id": "701970c2-cf24-41ca-a7a7-dd913939a7e4",
+    "id": "d5ae12c4-dbfa-4a43-8b9d-ebacdb318b30",
     "sku": "SKU-10350",
     "name": "HomeBase Apparel Product 60",
     "brand": "HomeBase",
@@ -1256,11 +1256,11 @@
     "supplier": "Supplier-16",
     "lead_time_days": 12,
     "buyer": "Alice Chen",
-    "last_reorder_date": "2026-04-15",
+    "last_reorder_date": "2026-08-23",
     "_risk_label": "healthy"
   },
   {
-    "id": "57db9f61-209a-42b1-833b-268f79b84394",
+    "id": "8af6cef3-94a0-49ac-a517-d3a9f46df564",
     "sku": "SKU-44675",
     "name": "GlowBeauty Beauty Product 61",
     "brand": "GlowBeauty",
@@ -1277,11 +1277,11 @@
     "supplier": "Supplier-7",
     "lead_time_days": 16,
     "buyer": "Alice Chen",
-    "last_reorder_date": "2026-03-26",
+    "last_reorder_date": "2026-08-03",
     "_risk_label": "healthy"
   },
   {
-    "id": "1422356a-f6ee-4ccb-b9a5-cd400d61d35d",
+    "id": "1cd3cc38-1299-43de-b334-cd3e4fc4c6e3",
     "sku": "SKU-87993",
     "name": "HomeBase Sports Product 62",
     "brand": "HomeBase",
@@ -1298,11 +1298,11 @@
     "supplier": "Supplier-10",
     "lead_time_days": 17,
     "buyer": "Alice Chen",
-    "last_reorder_date": "2026-03-31",
+    "last_reorder_date": "2026-08-08",
     "_risk_label": "overstock"
   },
   {
-    "id": "9dc59a30-0fe0-4ff3-8aa9-08095099f0d9",
+    "id": "2265c7ee-d9e8-47e5-8fc3-bea5f3406a45",
     "sku": "SKU-88385",
     "name": "FunZone Beauty Product 63",
     "brand": "FunZone",
@@ -1319,11 +1319,11 @@
     "supplier": "Supplier-11",
     "lead_time_days": 11,
     "buyer": "Alice Chen",
-    "last_reorder_date": "2026-04-24",
+    "last_reorder_date": "2026-09-01",
     "_risk_label": "overstock"
   },
   {
-    "id": "2a838444-0374-4653-b80a-e2d0e59ee9f4",
+    "id": "09688c1b-36f0-4d21-9b0f-07a606254e57",
     "sku": "SKU-78021",
     "name": "ProTech Sports Product 64",
     "brand": "ProTech",
@@ -1340,11 +1340,11 @@
     "supplier": "Supplier-6",
     "lead_time_days": 21,
     "buyer": "Dave Patel",
-    "last_reorder_date": "2026-03-20",
+    "last_reorder_date": "2026-07-28",
     "_risk_label": "stockout"
   },
   {
-    "id": "90b05e87-4c84-48fc-968b-49d1022b6c67",
+    "id": "613fa895-0a95-4444-a22a-ba719e96b9b4",
     "sku": "SKU-97835",
     "name": "StyleCo Office Product 65",
     "brand": "StyleCo",
@@ -1361,11 +1361,11 @@
     "supplier": "Supplier-14",
     "lead_time_days": 18,
     "buyer": "Carol Johnson",
-    "last_reorder_date": "2026-03-18",
+    "last_reorder_date": "2026-07-26",
     "_risk_label": "healthy"
   },
   {
-    "id": "f232af9a-e9bf-4254-9550-6791549b03fa",
+    "id": "a47c4962-eab4-45c5-87f8-9563606e485d",
     "sku": "SKU-25194",
     "name": "ProTech Toys Product 66",
     "brand": "ProTech",
@@ -1382,11 +1382,11 @@
     "supplier": "Supplier-17",
     "lead_time_days": 3,
     "buyer": "Emma Wilson",
-    "last_reorder_date": "2026-03-31",
+    "last_reorder_date": "2026-08-08",
     "_risk_label": "healthy"
   },
   {
-    "id": "0f39b55d-33a7-4914-bf40-bdbf06b005f5",
+    "id": "9016018c-2b16-4950-86c7-df3806ff607b",
     "sku": "SKU-75338",
     "name": "ProTech Toys Product 67",
     "brand": "ProTech",
@@ -1403,11 +1403,11 @@
     "supplier": "Supplier-7",
     "lead_time_days": 11,
     "buyer": "Emma Wilson",
-    "last_reorder_date": "2026-04-21",
+    "last_reorder_date": "2026-08-29",
     "_risk_label": "healthy"
   },
   {
-    "id": "d4fb5a54-d8fc-4240-8d3e-8edb3f920c18",
+    "id": "1d4b84e1-010b-4db0-aca8-15e28654e76f",
     "sku": "SKU-41365",
     "name": "WorkSmart Beauty Product 68",
     "brand": "WorkSmart",
@@ -1424,11 +1424,11 @@
     "supplier": "Supplier-1",
     "lead_time_days": 20,
     "buyer": "Dave Patel",
-    "last_reorder_date": "2026-04-24",
+    "last_reorder_date": "2026-09-01",
     "_risk_label": "overstock"
   },
   {
-    "id": "bb91c345-e3fe-4b25-8c58-8a62708c303a",
+    "id": "70598972-eef0-4e11-9975-5b70c8a9b3c6",
     "sku": "SKU-48254",
     "name": "StyleCo Sports Product 69",
     "brand": "StyleCo",
@@ -1445,11 +1445,11 @@
     "supplier": "Supplier-16",
     "lead_time_days": 18,
     "buyer": "Bob Martinez",
-    "last_reorder_date": "2026-03-31",
+    "last_reorder_date": "2026-08-08",
     "_risk_label": "healthy"
   },
   {
-    "id": "6a61492e-e5a2-413c-ad68-a6899e727731",
+    "id": "2e2da29a-c5ef-4920-adf3-072826d89723",
     "sku": "SKU-27892",
     "name": "FunZone Home & Garden Product 70",
     "brand": "FunZone",
@@ -1466,11 +1466,11 @@
     "supplier": "Supplier-14",
     "lead_time_days": 13,
     "buyer": "Emma Wilson",
-    "last_reorder_date": "2026-04-12",
+    "last_reorder_date": "2026-08-20",
     "_risk_label": "healthy"
   },
   {
-    "id": "bf7c14aa-777a-45cf-ac2e-6c10befc8e94",
+    "id": "774ad140-b467-4d87-96e8-796babdb5f72",
     "sku": "SKU-68529",
     "name": "GlowBeauty Electronics Product 71",
     "brand": "GlowBeauty",
@@ -1487,11 +1487,11 @@
     "supplier": "Supplier-18",
     "lead_time_days": 20,
     "buyer": "Dave Patel",
-    "last_reorder_date": "2026-03-31",
+    "last_reorder_date": "2026-08-08",
     "_risk_label": "stockout"
   },
   {
-    "id": "bca299c4-9710-458e-bb02-7795c82af3c0",
+    "id": "8df1909e-ba97-47b0-9f3e-dd650461005b",
     "sku": "SKU-63841",
     "name": "ActiveGear Food & Beverage Product 72",
     "brand": "ActiveGear",
@@ -1508,11 +1508,11 @@
     "supplier": "Supplier-13",
     "lead_time_days": 15,
     "buyer": "Bob Martinez",
-    "last_reorder_date": "2026-03-29",
+    "last_reorder_date": "2026-08-06",
     "_risk_label": "healthy"
   },
   {
-    "id": "29a24dab-3876-47fd-8bd5-9bf06b690718",
+    "id": "47226980-9c3c-48cc-a776-c0e092e5fe7c",
     "sku": "SKU-23069",
     "name": "HomeBase Electronics Product 73",
     "brand": "HomeBase",
@@ -1529,11 +1529,11 @@
     "supplier": "Supplier-5",
     "lead_time_days": 16,
     "buyer": "Bob Martinez",
-    "last_reorder_date": "2026-04-25",
+    "last_reorder_date": "2026-09-02",
     "_risk_label": "overstock"
   },
   {
-    "id": "6d4895c5-48f0-425b-97d8-a274cc5f20cd",
+    "id": "6ab1e68e-96b2-48cd-9137-c868ba2ac500",
     "sku": "SKU-53065",
     "name": "GlowBeauty Office Product 74",
     "brand": "GlowBeauty",
@@ -1550,11 +1550,11 @@
     "supplier": "Supplier-13",
     "lead_time_days": 13,
     "buyer": "Dave Patel",
-    "last_reorder_date": "2026-03-26",
+    "last_reorder_date": "2026-08-03",
     "_risk_label": "healthy"
   },
   {
-    "id": "178ba522-0e8e-4643-b5f1-29fd52ca673a",
+    "id": "4ad2b04c-08ca-418d-b647-fbf14fd1c61e",
     "sku": "SKU-21846",
     "name": "StyleCo Electronics Product 75",
     "brand": "StyleCo",
@@ -1571,11 +1571,11 @@
     "supplier": "Supplier-4",
     "lead_time_days": 17,
     "buyer": "Bob Martinez",
-    "last_reorder_date": "2026-03-16",
+    "last_reorder_date": "2026-07-24",
     "_risk_label": "healthy"
   },
   {
-    "id": "a24434ea-a3dc-48d7-bd04-774ee5a1fe05",
+    "id": "41beaead-3448-492f-8f83-c1d0e8958d09",
     "sku": "SKU-59131",
     "name": "ProTech Beauty Product 76",
     "brand": "ProTech",
@@ -1592,11 +1592,11 @@
     "supplier": "Supplier-14",
     "lead_time_days": 21,
     "buyer": "Bob Martinez",
-    "last_reorder_date": "2026-04-19",
+    "last_reorder_date": "2026-08-27",
     "_risk_label": "healthy"
   },
   {
-    "id": "2127922e-e62e-4c15-bab3-1caca4168bdf",
+    "id": "5a97ad42-5a5c-45bb-8049-bfb1798b64bc",
     "sku": "SKU-86435",
     "name": "StyleCo Home & Garden Product 77",
     "brand": "StyleCo",
@@ -1613,11 +1613,11 @@
     "supplier": "Supplier-9",
     "lead_time_days": 17,
     "buyer": "Carol Johnson",
-    "last_reorder_date": "2026-03-18",
+    "last_reorder_date": "2026-07-26",
     "_risk_label": "healthy"
   },
   {
-    "id": "c32b140c-1685-4ad7-8986-5bc14d045f0a",
+    "id": "b531bb9d-a1f9-4b49-b9a6-a2a360593b4a",
     "sku": "SKU-87014",
     "name": "WorkSmart Electronics Product 78",
     "brand": "WorkSmart",
@@ -1634,11 +1634,11 @@
     "supplier": "Supplier-9",
     "lead_time_days": 17,
     "buyer": "Carol Johnson",
-    "last_reorder_date": "2026-04-17",
+    "last_reorder_date": "2026-08-25",
     "_risk_label": "stockout"
   },
   {
-    "id": "7b0d4fcf-7cee-4913-aad3-fd0d2e792379",
+    "id": "8371a115-f0d2-44a7-8c65-7169c2a6bc09",
     "sku": "SKU-85341",
     "name": "WorkSmart Toys Product 79",
     "brand": "WorkSmart",
@@ -1655,11 +1655,11 @@
     "supplier": "Supplier-1",
     "lead_time_days": 15,
     "buyer": "Carol Johnson",
-    "last_reorder_date": "2026-04-29",
+    "last_reorder_date": "2026-09-06",
     "_risk_label": "healthy"
   },
   {
-    "id": "1c3c060b-d795-4274-9a39-1fe121d994ad",
+    "id": "ff5455f2-91c3-4a5e-beef-d4b5e4c687ce",
     "sku": "SKU-93442",
     "name": "WorkSmart Electronics Product 80",
     "brand": "WorkSmart",
@@ -1676,11 +1676,11 @@
     "supplier": "Supplier-5",
     "lead_time_days": 6,
     "buyer": "Alice Chen",
-    "last_reorder_date": "2026-04-10",
+    "last_reorder_date": "2026-08-18",
     "_risk_label": "overstock"
   },
   {
-    "id": "be6bd44c-895d-4504-b356-31996332d052",
+    "id": "1b651b58-7c68-4b74-b38b-960db6e81f0c",
     "sku": "SKU-48680",
     "name": "ProTech Office Product 81",
     "brand": "ProTech",
@@ -1697,11 +1697,11 @@
     "supplier": "Supplier-7",
     "lead_time_days": 7,
     "buyer": "Emma Wilson",
-    "last_reorder_date": "2026-04-06",
+    "last_reorder_date": "2026-08-14",
     "_risk_label": "healthy"
   },
   {
-    "id": "a2f807a9-04a3-46fc-b2ce-7e9a18519793",
+    "id": "8fc79bbe-3d41-4e46-a030-88d9939b0b5a",
     "sku": "SKU-71385",
     "name": "HomeBase Beauty Product 82",
     "brand": "HomeBase",
@@ -1718,11 +1718,11 @@
     "supplier": "Supplier-8",
     "lead_time_days": 15,
     "buyer": "Emma Wilson",
-    "last_reorder_date": "2026-04-06",
+    "last_reorder_date": "2026-08-14",
     "_risk_label": "overstock"
   },
   {
-    "id": "7a6f7bf5-d580-4da7-80b0-4d029e713329",
+    "id": "275149dc-dd45-4ffd-a772-3c9b2f31319d",
     "sku": "SKU-98125",
     "name": "FunZone Apparel Product 83",
     "brand": "FunZone",
@@ -1739,11 +1739,11 @@
     "supplier": "Supplier-12",
     "lead_time_days": 6,
     "buyer": "Bob Martinez",
-    "last_reorder_date": "2026-03-30",
+    "last_reorder_date": "2026-08-07",
     "_risk_label": "stockout"
   },
   {
-    "id": "61141dae-e8d1-40d9-b00b-e3e68b24915f",
+    "id": "27424f83-4795-4def-8db6-c1e8b02d6000",
     "sku": "SKU-49608",
     "name": "FreshFarm Electronics Product 84",
     "brand": "FreshFarm",
@@ -1760,11 +1760,11 @@
     "supplier": "Supplier-2",
     "lead_time_days": 4,
     "buyer": "Carol Johnson",
-    "last_reorder_date": "2026-03-29",
+    "last_reorder_date": "2026-08-06",
     "_risk_label": "overstock"
   },
   {
-    "id": "9940ba26-f5c2-4da6-b30f-e9f88830781b",
+    "id": "3a3596a7-2c5d-4b7a-a7c1-3b3086423344",
     "sku": "SKU-80804",
     "name": "StyleCo Apparel Product 85",
     "brand": "StyleCo",
@@ -1781,11 +1781,11 @@
     "supplier": "Supplier-5",
     "lead_time_days": 16,
     "buyer": "Alice Chen",
-    "last_reorder_date": "2026-03-07",
+    "last_reorder_date": "2026-07-15",
     "_risk_label": "stockout"
   },
   {
-    "id": "eb735976-e9c7-4491-8bc6-29fc40661699",
+    "id": "1a4016d1-da8f-4ebd-aaa1-6997554b2cb4",
     "sku": "SKU-68287",
     "name": "FunZone Office Product 86",
     "brand": "FunZone",
@@ -1802,11 +1802,11 @@
     "supplier": "Supplier-4",
     "lead_time_days": 14,
     "buyer": "Emma Wilson",
-    "last_reorder_date": "2026-03-19",
+    "last_reorder_date": "2026-07-27",
     "_risk_label": "overstock"
   },
   {
-    "id": "625090dd-a59b-4fe0-a40c-48b8c91348f2",
+    "id": "b8f78ba4-8785-4308-af3e-2e431bef67ae",
     "sku": "SKU-69600",
     "name": "ProTech Food & Beverage Product 87",
     "brand": "ProTech",
@@ -1823,11 +1823,11 @@
     "supplier": "Supplier-20",
     "lead_time_days": 3,
     "buyer": "Alice Chen",
-    "last_reorder_date": "2026-03-10",
+    "last_reorder_date": "2026-07-18",
     "_risk_label": "healthy"
   },
   {
-    "id": "dacc399e-53db-4f3d-b678-e7ea4728e024",
+    "id": "f9533ed9-937b-464c-8701-9c9bde8e821d",
     "sku": "SKU-82641",
     "name": "ActiveGear Food & Beverage Product 88",
     "brand": "ActiveGear",
@@ -1844,11 +1844,11 @@
     "supplier": "Supplier-8",
     "lead_time_days": 13,
     "buyer": "Bob Martinez",
-    "last_reorder_date": "2026-03-10",
+    "last_reorder_date": "2026-07-18",
     "_risk_label": "healthy"
   },
   {
-    "id": "16762ed4-8c65-4a54-b859-e886691c807d",
+    "id": "b1e0a077-f1a5-41bf-8be7-7666c9ac2953",
     "sku": "SKU-24408",
     "name": "GlowBeauty Electronics Product 89",
     "brand": "GlowBeauty",
@@ -1865,11 +1865,11 @@
     "supplier": "Supplier-1",
     "lead_time_days": 14,
     "buyer": "Bob Martinez",
-    "last_reorder_date": "2026-03-23",
+    "last_reorder_date": "2026-07-31",
     "_risk_label": "overstock"
   },
   {
-    "id": "a3fa4af3-11a1-4436-9064-0a949ce97396",
+    "id": "ca7d2cfc-77fe-4e6b-81e9-870cf752e667",
     "sku": "SKU-65176",
     "name": "ProTech Food & Beverage Product 90",
     "brand": "ProTech",
@@ -1886,11 +1886,11 @@
     "supplier": "Supplier-16",
     "lead_time_days": 17,
     "buyer": "Carol Johnson",
-    "last_reorder_date": "2026-03-28",
+    "last_reorder_date": "2026-08-05",
     "_risk_label": "healthy"
   },
   {
-    "id": "44ed877d-7797-4912-a863-fe7aeeb198ad",
+    "id": "31e44efb-c5c2-4273-b9c9-7f827f31ddc1",
     "sku": "SKU-78347",
     "name": "WorkSmart Apparel Product 91",
     "brand": "WorkSmart",
@@ -1907,11 +1907,11 @@
     "supplier": "Supplier-1",
     "lead_time_days": 4,
     "buyer": "Dave Patel",
-    "last_reorder_date": "2026-04-04",
+    "last_reorder_date": "2026-08-12",
     "_risk_label": "overstock"
   },
   {
-    "id": "d4a67b0e-a7c1-4166-9ce5-c86ef5023694",
+    "id": "6f4c54e4-4a70-40c1-9317-924c7703472e",
     "sku": "SKU-29442",
     "name": "StyleCo Toys Product 92",
     "brand": "StyleCo",
@@ -1928,11 +1928,11 @@
     "supplier": "Supplier-19",
     "lead_time_days": 20,
     "buyer": "Carol Johnson",
-    "last_reorder_date": "2026-04-05",
+    "last_reorder_date": "2026-08-13",
     "_risk_label": "stockout"
   },
   {
-    "id": "31d5d81a-5331-4632-a826-ec36725fe271",
+    "id": "e4308d3f-cdc0-4ba0-9fec-5a6a1452dbaa",
     "sku": "SKU-24996",
     "name": "WorkSmart Beauty Product 93",
     "brand": "WorkSmart",
@@ -1949,11 +1949,11 @@
     "supplier": "Supplier-18",
     "lead_time_days": 9,
     "buyer": "Dave Patel",
-    "last_reorder_date": "2026-04-01",
+    "last_reorder_date": "2026-08-09",
     "_risk_label": "healthy"
   },
   {
-    "id": "0b7e3a9c-6318-4876-979f-f9ff0911cb96",
+    "id": "d0badaec-93bc-4f02-bc0e-89b74735f4e6",
     "sku": "SKU-22463",
     "name": "FunZone Sports Product 94",
     "brand": "FunZone",
@@ -1970,11 +1970,11 @@
     "supplier": "Supplier-9",
     "lead_time_days": 14,
     "buyer": "Bob Martinez",
-    "last_reorder_date": "2026-03-17",
+    "last_reorder_date": "2026-07-25",
     "_risk_label": "healthy"
   },
   {
-    "id": "7db1bc3f-dc42-4f97-8dcc-ceaf7be031ab",
+    "id": "34242e5d-ca21-4688-b65e-c6b2f94bf221",
     "sku": "SKU-58843",
     "name": "StyleCo Office Product 95",
     "brand": "StyleCo",
@@ -1991,11 +1991,11 @@
     "supplier": "Supplier-19",
     "lead_time_days": 20,
     "buyer": "Emma Wilson",
-    "last_reorder_date": "2026-04-08",
+    "last_reorder_date": "2026-08-16",
     "_risk_label": "healthy"
   },
   {
-    "id": "1d47188a-3832-4078-9def-c0346b8ccde5",
+    "id": "f424c4a2-1632-461d-9882-87915e45ac40",
     "sku": "SKU-88696",
     "name": "FunZone Apparel Product 96",
     "brand": "FunZone",
@@ -2012,11 +2012,11 @@
     "supplier": "Supplier-17",
     "lead_time_days": 9,
     "buyer": "Bob Martinez",
-    "last_reorder_date": "2026-03-18",
+    "last_reorder_date": "2026-07-26",
     "_risk_label": "healthy"
   },
   {
-    "id": "18e51151-6cd0-4180-a9b8-f387ec640bf5",
+    "id": "fdc22f3b-efe2-43f2-8e40-c6a4b9d7bbcd",
     "sku": "SKU-46512",
     "name": "ActiveGear Office Product 97",
     "brand": "ActiveGear",
@@ -2033,11 +2033,11 @@
     "supplier": "Supplier-18",
     "lead_time_days": 20,
     "buyer": "Alice Chen",
-    "last_reorder_date": "2026-03-22",
+    "last_reorder_date": "2026-07-30",
     "_risk_label": "overstock"
   },
   {
-    "id": "91a2ead0-8363-460b-91a8-6e977d57a919",
+    "id": "7ba71530-096d-4e19-88c7-c56d68ff6081",
     "sku": "SKU-56009",
     "name": "ProTech Beauty Product 98",
     "brand": "ProTech",
@@ -2054,11 +2054,11 @@
     "supplier": "Supplier-19",
     "lead_time_days": 15,
     "buyer": "Alice Chen",
-    "last_reorder_date": "2026-04-20",
+    "last_reorder_date": "2026-08-28",
     "_risk_label": "healthy"
   },
   {
-    "id": "1ee30c00-0930-4360-8a85-d7f563084f4f",
+    "id": "cb0f81e0-bed0-4124-bee9-9510d7e06685",
     "sku": "SKU-30631",
     "name": "StyleCo Electronics Product 99",
     "brand": "StyleCo",
@@ -2075,11 +2075,11 @@
     "supplier": "Supplier-19",
     "lead_time_days": 5,
     "buyer": "Alice Chen",
-    "last_reorder_date": "2026-04-20",
+    "last_reorder_date": "2026-08-28",
     "_risk_label": "stockout"
   },
   {
-    "id": "b3eae0a9-c3e7-4fc0-b95f-91f297091d10",
+    "id": "84c96fa9-621c-48ea-8539-115a1b49d603",
     "sku": "SKU-89570",
     "name": "ProTech Home & Garden Product 100",
     "brand": "ProTech",
@@ -2096,11 +2096,11 @@
     "supplier": "Supplier-17",
     "lead_time_days": 6,
     "buyer": "Carol Johnson",
-    "last_reorder_date": "2026-04-02",
+    "last_reorder_date": "2026-08-10",
     "_risk_label": "overstock"
   },
   {
-    "id": "88da932a-87bb-4314-8677-5d71f4b76983",
+    "id": "d59d5710-0c07-4f81-847a-d37817cf10d7",
     "sku": "SKU-50425",
     "name": "GlowBeauty Apparel Product 101",
     "brand": "GlowBeauty",
@@ -2117,11 +2117,11 @@
     "supplier": "Supplier-20",
     "lead_time_days": 4,
     "buyer": "Alice Chen",
-    "last_reorder_date": "2026-04-16",
+    "last_reorder_date": "2026-08-24",
     "_risk_label": "healthy"
   },
   {
-    "id": "749b9ad1-aaa1-4b8a-8ca6-0da4516ee647",
+    "id": "4a9c69cb-1fef-4105-8a91-7081d53e47ea",
     "sku": "SKU-25726",
     "name": "ActiveGear Beauty Product 102",
     "brand": "ActiveGear",
@@ -2138,11 +2138,11 @@
     "supplier": "Supplier-6",
     "lead_time_days": 7,
     "buyer": "Dave Patel",
-    "last_reorder_date": "2026-03-26",
+    "last_reorder_date": "2026-08-03",
     "_risk_label": "healthy"
   },
   {
-    "id": "fd2f8cac-454d-488f-9cad-7aa0d15875a6",
+    "id": "d61c582a-f003-4d81-a0b5-ead9c805471d",
     "sku": "SKU-70260",
     "name": "FreshFarm Sports Product 103",
     "brand": "FreshFarm",
@@ -2159,11 +2159,11 @@
     "supplier": "Supplier-19",
     "lead_time_days": 16,
     "buyer": "Emma Wilson",
-    "last_reorder_date": "2026-04-04",
+    "last_reorder_date": "2026-08-12",
     "_risk_label": "healthy"
   },
   {
-    "id": "01f69ce9-cb74-41d7-9176-152aac8acf3e",
+    "id": "36c77d4d-594f-46c2-84e0-43a97fea1245",
     "sku": "SKU-32527",
     "name": "GlowBeauty Toys Product 104",
     "brand": "GlowBeauty",
@@ -2180,11 +2180,11 @@
     "supplier": "Supplier-12",
     "lead_time_days": 5,
     "buyer": "Dave Patel",
-    "last_reorder_date": "2026-04-23",
+    "last_reorder_date": "2026-08-31",
     "_risk_label": "healthy"
   },
   {
-    "id": "1bd18379-65c9-4692-a486-6c253a9422e0",
+    "id": "b321d117-4b1c-4dca-98a9-d44d300a9a4d",
     "sku": "SKU-50668",
     "name": "FunZone Sports Product 105",
     "brand": "FunZone",
@@ -2201,11 +2201,11 @@
     "supplier": "Supplier-6",
     "lead_time_days": 5,
     "buyer": "Emma Wilson",
-    "last_reorder_date": "2026-03-20",
+    "last_reorder_date": "2026-07-28",
     "_risk_label": "healthy"
   },
   {
-    "id": "db1259c7-c41d-4536-8034-dda767f7a15b",
+    "id": "1145da4a-794d-4d66-b805-833e4189c67b",
     "sku": "SKU-23474",
     "name": "ActiveGear Apparel Product 106",
     "brand": "ActiveGear",
@@ -2222,11 +2222,11 @@
     "supplier": "Supplier-20",
     "lead_time_days": 7,
     "buyer": "Alice Chen",
-    "last_reorder_date": "2026-04-18",
+    "last_reorder_date": "2026-08-26",
     "_risk_label": "stockout"
   },
   {
-    "id": "06a9fc04-2aad-475d-ae22-2babc91a5a9f",
+    "id": "4f61a327-1957-4bb4-860d-567d4a5ba2f9",
     "sku": "SKU-83989",
     "name": "WorkSmart Office Product 107",
     "brand": "WorkSmart",
@@ -2243,11 +2243,11 @@
     "supplier": "Supplier-11",
     "lead_time_days": 13,
     "buyer": "Bob Martinez",
-    "last_reorder_date": "2026-04-01",
+    "last_reorder_date": "2026-08-09",
     "_risk_label": "healthy"
   },
   {
-    "id": "2c92d1de-bb6b-4b18-8517-6c99c88b0984",
+    "id": "570c26f4-e11d-4f52-84bb-c06d1b355399",
     "sku": "SKU-87518",
     "name": "WorkSmart Apparel Product 108",
     "brand": "WorkSmart",
@@ -2264,11 +2264,11 @@
     "supplier": "Supplier-10",
     "lead_time_days": 17,
     "buyer": "Dave Patel",
-    "last_reorder_date": "2026-04-27",
+    "last_reorder_date": "2026-09-04",
     "_risk_label": "healthy"
   },
   {
-    "id": "e142630e-8061-42b8-968b-511038928ceb",
+    "id": "b1dffa36-3382-4ac3-bfa8-720afcca6831",
     "sku": "SKU-90610",
     "name": "FreshFarm Electronics Product 109",
     "brand": "FreshFarm",
@@ -2285,11 +2285,11 @@
     "supplier": "Supplier-19",
     "lead_time_days": 20,
     "buyer": "Alice Chen",
-    "last_reorder_date": "2026-04-01",
+    "last_reorder_date": "2026-08-09",
     "_risk_label": "overstock"
   },
   {
-    "id": "52bd1c68-5c12-4990-a786-eba87c0a1dde",
+    "id": "6582a77b-8b8e-44be-9755-9203af775180",
     "sku": "SKU-18109",
     "name": "FreshFarm Sports Product 110",
     "brand": "FreshFarm",
@@ -2306,11 +2306,11 @@
     "supplier": "Supplier-11",
     "lead_time_days": 5,
     "buyer": "Emma Wilson",
-    "last_reorder_date": "2026-03-19",
+    "last_reorder_date": "2026-07-27",
     "_risk_label": "healthy"
   },
   {
-    "id": "8ef1cdf8-66c3-4166-bf4c-f65b72f7e2b3",
+    "id": "c5c9044d-8d8e-4d7b-ad51-ac48cee596cb",
     "sku": "SKU-89928",
     "name": "ProTech Home & Garden Product 111",
     "brand": "ProTech",
@@ -2327,11 +2327,11 @@
     "supplier": "Supplier-10",
     "lead_time_days": 15,
     "buyer": "Dave Patel",
-    "last_reorder_date": "2026-03-11",
+    "last_reorder_date": "2026-07-19",
     "_risk_label": "healthy"
   },
   {
-    "id": "0e97d86a-210b-42a4-a643-f7e449852d78",
+    "id": "5877f386-2f0f-4c9d-867e-0232291b3d16",
     "sku": "SKU-98916",
     "name": "ProTech Food & Beverage Product 112",
     "brand": "ProTech",
@@ -2348,11 +2348,11 @@
     "supplier": "Supplier-20",
     "lead_time_days": 7,
     "buyer": "Carol Johnson",
-    "last_reorder_date": "2026-04-24",
+    "last_reorder_date": "2026-09-01",
     "_risk_label": "overstock"
   },
   {
-    "id": "8292e362-13ca-4902-ab84-746e8fe563fb",
+    "id": "40877123-2fa3-4aed-a735-7db7b4351095",
     "sku": "SKU-83259",
     "name": "FreshFarm Home & Garden Product 113",
     "brand": "FreshFarm",
@@ -2369,11 +2369,11 @@
     "supplier": "Supplier-5",
     "lead_time_days": 19,
     "buyer": "Alice Chen",
-    "last_reorder_date": "2026-03-19",
+    "last_reorder_date": "2026-07-27",
     "_risk_label": "stockout"
   },
   {
-    "id": "5c514c9c-1a34-4839-8492-01948dfb7508",
+    "id": "e998f86c-c152-4807-b18f-db9473c05e20",
     "sku": "SKU-73736",
     "name": "FreshFarm Toys Product 114",
     "brand": "FreshFarm",
@@ -2390,11 +2390,11 @@
     "supplier": "Supplier-5",
     "lead_time_days": 5,
     "buyer": "Carol Johnson",
-    "last_reorder_date": "2026-03-10",
+    "last_reorder_date": "2026-07-18",
     "_risk_label": "stockout"
   },
   {
-    "id": "6964e11f-1334-4397-9847-ecf201c72f23",
+    "id": "7672f290-284a-4a01-95ef-a468f3e5bf09",
     "sku": "SKU-30218",
     "name": "ProTech Apparel Product 115",
     "brand": "ProTech",
@@ -2411,11 +2411,11 @@
     "supplier": "Supplier-20",
     "lead_time_days": 8,
     "buyer": "Dave Patel",
-    "last_reorder_date": "2026-04-27",
+    "last_reorder_date": "2026-09-04",
     "_risk_label": "healthy"
   },
   {
-    "id": "e7802262-80b5-4645-8fa3-05ab84540dac",
+    "id": "07762ff8-1eaa-445e-b083-4cbeec16f34b",
     "sku": "SKU-68841",
     "name": "FreshFarm Toys Product 116",
     "brand": "FreshFarm",
@@ -2432,11 +2432,11 @@
     "supplier": "Supplier-16",
     "lead_time_days": 9,
     "buyer": "Carol Johnson",
-    "last_reorder_date": "2026-03-17",
+    "last_reorder_date": "2026-07-25",
     "_risk_label": "healthy"
   },
   {
-    "id": "88bf0374-33f3-4f3f-bfc9-9ee15db92db8",
+    "id": "120ad373-7c23-4400-913d-b6881274f2df",
     "sku": "SKU-64874",
     "name": "WorkSmart Office Product 117",
     "brand": "WorkSmart",
@@ -2453,11 +2453,11 @@
     "supplier": "Supplier-20",
     "lead_time_days": 7,
     "buyer": "Carol Johnson",
-    "last_reorder_date": "2026-04-26",
+    "last_reorder_date": "2026-09-03",
     "_risk_label": "healthy"
   },
   {
-    "id": "5bf21f68-e396-4d67-9153-cae12f85880f",
+    "id": "146880ec-0347-4b5d-877d-1f7213436773",
     "sku": "SKU-31012",
     "name": "FreshFarm Office Product 118",
     "brand": "FreshFarm",
@@ -2474,11 +2474,11 @@
     "supplier": "Supplier-5",
     "lead_time_days": 16,
     "buyer": "Alice Chen",
-    "last_reorder_date": "2026-04-15",
+    "last_reorder_date": "2026-08-23",
     "_risk_label": "overstock"
   },
   {
-    "id": "f1d4151d-4ab1-4230-911b-43277c225496",
+    "id": "b880c9cb-46ff-4d54-b042-b3e7b0b8cd31",
     "sku": "SKU-40903",
     "name": "FreshFarm Office Product 119",
     "brand": "FreshFarm",
@@ -2495,11 +2495,11 @@
     "supplier": "Supplier-8",
     "lead_time_days": 3,
     "buyer": "Carol Johnson",
-    "last_reorder_date": "2026-04-23",
+    "last_reorder_date": "2026-08-31",
     "_risk_label": "overstock"
   },
   {
-    "id": "1979eaa5-642d-4120-892e-3784f9900e6e",
+    "id": "d028a1ac-8a4a-464b-b837-abbcc0181318",
     "sku": "SKU-28191",
     "name": "HomeBase Food & Beverage Product 120",
     "brand": "HomeBase",
@@ -2516,11 +2516,11 @@
     "supplier": "Supplier-20",
     "lead_time_days": 3,
     "buyer": "Alice Chen",
-    "last_reorder_date": "2026-04-28",
+    "last_reorder_date": "2026-09-05",
     "_risk_label": "stockout"
   },
   {
-    "id": "d3ab3450-6ffa-4627-87bc-9d3d251de5a0",
+    "id": "acc79357-bd6a-403f-b806-c066d5126bf6",
     "sku": "SKU-65476",
     "name": "ActiveGear Beauty Product 121",
     "brand": "ActiveGear",
@@ -2537,11 +2537,11 @@
     "supplier": "Supplier-10",
     "lead_time_days": 6,
     "buyer": "Alice Chen",
-    "last_reorder_date": "2026-04-14",
+    "last_reorder_date": "2026-08-22",
     "_risk_label": "overstock"
   },
   {
-    "id": "51b1c203-0d7b-46a5-af01-7baa4460f91f",
+    "id": "38539cb3-f6c9-4d8b-b5a4-9111d7fb90e6",
     "sku": "SKU-12154",
     "name": "WorkSmart Toys Product 122",
     "brand": "WorkSmart",
@@ -2558,11 +2558,11 @@
     "supplier": "Supplier-5",
     "lead_time_days": 12,
     "buyer": "Dave Patel",
-    "last_reorder_date": "2026-04-29",
+    "last_reorder_date": "2026-09-06",
     "_risk_label": "healthy"
   },
   {
-    "id": "ed6c7a73-8a76-434c-9476-ae586700b8be",
+    "id": "290ba864-1c1e-4f06-8052-a9777daa2c40",
     "sku": "SKU-21221",
     "name": "ActiveGear Food & Beverage Product 123",
     "brand": "ActiveGear",
@@ -2579,11 +2579,11 @@
     "supplier": "Supplier-17",
     "lead_time_days": 20,
     "buyer": "Emma Wilson",
-    "last_reorder_date": "2026-03-10",
+    "last_reorder_date": "2026-07-18",
     "_risk_label": "healthy"
   },
   {
-    "id": "96081845-7e5c-4d96-9102-94c15de56d60",
+    "id": "b3b79564-661b-4c18-a9b9-608efabfdb7d",
     "sku": "SKU-12128",
     "name": "FunZone Electronics Product 124",
     "brand": "FunZone",
@@ -2600,11 +2600,11 @@
     "supplier": "Supplier-8",
     "lead_time_days": 6,
     "buyer": "Emma Wilson",
-    "last_reorder_date": "2026-03-13",
+    "last_reorder_date": "2026-07-21",
     "_risk_label": "overstock"
   },
   {
-    "id": "1165cc03-0a48-4975-a85c-e8a40efbfd10",
+    "id": "da269c98-3535-41de-be6e-3a7f530ed681",
     "sku": "SKU-94252",
     "name": "HomeBase Food & Beverage Product 125",
     "brand": "HomeBase",
@@ -2621,11 +2621,11 @@
     "supplier": "Supplier-15",
     "lead_time_days": 18,
     "buyer": "Bob Martinez",
-    "last_reorder_date": "2026-03-09",
+    "last_reorder_date": "2026-07-17",
     "_risk_label": "healthy"
   },
   {
-    "id": "68b4f8d2-e25b-4334-a58f-bbd2fc4e177e",
+    "id": "16c7dcf9-28fd-448f-95f3-eb902e1f3242",
     "sku": "SKU-15741",
     "name": "StyleCo Home & Garden Product 126",
     "brand": "StyleCo",
@@ -2642,11 +2642,11 @@
     "supplier": "Supplier-11",
     "lead_time_days": 12,
     "buyer": "Emma Wilson",
-    "last_reorder_date": "2026-04-04",
+    "last_reorder_date": "2026-08-12",
     "_risk_label": "healthy"
   },
   {
-    "id": "6366aff2-9e2d-47a9-9b82-c784d1506be8",
+    "id": "871c60b6-0c60-4ec2-b5cd-fb2f7cd15505",
     "sku": "SKU-53506",
     "name": "GlowBeauty Office Product 127",
     "brand": "GlowBeauty",
@@ -2663,11 +2663,11 @@
     "supplier": "Supplier-14",
     "lead_time_days": 15,
     "buyer": "Dave Patel",
-    "last_reorder_date": "2026-04-05",
+    "last_reorder_date": "2026-08-13",
     "_risk_label": "stockout"
   },
   {
-    "id": "2936d646-bd56-490e-9c29-810f8c51b8de",
+    "id": "5b28f178-308a-4c8b-b8cb-a69c86a2fc57",
     "sku": "SKU-78062",
     "name": "HomeBase Food & Beverage Product 128",
     "brand": "HomeBase",
@@ -2684,11 +2684,11 @@
     "supplier": "Supplier-14",
     "lead_time_days": 5,
     "buyer": "Dave Patel",
-    "last_reorder_date": "2026-03-22",
+    "last_reorder_date": "2026-07-30",
     "_risk_label": "healthy"
   },
   {
-    "id": "b06237b3-3b20-484b-be3d-b1c8e09073a9",
+    "id": "ad84d398-0e04-4b36-9cce-7cb3419dec1b",
     "sku": "SKU-48750",
     "name": "GlowBeauty Home & Garden Product 129",
     "brand": "GlowBeauty",
@@ -2705,11 +2705,11 @@
     "supplier": "Supplier-14",
     "lead_time_days": 8,
     "buyer": "Dave Patel",
-    "last_reorder_date": "2026-04-07",
+    "last_reorder_date": "2026-08-15",
     "_risk_label": "healthy"
   },
   {
-    "id": "1dbd7085-dba4-4690-bf97-22f1eb05c7b5",
+    "id": "21a50ab3-a38f-4b98-826f-b559ccba2612",
     "sku": "SKU-17518",
     "name": "ProTech Office Product 130",
     "brand": "ProTech",
@@ -2726,11 +2726,11 @@
     "supplier": "Supplier-12",
     "lead_time_days": 19,
     "buyer": "Bob Martinez",
-    "last_reorder_date": "2026-04-28",
+    "last_reorder_date": "2026-09-05",
     "_risk_label": "healthy"
   },
   {
-    "id": "04b49c07-3490-40e2-9b98-8dfcf1c452da",
+    "id": "667c6dcd-ba9f-473b-ba68-781f88cc272c",
     "sku": "SKU-94562",
     "name": "WorkSmart Home & Garden Product 131",
     "brand": "WorkSmart",
@@ -2747,11 +2747,11 @@
     "supplier": "Supplier-19",
     "lead_time_days": 4,
     "buyer": "Emma Wilson",
-    "last_reorder_date": "2026-04-20",
+    "last_reorder_date": "2026-08-28",
     "_risk_label": "healthy"
   },
   {
-    "id": "3b0c5919-d28c-4d4c-8b28-942f75a7803c",
+    "id": "51c0bf0f-807a-4abc-89a0-dfdc79bc3de6",
     "sku": "SKU-79397",
     "name": "FreshFarm Office Product 132",
     "brand": "FreshFarm",
@@ -2768,11 +2768,11 @@
     "supplier": "Supplier-9",
     "lead_time_days": 10,
     "buyer": "Alice Chen",
-    "last_reorder_date": "2026-04-28",
+    "last_reorder_date": "2026-09-05",
     "_risk_label": "healthy"
   },
   {
-    "id": "b3b55d1c-847a-469f-a3f1-9ccc4301716a",
+    "id": "5b070d86-3273-40f6-a1da-0c42166aa778",
     "sku": "SKU-44116",
     "name": "WorkSmart Home & Garden Product 133",
     "brand": "WorkSmart",
@@ -2789,11 +2789,11 @@
     "supplier": "Supplier-20",
     "lead_time_days": 12,
     "buyer": "Dave Patel",
-    "last_reorder_date": "2026-04-17",
+    "last_reorder_date": "2026-08-25",
     "_risk_label": "healthy"
   },
   {
-    "id": "6f47bfdd-33c9-4971-a376-f8464092c0ed",
+    "id": "5e443fff-863e-4610-84ef-55bf29ce7d26",
     "sku": "SKU-99381",
     "name": "HomeBase Apparel Product 134",
     "brand": "HomeBase",
@@ -2810,11 +2810,11 @@
     "supplier": "Supplier-12",
     "lead_time_days": 5,
     "buyer": "Emma Wilson",
-    "last_reorder_date": "2026-03-26",
+    "last_reorder_date": "2026-08-03",
     "_risk_label": "stockout"
   },
   {
-    "id": "3e86e3b9-42d7-4a87-8246-0bdf50a4b4f5",
+    "id": "0756f049-527b-4ac3-aabb-64f4f61d221a",
     "sku": "SKU-25907",
     "name": "GlowBeauty Beauty Product 135",
     "brand": "GlowBeauty",
@@ -2831,11 +2831,11 @@
     "supplier": "Supplier-8",
     "lead_time_days": 18,
     "buyer": "Alice Chen",
-    "last_reorder_date": "2026-04-06",
+    "last_reorder_date": "2026-08-14",
     "_risk_label": "overstock"
   },
   {
-    "id": "c9fb7eac-04ce-4b7c-87d1-1a6b9b04aea7",
+    "id": "36758519-0099-40d5-8cb9-70e0a7c47852",
     "sku": "SKU-50539",
     "name": "WorkSmart Food & Beverage Product 136",
     "brand": "WorkSmart",
@@ -2852,11 +2852,11 @@
     "supplier": "Supplier-16",
     "lead_time_days": 19,
     "buyer": "Dave Patel",
-    "last_reorder_date": "2026-03-11",
+    "last_reorder_date": "2026-07-19",
     "_risk_label": "overstock"
   },
   {
-    "id": "150e9519-037e-4f40-a60f-86f72dd3e2a9",
+    "id": "63fca293-ca03-492f-abfc-8849ee14c2cf",
     "sku": "SKU-99143",
     "name": "StyleCo Toys Product 137",
     "brand": "StyleCo",
@@ -2873,11 +2873,11 @@
     "supplier": "Supplier-18",
     "lead_time_days": 21,
     "buyer": "Bob Martinez",
-    "last_reorder_date": "2026-03-11",
+    "last_reorder_date": "2026-07-19",
     "_risk_label": "healthy"
   },
   {
-    "id": "872654b8-5320-4458-9810-7fe0a34a194e",
+    "id": "df44b4df-7bc5-4e89-881b-0a5f66c045cf",
     "sku": "SKU-49862",
     "name": "FunZone Home & Garden Product 138",
     "brand": "FunZone",
@@ -2894,11 +2894,11 @@
     "supplier": "Supplier-8",
     "lead_time_days": 14,
     "buyer": "Emma Wilson",
-    "last_reorder_date": "2026-04-11",
+    "last_reorder_date": "2026-08-19",
     "_risk_label": "healthy"
   },
   {
-    "id": "3b3364c6-a527-4749-9106-64c02149693e",
+    "id": "d3439f52-4c3d-441d-9298-5868744efbd2",
     "sku": "SKU-49691",
     "name": "GlowBeauty Apparel Product 139",
     "brand": "GlowBeauty",
@@ -2915,11 +2915,11 @@
     "supplier": "Supplier-6",
     "lead_time_days": 21,
     "buyer": "Emma Wilson",
-    "last_reorder_date": "2026-04-20",
+    "last_reorder_date": "2026-08-28",
     "_risk_label": "healthy"
   },
   {
-    "id": "99987dfe-79cd-4df6-8db7-8fdea67f3ad0",
+    "id": "3c0ecd36-196f-472b-8058-3b9feefdb4f7",
     "sku": "SKU-15958",
     "name": "FreshFarm Home & Garden Product 140",
     "brand": "FreshFarm",
@@ -2936,11 +2936,11 @@
     "supplier": "Supplier-9",
     "lead_time_days": 9,
     "buyer": "Emma Wilson",
-    "last_reorder_date": "2026-04-03",
+    "last_reorder_date": "2026-08-11",
     "_risk_label": "overstock"
   },
   {
-    "id": "1042e827-adf4-4794-b80d-1c6d4f0c2884",
+    "id": "35233ff2-62a6-49b0-841a-f887a0f72c29",
     "sku": "SKU-42096",
     "name": "WorkSmart Electronics Product 141",
     "brand": "WorkSmart",
@@ -2957,11 +2957,11 @@
     "supplier": "Supplier-10",
     "lead_time_days": 17,
     "buyer": "Alice Chen",
-    "last_reorder_date": "2026-03-16",
+    "last_reorder_date": "2026-07-24",
     "_risk_label": "stockout"
   },
   {
-    "id": "1a24b2fc-ae11-45de-8e25-9c23f4d37f19",
+    "id": "34cd48e9-53d8-44bf-9d4c-b094f02435b8",
     "sku": "SKU-54589",
     "name": "HomeBase Electronics Product 142",
     "brand": "HomeBase",
@@ -2978,11 +2978,11 @@
     "supplier": "Supplier-11",
     "lead_time_days": 14,
     "buyer": "Dave Patel",
-    "last_reorder_date": "2026-04-21",
+    "last_reorder_date": "2026-08-29",
     "_risk_label": "healthy"
   },
   {
-    "id": "87518960-c820-4ea4-b6c8-5551351287a4",
+    "id": "f426f9c3-8aef-46c3-a439-a2e68dfea6e4",
     "sku": "SKU-68929",
     "name": "StyleCo Food & Beverage Product 143",
     "brand": "StyleCo",
@@ -2999,11 +2999,11 @@
     "supplier": "Supplier-10",
     "lead_time_days": 15,
     "buyer": "Emma Wilson",
-    "last_reorder_date": "2026-04-03",
+    "last_reorder_date": "2026-08-11",
     "_risk_label": "healthy"
   },
   {
-    "id": "08d763a1-5770-4866-865b-ab42a697378c",
+    "id": "9d0079d9-59cf-435a-8492-515c66cdb5cb",
     "sku": "SKU-30885",
     "name": "HomeBase Sports Product 144",
     "brand": "HomeBase",
@@ -3020,11 +3020,11 @@
     "supplier": "Supplier-16",
     "lead_time_days": 12,
     "buyer": "Dave Patel",
-    "last_reorder_date": "2026-04-28",
+    "last_reorder_date": "2026-09-05",
     "_risk_label": "overstock"
   },
   {
-    "id": "0e756731-79a9-4fa2-ab51-6a20ec928220",
+    "id": "2303e3c0-4783-4f41-b506-270afb6c43ff",
     "sku": "SKU-16624",
     "name": "FunZone Apparel Product 145",
     "brand": "FunZone",
@@ -3041,11 +3041,11 @@
     "supplier": "Supplier-16",
     "lead_time_days": 12,
     "buyer": "Emma Wilson",
-    "last_reorder_date": "2026-04-29",
+    "last_reorder_date": "2026-09-06",
     "_risk_label": "overstock"
   },
   {
-    "id": "926367bb-fcee-44ba-b96f-02e900f6441b",
+    "id": "39aad570-d33c-4f95-9249-f708585e670a",
     "sku": "SKU-57964",
     "name": "FunZone Apparel Product 146",
     "brand": "FunZone",
@@ -3062,11 +3062,11 @@
     "supplier": "Supplier-18",
     "lead_time_days": 9,
     "buyer": "Carol Johnson",
-    "last_reorder_date": "2026-03-25",
+    "last_reorder_date": "2026-08-02",
     "_risk_label": "healthy"
   },
   {
-    "id": "4120ad1b-a3f1-4288-b3db-2a08ff11f6f8",
+    "id": "6b736ccf-8361-47f6-aad4-73553e9f72cb",
     "sku": "SKU-46663",
     "name": "StyleCo Beauty Product 147",
     "brand": "StyleCo",
@@ -3083,11 +3083,11 @@
     "supplier": "Supplier-20",
     "lead_time_days": 6,
     "buyer": "Bob Martinez",
-    "last_reorder_date": "2026-04-23",
+    "last_reorder_date": "2026-08-31",
     "_risk_label": "healthy"
   },
   {
-    "id": "63e3a166-c6c2-4df2-9a53-c4b7fdb6be06",
+    "id": "3f6df7fa-b066-41fa-a264-17f1bdc1cfaa",
     "sku": "SKU-88966",
     "name": "FreshFarm Toys Product 148",
     "brand": "FreshFarm",
@@ -3104,11 +3104,11 @@
     "supplier": "Supplier-2",
     "lead_time_days": 4,
     "buyer": "Bob Martinez",
-    "last_reorder_date": "2026-03-15",
+    "last_reorder_date": "2026-07-23",
     "_risk_label": "stockout"
   },
   {
-    "id": "6d16d7a4-8793-493c-b806-d1bbe99b233e",
+    "id": "f57c60fa-e08d-4198-b64a-1a7600e49443",
     "sku": "SKU-77568",
     "name": "WorkSmart Food & Beverage Product 149",
     "brand": "WorkSmart",
@@ -3125,11 +3125,11 @@
     "supplier": "Supplier-11",
     "lead_time_days": 8,
     "buyer": "Dave Patel",
-    "last_reorder_date": "2026-03-21",
+    "last_reorder_date": "2026-07-29",
     "_risk_label": "healthy"
   },
   {
-    "id": "6875d959-6f36-4e4d-9ae2-9b3204bc0e74",
+    "id": "bd799a88-7979-4485-8931-6aee01edf338",
     "sku": "SKU-83783",
     "name": "FreshFarm Beauty Product 150",
     "brand": "FreshFarm",
@@ -3146,7 +3146,7 @@
     "supplier": "Supplier-12",
     "lead_time_days": 13,
     "buyer": "Alice Chen",
-    "last_reorder_date": "2026-04-03",
+    "last_reorder_date": "2026-08-11",
     "_risk_label": "healthy"
   }
 ]

@@ -111,6 +111,20 @@ async def _resolve_org_context(user_id: Optional[str], email: Optional[str]) -> 
     return None, None
 
 
+async def get_current_user_from_token(token: str) -> TokenData:
+    """Validate token using api.auth.decode_token and resolve DB organization context."""
+    from api.auth import decode_token
+    user = decode_token(token)
+    if user.user_id or user.email:
+        db_org_id, db_role = await _resolve_org_context(user.user_id, user.email)
+        if db_org_id:
+            user.organization_id = db_org_id
+            user.tenant_id = db_org_id
+        if db_role:
+            user.role = db_role
+    return user
+
+
 async def get_current_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
 ) -> TokenData:
@@ -121,100 +135,7 @@ async def get_current_user(
             detail="Missing Authorization Header",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    token = credentials.credentials
-    try:
-        # Try decoding with Supabase JWT Secret or fallback SECRET_KEY
-        key = get_supabase_jwt_secret()
-        payload = jwt.decode(token, key, algorithms=["HS256"], options={"verify_aud": False})
-        
-        user_id = payload.get("sub") or payload.get("user_id")
-        email = payload.get("email", "user@smbflow.com")
-        role = payload.get("role") or payload.get("user_metadata", {}).get("role", "org_user")
-        
-        # Normalize roles: super_admin -> platform_admin, tenant_user/authenticated -> org_user
-        if role == "super_admin":
-            role = "platform_admin"
-        elif role in ("tenant_user", "authenticated"):
-            role = "org_user"
-            
-        org_id = payload.get("organization_id") or payload.get("tenant_id") or payload.get("user_metadata", {}).get("organization_id")
-
-        if not org_id and user_id:
-            db_org_id, db_role = await _resolve_org_context(str(user_id), email)
-            if db_org_id:
-                org_id = db_org_id
-            if db_role and role == "org_user":
-                role = db_role
-
-        return TokenData(
-            user_id=str(user_id),
-            email=email,
-            role=role,
-            organization_id=str(org_id) if org_id else None,
-            tenant_id=str(org_id) if org_id else None,
-        )
-    except JWTError as e:
-        # Fallback to local token decoder
-        try:
-            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-            role = payload.get("role", "org_user")
-            if role == "super_admin":
-                role = "platform_admin"
-            org_id = payload.get("tenant_id") or payload.get("organization_id")
-            
-            user_id = payload.get("sub")
-            email = payload.get("email", "")
-            if not org_id and user_id:
-                db_org_id, db_role = await _resolve_org_context(str(user_id), email)
-                if db_org_id:
-                    org_id = db_org_id
-                if db_role and role == "org_user":
-                    role = db_role
-
-            return TokenData(
-                user_id=user_id,
-                email=email,
-                role=role,
-                organization_id=str(org_id) if org_id else None,
-                tenant_id=str(org_id) if org_id else None,
-            )
-        except JWTError:
-            pass
-
-    # 3. Server-side online validation against Supabase Auth API (/auth/v1/user)
-    user_data = _verify_supabase_token_online(token)
-    if user_data and user_data.get("id"):
-        user_id = user_data["id"]
-        email = user_data.get("email", f"{user_id}@smbflow.com")
-        user_meta = user_data.get("user_metadata") or {}
-        role = user_data.get("role") or user_meta.get("role", "org_user")
-        if role == "super_admin":
-            role = "platform_admin"
-        elif role in ("tenant_user", "authenticated"):
-            role = "org_user"
-        org_id = user_meta.get("organization_id") or user_meta.get("tenant_id")
-        user_id_str = str(user_id)
-        if not org_id:
-            db_org_id, db_role = await _resolve_org_context(user_id_str, email)
-            if db_org_id:
-                org_id = db_org_id
-            if db_role and role == "org_user":
-                role = db_role
-        full_name = user_meta.get("full_name") or user_meta.get("name")
-        return TokenData(
-            user_id=user_id_str,
-            email=email,
-            role=role,
-            organization_id=str(org_id) if org_id else None,
-            tenant_id=str(org_id) if org_id else None,
-            full_name=full_name,
-        )
-
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Invalid or expired authentication token",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+    return await get_current_user_from_token(credentials.credentials)
 
 async def require_platform_admin(current_user: TokenData = Depends(get_current_user)) -> TokenData:
     if current_user.role not in ("platform_admin", "super_admin"):

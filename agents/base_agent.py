@@ -172,18 +172,24 @@ class AgentInput:
 class AgentOutput:
     """Standardized output from every agent."""
     success: bool
-    confidence: float                   # 0.0 to 1.0
+    confidence: Optional[float]         # 0.0 to 1.0 when reported by the model
     output_data: dict                   # Structured output for next agent
     reasoning_chain: str                # Claude's thinking — stored for audit
     escalate: bool = False              # True = send to human queue
     escalation_reason: str = ""
     # Cost fields (populated automatically by base class)
-    tokens_in: int = 0
-    tokens_out: int = 0
-    cost_usd: float = 0.0
+    tokens_in: Optional[int] = None
+    tokens_out: Optional[int] = None
+    cost_usd: Optional[float] = None
     model_used: str = ""
     duration_ms: int = 0
     error: Optional[str] = None
+    provider: Optional[str] = None
+    cached_tokens: Optional[int] = None
+    fallback_used: bool = False
+    fallback_from: Optional[str] = None
+    fallback_reason: Optional[str] = None
+    provider_attempts: Optional[list[dict]] = None
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -335,6 +341,7 @@ class BaseAgent(ABC):
         tool_schemas = self._tools.get_schemas(available_tools)
         all_calls: list[LLMCall] = []
         conversation = list(messages)
+        self._last_tool_outputs = []
         iterations = 0
  
         while iterations < MAX_TOOL_ITERATIONS:
@@ -387,6 +394,7 @@ class BaseAgent(ABC):
                         self._log.debug("Executing tool (parallel)", tool=t_name)
                         result = await self._tools.execute(t_name, t_args)
                         if result.success:
+                            self._last_tool_outputs.append({"tool": t_name, "data": result.data})
                             text_out = (
                                 f"Tool: {t_name}\n"
                                 f"Result: {json.dumps(result.data, default=str)[:4000]}"
@@ -718,11 +726,20 @@ class BaseAgent(ABC):
 
     def _aggregate_costs(self, calls: list[LLMCall]) -> dict:
         """Sum up token and cost data from multiple LLM calls."""
+        successful = [call for call in calls if call.success]
+        usage_calls = [call for call in successful if call.tokens_in is not None or call.tokens_out is not None]
+        cost_calls = [call for call in successful if call.cost_usd is not None]
+        last_call = successful[-1] if successful else (calls[-1] if calls else None)
         return {
-            "tokens_in": sum(c.tokens_in for c in calls),
-            "tokens_out": sum(c.tokens_out for c in calls),
-            "cost_usd": sum(c.cost_usd for c in calls),
-            "model_used": calls[-1].model if calls else "",
+            "tokens_in": sum(c.tokens_in or 0 for c in usage_calls) if usage_calls else None,
+            "tokens_out": sum(c.tokens_out or 0 for c in usage_calls) if usage_calls else None,
+            "cost_usd": sum(c.cost_usd or 0 for c in cost_calls) if cost_calls else None,
+            "model_used": last_call.model if last_call and last_call.success else "",
+            "provider": last_call.provider if last_call and last_call.success else None,
+            "cached_tokens": sum(c.cached_tokens or 0 for c in successful if c.cached_tokens is not None) or None,
+            "fallback_used": any(c.fallback_used for c in calls),
+            "fallback_from": next((c.fallback_from for c in calls if c.fallback_from), None),
+            "fallback_reason": next((c.fallback_reason for c in calls if c.fallback_reason), None),
         }
 
     def _has_tool_call(self, text: str) -> bool:

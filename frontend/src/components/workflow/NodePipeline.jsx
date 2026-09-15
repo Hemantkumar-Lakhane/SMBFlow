@@ -318,6 +318,7 @@ const nodeTypes = { pipelineNode: PipelineNode }
 // ── NodePipeline ──────────────────────────────────────────────────────────────
 export default function NodePipeline({
   nodes: dagNodes,
+  edges: dagEdges = [],
   agents,
   agentRuns = [],
   currentNode,
@@ -343,6 +344,15 @@ export default function NodePipeline({
     if (!dagNodes?.length) return
     const agentRunsMap = buildAgentMap()
 
+    // Resolve the real DAG topology. Fall back to a linear chain only when no edges
+    // were supplied (keeps the default 6-node pipeline / legacy callers working).
+    const nodeIds = new Set(dagNodes.map(n => n.id))
+    const edgeList = (dagEdges && dagEdges.length)
+      ? dagEdges
+          .map(e => ({ from: e.from ?? e.source, to: e.to ?? e.target }))
+          .filter(e => e.from && e.to && nodeIds.has(e.from) && nodeIds.has(e.to))
+      : dagNodes.slice(0, -1).map((n, i) => ({ from: n.id, to: dagNodes[i + 1].id }))
+
     // Hash the current statuses to check if only data changed (not structure)
     const statusHash = dagNodes
       .map(n => {
@@ -351,8 +361,10 @@ export default function NodePipeline({
       })
       .join('|')
 
-    // Hash the dag structure itself
-    const dagHash = dagNodes.map(n => n.id + n.agent).join('|')
+    // Hash the dag structure itself (nodes + edges)
+    const dagHash =
+      dagNodes.map(n => n.id + n.agent).join('|') +
+      '::' + edgeList.map(e => `${e.from}>${e.to}`).join('|')
 
     const structureChanged = dagHash !== prevDagHashRef.current
     const statusChanged    = statusHash !== prevStatusHashRef.current
@@ -386,20 +398,21 @@ export default function NodePipeline({
       }
     })
 
-    // Build edges
-    const rawEdges = dagNodes.slice(0, -1).map((n, i) => {
-      const next = dagNodes[i + 1]
-      const isFlow = isRunning && (currentNode === next.id || agents[next.id]?.status === 'running')
-      const fromStatus = agents[n.id]?.status || 'pending'
+    // Build edges from the real DAG topology (branches, joins, conditional paths) —
+    // not a hardcoded linear chain, which mis-rendered fan-out/fan-in workflows.
+    const rawEdges = edgeList.map(({ from, to }) => {
+      const fromStatus = (agents[from] || agentRunsMap[from])?.status || 'pending'
+      const toStatus   = (agents[to]   || agentRunsMap[to])?.status   || 'pending'
+      const isFlow = isRunning && (currentNode === to || toStatus === 'running')
       const color = fromStatus === 'success' ? '#10E580'
         : fromStatus === 'failed' ? '#FF4757'
         : isFlow ? '#6C63FF'
         : '#1E2A3A'
 
       return {
-        id: `e-${n.id}-${next.id}`,
-        source: n.id,
-        target: next.id,
+        id: `e-${from}-${to}`,
+        source: from,
+        target: to,
         animated: isFlow,
         markerEnd: { type: MarkerType.ArrowClosed, width: 12, height: 12, color },
         style: {
@@ -420,7 +433,7 @@ export default function NodePipeline({
 
     setRfNodes(layoutedNodes)
     setRfEdges(rawEdges)
-  }, [dagNodes, agents, agentRuns, currentNode, isRunning, buildAgentMap])
+  }, [dagNodes, dagEdges, agents, agentRuns, currentNode, isRunning, buildAgentMap])
   // NOTE: liveOutputs / streamingTexts intentionally excluded — they don't affect layout
 
   if (!dagNodes?.length) return null

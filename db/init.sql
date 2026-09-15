@@ -468,6 +468,9 @@ CREATE TABLE IF NOT EXISTS agent_run_records (
     delta_vs_history  VARCHAR(50),
     delta_trend       VARCHAR(50),
     delta_analysis    JSONB,
+    -- Full structured output of the node (business result the UI renders),
+    -- tied to (instance_id, node_id). Secrets redacted / size-capped by the app.
+    output_data       JSONB,
     completed_at      TIMESTAMPTZ DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_agent_run_records_instance

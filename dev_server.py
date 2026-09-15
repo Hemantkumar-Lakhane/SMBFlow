@@ -24,10 +24,37 @@ Then set in tenant config:
 
 from __future__ import annotations
 
-import json
-import sys
-from pathlib import Path
-from typing import Optional
+import asyncio
+import structlog
+import httpx
+
+log = structlog.get_logger()
+
+@app.on_event("startup")
+async def trigger_startup_demo():
+    """Call the main API startup demo endpoint after server start, if enabled.
+
+    Controlled by the environment variable ``ENABLE_STARTUP_DEMO``. In production
+    or normal development runs this will be ``false`` (default) and the demo will
+    not execute. This preserves idempotency and scoping – the endpoint itself
+    also checks a lock file, but we avoid the network request entirely unless the
+    developer explicitly opts in.
+    """
+    if os.getenv("ENABLE_STARTUP_DEMO", "false").lower() != "true":
+        log.info("Startup demo disabled via ENABLE_STARTUP_DEMO flag")
+        return
+    # Wait briefly for the main API server to be up (if running locally on 8000)
+    await asyncio.sleep(0.5)
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.post("http://localhost:8000/internal/startup-demo")
+            if resp.status_code == 200:
+                log.info("Startup demo triggered", response=resp.json())
+            else:
+                log.warning("Startup demo request failed", status=resp.status_code, body=resp.text)
+    except Exception as e:
+        log.error("Failed to trigger startup demo", error=str(e))
+
 
 SEED_DIR = Path("db/seed/data")
 

@@ -47,7 +47,11 @@ function LogLine({ ev }) {
   if (ev.cost_usd > 0) parts.push(fmtCost(ev.cost_usd))
   if (ev.confidence != null) parts.push(`${(ev.confidence * 100).toFixed(0)}%`)
   if (ev.reason)     parts.push(ev.reason.slice(0, 48))
-  if (ev.error)      parts.push(ev.error.slice(0, 55))
+  if (ev.error && !ev.error_type) parts.push(ev.error.slice(0, 55))
+  if (ev.error_type) parts.push(`[${ev.error_type}]`)
+  if (ev.error_message) parts.push(ev.error_message.slice(0, 40))
+  if (!ev.llm_attempted && ev.type === 'agent_failed') parts.push('LLM not attempted')
+  if (ev.tools_used?.length) parts.push(`tools:${ev.tools_used.length}`)
 
   return (
     <div

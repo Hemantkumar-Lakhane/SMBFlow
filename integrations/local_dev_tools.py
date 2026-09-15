@@ -202,6 +202,77 @@ async def get_communication_history(
     }
 
 
+# Founder Content Requests
+async def founder_content_get_requests(
+    limit: int = 20,
+    priority: Optional[str] = None,
+) -> dict:
+    """Return founder content request seed data.
+
+    Args:
+        limit: Maximum number of requests to return.
+        priority: Filter by request priority (e.g., "high", "medium", "low").
+    """
+    requests = _load_seed("founder_content_requests.json")
+    if priority:
+        requests = [r for r in requests if r.get("priority") == priority]
+    return {
+        "requests": requests[:limit],
+        "summary": {
+            "total_requests": len(requests),
+            "returned": min(limit, len(requests)),
+        },
+        "data_source": "local_dev_seed",
+    }
+
+# Product Launch Briefs
+async def product_launch_get_briefs(
+    limit: int = 20,
+    status: Optional[str] = None,
+) -> dict:
+    """Return product launch brief seed data.
+
+    Args:
+        limit: Maximum number of briefs to return.
+        status: Filter by brief status (e.g., "draft", "approved").
+    """
+    briefs = _load_seed("product_launch_briefs.json")
+    if status:
+        briefs = [b for b in briefs if b.get("status") == status]
+    return {
+        "briefs": briefs[:limit],
+        "summary": {
+            "total_briefs": len(briefs),
+            "returned": min(limit, len(briefs)),
+        },
+        "data_source": "local_dev_seed",
+    }
+
+# Weekly Growth Brief Data
+async def weekly_growth_brief_get_data(
+    limit: int = 20,
+    start_week: Optional[str] = None,
+) -> dict:
+    """Return weekly growth brief seed data.
+
+    Args:
+        limit: Maximum number of weeks to return.
+        start_week: ISO date string (YYYY-MM-DD) to filter weeks starting on or after this date.
+    """
+    weeks = _load_seed("weekly_growth_brief_data.json")
+    if start_week:
+        weeks = [w for w in weeks if w.get("week_start") >= start_week]
+    return {
+        "weeks": weeks[:limit],
+        "summary": {
+            "total_weeks": len(weeks),
+            "returned": min(limit, len(weeks)),
+        },
+        "data_source": "local_dev_seed",
+    }
+
+
+
 async def get_activity_log(
     contact_id: Optional[str] = None,
     account_id: Optional[str] = None,
@@ -719,7 +790,119 @@ async def email_get_synthetic_messages(
     }
 
 
+async def crm_get_synthetic_leads(
+    limit: int = 40,
+    form_type: Optional[str] = None,
+    requested_demo: Optional[bool] = None,
+    search_query: Optional[str] = None,
+) -> dict:
+    """
+    Get synthetic inbound leads for the Inbound Lead-to-Demo workflow.
+    Loads from db/seed/data/inbound_leads.json fixture. Zero external
+    credentials required — this is the local-dev stand-in for a website
+    form/webhook + CRM read.
+
+    Each lead carries the raw form/UTM/CRM-history fields the Lead
+    Qualification Agent needs to score fit, intent, need, and data quality.
+
+    Args:
+        limit: Max leads to return (default 40)
+        form_type: Filter by 'demo_request' | 'contact' | 'waitlist'
+        requested_demo: Filter by whether the lead explicitly requested a demo
+        search_query: Search text in name, company, or message
+    """
+    leads = _load_seed("inbound_leads.json")
+    if not leads:
+        return {
+            "leads": [],
+            "total_leads": 0,
+            "returned_count": 0,
+            "data_origin": "synthetic",
+            "is_test_data": True,
+            "dataset": "lead_to_demo_demo",
+            "note": "No lead seed data found at db/seed/data/inbound_leads.json.",
+        }
+
+    filtered = leads
+    if form_type:
+        filtered = [l for l in filtered if l.get("form_type") == form_type.lower()]
+    if requested_demo is not None:
+        filtered = [l for l in filtered if bool(l.get("requested_demo")) == bool(requested_demo)]
+    if search_query:
+        sq = search_query.lower()
+        filtered = [
+            l for l in filtered
+            if sq in (l.get("name") or "").lower()
+            or sq in (l.get("company") or "").lower()
+            or sq in (l.get("message") or "").lower()
+        ]
+
+    result_set = filtered[:limit]
+
+    return {
+        "leads": result_set,
+        "total_leads": len(leads),
+        "returned_count": len(result_set),
+        "data_origin": "synthetic",
+        "is_test_data": True,
+        "dataset": "lead_to_demo_demo",
+    }
+
+
 # ─────────────────────────────────────────────────────────────────────────────
+async def case_study_get_data(limit: int = 10) -> dict:
+    """Load case study seed data."""
+    data = _load_seed("case_studies.json")
+    return {"case_studies": data, "data_source": "local_dev_seed"}
+
+async def investor_update_get_data(limit: int = 5) -> dict:
+    """Load investor update metrics seed data."""
+    data = _load_seed("investor_updates.json")
+    return {"investor_updates": data, "data_source": "local_dev_seed"}
+
+async def pipeline_content_get_requests(limit: int = 10) -> dict:
+    """Load pipeline content request seed data."""
+    data = _load_seed("pipeline_content_requests.json")
+    return {"content_requests": data, "data_source": "local_dev_seed"}
+
+async def account_signal_get_data(limit: int = 20) -> dict:
+    """Load account signal seed data."""
+    data = _load_seed("account_signals.json")
+    return {"account_signals": data, "data_source": "local_dev_seed"}
+
+async def sla_monitor_get_events(limit: int = 50) -> dict:
+    """Load SLA monitor event seed data."""
+    data = _load_seed("sla_monitor_events.json")
+    return {"sla_events": data, "data_source": "local_dev_seed"}
+
+async def account_based_campaign_get_data(limit: int = 5) -> dict:
+    """Load account based campaign seed data."""
+    data = _load_seed("account_based_campaigns.json")
+    return {"campaigns": data, "data_source": "local_dev_seed"}
+
+async def finance_operations_get_data(limit: int = 20) -> dict:
+    """Load finance operations consolidated seed data."""
+    path = SEED_DIR / "finance_operations.json"
+    if not path.exists():
+        return {"finance_operations": [], "data_source": "local_dev_seed"}
+    try:
+        raw = json.loads(path.read_text())
+        combined: list = []
+        if isinstance(raw, dict):
+            for v in raw.values():
+                if isinstance(v, list):
+                    combined.extend(v)
+        elif isinstance(raw, list):
+            combined = raw
+        else:
+            combined = []
+        if limit:
+            combined = combined[:limit]
+    except Exception as e:
+        log.warning("Finance operations seed load failed", error=str(e))
+        combined = []
+    return {"finance_operations": combined, "data_source": "local_dev_seed"}
+
 # Schema + Function Registry
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -743,6 +926,14 @@ LOCAL_TOOL_FUNCTIONS: dict[str, Any] = {
     "re_get_tenant_ledger":      re_get_tenant_ledger,
     "re_get_buyers":             re_get_buyers,
     "email_get_synthetic_messages": email_get_synthetic_messages,
+    "crm_get_synthetic_leads":      crm_get_synthetic_leads,
+    "case_study_get_data": case_study_get_data,
+    "investor_update_get_data": investor_update_get_data,
+    "pipeline_content_get_requests": pipeline_content_get_requests,
+    "account_signal_get_data": account_signal_get_data,
+    "sla_monitor_get_events": sla_monitor_get_events,
+    "account_based_campaign_get_data": account_based_campaign_get_data,
+    "finance_operations_get_data": finance_operations_get_data,
 }
 
 LOCAL_TOOL_SCHEMAS: dict[str, dict] = {
@@ -761,6 +952,99 @@ LOCAL_TOOL_SCHEMAS: dict[str, dict] = {
                 },
             },
         },
+    },
+    "crm_get_synthetic_leads": {
+        "type": "function",
+        "function": {
+            "name": "crm_get_synthetic_leads",
+            "description": "Retrieve synthetic inbound leads (website form/webhook + CRM history) for the Inbound Lead-to-Demo workflow. Each lead includes form, UTM/source, and CRM-history fields for fit/intent/need/data-quality scoring. Filter by form type, demo request, or text search.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "limit": {"type": "integer", "description": "Max lead records to return", "default": 40},
+                    "form_type": {"type": "string", "enum": ["demo_request", "contact", "waitlist"], "description": "Filter by the form the lead submitted"},
+                    "requested_demo": {"type": "boolean", "description": "Filter to leads that explicitly requested a demo"},
+                    "search_query": {"type": "string", "description": "Search text in name, company, or message"},
+                },
+            },
+        },
+    },
+    "case_study_get_data": {
+        "type": "function",
+        "function": {
+            "name": "case_study_get_data",
+            "description": "Load approved case studies with public permission for repurposing.",
+            "parameters": {
+                "type": "object",
+                "properties": {}
+            }
+        }
+    },
+    "investor_update_get_data": {
+        "type": "function",
+        "function": {
+            "name": "investor_update_get_data",
+            "description": "Load investor update metrics for investor and partnership updates.",
+            "parameters": {
+                "type": "object",
+                "properties": {}
+            }
+        }
+    },
+    "pipeline_content_get_requests": {
+        "type": "function",
+        "function": {
+            "name": "pipeline_content_get_requests",
+            "description": "Load pipeline content requests for generating assets with UTM tracking.",
+            "parameters": {
+                "type": "object",
+                "properties": {}
+            }
+        }
+    },
+    "account_signal_get_data": {
+        "type": "function",
+        "function": {
+            "name": "account_signal_get_data",
+            "description": "Load account signals for expansion or churn risk analysis.",
+            "parameters": {
+                "type": "object",
+                "properties": {}
+            }
+        }
+    },
+    "sla_monitor_get_events": {
+        "type": "function",
+        "function": {
+            "name": "sla_monitor_get_events",
+            "description": "Load marketing-to-sales SLA event timestamps for compliance monitoring.",
+            "parameters": {
+                "type": "object",
+                "properties": {}
+            }
+        }
+    },
+    "account_based_campaign_get_data": {
+        "type": "function",
+        "function": {
+            "name": "account_based_campaign_get_data",
+            "description": "Load target account list and objectives for account-based campaign planning.",
+            "parameters": {
+                "type": "object",
+                "properties": {}
+            }
+        }
+    },
+    "finance_operations_get_data": {
+        "type": "function",
+        "function": {
+            "name": "finance_operations_get_data",
+            "description": "Load consolidated finance operations signals (expenses, late payments, lease expiries).",
+            "parameters": {
+                "type": "object",
+                "properties": {}
+            }
+        }
     },
     "product_api_usage": {
         "type": "function",

@@ -99,6 +99,16 @@ class WorkflowInstance(Base):
     total_tokens_out = Column(Integer, default=0)
     total_cost_usd   = Column(Float, default=0.0)
 
+    # Denormalized last-10 per-node run summary. The physical column is added in
+    # db/init.sql (ALTER TABLE ... ADD COLUMN agent_runs JSONB DEFAULT '[]') with a
+    # BEFORE UPDATE trigger that trims to the 10 most-recent entries; full durable
+    # history lives in the normalized agent_run_records table. This mapping is
+    # REQUIRED: update_workflow_status()/workflow_to_dict() reference it, and without
+    # it the per-agent callback raises AttributeError on every run (silently swallowed),
+    # so current_node/per-node status never persist and completed runs can't rehydrate
+    # their pipeline coloring on reload.
+    agent_runs       = Column(JSONB, default=list)
+
 
 class AgentRun(Base):
     __tablename__ = "agent_runs"
@@ -141,6 +151,13 @@ class AgentRunRecord(Base):
     duration_ms       = Column(Integer)
     error             = Column(Text)
     tools_used        = Column(JSONB, default=list)
+    # Full structured output of this node (what the agent actually produced),
+    # tied to (instance_id, node_id). Secrets are redacted and the payload is
+    # size-capped by the orchestrator before it reaches here. The physical
+    # column is added idempotently at startup (api/main.py lifespan) and in
+    # db/init.sql / db/migrations for fresh databases. Metrics stay in the
+    # dedicated columns above; this holds the business result the UI renders.
+    output_data       = Column(JSONB, nullable=True)
     completed_at      = Column(DateTime, default=datetime.utcnow)
 
 
@@ -472,6 +489,7 @@ class StateManager:
             duration_ms=agent_run_data.get("duration_ms"),
             error=agent_run_data.get("error"),
             tools_used=agent_run_data.get("tools_used", []),
+            output_data=agent_run_data.get("output_data"),
             completed_at=datetime.utcnow(),
         )
         self._db.add(record)

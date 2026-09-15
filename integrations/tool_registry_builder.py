@@ -53,10 +53,11 @@ def build_registry(tenant_config: dict, credentials: dict) -> ToolRegistry:
         log.info("HubSpot tools registered")
 
     # ── Gmail ─────────────────────────────────────────────────────────────
-    if integrations.get("gmail", {}).get("enabled") and "gmail" in credentials:
+    if (integrations.get("gmail", {}).get("enabled") or "gmail" in credentials) and "gmail" in credentials:
+        gm_config = credentials["gmail"] if isinstance(credentials["gmail"], dict) else integrations.get("gmail", {})
         gm = GmailConnector(
             credentials=credentials["gmail"],
-            config=integrations["gmail"],
+            config=gm_config,
         )
         _register_gmail_tools(registry, gm)
         log.info("Gmail tools registered")
@@ -271,6 +272,65 @@ def _register_gmail_tools(registry: ToolRegistry, gm: GmailConnector) -> None:
             },
         },
     })
+
+    async def gmail_read_messages(query: str = "in:inbox", limit: int = 40) -> dict:
+        msgs = await gm.read_detailed_messages(query=query, limit=limit)
+        err_info = gm.get_last_error_info() if hasattr(gm, "get_last_error_info") else {}
+        if not msgs and err_info.get("error_code") in (401, 403, 500):
+            return {
+                "status": "error",
+                "error_code": "GMAIL_SOURCE_UNAVAILABLE",
+                "detail": err_info.get("error") or "Gmail API read failed or unauthorized",
+                "messages": [],
+                "total_messages": 0,
+                "data_origin": "real_gmail",
+                "is_test_data": False,
+            }
+
+        normalized_msgs = []
+        for m in msgs:
+            email_id = m.get("email_id") or m.get("id") or m.get("message_id")
+            sender_val = m.get("from") or m.get("sender", "Unknown Sender")
+            timestamp_val = m.get("received_at") or m.get("date") or m.get("timestamp", "")
+            body_val = m.get("body") or m.get("snippet", "")
+            normalized_msgs.append({
+                "id": str(email_id) if email_id else "",
+                "message_id": str(email_id) if email_id else "",
+                "thread_id": m.get("thread_id", ""),
+                "from": sender_val,
+                "sender": sender_val,
+                "to": m.get("to", ""),
+                "subject": m.get("subject", "(No Subject)"),
+                "body": body_val,
+                "snippet": body_val,
+                "received_at": timestamp_val,
+                "timestamp": timestamp_val,
+                "labels": m.get("labels", []),
+                "data_origin": "real_gmail",
+                "is_test_data": False,
+            })
+        return {
+            "messages": normalized_msgs,
+            "total_messages": len(normalized_msgs),
+            "data_origin": "real_gmail",
+            "is_test_data": False,
+        }
+
+    registry.register("gmail_read_messages", gmail_read_messages, {
+        "type": "function",
+        "function": {
+            "name": "gmail_read_messages",
+            "description": "Fetch real incoming email messages from the user's connected Gmail account",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "default": "in:inbox"},
+                    "limit": {"type": "integer", "default": 40},
+                },
+            },
+        },
+    })
+
 
 
 def _register_google_workspace_tools(registry: ToolRegistry, gw: GoogleWorkspaceConnector) -> None:

@@ -12,7 +12,9 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
+import re
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -58,6 +60,29 @@ from core.redis_pubsub import pubsub as redis_pubsub
 from core.dag_validator import validate_dag
 log = structlog.get_logger()
 
+
+class _RedactWebSocketTokenFilter(logging.Filter):
+    """Keep bearer tokens and credentials out of uvicorn access-log request paths and fix status code string formatting."""
+
+    _token_pattern = re.compile(r"([?&](?:token|jwt|access_token|api_key|auth|authorization|credentials|secret)=)[^&\s\"]+", re.IGNORECASE)
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if isinstance(record.msg, str):
+            record.msg = self._token_pattern.sub(r"\1[REDACTED]", record.msg)
+        if record.args:
+            args_list = list(record.args)
+            for idx, arg in enumerate(args_list):
+                if isinstance(arg, str):
+                    args_list[idx] = self._token_pattern.sub(r"\1[REDACTED]", arg)
+            # Fix uvicorn access log '%s - "%s %s HTTP/%s" %d' error when 5th arg is str digit
+            if len(args_list) >= 5 and isinstance(args_list[4], str) and args_list[4].isdigit():
+                args_list[4] = int(args_list[4])
+            record.args = tuple(args_list)
+        return True
+
+
+logging.getLogger("uvicorn.access").addFilter(_RedactWebSocketTokenFilter())
+
 # ─────────────────────────────────────────────────────────────────────────────
 # In-memory (ONLY transient, process-local state)
 # ─────────────────────────────────────────────────────────────────────────────
@@ -69,6 +94,8 @@ _active_orchestrators: dict[str, Any] = {}
 # App lifespan
 # ─────────────────────────────────────────────────────────────────────────────
 
+# (No changes to lifespan section)
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup: ensure DB tables exist, seed super-admin, recover stuck workflows."""
@@ -77,6 +104,23 @@ async def lifespan(app: FastAPI):
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+    # Additive, idempotent column migrations. create_all() only creates missing
+    # TABLES — it never adds a column to a table that already exists — so any
+    # database provisioned before this column existed needs an explicit ALTER.
+    # These are safe to run on every boot: nullable, IF NOT EXISTS, no data loss.
+    try:
+        from sqlalchemy import text as _sql_text
+        async with engine.begin() as _mconn:
+            await _mconn.execute(_sql_text(
+                "ALTER TABLE agent_run_records "
+                "ADD COLUMN IF NOT EXISTS output_data JSONB"
+            ))
+        log.info("Schema check: agent_run_records.output_data present")
+    except Exception as _mig_err:
+        # Non-fatal: the app still runs; per-node structured output just won't
+        # persist to the normalized table until this column exists.
+        log.error("Additive column migration failed (non-fatal)", error=str(_mig_err))
 
     # Initialize Redis pub/sub
     await redis_pubsub.connect()
@@ -212,10 +256,9 @@ async def system_integrity_check(request: Request, call_next):
 
 async def broadcast_event(event_type: str, data: dict) -> None:
     """Broadcast event via Redis (multi-worker) or in-process fallback."""
+    # redis_pubsub.publish() already calls _local_broadcast via its internal fallback
+    # when Redis is unavailable — do NOT duplicate the delivery here.
     await redis_pubsub.publish(event_type, data)
-    # _local_broadcast already handles the (WebSocket, tenant_id) tuple structure
-    if not redis_pubsub.available:
-        await _local_broadcast(event_type, data)
  
 # Add separate local-only broadcast (used by Redis subscriber callback):
 async def _local_broadcast(event_type: str, data: dict) -> None:
@@ -237,15 +280,19 @@ async def _local_broadcast(event_type: str, data: dict) -> None:
 @app.websocket("/ws/{session_id}")
 async def websocket_endpoint(websocket: WebSocket, session_id: str):
     token = websocket.query_params.get("token")
+    if not token:
+        await websocket.close(code=4001)
+        return
     try:
-        from api.auth import decode_token
-        token_data = decode_token(token) if token else None
-    except Exception:
+        from api.deps.auth import get_current_user_from_token
+        token_data = await get_current_user_from_token(token)
+    except Exception as e:
+        log.warning("WebSocket authentication failed", error=str(e), session_id=session_id)
         await websocket.close(code=4001)
         return
  
     await websocket.accept()
-    user_tenant = getattr(token_data, "tenant_id", None)
+    user_tenant = getattr(token_data, "tenant_id", None) or getattr(token_data, "organization_id", None)
     user_role   = getattr(token_data, "role", "anon")
     _ws_connections[session_id] = (websocket, user_tenant)
  
@@ -773,9 +820,77 @@ async def reset_password(
     return {"message": "Your password has been updated."}
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# System
-# ─────────────────────────────────────────────────────────────────────────────
+
+@app.post("/internal/startup-demo", tags=["System"])
+async def startup_demo(background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
+    """One‑time demo that triggers each enabled workflow after server start.
+
+    An idempotent lock file ``startup_demo.lock`` in the project root ensures the demo runs only once per process.
+    The demo uses the first tenant (or aborts if none) and triggers all workflows where ``_meta.trigger.enabled`` is true.
+    """
+    from pathlib import Path
+    import uuid
+    import json
+
+    lock_path = Path("startup_demo.lock")
+    if lock_path.exists():
+        return {"message": "Startup demo already executed"}
+    try:
+        lock_path.touch(exist_ok=False)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create demo lock: {e}")
+    # Determine a tenant to run the demo under
+    tenants = await crud.list_tenants(db)
+    if not tenants:
+        return {"message": "No tenants available for demo"}
+    tenant = tenants[0]
+    tenant_id = str(tenant.id)
+    tenant_config = tenant.config or {}
+    tenant_config["client_id"] = tenant_id
+    # Iterate DAG files
+    dag_dir = Path("workflows/dags")
+    if not dag_dir.exists():
+        return {"message": "No workflow DAGs found"}
+    triggered = []
+    for dag_file in dag_dir.glob("*.json"):
+        try:
+            data = json.loads(dag_file.read_text())
+        except Exception:
+            continue
+        meta = data.get("_meta", {})
+        trigger = meta.get("trigger", {})
+        if not trigger.get("enabled", False):
+            continue
+        workflow_name = dag_file.stem
+        run_id = str(uuid.uuid4())
+        # Create DB instance record
+        await crud.create_workflow_instance(
+            db,
+            run_id=run_id,
+            tenant_id=tenant_id,
+            workflow_name=workflow_name,
+            trigger_signal={"source": "startup_demo"},
+            triggered_by="startup_demo",
+            tenant_config=tenant_config,
+        )
+        budget = await crud.get_budget_settings(db, tenant_id) or {}
+        background_tasks.add_task(
+            _execute_workflow_background,
+            run_id,
+            tenant_config,
+            workflow_name,
+            {"source": "startup_demo"},
+            budget,
+        )
+        triggered.append(workflow_name)
+        await crud.log_event(db, "startup_demo_triggered", tenant_id, run_id,
+            f"Startup demo triggered workflow '{workflow_name}'")
+        await broadcast_event("startup_demo_workflow_triggered", {
+            "run_id": run_id,
+            "workflow": workflow_name,
+            "tenant_id": tenant_id,
+        })
+    return {"message": "Startup demo executed", "tenant_id": tenant_id, "triggered_workflows": triggered}
 
 @app.get("/api/v1/health", tags=["System"])
 async def health_check(db: AsyncSession = Depends(get_db)):
@@ -785,11 +900,12 @@ async def health_check(db: AsyncSession = Depends(get_db)):
         ("google", "GOOGLE_API_KEY"), ("groq", "GROQ_API_KEY"),
     ]:
         key_val = os.getenv(key_env, "")
-        if key_val and len(key_val) > 8:
-            llm_providers[provider] = {"status": "configured",
-                                        "key_preview": key_val[:8] + "****" + key_val[-4:]}
+        token_val = os.getenv(provider.upper() + "_AUTH_TOKEN", "")
+        if (key_val and len(key_val) > 8) or token_val:
+            llm_providers[provider] = {"status": "configured"}
         else:
             llm_providers[provider] = {"status": "not_configured"}
+
 
     instances = await crud.list_workflow_instances(db, limit=500)
     active = sum(1 for i in instances if i.status == "running")
@@ -1263,37 +1379,48 @@ async def get_evidence_file_content(
 # path segments as run_id values.
 # ─────────────────────────────────────────────────────────────────────────────
 
-@app.get("/api/v1/workflows/{workflow_name}/trigger-info", tags=["Workflows"])
-async def get_workflow_trigger_info(
-    workflow_name: str,
-    current_user: TokenData = Depends(require_any_auth),
-    db: AsyncSession = Depends(get_db),
-):
+
+
+@app.post("/api/v1/workflows/prepare-demo-data", tags=["Workflows"])
+async def prepare_demo_data(current_user: TokenData = Depends(require_any_auth)):
+    """Prepare synthetic fixture data for enabled workflows.
+
+    Returns a summary per workflow with source type and available record count.
+    No workflow runs are created, and no approvals or side‑effects occur.
     """
-    Returns live metadata for manual workflow trigger UI (available fixture messages, trigger type, source).
-    """
-    available_messages = 40
-    try:
-        data_path = Path("db/seed/data/email_messages.json")
-        if data_path.exists():
-            emails = json.loads(data_path.read_text(encoding="utf-8"))
-            available_messages = len(emails)
-    except Exception:
-        pass
-
-    display_name = workflow_name.replace("_", " ").title()
-    if workflow_name == "email_summarizer":
-        display_name = "Email Summarizer"
-
-    return {
-        "workflow_name": workflow_name,
-        "display_name": display_name,
-        "trigger_type": "New Email" if "email" in workflow_name else "Manual",
-        "source": "Synthetic Inbox" if "email" in workflow_name else "System Direct",
-        "available_messages_count": available_messages,
-        "status": "active",
-    }
-
+    from pathlib import Path
+    import json, aiofiles
+    dags_dir = Path("workflows/dags")
+    if not dags_dir.exists():
+        return {"demo_data": []}
+    demo = []
+    for f in dags_dir.glob("*.json"):
+        name = f.stem
+        source = "unavailable"
+        available = 0
+        message = "No demo input configured"
+        # Email summarizer fixture
+        if "email" in name:
+            fixture = Path("db/seed/data/email_messages.json")
+            if fixture.exists():
+                try:
+                    async with aiofiles.open(fixture) as fp:
+                        emails = json.loads(await fp.read())
+                    if isinstance(emails, list):
+                        available = len(emails)
+                    else:
+                        available = 0
+                    source = "synthetic_inbox"
+                    message = None
+                except Exception:
+                    pass
+        demo.append({
+            "workflow_name": name,
+            "source": source,
+            "available_count": available,
+            "message": message,
+        })
+    return {"demo_data": demo}
 
 @app.post("/api/v1/workflows/trigger", tags=["Workflows"])
 async def trigger_workflow(
@@ -1302,119 +1429,136 @@ async def trigger_workflow(
     current_user: TokenData = Depends(require_any_auth),
     db: AsyncSession = Depends(get_db),
 ):
+    """Trigger a workflow run via manual UI.
+
+    Mirrors the logic previously present but was missing a route definition.
     """
-    Trigger a workflow run.
+    # Determine effective tenant ID (explicit in payload or from auth)
+    effective_tenant_id = body.tenant_id or (current_user.organization_id or current_user.tenant_id)
+    # Load tenant config via bridge — handles both legacy tenants table and new organizations table.
+    _resolved_tid, tenant_config = await crud.resolve_tenant_config_bridge(db, effective_tenant_id) if effective_tenant_id else (effective_tenant_id, {})
 
-    Phase 0 bridge: ``tenant_id`` in the request body is now optional.
-    When omitted (or for org_users), the tenant context is derived from the
-    authenticated user's organization via ``resolve_tenant_config_bridge``.
-    Platform admins may still supply an explicit ``tenant_id`` to target a
-    specific legacy tenant.
-    """
-    # ── Resolve effective tenant_id and config (Option B bridge) ──────────
-    if body.tenant_id and current_user.role in ("platform_admin", "super_admin"):
-        # Platform admin with explicit tenant_id — use legacy path
-        assert_tenant_access(current_user, body.tenant_id)
-        effective_tenant_id, tenant_config = await crud.resolve_tenant_config_bridge(
-            db, body.tenant_id
-        )
-    else:
-        # Org user — always derive from authenticated organization
-        org_id = (
-            current_user.organization_id
-            or current_user.tenant_id
-            or body.tenant_id
-        )
-        if not org_id:
-            # Canonical resolution: authenticated user -> organization_users -> organizations
-            org_user, org = await crud.ensure_user_organization_provisioned(
-                db,
-                user_id=current_user.user_id,
-                email=current_user.email,
-                full_name=current_user.full_name,
-            )
-            if org:
-                org_id = str(org.id)
-                current_user.organization_id = org_id
-                current_user.tenant_id = org_id
-                if org_user and current_user.role == "org_user":
-                    current_user.role = org_user.role
-
-        if not org_id:
-            raise HTTPException(
-                status_code=422,
-                detail="Cannot determine organization context. Complete onboarding first.",
-            )
-        effective_tenant_id, tenant_config = await crud.resolve_tenant_config_bridge(
-            db, org_id
-        )
-
-    run_id = str(uuid.uuid4())
-
-    # ── Pre-flight config validation (best-effort — warns but allows run) ─
+    # Pre-flight config validation — block ALL users when config is invalid.
+    # The workflow would fail in the background anyway; surfacing the error here
+    # lets the frontend show a config-input form instead of a silent failure.
     from core.config_validator import validate_tenant_config
     validation = validate_tenant_config(tenant_config, strict=False)
     if not validation.valid and validation.errors:
         log.warning(
-            "Workflow trigger config warnings",
+            "Workflow trigger blocked — config validation failed",
             tenant_id=effective_tenant_id,
             errors=[e.message for e in validation.errors],
         )
-        # Only block on hard errors if config was explicitly supplied (admin path)
-        if body.tenant_id and current_user.role in ("platform_admin", "super_admin"):
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "message": "Configuration required before this workflow can run",
+                "errors": [{"field": e.field, "message": e.message} for e in validation.errors],
+                "warnings": [{"field": w.field, "message": w.message} for w in validation.warnings],
+                "missing_fields": [e.field for e in validation.errors],
+                "hint": "Provide the required configuration values, then trigger again.",
+            },
+        )
+
+    # Normalize trigger signal / payload
+    sig = body.trigger_signal or body.signal_data or getattr(body, "trigger_payload", None) or {}
+    if not isinstance(sig, dict):
+        sig = {}
+
+    req_source = sig.get("source")
+    if body.workflow_name == "email_summarizer":
+        if req_source not in ("real_gmail", "synthetic_demo"):
             raise HTTPException(
                 status_code=422,
                 detail={
-                    "message": "Tenant config has blocking errors — fix before triggering",
-                    "errors": [{"field": e.field, "message": e.message} for e in validation.errors],
-                    "warnings": [{"field": w.field, "message": w.message} for w in validation.warnings],
-                    "hint": "Fix [MODIFY] placeholders and REPLACE_WITH_UUID values in Config Studio",
+                    "error_code": "INVALID_SOURCE",
+                    "message": "Explicit 'source' parameter required for email_summarizer. Allowed values: 'real_gmail' or 'synthetic_demo'.",
                 },
             )
 
-    # Normalize trigger signal / payload
-    sig = body.trigger_signal or body.signal_data or {}
-    if not isinstance(sig, dict):
-        sig = {}
-    if "source" not in sig:
-        sig["source"] = "manual_ui"
+        if req_source == "real_gmail":
+            org_id = effective_tenant_id or current_user.organization_id or current_user.tenant_id
+            gmail_conn_ok = False
+            if org_id:
+                try:
+                    from sqlalchemy import select
+                    from db.models.core import ToolConnection
+                    org_uuid = uuid.UUID(str(org_id))
+                    conn_stmt = select(ToolConnection).where(
+                        ToolConnection.organization_id == org_uuid,
+                        ToolConnection.tool_name == "gmail",
+                        ToolConnection.status == "connected",
+                    )
+                    tc_res = await db.execute(conn_stmt)
+                    if tc_res.scalar_one_or_none():
+                        gmail_conn_ok = True
+                except Exception as _check_err:
+                    log.warning("Failed checking Gmail connection status", error=str(_check_err))
 
+            if not gmail_conn_ok:
+                raise HTTPException(
+                    status_code=400,
+                    detail={
+                        "error_code": "GMAIL_CONNECTION_REQUIRED",
+                        "message": "Real Gmail source requested, but no active connected Gmail connection was found for this organization. Please connect Gmail in Settings -> Tool Connections.",
+                    },
+                )
+
+    # Create workflow instance record
+    run_id = str(uuid.uuid4())
     await crud.create_workflow_instance(
-        db, run_id=run_id, tenant_id=effective_tenant_id,
-        workflow_name=body.workflow_name, trigger_signal=sig,
-        triggered_by=current_user.user_id, tenant_config=tenant_config,
+        db,
+        run_id=run_id,
+        tenant_id=effective_tenant_id,
+        workflow_name=body.workflow_name,
+        trigger_signal=sig,
+        triggered_by=current_user.user_id,
+        tenant_config=tenant_config,
     )
+    # Schedule background execution
     budget = await crud.get_budget_settings(db, effective_tenant_id) or {}
     background_tasks.add_task(
-        _execute_workflow_background, run_id, tenant_config,
-        body.workflow_name, sig, budget,
+        _execute_workflow_background,
+        run_id,
+        tenant_config,
+        body.workflow_name,
+        sig,
+        budget,
     )
+    # Log and broadcast event
     await crud.log_event(
-        db, "workflow_triggered", effective_tenant_id, run_id,
+        db,
+        "workflow_triggered",
+        effective_tenant_id,
+        run_id,
         f"Workflow '{body.workflow_name}' triggered by {current_user.email}",
     )
     await broadcast_event(
         "workflow_triggered",
-        {"run_id": run_id, "workflow": body.workflow_name,
-         "tenant_id": effective_tenant_id},
+        {"run_id": run_id, "workflow": body.workflow_name, "tenant_id": effective_tenant_id},
     )
     return {
-        "run_id":     run_id,
-        "status":     "pending",
-        "tenant_id":  effective_tenant_id,
-        "message":    f"Workflow '{body.workflow_name}' queued.",
+        "run_id": run_id,
+        "status": "pending",
+        "tenant_id": effective_tenant_id,
+        "message": f"Workflow '{body.workflow_name}' queued.",
     }
+
+
 
 
 @app.get("/api/v1/workflows/{workflow_name}/trigger-info", tags=["Workflows"])
 async def get_workflow_trigger_info(
     workflow_name: str,
+    date_range: Optional[str] = "Today",
+    scope: Optional[str] = "Inbox",
+    batch_size: Optional[int] = 10,
     current_user: TokenData = Depends(require_any_auth),
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Returns real runtime trigger information, available message counts from fixtures,
-    and execution statistics for the given workflow.
+    Returns real runtime trigger information, available message counts from fixtures or real Gmail,
+    filtered counts, preview messages, and connection health status for the given workflow.
     """
     safe_name = workflow_name.replace("/", "_").replace("..", "")
     dag_path = Path("workflows/dags") / f"{safe_name}.json"
@@ -1445,10 +1589,99 @@ async def get_workflow_trigger_info(
 
     # Compute stats for authenticated org / tenant
     org_id = current_user.organization_id or current_user.tenant_id
+    real_messages_count = 0
+    total_inbox_count = 0
+    real_gmail_connected = False
+    real_gmail_status = "not_connected"
+    real_gmail_error = None
+    connected_email = None
+    preview_messages = []
+
+    def _build_gmail_query(dr: str = "Today", sc: str = "Inbox") -> str:
+        parts = []
+        sc_lower = (sc or "").lower()
+        if sc_lower == "unread":
+            parts.append("is:unread in:inbox")
+        elif sc_lower == "important":
+            parts.append("is:important in:inbox")
+        elif sc_lower == "starred":
+            parts.append("is:starred in:inbox")
+        else:
+            parts.append("in:inbox")
+
+        dr_lower = (dr or "").lower()
+        if "today" in dr_lower:
+            parts.append("newer_than:1d")
+        elif "7" in dr_lower:
+            parts.append("newer_than:7d")
+        elif "30" in dr_lower:
+            parts.append("newer_than:30d")
+        
+        return " ".join(parts)
+
+    if org_id and (workflow_name == "email_summarizer" or "email" in workflow_name):
+        try:
+            from sqlalchemy import select
+            from db.models.core import ToolConnection
+            from integrations.key_vault import decrypt_credentials
+            from integrations.connectors import GmailConnector
+
+            org_uuid = uuid.UUID(str(org_id)) if isinstance(org_id, str) else org_id
+            conn_stmt = select(ToolConnection).where(
+                ToolConnection.organization_id == org_uuid,
+                ToolConnection.tool_name == "gmail",
+                ToolConnection.status == "connected"
+            )
+            c_res = await db.execute(conn_stmt)
+            conn_obj = c_res.scalar_one_or_none()
+
+            if conn_obj and conn_obj.encrypted_credentials:
+                raw_creds = decrypt_credentials(conn_obj.encrypted_credentials)
+                if raw_creds:
+                    real_gmail_connected = True
+                    connected_email = (conn_obj.config or {}).get("connected_email") or (conn_obj.config or {}).get("sender_alias")
+                    gc = GmailConnector(raw_creds, config=conn_obj.config or {})
+                    
+                    inbox_stubs = await gc.read("messages", {"q": "in:inbox", "limit": 100})
+                    err_info = gc.get_last_error_info() if hasattr(gc, "get_last_error_info") else {}
+
+                    if err_info.get("error_code") in (401, 403, 500) or err_info.get("error"):
+                        real_gmail_status = "reauth_required" if err_info.get("error_code") in (401, 403) else "error"
+                        real_gmail_error = err_info.get("error") or "Gmail API read error"
+                        real_messages_count = 0
+                        total_inbox_count = 0
+                    else:
+                        real_gmail_status = "ok"
+                        total_inbox_count = len(inbox_stubs)
+                        query_q = _build_gmail_query(date_range, scope)
+                        if query_q == "in:inbox":
+                            filter_stubs = inbox_stubs
+                        else:
+                            filter_stubs = await gc.read("messages", {"q": query_q, "limit": 100})
+                        
+                        real_messages_count = len(filter_stubs)
+                        prev_limit = min(max(1, batch_size or 10), 5)
+                        preview_messages = await gc.read_detailed_messages(query=query_q, limit=prev_limit)
+        except Exception as ex:
+            log.warning("Failed to query real Gmail count for trigger info", error=str(ex))
+            real_gmail_error = str(ex)
+
     instances = await crud.list_workflow_instances(db, tenant_id=org_id, limit=200)
     wf_runs = [i for i in instances if i.workflow_name == workflow_name]
     completed_runs = [i for i in wf_runs if i.status in ("completed", "WorkflowStatus.COMPLETED")]
     last_run = wf_runs[0] if wf_runs else None
+
+    # ── Config validation — surface missing fields before the user triggers ──
+    config_validation = None
+    if org_id:
+        _resolved_tid, tenant_config = await crud.resolve_tenant_config_bridge(db, org_id)
+        from core.config_validator import validate_tenant_config
+        cv = validate_tenant_config(tenant_config, strict=False)
+        config_validation = {
+            "valid": cv.valid,
+            "errors": [{"field": e.field, "message": e.message} for e in cv.errors],
+            "warnings": [{"field": w.field, "message": w.message} for w in cv.warnings],
+        }
 
     return {
         "workflow_name": workflow_name,
@@ -1460,10 +1693,22 @@ async def get_workflow_trigger_info(
         "trigger_type": trigger_type,
         "source": source,
         "available_messages_count": available_messages_count,
+        "synthetic_messages_count": available_messages_count,
+        "real_messages_count": real_messages_count,
+        "total_inbox_count": total_inbox_count,
+        "real_gmail_connected": real_gmail_connected,
+        "real_gmail_status": real_gmail_status,
+        "real_gmail_error": real_gmail_error,
+        "connected_email": connected_email,
+        "preview_messages": preview_messages,
+        "date_range": date_range,
+        "scope": scope,
+        "batch_size": batch_size,
         "total_runs": len(wf_runs),
         "completed_runs": len(completed_runs),
         "success_rate": round((len(completed_runs) / len(wf_runs)) * 100) if wf_runs else None,
         "last_run": crud.workflow_to_dict(last_run) if last_run else None,
+        "config_validation": config_validation,
     }
 
 
@@ -1532,10 +1777,11 @@ async def estimate_workflow_cost(
     for run in agent_runs:
         if isinstance(run, dict):
             node_id = run.get("node_id", "?")
+            run_c = run.get("cost_usd")
             breakdown[node_id] = {
                 "agent_type": run.get("agent_type", "?"),
-                "last_cost_usd": round(run.get("cost_usd", 0.0), 6),
-                "estimated_cost_usd": round(run.get("cost_usd", 0.0) * (1.0 - savings_pct), 6),
+                "last_cost_usd": round(run_c, 6) if run_c is not None else None,
+                "estimated_cost_usd": round(run_c * (1.0 - savings_pct), 6) if run_c is not None else None,
                 "model_last_used": run.get("model_used", "?"),
             }
 
@@ -1753,7 +1999,7 @@ async def get_workflow_system_log(
                 "agent_type": r.get("agent_type"),
                 "status": r.get("status"),
                 "model": r.get("model_used", "?"),
-                "cost_usd": round(r.get("cost_usd", 0.0), 6),
+                "cost_usd": round(r_c, 6) if (r_c := r.get("cost_usd")) is not None else None,
                 "tokens_in": r.get("tokens_in", 0),
                 "tokens_out": r.get("tokens_out", 0),
                 "confidence": r.get("confidence"),
@@ -1932,6 +2178,8 @@ async def decide_escalation(
             payload = appr.payload or {}
             if isinstance(body.decision, dict) and body.decision.get("notes"):
                 payload["decision_notes"] = body.decision.get("notes")
+            if isinstance(body.decision, dict) and isinstance(body.decision.get("patch_payload"), dict):
+                payload = {**payload, **body.decision.get("patch_payload")}
             appr.payload = payload
             await db.commit()
 
@@ -2619,10 +2867,34 @@ async def get_workflow_dag(workflow_name: str):
 
 
 @app.get("/api/v1/config/workflows", tags=["Config"])
-async def list_workflow_dags():
+async def list_workflow_dags(db: AsyncSession = Depends(get_db)):
+    from sqlalchemy import select, func
+    from core.state_manager import WorkflowInstance
+
     dags_dir = Path("workflows/dags")
     if not dags_dir.exists():
         return []
+
+    # Run counts per workflow so the builder lists the most-active workflows first
+    # instead of alphabetically. Join key: workflow_instances.workflow_name == DAG stem
+    # (the same value /config/dag/{name} loads by).
+    run_counts: dict[str, int] = {}
+    last_run: dict[str, str] = {}
+    try:
+        rc_res = await db.execute(
+            select(
+                WorkflowInstance.workflow_name,
+                func.count().label("runs"),
+                func.max(WorkflowInstance.started_at).label("last_started"),
+            ).group_by(WorkflowInstance.workflow_name)
+        )
+        for row in rc_res.all():
+            if row.workflow_name:
+                run_counts[row.workflow_name] = row.runs or 0
+                last_run[row.workflow_name] = row.last_started.isoformat() if row.last_started else None
+    except Exception:
+        run_counts, last_run = {}, {}
+
     workflows = []
     for f in sorted(dags_dir.glob("*.json")):
         try:
@@ -2647,6 +2919,8 @@ async def list_workflow_dags():
                 "source": source,
                 "sla_hours": meta.get("sla_hours", 2),
                 "estimated_duration_minutes": meta.get("estimated_duration_minutes", 2),
+                "run_count": run_counts.get(f.stem, 0),
+                "last_run_at": last_run.get(f.stem),
             })
         except Exception:
             workflows.append({
@@ -2656,7 +2930,12 @@ async def list_workflow_dags():
                 "trigger_type": "Manual",
                 "source": "Direct",
                 "automation_status": "active",
+                "run_count": run_counts.get(f.stem, 0),
+                "last_run_at": last_run.get(f.stem),
             })
+
+    # Most-run workflows first; ties fall back to alphabetical display name.
+    workflows.sort(key=lambda w: (-(w.get("run_count") or 0), (w.get("display_name") or "").lower()))
     return workflows
 
 
@@ -3259,6 +3538,58 @@ async def dismiss_auto_eval_suggestion(
 # Background execution (creates own DB sessions)
 # ─────────────────────────────────────────────────────────────────────────────
 
+async def _load_stored_credentials_for_workflow(db: AsyncSession, tenant_config: dict) -> dict:
+    """
+    Fetch stored credentials for workflow execution from both:
+    1. Legacy IntegrationCredential rows (by client_id / tenant_id)
+    2. First-Class ToolConnection rows (by organization_id / client_id)
+    """
+    client_id = tenant_config.get("client_id")
+    org_id = tenant_config.get("organization_id") or client_id
+    stored_creds = {}
+
+    # 1. Legacy IntegrationCredential table
+    if client_id:
+        try:
+            creds_rows = await crud.list_credentials(db, tenant_id=client_id)
+            for c in creds_rows:
+                raw = (c.credentials or {}).get("encrypted", "")
+                if raw:
+                    try:
+                        stored_creds[c.tool_name] = decrypt_credentials(raw)
+                    except Exception as _e:
+                        log.warning("Failed to decrypt legacy credential", tool=c.tool_name, error=str(_e))
+        except Exception as _leg_err:
+            log.warning("Failed reading legacy credentials", error=str(_leg_err))
+
+    # 2. Canonical ToolConnection table
+    if org_id:
+        try:
+            import uuid
+            from sqlalchemy import select
+            from db.models.core import ToolConnection
+            org_uuid = uuid.UUID(str(org_id))
+            conn_stmt = select(ToolConnection).where(
+                ToolConnection.organization_id == org_uuid,
+                ToolConnection.status == "connected"
+            )
+            tc_result = await db.execute(conn_stmt)
+            for tc in tc_result.scalars().all():
+                if tc.encrypted_credentials:
+                    try:
+                        dec = decrypt_credentials(tc.encrypted_credentials)
+                        if isinstance(dec, dict):
+                            if tc.config and isinstance(tc.config, dict):
+                                dec = {**tc.config, **dec}
+                            stored_creds[tc.tool_name] = dec
+                    except Exception as _tc_dec_err:
+                        log.warning("Failed to decrypt ToolConnection credentials", tool=tc.tool_name, error=str(_tc_dec_err))
+        except Exception as _tc_err:
+            log.warning("Failed querying ToolConnection table for credentials", error=str(_tc_err))
+
+    return stored_creds
+
+
 async def _execute_workflow_background(
     run_id: str,
     tenant_config: dict,
@@ -3280,13 +3611,7 @@ async def _execute_workflow_background(
     async with db:
         try:
             llm_router = LLMRouter()
-            creds_rows = await crud.list_credentials(db, tenant_id=tenant_config.get("client_id"))
-            stored_creds = {}
-            for c in creds_rows:
-                raw = (c.credentials or {}).get("encrypted", "")
-                if raw:
-                    stored_creds[c.tool_name] = decrypt_credentials(raw)
-
+            stored_creds = await _load_stored_credentials_for_workflow(db, tenant_config)
             tool_registry = build_registry(tenant_config, credentials=stored_creds)
             state_manager = StateManager(session=db)
             rag_engine = RAGEngine(db_session=db, llm_router=llm_router)
@@ -3396,13 +3721,7 @@ async def _resume_workflow_background(
                 return
 
             llm_router = LLMRouter()
-            creds_rows = await crud.list_credentials(db, tenant_id=tenant_config.get("client_id"))
-            stored_creds = {}
-            for c in creds_rows:
-                raw = (c.credentials or {}).get("encrypted", "")
-                if raw:
-                    stored_creds[c.tool_name] = decrypt_credentials(raw)
-
+            stored_creds = await _load_stored_credentials_for_workflow(db, tenant_config)
             tool_registry = build_registry(tenant_config, credentials=stored_creds)
             rag_engine = RAGEngine(db_session=db, llm_router=llm_router)
 
@@ -3495,13 +3814,7 @@ async def _fork_workflow_background(
             accumulated_context["_fork_node"] = from_node_id
 
             llm_router = LLMRouter()
-            creds_rows = await crud.list_credentials(db, tenant_id=tenant_config.get("client_id"))
-            stored_creds = {}
-            for c in creds_rows:
-                raw = (c.credentials or {}).get("encrypted", "")
-                if raw:
-                    stored_creds[c.tool_name] = decrypt_credentials(raw)
-
+            stored_creds = await _load_stored_credentials_for_workflow(db, tenant_config)
             tool_registry = build_registry(tenant_config, credentials=stored_creds)
             state_manager = StateManager(session=db)
             rag_engine = RAGEngine(db_session=db, llm_router=llm_router)

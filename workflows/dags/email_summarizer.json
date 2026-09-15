@@ -1,10 +1,10 @@
 {
   "_meta": {
     "workflow_id": "email_summarizer",
-    "name": "Synthetic Email Summarizer Pipeline",
+    "name": "Enterprise Inbox Triage & Autonomous SLA Sentinel",
     "industry": "general",
-    "version": "1.1.0",
-    "description": "Continuously batches and retrieves synthetic business emails, analyzes priorities, evaluates actionable escalations for human review, and persists results.",
+    "version": "1.2.0",
+    "description": "Continuously batches business emails, analyzes priority and sentiment, humanizes proposed responses, exposes explainable approval actions, and persists operational intelligence.",
     "trigger_types": [
       "event",
       "scheduled",
@@ -29,6 +29,7 @@
       "description": "Retrieve synthetic email messages from local development fixture or event batch",
       "prompt_file": "email/fetch_emails.txt",
       "tools": [
+        "gmail_read_messages",
         "email_get_synthetic_messages"
       ],
       "timeout_seconds": 60
@@ -48,9 +49,21 @@
       "name": "Evaluate Actions & Generate Drafts",
       "description": "Detect actionable customer escalations/SLA warnings and prepare proposed responses for human approval",
       "prompt_file": "email/evaluate_actions.txt",
-      "tools": [
-        "db_write_outcome"
+      "tools": [],
+      "suppress_approval_creation": true,
+      "timeout_seconds": 90
+    },
+    {
+      "id": "humanize_draft",
+      "agent": "humanizer_agent",
+      "name": "Humanize Drafts & Attach XAI",
+      "description": "Refine urgent email drafts into natural, empathetic responses and attach explainability metadata",
+      "prompt_file": "email/humanize_draft.txt",
+      "depends_on": [
+        "evaluate_actions",
+        "summarize_emails"
       ],
+      "tools": [],
       "timeout_seconds": 90
     },
     {
@@ -78,6 +91,11 @@
     },
     {
       "from": "evaluate_actions",
+      "to": "humanize_draft",
+      "condition": null
+    },
+    {
+      "from": "humanize_draft",
       "to": "persist_results",
       "condition": null
     }

@@ -66,6 +66,14 @@ NEVER_DOWNGRADE_BELOW = {
 }
 
 
+def _extract_provider(err_str: str) -> str:
+    """Extract provider name from error string without exposing keys."""
+    for prov in ("anthropic", "openai", "openrouter", "groq", "gemini", "google"):
+        if prov in err_str:
+            return prov
+    return "unknown"
+
+
 @dataclass
 class LLMCall:
     call_id: str
@@ -80,6 +88,26 @@ class LLMCall:
     cache_hit: bool = False
     timestamp: datetime = field(default_factory=datetime.utcnow)
     error: Optional[str] = None
+    # True when this "call" is NOT a real model response but a deterministic
+    # mock/fallback produced because every provider in the chain failed (e.g.
+    # auth/401) or the router is in mock mode. Downstream must NOT treat a
+    # fallback as a genuine AI result — the UI labels it as degraded.
+    is_fallback: bool = False
+    provider: Optional[str] = None
+    cached_tokens: Optional[int] = None
+    fallback_used: bool = False
+    fallback_from: Optional[str] = None
+    fallback_reason: Optional[str] = None
+    tool_calls: Optional[int] = None
+
+
+class LLMProviderUnavailableError(RuntimeError):
+    """Raised when no real provider returned an LLM response."""
+
+    def __init__(self, agent_name: str, attempts: list[dict]):
+        self.agent_name = agent_name
+        self.attempts = attempts
+        super().__init__("AI_PROVIDER_UNAVAILABLE")
 
 
 @dataclass
@@ -202,16 +230,19 @@ class LLMRouter:
         lm_messages = [{"role": m.role, "content": m.content} for m in messages]
         model_config = self._task_models.get(tier, self._task_models["balanced"])
 
+        if not any(
+            message.get("role") == "user" and str(message.get("content", "")).strip()
+            for message in lm_messages
+        ):
+            raise ValueError("INPUT_CONTEXT_MISSING: at least one non-empty user message is required")
+
         # Fast mock mode check for testing/offline execution
         if os.getenv("MOCK_LLM", "false").lower() in ("true", "1"):
-            return self._generate_mock_fallback_response(
-                agent_name=agent_name,
-                lm_messages=lm_messages,
-                tools=tools,
-                attempt_model=model,
-                tier=tier,
-                start_ms=int(time.time() * 1000),
-                call_id=str(uuid.uuid4())[:8],
+            raise LLMProviderUnavailableError(
+                agent_name,
+                [{"attempt": 1, "model": model,
+                  "provider": self._provider_for_model(model),
+                  "error_type": "mock_mode_disabled"}],
             )
 
         # ── Cache check (Level >= 1) ──────────────────────────────────────
@@ -269,7 +300,9 @@ class LLMRouter:
                 log.debug("Tiktoken pre-flight failed (non-fatal)", error=str(e))
 
         # ── Try models in fallback chain ──────────────────────────────────
-        for attempt, attempt_model in enumerate(self._get_fallback_chain(model, tier)):
+        fallback_models = self._get_fallback_chain(model, tier)
+        attempts: list[dict] = []
+        for attempt, attempt_model in enumerate(fallback_models):
             start_ms = int(time.time() * 1000)
             call_id = str(uuid.uuid4())[:8]
 
@@ -343,6 +376,7 @@ class LLMRouter:
                             cost_usd=cost,
                             duration_ms=duration_ms,
                             success=True,
+                            provider=self._provider_for_model(attempt_model),
                         )
                         self._record_call(call)
                         text = full_text
@@ -396,8 +430,8 @@ class LLMRouter:
                 response = await acompletion(**kwargs)
 
                 usage = response.usage
-                tokens_in = usage.prompt_tokens if usage else 0
-                tokens_out = usage.completion_tokens if usage else 0
+                tokens_in = getattr(usage, "prompt_tokens", None) if usage else None
+                tokens_out = getattr(usage, "completion_tokens", None) if usage else None
 
                 # Unified cost calculation logic (Fixes BUG-001)
                 if usage:
@@ -414,7 +448,7 @@ class LLMRouter:
                         savings = (rates.get('input', 0) - rates.get('cache_read', 0)) * cache_read_tokens / 1e6
                         self._workflow_logger.mark_provider_cache_hit(cache_read_tokens, savings)
                 else:
-                    cost = 0.0
+                    cost = None
 
                 duration_ms = int(time.time() * 1000) - start_ms
     
@@ -428,6 +462,7 @@ class LLMRouter:
                     cost_usd=cost,
                     duration_ms=duration_ms,
                     success=True,
+                    provider=self._provider_for_model(attempt_model),
                 )
                 self._record_call(call)
     
@@ -497,26 +532,29 @@ class LLMRouter:
                             error=str(e), attempt=attempt + 1)
                 call = LLMCall(
                     call_id=call_id, agent_name=agent_name, model=attempt_model,
-                    tier=tier, tokens_in=0, tokens_out=0, cost_usd=0.0,
+                    tier=tier, tokens_in=None, tokens_out=None, cost_usd=None,
                     duration_ms=duration_ms, success=False, error=str(e),
+                    provider=self._provider_for_model(attempt_model),
                 )
                 self._record_call(call)
-
-                if attempt == len(self._get_fallback_chain(model, tier)) - 1:
+                classified = self.classify_llm_error(e)
+                attempts.append({
+                    "attempt": attempt + 1,
+                    "model": attempt_model,
+                    "provider": self._provider_for_model(attempt_model),
+                    "error_type": classified.get("error_type"),
+                    "safe_detail": classified.get("safe_detail"),
+                })
+                if attempt == len(fallback_models) - 1:
                     log.warning(
-                        "All network LLM models failed, generating deterministic fallback response for workflow execution",
+                        "All real LLM providers failed",
                         agent=agent_name,
-                        last_error=str(e),
+                        attempts=[
+                            {"provider": a["provider"], "model": a["model"], "error_type": a["error_type"]}
+                            for a in attempts
+                        ],
                     )
-                    return self._generate_mock_fallback_response(
-                        agent_name=agent_name,
-                        lm_messages=lm_messages,
-                        tools=tools,
-                        attempt_model=attempt_model,
-                        tier=tier,
-                        start_ms=start_ms,
-                        call_id=call_id,
-                    )
+                    raise LLMProviderUnavailableError(agent_name, attempts) from e
                 continue
 
         raise RuntimeError(f"Exhausted fallback models for {agent_name}")
@@ -531,6 +569,13 @@ class LLMRouter:
         start_ms: int,
         call_id: str,
     ) -> tuple[str, LLMCall]:
+        raise LLMProviderUnavailableError(
+            agent_name,
+            [{"attempt": 1, "model": attempt_model,
+              "provider": self._provider_for_model(attempt_model),
+              "error_type": "deterministic_fallback_disabled"}],
+        )
+
         # Check if conversation already contains tool results
         has_tool_result = any(
             isinstance(m, dict) and (m.get("role") == "tool" or "Tool:" in str(m.get("content", "")))
@@ -686,7 +731,81 @@ class LLMRouter:
             tier_override="mini",
         )
         return f"[COMPRESSED TOOL RESULTS]\n{text}"
-    
+
+    @staticmethod
+    def classify_llm_error(error: Exception) -> dict:
+        """
+        Classify an LLM/SDK exception into a developer-friendly error type.
+        Returns {error_type, error_message, provider, safe_detail}.
+        Never exposes API keys, tokens, or credentials.
+        """
+        err_str = str(error).lower()
+        err_type = type(error).__name__
+
+        # ── Rate limit / quota ──────────────────────────────────────────────
+        if any(kw in err_str for kw in ("rate limit", "ratelimit", "429", "quota", "too many requests", "tpm", "rpm")):
+            return {
+                "error_type": "rate_limit",
+                "error_message": "Rate limit / quota exceeded",
+                "provider": _extract_provider(err_str),
+                "safe_detail": str(error)[:300],
+            }
+        # ── Model not found / unavailable ───────────────────────────────────
+        if any(kw in err_str for kw in ("model not found", "model not available", "does not exist", "model_not_found", "not_found", "404")) or ("model" in err_str and "not found" in err_str):
+            return {
+                "error_type": "model_unavailable",
+                "error_message": "Model unavailable",
+                "provider": _extract_provider(err_str),
+                "safe_detail": str(error)[:300],
+            }
+        # ── Authentication / invalid key ────────────────────────────────────
+        if any(kw in err_str for kw in ("auth", "invalid key", "invalid api key", "unauthorized", "401", "api_key", "invalid_request_error")):
+            return {
+                "error_type": "invalid_api_key",
+                "error_message": "Invalid or expired API key",
+                "provider": _extract_provider(err_str),
+                "safe_detail": str(error)[:300],
+            }
+        # ── Timeout ─────────────────────────────────────────────────────────
+        if any(kw in err_str for kw in ("timeout", "timed out", "deadline exceeded", "context deadline")):
+            return {
+                "error_type": "timeout",
+                "error_message": "Provider timeout",
+                "provider": _extract_provider(err_str),
+                "safe_detail": str(error)[:300],
+            }
+        # ── Overloaded / 503 ────────────────────────────────────────────────
+        if any(kw in err_str for kw in ("overloaded", "503", "service unavailable", "server is overloaded")):
+            return {
+                "error_type": "provider_overloaded",
+                "error_message": "Provider overloaded — try again shortly",
+                "provider": _extract_provider(err_str),
+                "safe_detail": str(error)[:300],
+            }
+        # ── Content policy / safety ─────────────────────────────────────────
+        if any(kw in err_str for kw in ("content_policy", "safety", "blocked", "content filter", "nsfw")):
+            return {
+                "error_type": "content_policy",
+                "error_message": "Content policy violation — output blocked by provider",
+                "provider": _extract_provider(err_str),
+                "safe_detail": str(error)[:300],
+            }
+        # ── Context length ──────────────────────────────────────────────────
+        if any(kw in err_str for kw in ("context length", "context_length", "max_tokens", "token limit", "too long")):
+            return {
+                "error_type": "context_length_exceeded",
+                "error_message": "Input exceeds model context window",
+                "provider": _extract_provider(err_str),
+                "safe_detail": str(error)[:300],
+            }
+        # ── Generic LLM / provider error ────────────────────────────────────
+        return {
+            "error_type": "provider_error",
+            "error_message": "LLM provider error",
+            "provider": _extract_provider(err_str),
+            "safe_detail": str(error)[:300],
+        }
+
     def _inject_anthropic_cache_control(self, messages: list[dict], model: str) -> list[dict]:
         """
         Inject Anthropic cache_control breakpoints for provider-level prompt caching.
@@ -1102,6 +1221,13 @@ class LLMRouter:
         self._calls.clear()
         self._agent_totals.clear()
         self._cache_hits = 0
+        self._fallback_call_count = 0
+
+    def get_fallback_call_count(self) -> int:
+        """Cumulative number of deterministic fallback/mock responses returned
+        this session. The orchestrator samples this before/after each node to
+        detect whether that node ran on degraded (non-LLM) output."""
+        return getattr(self, "_fallback_call_count", 0)
 
     def get_predicted_savings(self, level: int) -> dict:
         """Return estimated savings and accuracy impact for a given optimization level."""
@@ -1174,6 +1300,10 @@ class LLMRouter:
                 return tier
         return "balanced"
 
+    @staticmethod
+    def _provider_for_model(model: str) -> str:
+        return model.split("/", 1)[0] if "/" in model else "anthropic"
+
     def _get_fallback_chain(self, primary_model: str, tier: str) -> list[str]:
         """
         Build fallback chain from config.
@@ -1229,15 +1359,17 @@ class LLMRouter:
 
     def _record_call(self, call: LLMCall) -> None:
         self._calls.append(call)
+        if getattr(call, "is_fallback", False):
+            self._fallback_call_count = getattr(self, "_fallback_call_count", 0) + 1
         agent = call.agent_name
         if agent not in self._agent_totals:
             self._agent_totals[agent] = {"calls": 0, "tokens_in": 0, "tokens_out": 0,
                                           "cost_usd": 0.0, "last_model": ""}
         t = self._agent_totals[agent]
         t["calls"] += 1
-        t["tokens_in"] += call.tokens_in
-        t["tokens_out"] += call.tokens_out
-        t["cost_usd"] += call.cost_usd
+        t["tokens_in"] += call.tokens_in or 0
+        t["tokens_out"] += call.tokens_out or 0
+        t["cost_usd"] += call.cost_usd or 0.0
         t["last_model"] = call.model
 
     def _build_cache_key(self, agent_name: str, messages: list[dict]) -> str:
@@ -1294,6 +1426,13 @@ class LLMRouter:
         start_ms: int,
         call_id: str,
     ) -> tuple[str, LLMCall]:
+        raise LLMProviderUnavailableError(
+            agent_name,
+            [{"attempt": 1, "model": attempt_model,
+              "provider": self._provider_for_model(attempt_model),
+              "error_type": "deterministic_fallback_disabled"}],
+        )
+
         """Generate deterministic mock response when MOCK_LLM=true or offline."""
         has_tool_result = any("Tool:" in m.get("content", "") or "Result:" in m.get("content", "") for m in lm_messages if isinstance(m, dict))
 
@@ -1330,6 +1469,98 @@ class LLMRouter:
                     "overall_sentiment": "mixed_requires_attention",
                     "confidence": 0.95,
                     "reasoning_confidence": 0.95
+                })
+            elif agent_name in ("humanizer_agent", "humanize_draft"):
+                content = json.dumps({
+                    "approval_items": [
+                        {
+                            "action_type": "email_response",
+                            "status": "pending",
+                            "title": "Customer response required: Enterprise SLA Warning from Acme Corp",
+                            "reason": "AI identified high-urgency SLA notice requiring executive response.",
+                            "category": "sla_risk",
+                            "category_label": "SLA Risk",
+                            "urgency_score": 9,
+                            "detected_sentiment": "urgent_negative",
+                            "trigger_keywords": ["URGENT", "SLA warning", "latency issue"],
+                            "source": {
+                                "message_id": "msg-synth-002",
+                                "subject": "URGENT: Enterprise SLA warning",
+                                "sender": "cto@acmecorp.com"
+                            },
+                            "proposed_action": {
+                                "type": "gmail_draft",
+                                "recipient": "cto@acmecorp.com",
+                                "subject": "Re: URGENT: Enterprise SLA warning - Investigation Update",
+                                "body": "Hi Acme Team,\n\nThank you for flagging this so quickly. I understand how disruptive latency can be for your team, especially under your SLA commitments.\n\nOur senior engineering team is actively investigating the issue now, and Customer Success is coordinating updates from the incident lead. We will send you a clear status update within 60 minutes, including current impact, next steps, and the path to resolution.\n\nBest,\nSMBFlow Enterprise Support"
+                            },
+                            "xai_explanation": {
+                                "trigger_rationale": "The email contained urgent SLA language and referenced a customer-impacting latency issue.",
+                                "strategy_rationale": "The safest response is an accountable incident acknowledgement with a near-term update window and no unverified root-cause claims.",
+                                "confidence_metrics": {
+                                    "intent_match": 0.96,
+                                    "sentiment_confidence": 0.94,
+                                    "safety_boundary_cleared": 0.98
+                                }
+                            },
+                            "confidence": 0.96
+                        },
+                        {
+                            "action_type": "email_response",
+                            "status": "pending",
+                            "title": "Billing dispute response required for finance partner",
+                            "reason": "Invoice dispute mentions duplicate charge and renewal risk.",
+                            "category": "billing_dispute",
+                            "category_label": "Billing Dispute",
+                            "urgency_score": 8,
+                            "detected_sentiment": "concerned",
+                            "trigger_keywords": ["duplicate charge", "invoice", "renewal"],
+                            "source": {
+                                "message_id": "msg-synth-014",
+                                "subject": "Duplicate charge on enterprise invoice",
+                                "sender": "finance@northstar.example"
+                            },
+                            "proposed_action": {
+                                "type": "gmail_draft",
+                                "recipient": "finance@northstar.example",
+                                "subject": "Re: Duplicate charge on enterprise invoice",
+                                "body": "Hi Northstar Finance Team,\n\nThanks for calling this out. I can see why a possible duplicate charge needs quick attention, especially this close to renewal.\n\nWe are reviewing the invoice and payment records now. I will follow up with a confirmed adjustment path or a clear explanation of the charge by end of business today.\n\nBest,\nSMBFlow Billing Support"
+                            },
+                            "xai_explanation": {
+                                "trigger_rationale": "The message references a duplicate charge and renewal timing, which increases business risk.",
+                                "strategy_rationale": "Billing disputes need a calm acknowledgement, ownership, and a concrete review timeline before making financial commitments.",
+                                "confidence_metrics": {
+                                    "intent_match": 0.93,
+                                    "sentiment_confidence": 0.91,
+                                    "safety_boundary_cleared": 0.97
+                                }
+                            },
+                            "confidence": 0.93
+                        }
+                    ],
+                    "routine_items_count": 38,
+                    "batch_intelligence": {
+                        "total_volume": 40,
+                        "sentiment_distribution": {
+                            "positive": 9,
+                            "neutral": 20,
+                            "concerned": 8,
+                            "urgent_negative": 3
+                        },
+                        "category_breakdown": {
+                            "sla_risk": 1,
+                            "billing_dispute": 1,
+                            "service_outage": 1,
+                            "routine_inquiry": 37
+                        },
+                        "critical_kpis": {
+                            "pending_approval_count": 2,
+                            "avg_urgency_score": 8.5,
+                            "highest_urgency_score": 9,
+                            "estimated_response_sla_minutes": 60
+                        }
+                    },
+                    "summary": "Humanized 2 urgent customer response drafts and attached explainability metadata."
                 })
             elif agent_name in ("drafting_agent", "evaluate_actions"):
                 content = json.dumps({
@@ -1391,6 +1622,7 @@ class LLMRouter:
             cost_usd=0.0,
             duration_ms=duration_ms,
             success=True,
+            is_fallback=True,   # deterministic mock — NOT a real model response
         )
         self._record_call(call)
         return content, call

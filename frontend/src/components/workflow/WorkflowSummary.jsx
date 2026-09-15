@@ -222,6 +222,39 @@ function SituationCard({ outcome }) {
   )
 }
 
+function EmailSummarySection({ runs }) {
+  const summary = runs.find(r => r.node_id === 'summarize_emails')?.output_data || {}
+  const actions = runs.find(r => r.node_id === 'evaluate_actions')?.output_data || {}
+  const drafts = runs.find(r => r.node_id === 'humanize_draft')?.output_data || {}
+  const summarizerRun = runs.find(r => r.node_id === 'summarize_emails') || {}
+  const hasOutput = Object.keys(summary).length > 0 || Object.keys(actions).length > 0 || Object.keys(drafts).length > 0
+
+  if (!hasOutput) return null
+
+  const important = summary.important_emails || []
+  const actionItems = summary.action_required || actions.action_items || []
+  const approvalItems = drafts.approval_items || actions.approval_items || []
+  const technical = [
+    ['Provider', summarizerRun.provider || 'Not reported'],
+    ['Model', summarizerRun.model_used || 'Not reported'],
+    ['Input tokens', summarizerRun.tokens_in ?? 'Not reported'],
+    ['Output tokens', summarizerRun.tokens_out ?? 'Not reported'],
+    ['Cost', summarizerRun.cost_usd ?? 'Not reported'],
+    ['Latency', summarizerRun.duration_ms != null ? `${summarizerRun.duration_ms}ms` : 'Not reported'],
+  ]
+
+  return (
+    <Section title="Email Summary" defaultOpen>
+      {summary.summary && <div className="mb-4"><h4 className="text-xs font-semibold text-gray-400 uppercase">AI Summary</h4><p className="text-sm text-gray-200 mt-1 leading-relaxed">{summary.summary}</p></div>}
+      {summary.categories && <div className="mb-4"><h4 className="text-xs font-semibold text-gray-400 uppercase">Priority Breakdown</h4><div className="flex flex-wrap gap-2 mt-2">{Object.entries(summary.categories).map(([key, value]) => <span key={key} className="text-xs border border-gray-700 rounded px-2 py-1 text-gray-300">{key}: {value}</span>)}</div></div>}
+      {actionItems.length > 0 && <div className="mb-4"><h4 className="text-xs font-semibold text-gray-400 uppercase">Action Items</h4><div className="mt-2 space-y-1">{actionItems.map((item, index) => <div key={index} className="text-sm text-gray-300">{item.subject || item.action || item.title || JSON.stringify(item)}</div>)}</div></div>}
+      {important.length > 0 && <div className="mb-4"><h4 className="text-xs font-semibold text-gray-400 uppercase">Important Emails / Threads</h4><div className="mt-2 space-y-2">{important.map((item, index) => <div key={index} className="border border-gray-700 rounded-lg p-2"><div className="text-sm text-gray-200">{item.subject || item.message_id || 'Referenced message'}</div>{item.reason && <div className="text-xs text-gray-400 mt-1">{item.reason}</div>}{item.message_id && <div className="text-[11px] text-gray-500 font-mono mt-1">{item.message_id}</div>}</div>)}</div></div>}
+      {approvalItems.length > 0 && <div className="mb-4"><h4 className="text-xs font-semibold text-gray-400 uppercase">Draft Responses</h4><div className="mt-2 space-y-2">{approvalItems.map((item, index) => <div key={index} className="border border-gray-700 rounded-lg p-2"><div className="text-sm text-gray-200">{item.title || item.source?.subject || 'Draft response'}</div><p className="text-xs text-gray-400 mt-1">{item.proposed_action?.body || item.reason || ''}</p>{item.source?.message_id && <div className="text-[11px] text-gray-500 font-mono mt-1">Source: {item.source.message_id}</div>}</div>)}</div></div>}
+      <div className="border-t border-gray-800 pt-3"><h4 className="text-xs font-semibold text-gray-500 uppercase">Technical Details</h4><div className="grid grid-cols-2 gap-2 mt-2 text-xs">{technical.map(([label, value]) => <div key={label} className="text-gray-400">{label}: <span className="text-gray-200 font-mono">{value}</span></div>)}</div></div>
+    </Section>
+  )
+}
+
 // ── Property Card — renders when output contains RE context ───────────────────
 function PropertyCard({ outputData }) {
   if (!outputData) return null
@@ -351,6 +384,8 @@ const dedupedRuns = useMemo(() => {
           </div>
         </div>
       </Card>
+
+      {workflow?.workflow_name === 'email_summarizer' && <EmailSummarySection runs={dedupedRuns} />}
 
       {/* ── Agent Pipeline Breakdown ──────────────────────────────────── */}
       {dedupedRuns.length > 0 && (

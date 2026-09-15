@@ -1,10 +1,10 @@
 {
   "_meta": {
-    "workflow_id": "re_listing_health_monitor",
-    "name": "Listing Health & Seller Re-alignment",
+    "workflow_id": "re_tenant_flight_risk",
+    "name": "Tenant Flight Risk",
     "industry": "real_estate",
     "version": "1.0.0",
-    "description": "Identifies stale listings, analyzes showing feedback and comp data, drafts consultative price strategy emails for sellers.",
+    "description": "Identifies at‑risk tenants, analyzes lease terms and payment history, drafts proactive retention or escalation communications.",
     "trigger_types": ["scheduled", "manual"],
     "schedule_cron": "0 8 * * 1",
     "estimated_duration_minutes": 6,

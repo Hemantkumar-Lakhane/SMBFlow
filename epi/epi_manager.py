@@ -72,26 +72,30 @@ class EPIWorkflowContext:
         agent_type: str,
         input_summary: dict,
         output_summary: dict,
-        confidence: float,
+        confidence: Optional[float],
         reasoning: str,
-        tokens_in: int = 0,
-        tokens_out: int = 0,
-        cost_usd: float = 0.0,
+        tokens_in: Optional[int] = None,
+        tokens_out: Optional[int] = None,
+        cost_usd: Optional[float] = None,
         model: str = "",
     ) -> None:
         """Log a single agent execution as a structured EPI step."""
         step_data = {
             "node_id": node_id,
             "agent_type": agent_type,
-            "confidence": round(confidence, 4),
-            "tokens_in": tokens_in,
-            "tokens_out": tokens_out,
-            "cost_usd": round(cost_usd, 6),
             "model": model,
             "timestamp": datetime.utcnow().isoformat(),
             "input_summary": input_summary,
             "output_keys": list(output_summary.keys()) if isinstance(output_summary, dict) else [],
         }
+        if confidence is not None:
+            step_data["confidence"] = round(confidence, 4)
+        if tokens_in is not None:
+            step_data["tokens_in"] = tokens_in
+        if tokens_out is not None:
+            step_data["tokens_out"] = tokens_out
+        if cost_usd is not None:
+            step_data["cost_usd"] = round(cost_usd, 6)
         self._agent_steps.append(step_data)
 
         if self._session and _epi_available:

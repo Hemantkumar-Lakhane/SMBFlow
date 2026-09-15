@@ -101,6 +101,33 @@ class ResearchAgent(BaseAgent):
         try:
             text, calls = await self._call_with_tools(messages, available_tools, input)
             output_data = self._parse_json_output(text)
+
+            # Direct extraction for raw email fetching
+            tool_messages = []
+            for item in getattr(self, "_last_tool_outputs", []):
+                res = item.get("data") if isinstance(item, dict) else item
+                if isinstance(res, dict) and "messages" in res and isinstance(res["messages"], list):
+                    tool_messages.extend(res["messages"])
+                elif isinstance(res, list) and res and isinstance(res[0], dict) and ("subject" in res[0] or "email_id" in res[0]):
+                    tool_messages.extend(res)
+
+            if tool_messages:
+                normalized_messages = []
+                for m in tool_messages:
+                    normalized_messages.append({
+                        "email_id": m.get("email_id") or m.get("id") or m.get("message_id", ""),
+                        "thread_id": m.get("thread_id") or m.get("threadId", ""),
+                        "from": m.get("from") or m.get("sender", "Unknown"),
+                        "to": m.get("to") or m.get("recipient", ""),
+                        "subject": m.get("subject", "(No subject)"),
+                        "body": m.get("body", ""),
+                        "received_at": m.get("received_at") or m.get("timestamp") or m.get("date", ""),
+                        "labels": m.get("labels") or [],
+                        "data_origin": m.get("data_origin", "synthetic")
+                    })
+                output_data["messages"] = normalized_messages
+                output_data["total_messages"] = len(normalized_messages)
+
             # Data quality gate: warn if zero entities were found
             entity_keys = (
                 "accounts", "patients", "transactions", "products",
@@ -143,6 +170,7 @@ class ResearchAgent(BaseAgent):
                 output_data={},
                 reasoning_chain="",
                 error=str(e),
+                provider_attempts=getattr(e, "attempts", None),
                 duration_ms=int((time.time() - start) * 1000),
             )
 
@@ -317,7 +345,8 @@ class ReasoningAgent(BaseAgent):
             log.error("Reasoning agent failed", error=str(e))
             return AgentOutput(
                 success=False, confidence=0.0, output_data={}, reasoning_chain="",
-                error=str(e), duration_ms=int((time.time() - start) * 1000),
+                error=str(e), provider_attempts=getattr(e, "attempts", None),
+                duration_ms=int((time.time() - start) * 1000),
             )
  
     def _default_reasoning_prompt(self) -> str:
@@ -404,16 +433,51 @@ class DraftingAgent(BaseAgent):
                 all_calls = p1_calls + [p2_call]
 
             else:
-                # fallback (no tools)
-                text, calls = await self._call_with_tools([], [], input)
-                all_calls = calls
+                summarize_output = input.accumulated_context.get("summarize_emails", {})
+                if isinstance(summarize_output, dict) and "per_email_analysis" in summarize_output:
+                    per_email = summarize_output.get("per_email_analysis", [])
+                    actionable_emails = [
+                        item for item in per_email
+                        if item.get("requires_reply") or item.get("needs_attention") or item.get("priority") in ["urgent", "high"]
+                    ]
+                    if not actionable_emails:
+                        log.info("No actionable emails requiring reply drafts, returning empty approval items.")
+                        return AgentOutput(
+                            success=True,
+                            confidence=1.0,
+                            output_data={
+                                "approval_items": [],
+                                "routine_items_count": summarize_output.get("total_emails", 0),
+                                "summary": "No actionable customer escalations or reply drafts were required."
+                            },
+                            reasoning_chain="Skipped drafting call as 0 emails require outbound reply.",
+                            tokens_in=0,
+                            tokens_out=0,
+                            cost_usd=0.0,
+                            model_used="none",
+                            duration_ms=int((time.time() - start) * 1000)
+                        )
+                    context_user = (
+                        f"Executive Summary: {summarize_output.get('executive_summary', '')}\n\n"
+                        f"Actionable/High Priority Emails ({len(actionable_emails)} items out of {len(per_email)}):\n"
+                        f"{json.dumps(actionable_emails, indent=2, default=str)}\n\n"
+                        "Propose draft responses ONLY for emails where requires_reply=true. Return valid JSON."
+                    )
+                else:
+                    context_user = (
+                        "Upstream workflow context:\n"
+                        f"{json.dumps(input.accumulated_context, default=str)[:12000]}\n\n"
+                        "Complete the requested task using only this context and return valid JSON."
+                    )
+                text, call = await self._simple_call(system, context_user, input)
+                all_calls = [call]
 
             output_data = self._parse_json_output(text)
             costs = self._aggregate_costs(all_calls)
 
             return AgentOutput(
                 success=True,
-                confidence=0.85,
+                confidence=output_data.get("confidence") if isinstance(output_data.get("confidence"), (int, float)) else None,
                 output_data=output_data,
                 reasoning_chain=f"Drafted {len(output_data.get('drafts', []))} emails, "
                                 f"{len(output_data.get('exec_briefs', []))} briefs",
@@ -424,7 +488,9 @@ class DraftingAgent(BaseAgent):
             log.error("Drafting agent failed", error=str(e))
             return AgentOutput(
                 success=False, confidence=0.0, output_data={}, reasoning_chain="",
-                error=str(e), duration_ms=int((time.time() - start) * 1000),
+                error=str(e),
+                provider_attempts=getattr(e, "attempts", None),
+                duration_ms=int((time.time() - start) * 1000),
             )
             
     def _build_two_phase_drafting_user(
@@ -517,6 +583,111 @@ class DraftingAgent(BaseAgent):
 # 4. VERIFICATION AGENT
 # Rule checker. Fast/mini model. Deterministic checks.
 # ─────────────────────────────────────────────────────────────────────────────
+
+class HumanizerAgent(BaseAgent):
+    """
+    Refines machine-generated email actions into warmer, review-ready drafts
+    while preserving the underlying approval metadata.
+    """
+
+    agent_type = "humanizer_agent"
+
+    async def receive(self, input: AgentInput) -> AgentOutput:
+        start = time.time()
+        node_data = input.node_specific_data
+        prompt_file = node_data.get("prompt_file", "")
+        prompt_template = await _load_prompt(prompt_file) if prompt_file else self._default_humanizer_prompt()
+
+        cfg = input.tenant_config
+        evaluate_output = input.accumulated_context.get("evaluate_actions", {})
+        summary_output = input.accumulated_context.get("summarize_emails", {})
+        approval_items = evaluate_output.get("approval_items", []) if isinstance(evaluate_output, dict) else []
+
+        if not approval_items:
+            log.info("No approval items to humanize, returning empty approval_items")
+            return AgentOutput(
+                success=True,
+                confidence=1.0,
+                output_data={
+                    "approval_items": [],
+                    "routine_items_count": summary_output.get("total_emails", 0) if isinstance(summary_output, dict) else 0,
+                    "summary": "No outbound draft responses were required for humanization."
+                },
+                reasoning_chain="Skipped LLM call as zero reply drafts required humanization.",
+                tokens_in=0,
+                tokens_out=0,
+                cost_usd=0.0,
+                model_used="none",
+                duration_ms=int((time.time() - start) * 1000),
+            )
+
+        try:
+            system = safe_format_template(
+                prompt_template,
+                tenant_name=cfg.get("client_name", "the company"),
+                tone_profile_json=json.dumps(cfg.get("tone_profile", {}), indent=2),
+            )
+        except Exception as e:
+            log.warning("Humanizer prompt template key error", error=str(e))
+            system = self._default_humanizer_prompt()
+
+        compact_summary = {
+            "total_emails": summary_output.get("total_emails") if isinstance(summary_output, dict) else 0,
+            "executive_summary": summary_output.get("executive_summary") if isinstance(summary_output, dict) else "",
+            "category_counts": summary_output.get("category_counts") if isinstance(summary_output, dict) else {}
+        }
+
+        user = (
+            "Email batch executive summary:\n"
+            f"{json.dumps(compact_summary, indent=2, default=str)}\n\n"
+            "Raw action recommendations and drafts requiring humanization:\n"
+            f"{json.dumps(approval_items, indent=2, default=str)}\n\n"
+            "Return ONLY valid JSON with refined approval_items."
+        )
+
+        try:
+            text, call = await self._simple_call(system, user, input)
+            output_data = self._parse_json_output(text)
+            if not isinstance(output_data, dict):
+                output_data = {"approval_items": [], "summary": str(output_data)}
+
+            return AgentOutput(
+                success=True,
+                confidence=float(output_data.get("confidence", 0.92)),
+                output_data=output_data,
+                reasoning_chain=(
+                    f"Humanized {len(output_data.get('approval_items', []))} approval drafts "
+                    "with XAI metadata."
+                ),
+                tokens_in=call.tokens_in,
+                tokens_out=call.tokens_out,
+                cost_usd=call.cost_usd,
+                model_used=call.model,
+                duration_ms=int((time.time() - start) * 1000),
+            )
+        except Exception as e:
+            log.error("Humanizer agent failed", error=str(e))
+            return AgentOutput(
+                success=False,
+                confidence=0.0,
+                output_data={},
+                reasoning_chain="",
+                error=str(e),
+                duration_ms=int((time.time() - start) * 1000),
+            )
+
+    def _default_humanizer_prompt(self) -> str:
+        return (
+            "You are a Humanizer Agent for {tenant_name}.\n"
+            "Refine raw AI email drafts so they sound natural, empathetic, specific, "
+            "and professionally accountable. Remove robotic phrasing and vague filler. "
+            "Preserve all facts, recipients, subjects, urgency, categories, and safety limits.\n"
+            "Tone profile: {tone_profile_json}\n\n"
+            "Return JSON with approval_items, routine_items_count, batch_intelligence, "
+            "and summary. Every approval item must include category, urgency_score, "
+            "detected_sentiment, trigger_keywords, and xai_explanation."
+        )
+
 
 class VerificationAgent(BaseAgent):
     """
@@ -827,7 +998,8 @@ class ExecutionAgent(BaseAgent):
             log.error("Execution agent failed", error=str(e))
             return AgentOutput(
                 success=False, confidence=0.0, output_data={}, reasoning_chain="",
-                error=str(e), duration_ms=int((time.time() - start) * 1000),
+                error=str(e), provider_attempts=getattr(e, "attempts", None),
+                duration_ms=int((time.time() - start) * 1000),
             )
 
 
@@ -1328,18 +1500,81 @@ class SummarizerAgent(BaseAgent):
     async def receive(self, input: AgentInput) -> AgentOutput:
         start = time.time()
         context = input.accumulated_context or {}
+        node_data = input.node_specific_data or {}
+        prompt_file = node_data.get("prompt_file")
+
+        # Load system prompt
+        system_prompt = ""
+        if prompt_file:
+            system_prompt = await _load_prompt(prompt_file)
+        if not system_prompt:
+            system_prompt = "You are a Summarizer Agent capability. Synthesize raw records into concise, structured briefs."
+
+        # Extract emails from context and strip ground-truth synthetic fields (scenario, priority)
+        raw_fetch = context.get("fetch_emails", {}) or context.get("research", {})
+        messages_list = raw_fetch.get("messages", [])
+        
+        clean_messages = []
+        for m in messages_list:
+            if isinstance(m, dict):
+                clean_messages.append({
+                    "email_id": m.get("email_id") or m.get("id", ""),
+                    "from": m.get("from") or m.get("sender", ""),
+                    "to": m.get("to") or m.get("recipient", ""),
+                    "subject": m.get("subject", ""),
+                    "body": m.get("body", ""),
+                    "received_at": m.get("received_at") or m.get("timestamp", "")
+                })
+
+        user_content = (
+            f"Email records to analyze ({len(clean_messages)} emails):\n"
+            f"{json.dumps(clean_messages, indent=2, default=str)}\n\n"
+            f"Analyze all emails and return valid JSON matching the exact required schema."
+        )
+
         messages = [
-            LLMMessage(role="system", content="You are a Summarizer Agent capability. Synthesize raw records into concise, structured briefs with citations."),
-            LLMMessage(role="user", content=f"Records to summarize:\n{json.dumps(context, default=str)[:4000]}"),
+            LLMMessage(role="system", content=system_prompt),
+            LLMMessage(role="user", content=user_content),
         ]
         text, call = await self._call_llm_with_fallback(messages, input)
-        output_dict = self._parse_json(text) or {
-            "summary": text[:500],
-            "key_points": [line.strip() for line in text.split("\n") if line.strip()][:5],
-        }
+        output_dict = self._parse_json(text)
+        if not isinstance(output_dict, dict):
+            output_dict = {
+                "executive_summary": text[:500] if text else "Summary completed.",
+                "total_emails": len(clean_messages),
+                "per_email_analysis": [],
+                "category_counts": {}
+            }
+
+        # Calculate category counts & metrics if missing or incomplete
+        per_email = output_dict.get("per_email_analysis") or []
+        if isinstance(per_email, list) and per_email:
+            cat_counts = {
+                "customer_request": 0,
+                "follow_up": 0,
+                "sales_opportunity": 0,
+                "urgent_issue": 0,
+                "internal": 0,
+                "finance": 0,
+                "support": 0,
+                "other": 0
+            }
+            attention_count = 0
+            for pe in per_email:
+                cat = pe.get("category", "other").lower()
+                if cat in cat_counts:
+                    cat_counts[cat] += 1
+                else:
+                    cat_counts["other"] += 1
+                if pe.get("needs_attention") or pe.get("priority") in ("urgent", "high"):
+                    attention_count += 1
+            output_dict["category_counts"] = cat_counts
+            output_dict["total_emails"] = len(clean_messages) or len(per_email)
+            output_dict["needs_attention_count"] = attention_count
+
         return AgentOutput(
             success=True,
-            confidence=0.95,
+            confidence=output_dict.get("confidence") if isinstance(output_dict.get("confidence"), (int, float)) else 0.95,
             output_data=output_dict,
             reasoning_chain=text,
             tokens_in=call.tokens_in,
@@ -1347,7 +1582,13 @@ class SummarizerAgent(BaseAgent):
             cost_usd=call.cost_usd,
             model_used=call.model,
             duration_ms=int((time.time() - start) * 1000),
+            provider=call.provider,
+            cached_tokens=call.cached_tokens,
+            fallback_used=call.fallback_used,
+            fallback_from=call.fallback_from,
+            fallback_reason=call.fallback_reason,
         )
+
 
 class RecommendationAgent(BaseAgent):
     """Recommendation Capability: Suggests operational next steps (strictly non-clinical)."""
@@ -1458,4 +1699,3 @@ class OperationsAgent(BaseAgent):
             model_used=call.model,
             duration_ms=int((time.time() - start) * 1000),
         )
-

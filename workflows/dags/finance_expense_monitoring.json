@@ -1,7 +1,7 @@
 {
   "_meta": {
     "workflow_id": "finance_expense_monitoring",
-    "name": "Finance Expense Anomaly Monitor",
+    "name": "Real-Time Corporate Expense Reconciliation & Fraud Sentinel",
     "industry": "finance",
     "version": "1.0.0",
     "description": "Detects expense policy violations and anomalies, drafts manager alerts and compliance reports.",

@@ -1,7 +1,7 @@
 {
   "_meta": {
     "workflow_id": "healthcare_patient_engagement",
-    "name": "Healthcare Patient Engagement Monitor",
+    "name": "Patient Intake & Medical Travel Coordination Agent",
     "industry": "healthcare",
     "version": "1.0.0",
     "description": "Identifies disengaged high-risk patients, generates care coordinator outreach, and flags appointment gaps.",

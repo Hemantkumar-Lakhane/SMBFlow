@@ -1,6 +1,6 @@
 [
   {
-    "id": "18880eba-3f6d-4e01-b498-a6748e56e9e1",
+    "id": "8e6ca681-82bf-416f-8a9c-01b515ad1567",
     "address": "4240 Willow Way",
     "city": "Riverside",
     "state": "OK",
@@ -20,32 +20,32 @@
     "listing_agent": "Derek Santos",
     "seller_email": "seller197@example.com",
     "seller_name": "Linda Smith",
-    "list_date": "2026-02-11",
+    "list_date": "2026-06-21",
     "status": "active",
     "showing_feedback": [
       {
         "type": "open_house",
         "comment": "Loved the backyard, submitting offer",
-        "date": "2026-03-25",
+        "date": "2026-08-02",
         "price_concern": false
       },
       {
         "type": "open_house",
         "comment": "Kitchen needs updating, not worth the asking price",
-        "date": "2026-04-08",
+        "date": "2026-08-16",
         "price_concern": true
       },
       {
         "type": "showing",
         "comment": "Price seems high for the area",
-        "date": "2026-04-09",
+        "date": "2026-08-17",
         "price_concern": true
       }
     ],
     "_risk_label": "stale"
   },
   {
-    "id": "ad34cefb-f8a4-4a01-8272-1cc4626d35e0",
+    "id": "a09f235d-b4e5-442f-86ee-b50ab6a1da18",
     "address": "1844 Pine Court",
     "city": "Hillcrest",
     "state": "OK",
@@ -65,20 +65,20 @@
     "listing_agent": "Marcus Webb",
     "seller_email": "seller220@example.com",
     "seller_name": "Robert Johnson",
-    "list_date": "2026-04-15",
+    "list_date": "2026-08-23",
     "status": "active",
     "showing_feedback": [
       {
         "type": "showing",
         "comment": "Great layout, very interested",
-        "date": "2026-05-05",
+        "date": "2026-09-12",
         "price_concern": false
       }
     ],
     "_risk_label": "healthy"
   },
   {
-    "id": "e46379cb-7829-4228-b66d-0eec83408685",
+    "id": "0b3d59be-028e-4f09-9622-9c9e64fa5ed0",
     "address": "8109 Oak Street",
     "city": "Hillcrest",
     "state": "OK",
@@ -98,32 +98,32 @@
     "listing_agent": "Lisa Park",
     "seller_email": "seller252@example.com",
     "seller_name": "James Smith",
-    "list_date": "2026-04-20",
+    "list_date": "2026-08-28",
     "status": "active",
     "showing_feedback": [
       {
         "type": "showing",
         "comment": "Great layout, very interested",
-        "date": "2026-04-29",
+        "date": "2026-09-06",
         "price_concern": false
       },
       {
         "type": "showing",
         "comment": "Perfect location, needs consideration",
-        "date": "2026-04-21",
+        "date": "2026-08-29",
         "price_concern": false
       },
       {
         "type": "showing",
         "comment": "Excellent condition for the price",
-        "date": "2026-04-30",
+        "date": "2026-09-07",
         "price_concern": false
       }
     ],
     "_risk_label": "healthy"
   },
   {
-    "id": "56ae61e8-0871-40c6-8a0a-6367dda9e0e9",
+    "id": "4f34a1ef-71dd-48c9-96d3-28b52c011ab1",
     "address": "8316 Ridgeline Court",
     "city": "Hillcrest",
     "state": "OK",
@@ -143,13 +143,13 @@
     "listing_agent": "Angela Brooks",
     "seller_email": "seller774@example.com",
     "seller_name": "James Johnson",
-    "list_date": "2026-04-20",
+    "list_date": "2026-08-28",
     "status": "active",
     "showing_feedback": [],
     "_risk_label": "healthy"
   },
   {
-    "id": "fe7afa6f-a6bd-4fa9-b79d-2d9b90114e76",
+    "id": "b6a26a67-0d7b-4a1f-813a-922cde6e4e7f",
     "address": "1461 Ridgeline Court",
     "city": "Hillcrest",
     "state": "OK",
@@ -169,13 +169,13 @@
     "listing_agent": "Marcus Webb",
     "seller_email": "seller616@example.com",
     "seller_name": "Linda Garcia",
-    "list_date": "2026-03-29",
+    "list_date": "2026-08-06",
     "status": "active",
     "showing_feedback": [],
     "_risk_label": "price_reduced"
   },
   {
-    "id": "757443f9-402c-49f6-a00e-66c19f46400c",
+    "id": "0e32c27f-467d-4bc2-bd4b-ea1049204708",
     "address": "9305 Valley Road",
     "city": "Lakewood",
     "state": "OK",
@@ -195,44 +195,44 @@
     "listing_agent": "Priya Nair",
     "seller_email": "seller514@example.com",
     "seller_name": "James Garcia",
-    "list_date": "2026-01-27",
+    "list_date": "2026-06-06",
     "status": "active",
     "showing_feedback": [
       {
         "type": "showing",
         "comment": "Better value available in the neighborhood",
-        "date": "2026-02-07",
+        "date": "2026-06-17",
         "price_concern": true
       },
       {
         "type": "open_house",
         "comment": "Kitchen needs updating, not worth the asking price",
-        "date": "2026-02-12",
+        "date": "2026-06-22",
         "price_concern": true
       },
       {
         "type": "showing",
         "comment": "Better value available in the neighborhood",
-        "date": "2026-03-01",
+        "date": "2026-07-09",
         "price_concern": true
       },
       {
         "type": "open_house",
         "comment": "Price seems high for the area",
-        "date": "2026-02-06",
+        "date": "2026-06-16",
         "price_concern": true
       },
       {
         "type": "showing",
         "comment": "Price seems high for the area",
-        "date": "2026-03-10",
+        "date": "2026-07-18",
         "price_concern": true
       }
     ],
     "_risk_label": "stale"
   },
   {
-    "id": "b89df203-f1f2-4a06-873c-806694016b4b",
+    "id": "1288d45e-7fd9-42e6-8a55-bd477f077bfc",
     "address": "1895 Oak Street",
     "city": "Hillcrest",
     "state": "OK",
@@ -252,32 +252,32 @@
     "listing_agent": "Sarah Chen",
     "seller_email": "seller758@example.com",
     "seller_name": "Robert Garcia",
-    "list_date": "2026-04-29",
+    "list_date": "2026-09-06",
     "status": "active",
     "showing_feedback": [
       {
         "type": "open_house",
         "comment": "Great layout, very interested",
-        "date": "2026-05-05",
+        "date": "2026-09-12",
         "price_concern": false
       },
       {
         "type": "showing",
         "comment": "Excellent condition for the price",
-        "date": "2026-05-04",
+        "date": "2026-09-11",
         "price_concern": false
       },
       {
         "type": "open_house",
         "comment": "Loved the backyard, submitting offer",
-        "date": "2026-05-03",
+        "date": "2026-09-10",
         "price_concern": false
       }
     ],
     "_risk_label": "healthy"
   },
   {
-    "id": "5ca5df46-5449-46bc-b0af-91cecf15bd4c",
+    "id": "8f388606-5e8e-4711-8ee9-22f990300670",
     "address": "7133 Elm Drive",
     "city": "Mapleton",
     "state": "OK",
@@ -297,32 +297,32 @@
     "listing_agent": "Tom Reyes",
     "seller_email": "seller997@example.com",
     "seller_name": "James Johnson",
-    "list_date": "2026-04-21",
+    "list_date": "2026-08-29",
     "status": "active",
     "showing_feedback": [
       {
         "type": "open_house",
         "comment": "Perfect location, needs consideration",
-        "date": "2026-05-02",
+        "date": "2026-09-09",
         "price_concern": false
       },
       {
         "type": "open_house",
         "comment": "Great layout, very interested",
-        "date": "2026-05-02",
+        "date": "2026-09-09",
         "price_concern": false
       },
       {
         "type": "open_house",
         "comment": "Perfect location, needs consideration",
-        "date": "2026-04-30",
+        "date": "2026-09-07",
         "price_concern": false
       }
     ],
     "_risk_label": "healthy"
   },
   {
-    "id": "92540207-8465-4c4f-acba-c1cad51f52d3",
+    "id": "7a7ad57f-0512-42e4-8ac5-91b64af0b308",
     "address": "8977 Willow Way",
     "city": "Hillcrest",
     "state": "OK",
@@ -342,32 +342,32 @@
     "listing_agent": "Angela Brooks",
     "seller_email": "seller194@example.com",
     "seller_name": "Robert Smith",
-    "list_date": "2026-04-10",
+    "list_date": "2026-08-18",
     "status": "active",
     "showing_feedback": [
       {
         "type": "showing",
         "comment": "Great layout, very interested",
-        "date": "2026-04-24",
+        "date": "2026-09-01",
         "price_concern": false
       },
       {
         "type": "open_house",
         "comment": "Great layout, very interested",
-        "date": "2026-04-25",
+        "date": "2026-09-02",
         "price_concern": false
       },
       {
         "type": "showing",
         "comment": "Loved the backyard, submitting offer",
-        "date": "2026-05-05",
+        "date": "2026-09-12",
         "price_concern": false
       }
     ],
     "_risk_label": "price_reduced"
   },
   {
-    "id": "04b26451-dcc7-4577-9b01-4af7727e66fb",
+    "id": "96b413dc-51e1-4c27-ba60-4628da03dd52",
     "address": "5493 Birch Boulevard",
     "city": "Springfield",
     "state": "OK",
@@ -387,20 +387,20 @@
     "listing_agent": "Marcus Webb",
     "seller_email": "seller630@example.com",
     "seller_name": "Maria Johnson",
-    "list_date": "2026-04-16",
+    "list_date": "2026-08-24",
     "status": "active",
     "showing_feedback": [
       {
         "type": "showing",
         "comment": "Great layout, very interested",
-        "date": "2026-05-06",
+        "date": "2026-09-13",
         "price_concern": false
       }
     ],
     "_risk_label": "healthy"
   },
   {
-    "id": "0e0a6701-6ea8-473f-9dd4-6df9913e61a0",
+    "id": "c3656f52-e0c3-4a01-ba0a-2e664c4eda69",
     "address": "616 Sunset Boulevard",
     "city": "Mapleton",
     "state": "OK",
@@ -420,44 +420,44 @@
     "listing_agent": "Lisa Park",
     "seller_email": "seller145@example.com",
     "seller_name": "James Johnson",
-    "list_date": "2026-02-28",
+    "list_date": "2026-07-08",
     "status": "active",
     "showing_feedback": [
       {
         "type": "showing",
         "comment": "Buyer feels it's overpriced",
-        "date": "2026-03-06",
+        "date": "2026-07-14",
         "price_concern": true
       },
       {
         "type": "open_house",
         "comment": "Better value available in the neighborhood",
-        "date": "2026-03-15",
+        "date": "2026-07-23",
         "price_concern": true
       },
       {
         "type": "showing",
         "comment": "Priced above recent comps",
-        "date": "2026-04-15",
+        "date": "2026-08-23",
         "price_concern": true
       },
       {
         "type": "open_house",
         "comment": "Excellent condition for the price",
-        "date": "2026-03-25",
+        "date": "2026-08-02",
         "price_concern": false
       },
       {
         "type": "open_house",
         "comment": "Better value available in the neighborhood",
-        "date": "2026-03-27",
+        "date": "2026-08-04",
         "price_concern": true
       }
     ],
     "_risk_label": "stale"
   },
   {
-    "id": "50658018-861a-4747-9209-3299e178e73a",
+    "id": "ca31e074-72d0-4be2-b8f7-a5fd73b6cc2d",
     "address": "9938 Valley Road",
     "city": "Springfield",
     "state": "OK",
@@ -477,26 +477,26 @@
     "listing_agent": "Marcus Webb",
     "seller_email": "seller274@example.com",
     "seller_name": "James Garcia",
-    "list_date": "2026-04-25",
+    "list_date": "2026-09-02",
     "status": "active",
     "showing_feedback": [
       {
         "type": "showing",
         "comment": "Excellent condition for the price",
-        "date": "2026-04-29",
+        "date": "2026-09-06",
         "price_concern": false
       },
       {
         "type": "open_house",
         "comment": "Perfect location, needs consideration",
-        "date": "2026-05-04",
+        "date": "2026-09-11",
         "price_concern": false
       }
     ],
     "_risk_label": "healthy"
   },
   {
-    "id": "8a7b8df4-a469-47a2-b5ec-6716ade0f480",
+    "id": "7c69b0b6-88f3-4294-9a9e-f44ce94e8257",
     "address": "4273 Walnut Road",
     "city": "Hillcrest",
     "state": "OK",
@@ -516,20 +516,20 @@
     "listing_agent": "Marcus Webb",
     "seller_email": "seller522@example.com",
     "seller_name": "Robert Johnson",
-    "list_date": "2026-04-08",
+    "list_date": "2026-08-16",
     "status": "active",
     "showing_feedback": [
       {
         "type": "open_house",
         "comment": "Excellent condition for the price",
-        "date": "2026-05-06",
+        "date": "2026-09-13",
         "price_concern": false
       }
     ],
     "_risk_label": "price_reduced"
   },
   {
-    "id": "efcf9a95-e020-4047-9128-bfe3a7742ccd",
+    "id": "fdfd1d3a-217d-4597-9bbe-8b1707c07846",
     "address": "2947 Sunset Boulevard",
     "city": "Springfield",
     "state": "OK",
@@ -549,32 +549,32 @@
     "listing_agent": "Jake Morrison",
     "seller_email": "seller240@example.com",
     "seller_name": "Robert Garcia",
-    "list_date": "2026-04-27",
+    "list_date": "2026-09-04",
     "status": "active",
     "showing_feedback": [
       {
         "type": "showing",
         "comment": "Great layout, very interested",
-        "date": "2026-05-02",
+        "date": "2026-09-09",
         "price_concern": false
       },
       {
         "type": "open_house",
         "comment": "Excellent condition for the price",
-        "date": "2026-05-03",
+        "date": "2026-09-10",
         "price_concern": false
       },
       {
         "type": "open_house",
         "comment": "Loved the backyard, submitting offer",
-        "date": "2026-04-28",
+        "date": "2026-09-05",
         "price_concern": false
       }
     ],
     "_risk_label": "healthy"
   },
   {
-    "id": "6e89d384-7474-4aca-86f9-7d058b03f952",
+    "id": "b70f5033-92bf-49dc-8a83-95e7ed92ebb6",
     "address": "7462 Pine Court",
     "city": "Mapleton",
     "state": "OK",
@@ -594,26 +594,26 @@
     "listing_agent": "Derek Santos",
     "seller_email": "seller718@example.com",
     "seller_name": "Maria Smith",
-    "list_date": "2026-04-16",
+    "list_date": "2026-08-24",
     "status": "active",
     "showing_feedback": [
       {
         "type": "showing",
         "comment": "Loved the backyard, submitting offer",
-        "date": "2026-04-30",
+        "date": "2026-09-07",
         "price_concern": false
       },
       {
         "type": "showing",
         "comment": "Great layout, very interested",
-        "date": "2026-04-19",
+        "date": "2026-08-27",
         "price_concern": false
       }
     ],
     "_risk_label": "healthy"
   },
   {
-    "id": "903535c2-6fd0-495c-be03-fccbe7b82b28",
+    "id": "32c3b2c5-7358-4dce-bd67-55e9f75f3fab",
     "address": "7522 Harbor View Drive",
     "city": "Riverside",
     "state": "OK",
@@ -633,44 +633,44 @@
     "listing_agent": "Marcus Webb",
     "seller_email": "seller397@example.com",
     "seller_name": "Robert Smith",
-    "list_date": "2025-11-07",
+    "list_date": "2026-03-17",
     "status": "sold",
     "showing_feedback": [
       {
         "type": "showing",
         "comment": "Needs too much work at this price point",
-        "date": "2026-01-10",
+        "date": "2026-05-20",
         "price_concern": true
       },
       {
         "type": "open_house",
         "comment": "Priced above recent comps",
-        "date": "2025-11-14",
+        "date": "2026-03-24",
         "price_concern": true
       },
       {
         "type": "showing",
         "comment": "Excellent condition for the price",
-        "date": "2026-04-22",
+        "date": "2026-08-30",
         "price_concern": false
       },
       {
         "type": "showing",
         "comment": "Priced above recent comps",
-        "date": "2026-02-21",
+        "date": "2026-07-01",
         "price_concern": true
       },
       {
         "type": "showing",
         "comment": "Perfect location, needs consideration",
-        "date": "2026-02-14",
+        "date": "2026-06-24",
         "price_concern": false
       }
     ],
     "_risk_label": "healthy"
   },
   {
-    "id": "3932db3f-14f4-4ff1-acf2-2ed25b6cebfd",
+    "id": "74116af6-3f3c-4802-85a2-7c429878b4d8",
     "address": "4674 Willow Way",
     "city": "Springfield",
     "state": "OK",
@@ -690,32 +690,32 @@
     "listing_agent": "Sarah Chen",
     "seller_email": "seller620@example.com",
     "seller_name": "Robert Smith",
-    "list_date": "2026-03-18",
+    "list_date": "2026-07-26",
     "status": "sold",
     "showing_feedback": [
       {
         "type": "showing",
         "comment": "Perfect location, needs consideration",
-        "date": "2026-03-25",
+        "date": "2026-08-02",
         "price_concern": false
       },
       {
         "type": "open_house",
         "comment": "Excellent condition for the price",
-        "date": "2026-03-28",
+        "date": "2026-08-05",
         "price_concern": false
       },
       {
         "type": "showing",
         "comment": "Great layout, very interested",
-        "date": "2026-05-05",
+        "date": "2026-09-12",
         "price_concern": false
       }
     ],
     "_risk_label": "healthy"
   },
   {
-    "id": "6c23d918-3ece-41dd-9dcb-d7fe36e6cbd4",
+    "id": "30b82c1f-2d8e-47a7-814b-648d5601cad4",
     "address": "6528 Willow Way",
     "city": "Hillcrest",
     "state": "OK",
@@ -735,26 +735,26 @@
     "listing_agent": "Tom Reyes",
     "seller_email": "seller440@example.com",
     "seller_name": "Maria Johnson",
-    "list_date": "2026-04-26",
+    "list_date": "2026-09-03",
     "status": "active",
     "showing_feedback": [
       {
         "type": "showing",
         "comment": "Great layout, very interested",
-        "date": "2026-05-05",
+        "date": "2026-09-12",
         "price_concern": false
       },
       {
         "type": "open_house",
         "comment": "Loved the backyard, submitting offer",
-        "date": "2026-05-01",
+        "date": "2026-09-08",
         "price_concern": false
       }
     ],
     "_risk_label": "healthy"
   },
   {
-    "id": "5f39109e-84ed-4757-88a9-1138ecee4a1b",
+    "id": "325d5fb4-7d9b-4613-8d26-355a4f89791a",
     "address": "5887 Cherry Path",
     "city": "Springfield",
     "state": "OK",
@@ -774,44 +774,44 @@
     "listing_agent": "Angela Brooks",
     "seller_email": "seller213@example.com",
     "seller_name": "James Johnson",
-    "list_date": "2026-04-15",
+    "list_date": "2026-08-23",
     "status": "pending",
     "showing_feedback": [
       {
         "type": "open_house",
         "comment": "Loved the backyard, submitting offer",
-        "date": "2026-04-30",
+        "date": "2026-09-07",
         "price_concern": false
       },
       {
         "type": "showing",
         "comment": "Perfect location, needs consideration",
-        "date": "2026-05-03",
+        "date": "2026-09-10",
         "price_concern": false
       },
       {
         "type": "showing",
         "comment": "Excellent condition for the price",
-        "date": "2026-04-30",
+        "date": "2026-09-07",
         "price_concern": false
       },
       {
         "type": "showing",
         "comment": "Perfect location, needs consideration",
-        "date": "2026-05-06",
+        "date": "2026-09-13",
         "price_concern": false
       },
       {
         "type": "open_house",
         "comment": "Perfect location, needs consideration",
-        "date": "2026-04-20",
+        "date": "2026-08-28",
         "price_concern": false
       }
     ],
     "_risk_label": "healthy"
   },
   {
-    "id": "6cb1f7c8-b62b-4b7b-87c1-4951983f56fc",
+    "id": "a4529f9f-9c5e-448d-80b5-6a61c31554a8",
     "address": "2723 Aspen Circle",
     "city": "Lakewood",
     "state": "OK",
@@ -831,20 +831,20 @@
     "listing_agent": "Sarah Chen",
     "seller_email": "seller772@example.com",
     "seller_name": "Linda Garcia",
-    "list_date": "2026-04-29",
+    "list_date": "2026-09-06",
     "status": "active",
     "showing_feedback": [
       {
         "type": "showing",
         "comment": "Loved the backyard, submitting offer",
-        "date": "2026-05-05",
+        "date": "2026-09-12",
         "price_concern": false
       }
     ],
     "_risk_label": "healthy"
   },
   {
-    "id": "dc1660e2-c78d-4ecd-8f75-dba3cf48b4d3",
+    "id": "5ef10438-212a-493c-84ed-be269cfd429e",
     "address": "1962 Cedar Lane",
     "city": "Springfield",
     "state": "OK",
@@ -864,44 +864,44 @@
     "listing_agent": "Marcus Webb",
     "seller_email": "seller204@example.com",
     "seller_name": "Maria Johnson",
-    "list_date": "2025-11-27",
+    "list_date": "2026-04-06",
     "status": "pending",
     "showing_feedback": [
       {
         "type": "open_house",
         "comment": "Price seems high for the area",
-        "date": "2025-12-23",
+        "date": "2026-05-02",
         "price_concern": true
       },
       {
         "type": "showing",
         "comment": "Kitchen needs updating, not worth the asking price",
-        "date": "2026-03-20",
+        "date": "2026-07-28",
         "price_concern": true
       },
       {
         "type": "open_house",
         "comment": "Buyer feels it's overpriced",
-        "date": "2026-03-13",
+        "date": "2026-07-21",
         "price_concern": true
       },
       {
         "type": "showing",
         "comment": "Priced above recent comps",
-        "date": "2026-03-17",
+        "date": "2026-07-25",
         "price_concern": true
       },
       {
         "type": "open_house",
         "comment": "Great layout, very interested",
-        "date": "2026-01-18",
+        "date": "2026-05-28",
         "price_concern": false
       }
     ],
     "_risk_label": "healthy"
   },
   {
-    "id": "38d48af5-26bb-459a-9b90-fedd91c3d0fa",
+    "id": "003006bb-27c7-48f0-b9d6-278547ce08a1",
     "address": "6229 Birch Boulevard",
     "city": "Riverside",
     "state": "OK",
@@ -921,20 +921,20 @@
     "listing_agent": "Marcus Webb",
     "seller_email": "seller590@example.com",
     "seller_name": "Maria Johnson",
-    "list_date": "2026-05-03",
+    "list_date": "2026-09-10",
     "status": "active",
     "showing_feedback": [
       {
         "type": "open_house",
         "comment": "Loved the backyard, submitting offer",
-        "date": "2026-05-06",
+        "date": "2026-09-13",
         "price_concern": false
       }
     ],
     "_risk_label": "healthy"
   },
   {
-    "id": "176bebde-cee3-47e9-a2cd-0652ee449d54",
+    "id": "ba0ddc33-08e8-460f-a212-d689aa42c8ad",
     "address": "7746 Birch Boulevard",
     "city": "Mapleton",
     "state": "OK",
@@ -954,26 +954,26 @@
     "listing_agent": "Derek Santos",
     "seller_email": "seller597@example.com",
     "seller_name": "Robert Johnson",
-    "list_date": "2026-04-21",
+    "list_date": "2026-08-29",
     "status": "sold",
     "showing_feedback": [
       {
         "type": "open_house",
         "comment": "Loved the backyard, submitting offer",
-        "date": "2026-04-30",
+        "date": "2026-09-07",
         "price_concern": false
       },
       {
         "type": "showing",
         "comment": "Perfect location, needs consideration",
-        "date": "2026-05-01",
+        "date": "2026-09-08",
         "price_concern": false
       }
     ],
     "_risk_label": "healthy"
   },
   {
-    "id": "e96356a1-3959-42c5-8a91-03fa46650c12",
+    "id": "8d715c6f-5c05-4d2e-a8fb-9510a8b54be7",
     "address": "476 Maple Avenue",
     "city": "Lakewood",
     "state": "OK",
@@ -993,20 +993,20 @@
     "listing_agent": "Angela Brooks",
     "seller_email": "seller497@example.com",
     "seller_name": "Robert Smith",
-    "list_date": "2026-04-29",
+    "list_date": "2026-09-06",
     "status": "sold",
     "showing_feedback": [
       {
         "type": "showing",
         "comment": "Great layout, very interested",
-        "date": "2026-05-04",
+        "date": "2026-09-11",
         "price_concern": false
       }
     ],
     "_risk_label": "healthy"
   },
   {
-    "id": "8ebb274e-6cb5-4bcb-8693-dde954063e2e",
+    "id": "62d32299-0201-45eb-8e79-edfcaf7e5609",
     "address": "6083 Cherry Path",
     "city": "Riverside",
     "state": "OK",
@@ -1026,32 +1026,32 @@
     "listing_agent": "Jake Morrison",
     "seller_email": "seller657@example.com",
     "seller_name": "James Garcia",
-    "list_date": "2026-03-07",
+    "list_date": "2026-07-15",
     "status": "active",
     "showing_feedback": [
       {
         "type": "showing",
         "comment": "Great layout, very interested",
-        "date": "2026-04-24",
+        "date": "2026-09-01",
         "price_concern": false
       },
       {
         "type": "open_house",
         "comment": "Loved the backyard, submitting offer",
-        "date": "2026-03-23",
+        "date": "2026-07-31",
         "price_concern": false
       },
       {
         "type": "open_house",
         "comment": "Great layout, very interested",
-        "date": "2026-03-10",
+        "date": "2026-07-18",
         "price_concern": false
       }
     ],
     "_risk_label": "price_reduced"
   },
   {
-    "id": "6adc3db6-375b-40ca-8145-d6ae2b497276",
+    "id": "3fa5e8b0-36d2-407e-bea6-07c4b103cd99",
     "address": "3098 Sunset Boulevard",
     "city": "Mapleton",
     "state": "OK",
@@ -1071,44 +1071,44 @@
     "listing_agent": "Tom Reyes",
     "seller_email": "seller389@example.com",
     "seller_name": "Linda Garcia",
-    "list_date": "2025-12-28",
+    "list_date": "2026-05-07",
     "status": "active",
     "showing_feedback": [
       {
         "type": "open_house",
         "comment": "Price seems high for the area",
-        "date": "2026-02-28",
+        "date": "2026-07-08",
         "price_concern": true
       },
       {
         "type": "showing",
         "comment": "Better value available in the neighborhood",
-        "date": "2026-02-20",
+        "date": "2026-06-30",
         "price_concern": true
       },
       {
         "type": "open_house",
         "comment": "Buyer feels it's overpriced",
-        "date": "2026-04-09",
+        "date": "2026-08-17",
         "price_concern": true
       },
       {
         "type": "open_house",
         "comment": "Price seems high for the area",
-        "date": "2026-03-07",
+        "date": "2026-07-15",
         "price_concern": true
       },
       {
         "type": "open_house",
         "comment": "Needs too much work at this price point",
-        "date": "2026-02-20",
+        "date": "2026-06-30",
         "price_concern": true
       }
     ],
     "_risk_label": "stale"
   },
   {
-    "id": "8a482b91-ed14-470f-bc22-90a6bb68e04e",
+    "id": "2b820422-f5ac-4fe0-b23d-c6202b737970",
     "address": "3811 Pine Court",
     "city": "Riverside",
     "state": "OK",
@@ -1128,32 +1128,32 @@
     "listing_agent": "Derek Santos",
     "seller_email": "seller998@example.com",
     "seller_name": "James Johnson",
-    "list_date": "2026-04-22",
+    "list_date": "2026-08-30",
     "status": "active",
     "showing_feedback": [
       {
         "type": "showing",
         "comment": "Excellent condition for the price",
-        "date": "2026-04-27",
+        "date": "2026-09-04",
         "price_concern": false
       },
       {
         "type": "showing",
         "comment": "Excellent condition for the price",
-        "date": "2026-05-06",
+        "date": "2026-09-13",
         "price_concern": false
       },
       {
         "type": "showing",
         "comment": "Perfect location, needs consideration",
-        "date": "2026-05-03",
+        "date": "2026-09-10",
         "price_concern": false
       }
     ],
     "_risk_label": "healthy"
   },
   {
-    "id": "9581b625-3d1e-4627-a344-f6d2bf4ea725",
+    "id": "ec94a2e7-c6c3-4545-bef7-1e9c18eab6c7",
     "address": "4860 Willow Way",
     "city": "Hillcrest",
     "state": "OK",
@@ -1173,20 +1173,20 @@
     "listing_agent": "Priya Nair",
     "seller_email": "seller664@example.com",
     "seller_name": "Robert Garcia",
-    "list_date": "2026-04-19",
+    "list_date": "2026-08-27",
     "status": "active",
     "showing_feedback": [
       {
         "type": "showing",
         "comment": "Great layout, very interested",
-        "date": "2026-05-01",
+        "date": "2026-09-08",
         "price_concern": false
       }
     ],
     "_risk_label": "healthy"
   },
   {
-    "id": "a1a3da86-1602-4263-868d-6825b83cefd3",
+    "id": "5a34cfaf-b04d-445e-bc7b-42b86379a3bd",
     "address": "1957 Ridgeline Court",
     "city": "Hillcrest",
     "state": "OK",
@@ -1206,26 +1206,26 @@
     "listing_agent": "Marcus Webb",
     "seller_email": "seller589@example.com",
     "seller_name": "James Smith",
-    "list_date": "2026-03-17",
+    "list_date": "2026-07-25",
     "status": "active",
     "showing_feedback": [
       {
         "type": "showing",
         "comment": "Perfect location, needs consideration",
-        "date": "2026-05-05",
+        "date": "2026-09-12",
         "price_concern": false
       },
       {
         "type": "showing",
         "comment": "Perfect location, needs consideration",
-        "date": "2026-04-03",
+        "date": "2026-08-11",
         "price_concern": false
       }
     ],
     "_risk_label": "price_reduced"
   },
   {
-    "id": "09ba3848-067a-4c2a-bc00-678c46fa0c30",
+    "id": "e18ff388-33bb-45ff-ad5f-255bbb7e0239",
     "address": "5029 Elm Drive",
     "city": "Lakewood",
     "state": "OK",
@@ -1245,13 +1245,13 @@
     "listing_agent": "Jake Morrison",
     "seller_email": "seller762@example.com",
     "seller_name": "James Johnson",
-    "list_date": "2026-04-27",
+    "list_date": "2026-09-04",
     "status": "active",
     "showing_feedback": [],
     "_risk_label": "healthy"
   },
   {
-    "id": "9008c217-7a5d-4e76-91f1-f5b587134bb1",
+    "id": "97764a39-c437-463c-bef0-96670a42f478",
     "address": "2224 Cherry Path",
     "city": "Springfield",
     "state": "OK",
@@ -1271,50 +1271,50 @@
     "listing_agent": "Derek Santos",
     "seller_email": "seller679@example.com",
     "seller_name": "James Garcia",
-    "list_date": "2025-11-27",
+    "list_date": "2026-04-06",
     "status": "active",
     "showing_feedback": [
       {
         "type": "showing",
         "comment": "Price seems high for the area",
-        "date": "2026-04-15",
+        "date": "2026-08-23",
         "price_concern": true
       },
       {
         "type": "showing",
         "comment": "Perfect location, needs consideration",
-        "date": "2026-02-26",
+        "date": "2026-07-06",
         "price_concern": false
       },
       {
         "type": "open_house",
         "comment": "Buyer feels it's overpriced",
-        "date": "2026-01-10",
+        "date": "2026-05-20",
         "price_concern": true
       },
       {
         "type": "open_house",
         "comment": "Buyer feels it's overpriced",
-        "date": "2026-01-23",
+        "date": "2026-06-02",
         "price_concern": true
       },
       {
         "type": "showing",
         "comment": "Priced above recent comps",
-        "date": "2026-01-10",
+        "date": "2026-05-20",
         "price_concern": true
       },
       {
         "type": "showing",
         "comment": "Buyer feels it's overpriced",
-        "date": "2026-03-17",
+        "date": "2026-07-25",
         "price_concern": true
       }
     ],
     "_risk_label": "stale"
   },
   {
-    "id": "9f6ae46b-9d81-436f-9496-d95f6daa9318",
+    "id": "9f45efcf-3f1d-4d94-aac2-dcae23d2a72e",
     "address": "5314 Cherry Path",
     "city": "Lakewood",
     "state": "OK",
@@ -1334,20 +1334,20 @@
     "listing_agent": "Angela Brooks",
     "seller_email": "seller951@example.com",
     "seller_name": "Linda Smith",
-    "list_date": "2026-04-29",
+    "list_date": "2026-09-06",
     "status": "active",
     "showing_feedback": [
       {
         "type": "open_house",
         "comment": "Great layout, very interested",
-        "date": "2026-04-30",
+        "date": "2026-09-07",
         "price_concern": false
       }
     ],
     "_risk_label": "healthy"
   },
   {
-    "id": "2998e1c6-aa7f-42c5-ac06-45142cbb89e9",
+    "id": "3b3e1bfb-617d-4c20-8c73-6c9b8042f648",
     "address": "4855 Harbor View Drive",
     "city": "Springfield",
     "state": "OK",
@@ -1367,32 +1367,32 @@
     "listing_agent": "Priya Nair",
     "seller_email": "seller947@example.com",
     "seller_name": "Robert Garcia",
-    "list_date": "2026-04-03",
+    "list_date": "2026-08-11",
     "status": "active",
     "showing_feedback": [
       {
         "type": "open_house",
         "comment": "Loved the backyard, submitting offer",
-        "date": "2026-04-11",
+        "date": "2026-08-19",
         "price_concern": false
       },
       {
         "type": "open_house",
         "comment": "Excellent condition for the price",
-        "date": "2026-04-12",
+        "date": "2026-08-20",
         "price_concern": false
       },
       {
         "type": "open_house",
         "comment": "Perfect location, needs consideration",
-        "date": "2026-04-29",
+        "date": "2026-09-06",
         "price_concern": false
       }
     ],
     "_risk_label": "price_reduced"
   },
   {
-    "id": "e3c4504d-0ac5-456b-9a5e-8241ef39ed46",
+    "id": "31294472-a9b2-4969-b35c-b3104781898a",
     "address": "4916 Oak Street",
     "city": "Hillcrest",
     "state": "OK",
@@ -1412,26 +1412,26 @@
     "listing_agent": "Lisa Park",
     "seller_email": "seller156@example.com",
     "seller_name": "Maria Johnson",
-    "list_date": "2026-04-18",
+    "list_date": "2026-08-26",
     "status": "active",
     "showing_feedback": [
       {
         "type": "open_house",
         "comment": "Great layout, very interested",
-        "date": "2026-04-19",
+        "date": "2026-08-27",
         "price_concern": false
       },
       {
         "type": "showing",
         "comment": "Excellent condition for the price",
-        "date": "2026-04-20",
+        "date": "2026-08-28",
         "price_concern": false
       }
     ],
     "_risk_label": "healthy"
   },
   {
-    "id": "79a3ff53-7cac-49db-ac31-61b515439ff4",
+    "id": "07daaca7-5def-49e9-9ae6-3c0050f859d9",
     "address": "4639 Cedar Lane",
     "city": "Riverside",
     "state": "OK",
@@ -1451,32 +1451,32 @@
     "listing_agent": "Lisa Park",
     "seller_email": "seller261@example.com",
     "seller_name": "James Smith",
-    "list_date": "2026-04-27",
+    "list_date": "2026-09-04",
     "status": "sold",
     "showing_feedback": [
       {
         "type": "open_house",
         "comment": "Excellent condition for the price",
-        "date": "2026-04-28",
+        "date": "2026-09-05",
         "price_concern": false
       },
       {
         "type": "open_house",
         "comment": "Excellent condition for the price",
-        "date": "2026-04-28",
+        "date": "2026-09-05",
         "price_concern": false
       },
       {
         "type": "showing",
         "comment": "Great layout, very interested",
-        "date": "2026-05-01",
+        "date": "2026-09-08",
         "price_concern": false
       }
     ],
     "_risk_label": "healthy"
   },
   {
-    "id": "50a73117-c8f0-4d9c-a6f2-de82b0b26a1b",
+    "id": "9e12818f-1f41-4dab-812a-e49ebdbedf9e",
     "address": "2455 Willow Way",
     "city": "Hillcrest",
     "state": "OK",
@@ -1496,50 +1496,50 @@
     "listing_agent": "Derek Santos",
     "seller_email": "seller850@example.com",
     "seller_name": "Robert Johnson",
-    "list_date": "2025-12-16",
+    "list_date": "2026-04-25",
     "status": "active",
     "showing_feedback": [
       {
         "type": "showing",
         "comment": "Needs too much work at this price point",
-        "date": "2026-03-06",
+        "date": "2026-07-14",
         "price_concern": true
       },
       {
         "type": "showing",
         "comment": "Price seems high for the area",
-        "date": "2026-03-08",
+        "date": "2026-07-16",
         "price_concern": true
       },
       {
         "type": "open_house",
         "comment": "Better value available in the neighborhood",
-        "date": "2026-02-12",
+        "date": "2026-06-22",
         "price_concern": true
       },
       {
         "type": "open_house",
         "comment": "Buyer feels it's overpriced",
-        "date": "2026-03-22",
+        "date": "2026-07-30",
         "price_concern": true
       },
       {
         "type": "open_house",
         "comment": "Needs too much work at this price point",
-        "date": "2026-01-26",
+        "date": "2026-06-05",
         "price_concern": true
       },
       {
         "type": "showing",
         "comment": "Buyer feels it's overpriced",
-        "date": "2026-04-06",
+        "date": "2026-08-14",
         "price_concern": true
       }
     ],
     "_risk_label": "stale"
   },
   {
-    "id": "f51a9e8c-3008-4fd7-b9d6-25615565eb57",
+    "id": "4abc818e-e1e5-45db-b6d6-243a21b8708e",
     "address": "4642 Birch Boulevard",
     "city": "Springfield",
     "state": "OK",
@@ -1559,32 +1559,32 @@
     "listing_agent": "Marcus Webb",
     "seller_email": "seller409@example.com",
     "seller_name": "Robert Smith",
-    "list_date": "2026-03-28",
+    "list_date": "2026-08-05",
     "status": "active",
     "showing_feedback": [
       {
         "type": "showing",
         "comment": "Great layout, very interested",
-        "date": "2026-05-01",
+        "date": "2026-09-08",
         "price_concern": false
       },
       {
         "type": "open_house",
         "comment": "Great layout, very interested",
-        "date": "2026-04-22",
+        "date": "2026-08-30",
         "price_concern": false
       },
       {
         "type": "open_house",
         "comment": "Loved the backyard, submitting offer",
-        "date": "2026-04-09",
+        "date": "2026-08-17",
         "price_concern": false
       }
     ],
     "_risk_label": "price_reduced"
   },
   {
-    "id": "9c898237-8a34-46b5-be82-a6daca2a1da1",
+    "id": "cba9d06f-c9a5-4a8a-a3b4-aff8f6ff1413",
     "address": "6697 Elm Drive",
     "city": "Lakewood",
     "state": "OK",
@@ -1604,26 +1604,26 @@
     "listing_agent": "Jake Morrison",
     "seller_email": "seller850@example.com",
     "seller_name": "Robert Smith",
-    "list_date": "2026-04-25",
+    "list_date": "2026-09-02",
     "status": "active",
     "showing_feedback": [
       {
         "type": "open_house",
         "comment": "Excellent condition for the price",
-        "date": "2026-04-27",
+        "date": "2026-09-04",
         "price_concern": false
       },
       {
         "type": "showing",
         "comment": "Excellent condition for the price",
-        "date": "2026-04-27",
+        "date": "2026-09-04",
         "price_concern": false
       }
     ],
     "_risk_label": "healthy"
   },
   {
-    "id": "5b3493bb-5fd1-40a7-8dd4-895961c7a627",
+    "id": "6cb17d8c-5c36-4d76-9c41-cdd71af63b4a",
     "address": "3039 Sunset Boulevard",
     "city": "Riverside",
     "state": "OK",
@@ -1643,26 +1643,26 @@
     "listing_agent": "Priya Nair",
     "seller_email": "seller137@example.com",
     "seller_name": "Robert Smith",
-    "list_date": "2026-04-15",
+    "list_date": "2026-08-23",
     "status": "active",
     "showing_feedback": [
       {
         "type": "open_house",
         "comment": "Excellent condition for the price",
-        "date": "2026-04-20",
+        "date": "2026-08-28",
         "price_concern": false
       },
       {
         "type": "open_house",
         "comment": "Great layout, very interested",
-        "date": "2026-04-25",
+        "date": "2026-09-02",
         "price_concern": false
       }
     ],
     "_risk_label": "healthy"
   },
   {
-    "id": "1569b187-554a-4e06-b4ac-0a9d4898a8b0",
+    "id": "2f546784-c1ea-4c85-998c-a57a153b8de1",
     "address": "4300 Maple Avenue",
     "city": "Springfield",
     "state": "OK",
@@ -1682,38 +1682,38 @@
     "listing_agent": "Sarah Chen",
     "seller_email": "seller539@example.com",
     "seller_name": "James Smith",
-    "list_date": "2026-04-23",
+    "list_date": "2026-08-31",
     "status": "active",
     "showing_feedback": [
       {
         "type": "showing",
         "comment": "Perfect location, needs consideration",
-        "date": "2026-05-05",
+        "date": "2026-09-12",
         "price_concern": false
       },
       {
         "type": "showing",
         "comment": "Great layout, very interested",
-        "date": "2026-04-30",
+        "date": "2026-09-07",
         "price_concern": false
       },
       {
         "type": "showing",
         "comment": "Great layout, very interested",
-        "date": "2026-05-05",
+        "date": "2026-09-12",
         "price_concern": false
       },
       {
         "type": "showing",
         "comment": "Great layout, very interested",
-        "date": "2026-04-28",
+        "date": "2026-09-05",
         "price_concern": false
       }
     ],
     "_risk_label": "healthy"
   },
   {
-    "id": "9fbbfa47-6fdb-46cb-9a1f-f422a75dd0af",
+    "id": "48d06e93-1747-49b7-9243-3c2d93f0dafd",
     "address": "6896 Cedar Lane",
     "city": "Riverside",
     "state": "OK",
@@ -1733,50 +1733,50 @@
     "listing_agent": "Tom Reyes",
     "seller_email": "seller246@example.com",
     "seller_name": "Maria Johnson",
-    "list_date": "2025-12-22",
+    "list_date": "2026-05-01",
     "status": "active",
     "showing_feedback": [
       {
         "type": "showing",
         "comment": "Buyer feels it's overpriced",
-        "date": "2026-03-19",
+        "date": "2026-07-27",
         "price_concern": true
       },
       {
         "type": "showing",
         "comment": "Needs too much work at this price point",
-        "date": "2026-02-19",
+        "date": "2026-06-29",
         "price_concern": true
       },
       {
         "type": "showing",
         "comment": "Priced above recent comps",
-        "date": "2026-02-18",
+        "date": "2026-06-28",
         "price_concern": true
       },
       {
         "type": "showing",
         "comment": "Priced above recent comps",
-        "date": "2025-12-29",
+        "date": "2026-05-08",
         "price_concern": true
       },
       {
         "type": "showing",
         "comment": "Priced above recent comps",
-        "date": "2026-01-05",
+        "date": "2026-05-15",
         "price_concern": true
       },
       {
         "type": "open_house",
         "comment": "Better value available in the neighborhood",
-        "date": "2026-01-04",
+        "date": "2026-05-14",
         "price_concern": true
       }
     ],
     "_risk_label": "stale"
   },
   {
-    "id": "367e9d90-c247-4a5e-92cb-8edd49cdd8eb",
+    "id": "461b3e9f-9479-42c2-892b-b900a3736f66",
     "address": "960 Cherry Path",
     "city": "Mapleton",
     "state": "OK",
@@ -1796,32 +1796,32 @@
     "listing_agent": "Tom Reyes",
     "seller_email": "seller903@example.com",
     "seller_name": "Robert Garcia",
-    "list_date": "2026-05-01",
+    "list_date": "2026-09-08",
     "status": "active",
     "showing_feedback": [
       {
         "type": "open_house",
         "comment": "Great layout, very interested",
-        "date": "2026-05-05",
+        "date": "2026-09-12",
         "price_concern": false
       },
       {
         "type": "open_house",
         "comment": "Perfect location, needs consideration",
-        "date": "2026-05-02",
+        "date": "2026-09-09",
         "price_concern": false
       },
       {
         "type": "showing",
         "comment": "Loved the backyard, submitting offer",
-        "date": "2026-05-06",
+        "date": "2026-09-13",
         "price_concern": false
       }
     ],
     "_risk_label": "healthy"
   },
   {
-    "id": "07870d48-6e60-4b7b-8faa-d5c5c443e870",
+    "id": "3346fda2-dc0f-4c0d-9f1f-7c858d8b51db",
     "address": "9815 Elm Drive",
     "city": "Riverside",
     "state": "OK",
@@ -1841,32 +1841,32 @@
     "listing_agent": "Derek Santos",
     "seller_email": "seller262@example.com",
     "seller_name": "Linda Garcia",
-    "list_date": "2026-04-27",
+    "list_date": "2026-09-04",
     "status": "active",
     "showing_feedback": [
       {
         "type": "showing",
         "comment": "Great layout, very interested",
-        "date": "2026-04-30",
+        "date": "2026-09-07",
         "price_concern": false
       },
       {
         "type": "open_house",
         "comment": "Great layout, very interested",
-        "date": "2026-04-28",
+        "date": "2026-09-05",
         "price_concern": false
       },
       {
         "type": "open_house",
         "comment": "Loved the backyard, submitting offer",
-        "date": "2026-05-06",
+        "date": "2026-09-13",
         "price_concern": false
       }
     ],
     "_risk_label": "healthy"
   },
   {
-    "id": "d17e52cd-2e6d-40c8-a6e0-09222ff1b380",
+    "id": "f54e384b-91c3-41d6-b39d-f40cfb11efa1",
     "address": "8100 Cherry Path",
     "city": "Lakewood",
     "state": "OK",
@@ -1886,38 +1886,38 @@
     "listing_agent": "Derek Santos",
     "seller_email": "seller284@example.com",
     "seller_name": "James Smith",
-    "list_date": "2026-04-25",
+    "list_date": "2026-09-02",
     "status": "active",
     "showing_feedback": [
       {
         "type": "open_house",
         "comment": "Loved the backyard, submitting offer",
-        "date": "2026-05-01",
+        "date": "2026-09-08",
         "price_concern": false
       },
       {
         "type": "showing",
         "comment": "Great layout, very interested",
-        "date": "2026-04-27",
+        "date": "2026-09-04",
         "price_concern": false
       },
       {
         "type": "open_house",
         "comment": "Excellent condition for the price",
-        "date": "2026-05-04",
+        "date": "2026-09-11",
         "price_concern": false
       },
       {
         "type": "open_house",
         "comment": "Excellent condition for the price",
-        "date": "2026-04-28",
+        "date": "2026-09-05",
         "price_concern": false
       }
     ],
     "_risk_label": "healthy"
   },
   {
-    "id": "fd6f9b7c-11f5-45aa-944b-c556d311d4ca",
+    "id": "67580531-55e5-41a0-b968-096532afad72",
     "address": "4637 Sunset Boulevard",
     "city": "Hillcrest",
     "state": "OK",
@@ -1937,26 +1937,26 @@
     "listing_agent": "Jake Morrison",
     "seller_email": "seller252@example.com",
     "seller_name": "Maria Garcia",
-    "list_date": "2026-03-10",
+    "list_date": "2026-07-18",
     "status": "active",
     "showing_feedback": [
       {
         "type": "open_house",
         "comment": "Perfect location, needs consideration",
-        "date": "2026-04-13",
+        "date": "2026-08-21",
         "price_concern": false
       },
       {
         "type": "open_house",
         "comment": "Loved the backyard, submitting offer",
-        "date": "2026-04-18",
+        "date": "2026-08-26",
         "price_concern": false
       }
     ],
     "_risk_label": "price_reduced"
   },
   {
-    "id": "f5253048-be32-4ba5-8727-e3443ace36ef",
+    "id": "26928462-b5c0-4f95-aa7a-43309c1a17f5",
     "address": "8980 Willow Way",
     "city": "Riverside",
     "state": "OK",
@@ -1976,38 +1976,38 @@
     "listing_agent": "Sarah Chen",
     "seller_email": "seller656@example.com",
     "seller_name": "James Smith",
-    "list_date": "2026-01-10",
+    "list_date": "2026-05-20",
     "status": "pending",
     "showing_feedback": [
       {
         "type": "showing",
         "comment": "Better value available in the neighborhood",
-        "date": "2026-04-09",
+        "date": "2026-08-17",
         "price_concern": true
       },
       {
         "type": "showing",
         "comment": "Needs too much work at this price point",
-        "date": "2026-03-21",
+        "date": "2026-07-29",
         "price_concern": true
       },
       {
         "type": "open_house",
         "comment": "Price seems high for the area",
-        "date": "2026-05-02",
+        "date": "2026-09-09",
         "price_concern": true
       },
       {
         "type": "showing",
         "comment": "Priced above recent comps",
-        "date": "2026-04-29",
+        "date": "2026-09-06",
         "price_concern": true
       }
     ],
     "_risk_label": "healthy"
   },
   {
-    "id": "62fbd34f-071f-4d06-9c44-4cacd88b0f2b",
+    "id": "12670d91-79dd-423b-9aac-3f0d9540535a",
     "address": "7500 Sunset Boulevard",
     "city": "Hillcrest",
     "state": "OK",
@@ -2027,44 +2027,44 @@
     "listing_agent": "Priya Nair",
     "seller_email": "seller676@example.com",
     "seller_name": "Linda Johnson",
-    "list_date": "2026-04-23",
+    "list_date": "2026-08-31",
     "status": "active",
     "showing_feedback": [
       {
         "type": "showing",
         "comment": "Excellent condition for the price",
-        "date": "2026-05-01",
+        "date": "2026-09-08",
         "price_concern": false
       },
       {
         "type": "open_house",
         "comment": "Excellent condition for the price",
-        "date": "2026-05-02",
+        "date": "2026-09-09",
         "price_concern": false
       },
       {
         "type": "open_house",
         "comment": "Great layout, very interested",
-        "date": "2026-05-06",
+        "date": "2026-09-13",
         "price_concern": false
       },
       {
         "type": "showing",
         "comment": "Excellent condition for the price",
-        "date": "2026-05-01",
+        "date": "2026-09-08",
         "price_concern": false
       },
       {
         "type": "open_house",
         "comment": "Great layout, very interested",
-        "date": "2026-04-28",
+        "date": "2026-09-05",
         "price_concern": false
       }
     ],
     "_risk_label": "healthy"
   },
   {
-    "id": "5a5e4a4f-ea76-4d7f-b2e9-3674e8bd20ed",
+    "id": "2983b20c-d550-4edf-91d5-3aca506a980c",
     "address": "3623 Sunset Boulevard",
     "city": "Lakewood",
     "state": "OK",
@@ -2084,26 +2084,26 @@
     "listing_agent": "Marcus Webb",
     "seller_email": "seller127@example.com",
     "seller_name": "James Garcia",
-    "list_date": "2026-04-28",
+    "list_date": "2026-09-05",
     "status": "active",
     "showing_feedback": [
       {
         "type": "open_house",
         "comment": "Perfect location, needs consideration",
-        "date": "2026-05-01",
+        "date": "2026-09-08",
         "price_concern": false
       },
       {
         "type": "open_house",
         "comment": "Loved the backyard, submitting offer",
-        "date": "2026-05-01",
+        "date": "2026-09-08",
         "price_concern": false
       }
     ],
     "_risk_label": "healthy"
   },
   {
-    "id": "e7a24f16-a9b3-4395-ada0-11d5863e7d66",
+    "id": "3931cdd5-88bc-45d4-aa0f-6cc602ce1d07",
     "address": "5406 Cherry Path",
     "city": "Hillcrest",
     "state": "OK",
@@ -2123,26 +2123,26 @@
     "listing_agent": "Angela Brooks",
     "seller_email": "seller967@example.com",
     "seller_name": "Robert Garcia",
-    "list_date": "2026-03-29",
+    "list_date": "2026-08-06",
     "status": "sold",
     "showing_feedback": [
       {
         "type": "open_house",
         "comment": "Excellent condition for the price",
-        "date": "2026-04-24",
+        "date": "2026-09-01",
         "price_concern": false
       },
       {
         "type": "showing",
         "comment": "Excellent condition for the price",
-        "date": "2026-04-19",
+        "date": "2026-08-27",
         "price_concern": false
       }
     ],
     "_risk_label": "healthy"
   },
   {
-    "id": "7f6f80d8-1e58-4462-b7a4-912e7c493e62",
+    "id": "7ce51afb-4a49-4e5b-91e6-739711015494",
     "address": "2433 Willow Way",
     "city": "Springfield",
     "state": "OK",
@@ -2162,20 +2162,20 @@
     "listing_agent": "Lisa Park",
     "seller_email": "seller924@example.com",
     "seller_name": "Linda Garcia",
-    "list_date": "2026-04-18",
+    "list_date": "2026-08-26",
     "status": "active",
     "showing_feedback": [
       {
         "type": "open_house",
         "comment": "Perfect location, needs consideration",
-        "date": "2026-04-23",
+        "date": "2026-08-31",
         "price_concern": false
       }
     ],
     "_risk_label": "healthy"
   },
   {
-    "id": "9476af33-9e0e-4143-a0ca-8cd916584c31",
+    "id": "15ea4de3-915b-4bbf-be38-0445deaeaf84",
     "address": "7635 Oak Street",
     "city": "Riverside",
     "state": "OK",
@@ -2195,38 +2195,38 @@
     "listing_agent": "Tom Reyes",
     "seller_email": "seller100@example.com",
     "seller_name": "Linda Smith",
-    "list_date": "2025-12-04",
+    "list_date": "2026-04-13",
     "status": "active",
     "showing_feedback": [
       {
         "type": "open_house",
         "comment": "Price seems high for the area",
-        "date": "2026-04-09",
+        "date": "2026-08-17",
         "price_concern": true
       },
       {
         "type": "open_house",
         "comment": "Better value available in the neighborhood",
-        "date": "2026-02-27",
+        "date": "2026-07-07",
         "price_concern": true
       },
       {
         "type": "showing",
         "comment": "Kitchen needs updating, not worth the asking price",
-        "date": "2026-02-28",
+        "date": "2026-07-08",
         "price_concern": true
       },
       {
         "type": "showing",
         "comment": "Buyer feels it's overpriced",
-        "date": "2026-04-21",
+        "date": "2026-08-29",
         "price_concern": true
       }
     ],
     "_risk_label": "stale"
   },
   {
-    "id": "cc38c6be-0033-4f61-97d6-6fb31414da54",
+    "id": "ca2200ce-ba4c-4de2-8dc5-9de01c29461d",
     "address": "2851 Pine Court",
     "city": "Mapleton",
     "state": "OK",
@@ -2246,26 +2246,26 @@
     "listing_agent": "Jake Morrison",
     "seller_email": "seller396@example.com",
     "seller_name": "James Johnson",
-    "list_date": "2026-04-21",
+    "list_date": "2026-08-29",
     "status": "active",
     "showing_feedback": [
       {
         "type": "open_house",
         "comment": "Loved the backyard, submitting offer",
-        "date": "2026-04-29",
+        "date": "2026-09-06",
         "price_concern": false
       },
       {
         "type": "open_house",
         "comment": "Excellent condition for the price",
-        "date": "2026-04-29",
+        "date": "2026-09-06",
         "price_concern": false
       }
     ],
     "_risk_label": "healthy"
   },
   {
-    "id": "99f91dd7-354d-44ba-a748-73fa499467dc",
+    "id": "ec17cacc-6c86-4270-9784-ce006744cf4d",
     "address": "5496 Willow Way",
     "city": "Hillcrest",
     "state": "OK",
@@ -2285,26 +2285,26 @@
     "listing_agent": "Lisa Park",
     "seller_email": "seller130@example.com",
     "seller_name": "James Johnson",
-    "list_date": "2026-04-02",
+    "list_date": "2026-08-10",
     "status": "active",
     "showing_feedback": [
       {
         "type": "showing",
         "comment": "Great layout, very interested",
-        "date": "2026-05-04",
+        "date": "2026-09-11",
         "price_concern": false
       },
       {
         "type": "open_house",
         "comment": "Excellent condition for the price",
-        "date": "2026-04-06",
+        "date": "2026-08-14",
         "price_concern": false
       }
     ],
     "_risk_label": "price_reduced"
   },
   {
-    "id": "8ad61a5b-6a97-47da-8210-8f39eebb5a49",
+    "id": "5b1eebb9-256c-4c3a-a233-fcb135109c2d",
     "address": "1570 Cherry Path",
     "city": "Riverside",
     "state": "OK",
@@ -2324,38 +2324,38 @@
     "listing_agent": "Lisa Park",
     "seller_email": "seller281@example.com",
     "seller_name": "Maria Garcia",
-    "list_date": "2026-04-20",
+    "list_date": "2026-08-28",
     "status": "active",
     "showing_feedback": [
       {
         "type": "open_house",
         "comment": "Great layout, very interested",
-        "date": "2026-04-28",
+        "date": "2026-09-05",
         "price_concern": false
       },
       {
         "type": "showing",
         "comment": "Great layout, very interested",
-        "date": "2026-05-02",
+        "date": "2026-09-09",
         "price_concern": false
       },
       {
         "type": "showing",
         "comment": "Great layout, very interested",
-        "date": "2026-04-30",
+        "date": "2026-09-07",
         "price_concern": false
       },
       {
         "type": "open_house",
         "comment": "Great layout, very interested",
-        "date": "2026-04-27",
+        "date": "2026-09-04",
         "price_concern": false
       }
     ],
     "_risk_label": "healthy"
   },
   {
-    "id": "1f5c0ef1-8e01-4cbd-85c1-6ab7eb11cd25",
+    "id": "21ea3fb9-7355-429c-8b34-fc81ef625fa1",
     "address": "7186 Walnut Road",
     "city": "Lakewood",
     "state": "OK",
@@ -2375,13 +2375,13 @@
     "listing_agent": "Lisa Park",
     "seller_email": "seller294@example.com",
     "seller_name": "James Johnson",
-    "list_date": "2026-04-19",
+    "list_date": "2026-08-27",
     "status": "pending",
     "showing_feedback": [],
     "_risk_label": "healthy"
   },
   {
-    "id": "53915ccb-1283-4eff-b5e1-14002a23ba7e",
+    "id": "d1caf8b3-9400-4457-969a-3f35d7286526",
     "address": "5049 Ridgeline Court",
     "city": "Lakewood",
     "state": "OK",
@@ -2401,38 +2401,38 @@
     "listing_agent": "Tom Reyes",
     "seller_email": "seller399@example.com",
     "seller_name": "Robert Garcia",
-    "list_date": "2025-12-27",
+    "list_date": "2026-05-06",
     "status": "active",
     "showing_feedback": [
       {
         "type": "open_house",
         "comment": "Price seems high for the area",
-        "date": "2026-01-29",
+        "date": "2026-06-08",
         "price_concern": true
       },
       {
         "type": "showing",
         "comment": "Buyer feels it's overpriced",
-        "date": "2026-03-20",
+        "date": "2026-07-28",
         "price_concern": true
       },
       {
         "type": "showing",
         "comment": "Priced above recent comps",
-        "date": "2026-01-03",
+        "date": "2026-05-13",
         "price_concern": true
       },
       {
         "type": "showing",
         "comment": "Priced above recent comps",
-        "date": "2026-04-12",
+        "date": "2026-08-20",
         "price_concern": true
       }
     ],
     "_risk_label": "stale"
   },
   {
-    "id": "49953bef-6bd7-4075-921b-c3703d18c9a9",
+    "id": "71974663-6633-44e4-bccb-fa1f79c5ca5c",
     "address": "1586 Valley Road",
     "city": "Lakewood",
     "state": "OK",
@@ -2452,38 +2452,38 @@
     "listing_agent": "Jake Morrison",
     "seller_email": "seller112@example.com",
     "seller_name": "Robert Smith",
-    "list_date": "2026-04-02",
+    "list_date": "2026-08-10",
     "status": "active",
     "showing_feedback": [
       {
         "type": "showing",
         "comment": "Perfect location, needs consideration",
-        "date": "2026-04-07",
+        "date": "2026-08-15",
         "price_concern": false
       },
       {
         "type": "showing",
         "comment": "Great layout, very interested",
-        "date": "2026-04-08",
+        "date": "2026-08-16",
         "price_concern": false
       },
       {
         "type": "open_house",
         "comment": "Great layout, very interested",
-        "date": "2026-04-25",
+        "date": "2026-09-02",
         "price_concern": false
       },
       {
         "type": "showing",
         "comment": "Loved the backyard, submitting offer",
-        "date": "2026-04-09",
+        "date": "2026-08-17",
         "price_concern": false
       }
     ],
     "_risk_label": "price_reduced"
   },
   {
-    "id": "753e0628-f15d-45e1-9ea7-b91108e3c729",
+    "id": "246c058f-6ed8-4f96-8ae8-ee32adf464d2",
     "address": "6069 Oak Street",
     "city": "Hillcrest",
     "state": "OK",
@@ -2503,26 +2503,26 @@
     "listing_agent": "Derek Santos",
     "seller_email": "seller970@example.com",
     "seller_name": "James Johnson",
-    "list_date": "2026-04-22",
+    "list_date": "2026-08-30",
     "status": "active",
     "showing_feedback": [
       {
         "type": "open_house",
         "comment": "Excellent condition for the price",
-        "date": "2026-04-25",
+        "date": "2026-09-02",
         "price_concern": false
       },
       {
         "type": "showing",
         "comment": "Excellent condition for the price",
-        "date": "2026-04-23",
+        "date": "2026-08-31",
         "price_concern": false
       }
     ],
     "_risk_label": "healthy"
   },
   {
-    "id": "c1beef24-e742-4e5b-9da9-866730d980df",
+    "id": "6cc0abf9-88e8-448a-ac28-2f318ebc3b5d",
     "address": "2165 Walnut Road",
     "city": "Riverside",
     "state": "OK",
@@ -2542,32 +2542,32 @@
     "listing_agent": "Angela Brooks",
     "seller_email": "seller563@example.com",
     "seller_name": "Maria Johnson",
-    "list_date": "2026-04-23",
+    "list_date": "2026-08-31",
     "status": "pending",
     "showing_feedback": [
       {
         "type": "showing",
         "comment": "Great layout, very interested",
-        "date": "2026-05-03",
+        "date": "2026-09-10",
         "price_concern": false
       },
       {
         "type": "showing",
         "comment": "Great layout, very interested",
-        "date": "2026-04-28",
+        "date": "2026-09-05",
         "price_concern": false
       },
       {
         "type": "open_house",
         "comment": "Excellent condition for the price",
-        "date": "2026-04-28",
+        "date": "2026-09-05",
         "price_concern": false
       }
     ],
     "_risk_label": "healthy"
   },
   {
-    "id": "69a5100e-ef59-43d7-a0dc-a266c54c9ff0",
+    "id": "52c438c6-edb6-4424-8d9a-63e84e39b4b6",
     "address": "8664 Sunset Boulevard",
     "city": "Riverside",
     "state": "OK",
@@ -2587,32 +2587,32 @@
     "listing_agent": "Angela Brooks",
     "seller_email": "seller989@example.com",
     "seller_name": "Maria Garcia",
-    "list_date": "2026-04-29",
+    "list_date": "2026-09-06",
     "status": "active",
     "showing_feedback": [
       {
         "type": "open_house",
         "comment": "Great layout, very interested",
-        "date": "2026-05-06",
+        "date": "2026-09-13",
         "price_concern": false
       },
       {
         "type": "open_house",
         "comment": "Loved the backyard, submitting offer",
-        "date": "2026-05-03",
+        "date": "2026-09-10",
         "price_concern": false
       },
       {
         "type": "open_house",
         "comment": "Perfect location, needs consideration",
-        "date": "2026-05-06",
+        "date": "2026-09-13",
         "price_concern": false
       }
     ],
     "_risk_label": "healthy"
   },
   {
-    "id": "d0d6f7c5-f53d-44fc-ae9e-31827ee14188",
+    "id": "bf0e65c4-1c8a-423f-85ee-3595453ee266",
     "address": "8001 Valley Road",
     "city": "Riverside",
     "state": "OK",
@@ -2632,26 +2632,26 @@
     "listing_agent": "Angela Brooks",
     "seller_email": "seller487@example.com",
     "seller_name": "Maria Garcia",
-    "list_date": "2026-01-24",
+    "list_date": "2026-06-03",
     "status": "active",
     "showing_feedback": [
       {
         "type": "showing",
         "comment": "Needs too much work at this price point",
-        "date": "2026-03-25",
+        "date": "2026-08-02",
         "price_concern": true
       },
       {
         "type": "showing",
         "comment": "Price seems high for the area",
-        "date": "2026-03-31",
+        "date": "2026-08-08",
         "price_concern": true
       }
     ],
     "_risk_label": "stale"
   },
   {
-    "id": "81bf0052-c385-4c3f-b9d2-a26cad0428b6",
+    "id": "a4f58fe5-77e3-4d87-893e-2db88e6e89c6",
     "address": "7094 Harbor View Drive",
     "city": "Mapleton",
     "state": "OK",
@@ -2671,32 +2671,32 @@
     "listing_agent": "Angela Brooks",
     "seller_email": "seller303@example.com",
     "seller_name": "Maria Smith",
-    "list_date": "2026-04-27",
+    "list_date": "2026-09-04",
     "status": "pending",
     "showing_feedback": [
       {
         "type": "showing",
         "comment": "Excellent condition for the price",
-        "date": "2026-05-04",
+        "date": "2026-09-11",
         "price_concern": false
       },
       {
         "type": "showing",
         "comment": "Loved the backyard, submitting offer",
-        "date": "2026-04-27",
+        "date": "2026-09-04",
         "price_concern": false
       },
       {
         "type": "showing",
         "comment": "Loved the backyard, submitting offer",
-        "date": "2026-05-01",
+        "date": "2026-09-08",
         "price_concern": false
       }
     ],
     "_risk_label": "healthy"
   },
   {
-    "id": "5e642cb3-5393-412a-9d35-f79a0cabd434",
+    "id": "a4f94030-c360-4882-bed6-deba90331c9c",
     "address": "9592 Elm Drive",
     "city": "Mapleton",
     "state": "OK",
@@ -2716,13 +2716,13 @@
     "listing_agent": "Tom Reyes",
     "seller_email": "seller727@example.com",
     "seller_name": "Robert Smith",
-    "list_date": "2026-04-27",
+    "list_date": "2026-09-04",
     "status": "active",
     "showing_feedback": [],
     "_risk_label": "healthy"
   },
   {
-    "id": "3290cf90-26bb-416f-9082-a6e8c04e8423",
+    "id": "b101310d-c6c5-4038-b593-962849b87cef",
     "address": "7788 Sunset Boulevard",
     "city": "Springfield",
     "state": "OK",
@@ -2742,26 +2742,26 @@
     "listing_agent": "Derek Santos",
     "seller_email": "seller571@example.com",
     "seller_name": "Robert Johnson",
-    "list_date": "2026-04-28",
+    "list_date": "2026-09-05",
     "status": "active",
     "showing_feedback": [
       {
         "type": "showing",
         "comment": "Great layout, very interested",
-        "date": "2026-05-05",
+        "date": "2026-09-12",
         "price_concern": false
       },
       {
         "type": "showing",
         "comment": "Excellent condition for the price",
-        "date": "2026-04-29",
+        "date": "2026-09-06",
         "price_concern": false
       }
     ],
     "_risk_label": "healthy"
   },
   {
-    "id": "a1839e8e-e75a-4297-b2e8-320fdd02206a",
+    "id": "b7f11cdc-bb96-4198-a92a-3448c7c3addf",
     "address": "3614 Elm Drive",
     "city": "Springfield",
     "state": "OK",
@@ -2781,32 +2781,32 @@
     "listing_agent": "Jake Morrison",
     "seller_email": "seller926@example.com",
     "seller_name": "Linda Smith",
-    "list_date": "2026-03-11",
+    "list_date": "2026-07-19",
     "status": "active",
     "showing_feedback": [
       {
         "type": "showing",
         "comment": "Great layout, very interested",
-        "date": "2026-04-29",
+        "date": "2026-09-06",
         "price_concern": false
       },
       {
         "type": "showing",
         "comment": "Great layout, very interested",
-        "date": "2026-03-28",
+        "date": "2026-08-05",
         "price_concern": false
       },
       {
         "type": "open_house",
         "comment": "Loved the backyard, submitting offer",
-        "date": "2026-04-04",
+        "date": "2026-08-12",
         "price_concern": false
       }
     ],
     "_risk_label": "price_reduced"
   },
   {
-    "id": "3a041c6d-ad2d-4da5-a860-686095de5d3c",
+    "id": "9745eece-9fa2-4341-93cd-45b21462cef7",
     "address": "4980 Harbor View Drive",
     "city": "Riverside",
     "state": "OK",
@@ -2826,44 +2826,44 @@
     "listing_agent": "Sarah Chen",
     "seller_email": "seller412@example.com",
     "seller_name": "Robert Garcia",
-    "list_date": "2025-12-01",
+    "list_date": "2026-04-10",
     "status": "active",
     "showing_feedback": [
       {
         "type": "showing",
         "comment": "Perfect location, needs consideration",
-        "date": "2026-01-21",
+        "date": "2026-05-31",
         "price_concern": false
       },
       {
         "type": "open_house",
         "comment": "Perfect location, needs consideration",
-        "date": "2026-02-25",
+        "date": "2026-07-05",
         "price_concern": false
       },
       {
         "type": "showing",
         "comment": "Excellent condition for the price",
-        "date": "2026-03-30",
+        "date": "2026-08-07",
         "price_concern": false
       },
       {
         "type": "showing",
         "comment": "Needs too much work at this price point",
-        "date": "2026-03-01",
+        "date": "2026-07-09",
         "price_concern": true
       },
       {
         "type": "showing",
         "comment": "Kitchen needs updating, not worth the asking price",
-        "date": "2025-12-08",
+        "date": "2026-04-17",
         "price_concern": true
       }
     ],
     "_risk_label": "stale"
   },
   {
-    "id": "317bf508-ec97-40eb-aff0-6a9c8e8faffd",
+    "id": "26dd6eaf-5a45-4d71-be7e-a8135e5da494",
     "address": "7206 Harbor View Drive",
     "city": "Lakewood",
     "state": "OK",
@@ -2883,26 +2883,26 @@
     "listing_agent": "Sarah Chen",
     "seller_email": "seller129@example.com",
     "seller_name": "Maria Garcia",
-    "list_date": "2026-04-29",
+    "list_date": "2026-09-06",
     "status": "pending",
     "showing_feedback": [
       {
         "type": "open_house",
         "comment": "Excellent condition for the price",
-        "date": "2026-05-05",
+        "date": "2026-09-12",
         "price_concern": false
       },
       {
         "type": "open_house",
         "comment": "Perfect location, needs consideration",
-        "date": "2026-05-05",
+        "date": "2026-09-12",
         "price_concern": false
       }
     ],
     "_risk_label": "healthy"
   },
   {
-    "id": "c99d88b2-9026-44c3-b218-f74569c9f477",
+    "id": "cdebcf83-d80d-4804-adaf-e1c19ee7fad6",
     "address": "3966 Aspen Circle",
     "city": "Hillcrest",
     "state": "OK",
@@ -2922,20 +2922,20 @@
     "listing_agent": "Jake Morrison",
     "seller_email": "seller678@example.com",
     "seller_name": "Linda Johnson",
-    "list_date": "2026-04-24",
+    "list_date": "2026-09-01",
     "status": "active",
     "showing_feedback": [
       {
         "type": "showing",
         "comment": "Perfect location, needs consideration",
-        "date": "2026-05-03",
+        "date": "2026-09-10",
         "price_concern": false
       }
     ],
     "_risk_label": "healthy"
   },
   {
-    "id": "cce38499-e782-454d-ac4f-875b2775eab5",
+    "id": "a9e54d82-d0f4-4c86-8b87-3a0629c00876",
     "address": "6565 Valley Road",
     "city": "Hillcrest",
     "state": "OK",
@@ -2955,20 +2955,20 @@
     "listing_agent": "Marcus Webb",
     "seller_email": "seller622@example.com",
     "seller_name": "Robert Smith",
-    "list_date": "2026-03-14",
+    "list_date": "2026-07-22",
     "status": "active",
     "showing_feedback": [
       {
         "type": "showing",
         "comment": "Excellent condition for the price",
-        "date": "2026-05-05",
+        "date": "2026-09-12",
         "price_concern": false
       }
     ],
     "_risk_label": "price_reduced"
   },
   {
-    "id": "ba51bb27-d979-44cf-a272-62ff4291db6b",
+    "id": "e1dd868c-0f66-4428-93cf-2d0e0fa2a9d2",
     "address": "3973 Maple Avenue",
     "city": "Lakewood",
     "state": "OK",
@@ -2988,20 +2988,20 @@
     "listing_agent": "Priya Nair",
     "seller_email": "seller147@example.com",
     "seller_name": "Maria Garcia",
-    "list_date": "2026-04-18",
+    "list_date": "2026-08-26",
     "status": "active",
     "showing_feedback": [
       {
         "type": "open_house",
         "comment": "Great layout, very interested",
-        "date": "2026-04-28",
+        "date": "2026-09-05",
         "price_concern": false
       }
     ],
     "_risk_label": "healthy"
   },
   {
-    "id": "e2f8a6a4-b6dd-492f-8f89-76448adec899",
+    "id": "fdb180b2-a494-46da-82ab-0a58a4fbb374",
     "address": "8110 Maple Avenue",
     "city": "Lakewood",
     "state": "OK",
@@ -3021,38 +3021,38 @@
     "listing_agent": "Jake Morrison",
     "seller_email": "seller960@example.com",
     "seller_name": "Robert Garcia",
-    "list_date": "2026-02-03",
+    "list_date": "2026-06-13",
     "status": "active",
     "showing_feedback": [
       {
         "type": "open_house",
         "comment": "Buyer feels it's overpriced",
-        "date": "2026-04-01",
+        "date": "2026-08-09",
         "price_concern": true
       },
       {
         "type": "open_house",
         "comment": "Priced above recent comps",
-        "date": "2026-04-10",
+        "date": "2026-08-18",
         "price_concern": true
       },
       {
         "type": "showing",
         "comment": "Better value available in the neighborhood",
-        "date": "2026-04-05",
+        "date": "2026-08-13",
         "price_concern": true
       },
       {
         "type": "open_house",
         "comment": "Buyer feels it's overpriced",
-        "date": "2026-02-24",
+        "date": "2026-07-04",
         "price_concern": true
       }
     ],
     "_risk_label": "stale"
   },
   {
-    "id": "7532a719-3a46-4f2d-9227-4537b2efce91",
+    "id": "b92c213f-6731-4339-b3df-f66540b6a670",
     "address": "9442 Ridgeline Court",
     "city": "Springfield",
     "state": "OK",
@@ -3072,32 +3072,32 @@
     "listing_agent": "Sarah Chen",
     "seller_email": "seller414@example.com",
     "seller_name": "James Garcia",
-    "list_date": "2026-04-19",
+    "list_date": "2026-08-27",
     "status": "active",
     "showing_feedback": [
       {
         "type": "showing",
         "comment": "Perfect location, needs consideration",
-        "date": "2026-04-26",
+        "date": "2026-09-03",
         "price_concern": false
       },
       {
         "type": "showing",
         "comment": "Great layout, very interested",
-        "date": "2026-05-05",
+        "date": "2026-09-12",
         "price_concern": false
       },
       {
         "type": "open_house",
         "comment": "Great layout, very interested",
-        "date": "2026-05-06",
+        "date": "2026-09-13",
         "price_concern": false
       }
     ],
     "_risk_label": "healthy"
   },
   {
-    "id": "2b850d69-d60e-4be4-bfec-05cca211cf0d",
+    "id": "0297476d-919b-456f-8457-744b40ffd63e",
     "address": "8449 Harbor View Drive",
     "city": "Lakewood",
     "state": "OK",
@@ -3117,26 +3117,26 @@
     "listing_agent": "Lisa Park",
     "seller_email": "seller776@example.com",
     "seller_name": "Robert Garcia",
-    "list_date": "2026-03-11",
+    "list_date": "2026-07-19",
     "status": "active",
     "showing_feedback": [
       {
         "type": "open_house",
         "comment": "Perfect location, needs consideration",
-        "date": "2026-04-17",
+        "date": "2026-08-25",
         "price_concern": false
       },
       {
         "type": "showing",
         "comment": "Loved the backyard, submitting offer",
-        "date": "2026-04-02",
+        "date": "2026-08-10",
         "price_concern": false
       }
     ],
     "_risk_label": "price_reduced"
   },
   {
-    "id": "68d9dd1d-cda5-4e1c-9d52-a8fce10c6d83",
+    "id": "f425a1d4-c446-46cc-91dd-bd6d3a1fa571",
     "address": "3863 Sunset Boulevard",
     "city": "Lakewood",
     "state": "OK",
@@ -3156,32 +3156,32 @@
     "listing_agent": "Priya Nair",
     "seller_email": "seller264@example.com",
     "seller_name": "James Smith",
-    "list_date": "2026-04-20",
+    "list_date": "2026-08-28",
     "status": "active",
     "showing_feedback": [
       {
         "type": "showing",
         "comment": "Excellent condition for the price",
-        "date": "2026-04-28",
+        "date": "2026-09-05",
         "price_concern": false
       },
       {
         "type": "open_house",
         "comment": "Excellent condition for the price",
-        "date": "2026-04-23",
+        "date": "2026-08-31",
         "price_concern": false
       },
       {
         "type": "open_house",
         "comment": "Loved the backyard, submitting offer",
-        "date": "2026-04-30",
+        "date": "2026-09-07",
         "price_concern": false
       }
     ],
     "_risk_label": "healthy"
   },
   {
-    "id": "5abf94c8-9212-4a6a-bf0c-714f0f52b236",
+    "id": "0a8e80a5-2214-4a1a-93ce-ec6c8126036a",
     "address": "6082 Birch Boulevard",
     "city": "Mapleton",
     "state": "OK",
@@ -3201,32 +3201,32 @@
     "listing_agent": "Sarah Chen",
     "seller_email": "seller595@example.com",
     "seller_name": "Robert Johnson",
-    "list_date": "2026-04-16",
+    "list_date": "2026-08-24",
     "status": "active",
     "showing_feedback": [
       {
         "type": "showing",
         "comment": "Loved the backyard, submitting offer",
-        "date": "2026-04-21",
+        "date": "2026-08-29",
         "price_concern": false
       },
       {
         "type": "showing",
         "comment": "Excellent condition for the price",
-        "date": "2026-04-24",
+        "date": "2026-09-01",
         "price_concern": false
       },
       {
         "type": "open_house",
         "comment": "Perfect location, needs consideration",
-        "date": "2026-04-28",
+        "date": "2026-09-05",
         "price_concern": false
       }
     ],
     "_risk_label": "healthy"
   },
   {
-    "id": "111ac924-ae71-45c6-a181-ee5380f25998",
+    "id": "13f8f246-2f95-4589-9813-b0388b6bfade",
     "address": "1267 Cedar Lane",
     "city": "Hillcrest",
     "state": "OK",
@@ -3246,32 +3246,32 @@
     "listing_agent": "Jake Morrison",
     "seller_email": "seller629@example.com",
     "seller_name": "Robert Garcia",
-    "list_date": "2025-11-09",
+    "list_date": "2026-03-19",
     "status": "active",
     "showing_feedback": [
       {
         "type": "open_house",
         "comment": "Price seems high for the area",
-        "date": "2026-04-18",
+        "date": "2026-08-26",
         "price_concern": true
       },
       {
         "type": "open_house",
         "comment": "Needs too much work at this price point",
-        "date": "2026-01-19",
+        "date": "2026-05-29",
         "price_concern": true
       },
       {
         "type": "showing",
         "comment": "Excellent condition for the price",
-        "date": "2026-04-16",
+        "date": "2026-08-24",
         "price_concern": false
       }
     ],
     "_risk_label": "stale"
   },
   {
-    "id": "5629e1cf-a7ac-4851-8292-d97c53875bad",
+    "id": "8d0ca4c4-9760-456d-97f1-709c5c2e78ee",
     "address": "1430 Cedar Lane",
     "city": "Hillcrest",
     "state": "OK",
@@ -3291,32 +3291,32 @@
     "listing_agent": "Priya Nair",
     "seller_email": "seller685@example.com",
     "seller_name": "Maria Johnson",
-    "list_date": "2026-03-05",
+    "list_date": "2026-07-13",
     "status": "active",
     "showing_feedback": [
       {
         "type": "open_house",
         "comment": "Loved the backyard, submitting offer",
-        "date": "2026-04-01",
+        "date": "2026-08-09",
         "price_concern": false
       },
       {
         "type": "open_house",
         "comment": "Excellent condition for the price",
-        "date": "2026-03-12",
+        "date": "2026-07-20",
         "price_concern": false
       },
       {
         "type": "showing",
         "comment": "Perfect location, needs consideration",
-        "date": "2026-05-06",
+        "date": "2026-09-13",
         "price_concern": false
       }
     ],
     "_risk_label": "price_reduced"
   },
   {
-    "id": "495ba4dc-a805-4077-8997-bca172437faa",
+    "id": "d5161a4d-0fc7-41bf-8a65-73cb9e758401",
     "address": "8783 Birch Boulevard",
     "city": "Springfield",
     "state": "OK",
@@ -3336,26 +3336,26 @@
     "listing_agent": "Angela Brooks",
     "seller_email": "seller986@example.com",
     "seller_name": "Robert Johnson",
-    "list_date": "2026-04-22",
+    "list_date": "2026-08-30",
     "status": "active",
     "showing_feedback": [
       {
         "type": "open_house",
         "comment": "Great layout, very interested",
-        "date": "2026-05-05",
+        "date": "2026-09-12",
         "price_concern": false
       },
       {
         "type": "open_house",
         "comment": "Great layout, very interested",
-        "date": "2026-04-28",
+        "date": "2026-09-05",
         "price_concern": false
       }
     ],
     "_risk_label": "healthy"
   },
   {
-    "id": "7c52c1cd-6e29-4324-ba13-4b58aa7458b1",
+    "id": "fdcda43b-1211-427c-bd70-31a115ea79b7",
     "address": "1347 Elm Drive",
     "city": "Lakewood",
     "state": "OK",
@@ -3375,32 +3375,32 @@
     "listing_agent": "Lisa Park",
     "seller_email": "seller623@example.com",
     "seller_name": "Robert Johnson",
-    "list_date": "2026-04-20",
+    "list_date": "2026-08-28",
     "status": "active",
     "showing_feedback": [
       {
         "type": "open_house",
         "comment": "Great layout, very interested",
-        "date": "2026-04-23",
+        "date": "2026-08-31",
         "price_concern": false
       },
       {
         "type": "showing",
         "comment": "Loved the backyard, submitting offer",
-        "date": "2026-04-30",
+        "date": "2026-09-07",
         "price_concern": false
       },
       {
         "type": "open_house",
         "comment": "Loved the backyard, submitting offer",
-        "date": "2026-04-26",
+        "date": "2026-09-03",
         "price_concern": false
       }
     ],
     "_risk_label": "healthy"
   },
   {
-    "id": "15056ab9-f5ae-499b-8dc5-ee0fcbaba4be",
+    "id": "0a6387c1-19a6-4b2c-8d48-45f9f9b0eca9",
     "address": "1058 Oak Street",
     "city": "Mapleton",
     "state": "OK",
@@ -3420,19 +3420,19 @@
     "listing_agent": "Derek Santos",
     "seller_email": "seller217@example.com",
     "seller_name": "Linda Garcia",
-    "list_date": "2026-04-22",
+    "list_date": "2026-08-30",
     "status": "active",
     "showing_feedback": [
       {
         "type": "showing",
         "comment": "Excellent condition for the price",
-        "date": "2026-04-27",
+        "date": "2026-09-04",
         "price_concern": false
       },
       {
         "type": "open_house",
         "comment": "Great layout, very interested",
-        "date": "2026-05-03",
+        "date": "2026-09-10",
         "price_concern": false
       }
     ],

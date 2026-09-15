@@ -1,25 +1,25 @@
-# ⚡ OpsGrid
+# ⚡ SMBFLOW
 
 **Autonomous Multi-Agent Workflow Engine for Mid-Market Businesses**
 
-OpsGrid runs entire business processes end-to-end — without a human at every step. It monitors signals, makes decisions, drafts communications, executes actions across your tools, and learns from every outcome. One platform, any industry, configured entirely through JSON — no new code per client.
+SMBFlow runs entire business processes end-to-end — without a human at every step. It monitors signals, makes decisions, drafts communications, executes actions across your tools, and learns from every outcome. One platform, any industry, configured entirely through JSON — no new code per client.
 
 ---
 
 ## Table of Contents
 
-1. [What OpsGrid Does](#1-what-opsgrid-does)
+1. [What SMBFlow Does](#1-what-opsgrid-does)
 2. [How It Works](#2-how-it-works)
 3. [Architecture Overview](#3-architecture-overview)
 4. [Project Structure](#4-project-structure)
 5. [Prerequisites](#5-prerequisites)
-6. [Installation & Setup](#6-installation--setup)
+6. [Installation &amp; Setup](#6-installation--setup)
 7. [Configuration Guide](#7-configuration-guide)
 8. [Running Your First Workflow](#8-running-your-first-workflow)
 9. [Admin Control Panel](#9-admin-control-panel)
 10. [Multi-LLM Setup](#10-multi-llm-setup)
-11. [Token & Cost Tracking](#11-token--cost-tracking)
-12. [EPI Evidence & Audit Trail](#12-epi-evidence--audit-trail)
+11. [Token &amp; Cost Tracking](#11-token--cost-tracking)
+12. [EPI Evidence &amp; Audit Trail](#12-epi-evidence--audit-trail)
 13. [API Reference](#13-api-reference)
 14. [React Dashboard](#14-react-dashboard)
 15. [Adding a New Client](#15-adding-a-new-client)
@@ -31,9 +31,9 @@ OpsGrid runs entire business processes end-to-end — without a human at every s
 
 ---
 
-## 1. What OpsGrid Does
+## 1. What SMBFlow Does
 
-Most business automation tools do one thing: if X happens, do Y. OpsGrid does something fundamentally different — it handles the full decision-making loop:
+Most business automation tools do one thing: if X happens, do Y. SMBFlow does something fundamentally different — it handles the full decision-making loop:
 
 ```
 Monitor data  →  Understand situation  →  Draft response  →  Execute action  →  Learn from outcome
@@ -41,7 +41,7 @@ Monitor data  →  Understand situation  →  Draft response  →  Execute actio
 
 A concrete example for a B2B SaaS company:
 
-> Every morning at 8 AM, OpsGrid pulls usage data, NPS scores, and support ticket volume for all 120 customers. It scores each account for churn risk using your weighted model. For the 8 accounts it flags as critical, it drafts a personalised CSM outreach email for each one — referencing their specific usage drop and renewal date. It checks each draft against your business rules (no duplicates, correct tone, factual accuracy). It queues the approved emails for one-click send, creates HubSpot tasks for the CSM team, and posts a risk digest to #cs-alerts in Slack. It logs what it did. Next week, it checks whether the accounts that got outreach recovered — and gets smarter.
+> Every morning at 8 AM, SMBFlow pulls usage data, NPS scores, and support ticket volume for all 120 customers. It scores each account for churn risk using your weighted model. For the 8 accounts it flags as critical, it drafts a personalised CSM outreach email for each one — referencing their specific usage drop and renewal date. It checks each draft against your business rules (no duplicates, correct tone, factual accuracy). It queues the approved emails for one-click send, creates HubSpot tasks for the CSM team, and posts a risk digest to #cs-alerts in Slack. It logs what it did. Next week, it checks whether the accounts that got outreach recovered — and gets smarter.
 
 That entire process — from pulling data to Slack alert — runs in under 5 minutes, automatically, with a full tamper-evident audit trail.
 
@@ -78,7 +78,7 @@ EXECUTION AGENT
 
 MEMORY AGENT
   └─ Extracts patterns from this run and updates the memory store
-  └─ This is what makes OpsGrid improve over time
+  └─ This is what makes SMBFlow improve over time
 ```
 
 If confidence drops below your threshold at any step, the workflow pauses and sends the context to your human review queue — with a pre-written brief and recommended action ready.
@@ -143,24 +143,24 @@ New client = new JSON config file. New industry = new DAG + prompt folder. Zero 
 
 ### Technology Stack
 
-| Layer | Technology | Purpose |
-|-------|-----------|---------|
-| Workflow Engine | Python + LangGraph concepts | DAG execution and state routing |
-| Multi-LLM | LiteLLM | Abstraction over Anthropic, OpenAI, Gemini, Groq |
-| API | FastAPI + Pydantic | REST API with full type safety |
-| Database | PostgreSQL + SQLAlchemy | Workflow state, patterns, credentials |
-| Cache | Redis | Hot data caching |
-| Evidence | EPI Recorder (≥ v2.8.6) | Tamper-evident audit trails |
-| Dashboard (Terminal) | Rich + Click | Live admin control panel |
-| Dashboard (Web) | React 18 + Tailwind | Full workflow monitoring UI |
-| Containerisation | Docker + Docker Compose | One-command infrastructure |
+| Layer                | Technology                  | Purpose                                          |
+| -------------------- | --------------------------- | ------------------------------------------------ |
+| Workflow Engine      | Python + LangGraph concepts | DAG execution and state routing                  |
+| Multi-LLM            | LiteLLM                     | Abstraction over Anthropic, OpenAI, Gemini, Groq |
+| API                  | FastAPI + Pydantic          | REST API with full type safety                   |
+| Database             | PostgreSQL + SQLAlchemy     | Workflow state, patterns, credentials            |
+| Cache                | Redis                       | Hot data caching                                 |
+| Evidence             | EPI Recorder (≥ v2.8.6)    | Tamper-evident audit trails                      |
+| Dashboard (Terminal) | Rich + Click                | Live admin control panel                         |
+| Dashboard (Web)      | React 18 + Tailwind         | Full workflow monitoring UI                      |
+| Containerisation     | Docker + Docker Compose     | One-command infrastructure                       |
 
 ---
 
 ## 4. Project Structure
 
 ```
-opsgrid/
+SMBFlow/
 │
 ├── main.py                          ← ROOT ENTRY POINT — start here
 ├── requirements.txt
@@ -222,7 +222,7 @@ opsgrid/
 
 ### The CONSTANT vs MODIFY Principle
 
-This distinction is the key to OpsGrid's multi-tenant model:
+This distinction is the key to SMBFlow's multi-tenant model:
 
 **CONSTANT** — the engine, agents, connectors, API, admin panel. Identical for every client. You never touch these for business customisation.
 
@@ -234,21 +234,21 @@ This distinction is the key to OpsGrid's multi-tenant model:
 
 ### Required
 
-| Tool | Minimum Version | Install |
-|------|----------------|---------|
-| Python | 3.11+ | [python.org](https://python.org) |
-| Docker Desktop | Latest | [docker.com](https://docker.com) |
-| Node.js | 18+ | [nodejs.org](https://nodejs.org) |
-| Git | Any | [git-scm.com](https://git-scm.com) |
+| Tool           | Minimum Version | Install                           |
+| -------------- | --------------- | --------------------------------- |
+| Python         | 3.11+           | [python.org](https://python.org)   |
+| Docker Desktop | Latest          | [docker.com](https://docker.com)   |
+| Node.js        | 18+             | [nodejs.org](https://nodejs.org)   |
+| Git            | Any             | [git-scm.com](https://git-scm.com) |
 
 ### API Keys (at least one LLM required)
 
-| Provider | Key Name | Where to Get | Used For |
-|----------|----------|-------------|---------|
+| Provider  | Key Name              | Where to Get                                          | Used For                           |
+| --------- | --------------------- | ----------------------------------------------------- | ---------------------------------- |
 | Anthropic | `ANTHROPIC_API_KEY` | [console.anthropic.com](https://console.anthropic.com) | Reasoning + Drafting (heavy tasks) |
-| Groq | `GROQ_API_KEY` | [console.groq.com](https://console.groq.com) | Research + fast tasks (very cheap) |
-| OpenAI | `OPENAI_API_KEY` | [platform.openai.com](https://platform.openai.com) | Alternative heavy model |
-| Google | `GOOGLE_API_KEY` | [aistudio.google.com](https://aistudio.google.com) | Gemini Flash (balanced tier) |
+| Groq      | `GROQ_API_KEY`      | [console.groq.com](https://console.groq.com)           | Research + fast tasks (very cheap) |
+| OpenAI    | `OPENAI_API_KEY`    | [platform.openai.com](https://platform.openai.com)     | Alternative heavy model            |
+| Google    | `GOOGLE_API_KEY`    | [aistudio.google.com](https://aistudio.google.com)     | Gemini Flash (balanced tier)       |
 
 > **Minimum to get started:** just `ANTHROPIC_API_KEY`. The system will use Claude for all tasks. Add other providers to unlock model routing.
 
@@ -259,13 +259,17 @@ This distinction is the key to OpsGrid's multi-tenant model:
 We have provided automated scripts for local development setup.
 
 ### Step 1 — One-Time Setup
+
 Run the setup script from the project root (or **drag & drop `setup.ps1`** into your PowerShell terminal window):
+
 ```powershell
 .\setup.ps1
 # Or if execution policy is restricted:
 powershell -ExecutionPolicy Bypass -File .\setup.ps1
 ```
+
 This will automatically:
+
 - Verify prerequisites (Python, Node, Docker)
 - Create and activate a Python virtual environment
 - Ensure `.env` is created and safely generate a `VAULT_ENCRYPTION_KEY`
@@ -274,13 +278,17 @@ This will automatically:
 - Generate local JSON seed data
 
 ### Step 2 — Daily Startup
+
 To start the application, run (or **drag & drop `start.ps1`** into your PowerShell terminal window):
+
 ```powershell
 .\start.ps1
 ```
-This will launch the backend API and the Vite frontend in separate windows. 
+
+This will launch the backend API and the Vite frontend in separate windows.
 
 ### Step 3 — Access the Application & API Testing URLs
+
 - **Frontend Dashboard:** [http://localhost:5173](http://localhost:5173)
 - **API Base Endpoint:** [http://127.0.0.1:8000](http://127.0.0.1:8000)
 - **Interactive API Testing Docs (Swagger UI):** [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
@@ -289,21 +297,25 @@ This will launch the backend API and the Vite frontend in separate windows.
 - **OpenAPI JSON Schema:** [http://127.0.0.1:8000/openapi.json](http://127.0.0.1:8000/openapi.json)
 
 **Test Logins:**
+
 - *SMB Owner (Business User):* `demo@tenant.com` / `demo123`
 - *SMBFlow Admin (Super Admin):* `admin@smbflow.com` / `admin123`
 
 ### Step 4 — Shutdown
+
 When you are done developing, shut everything down safely:
+
 ```powershell
 .\stop.ps1
 ```
+
 This will gracefully stop the local backend/frontend processes and run `docker-compose stop` to pause the infrastructure without losing your database state.
 
 ---
 
 ## 7. Configuration Guide
 
-OpsGrid is configured entirely through two JSON files per client. No Python code changes.
+SMBFlow is configured entirely through two JSON files per client. No Python code changes.
 
 ### 7.1 Client Config (`config/templates/saas.json`)
 
@@ -427,18 +439,18 @@ Prompts are plain `.txt` files with `{placeholder}` variables. The variables are
 
 Available placeholders in every prompt:
 
-| Placeholder | Source |
-|-------------|--------|
-| `{tenant_name}` | `client_name` from config |
-| `{industry}` | `industry` from config |
-| `{company_profile}` | `company_profile` block as JSON |
-| `{business_rules}` | `business_rules` block as JSON |
-| `{tone_profile}` | `tone_profile` block as JSON |
-| `{action_library}` | `action_library` block as JSON |
+| Placeholder                | Source                                  |
+| -------------------------- | --------------------------------------- |
+| `{tenant_name}`          | `client_name` from config             |
+| `{industry}`             | `industry` from config                |
+| `{company_profile}`      | `company_profile` block as JSON       |
+| `{business_rules}`       | `business_rules` block as JSON        |
+| `{tone_profile}`         | `tone_profile` block as JSON          |
+| `{action_library}`       | `action_library` block as JSON        |
 | `{confidence_threshold}` | `business_rules.confidence_threshold` |
-| `{relevant_patterns}` | Historical patterns from memory store |
-| `{research_output}` | Output from the Research Agent |
-| `{current_datetime}` | UTC timestamp at time of execution |
+| `{relevant_patterns}`    | Historical patterns from memory store   |
+| `{research_output}`      | Output from the Research Agent          |
+| `{current_datetime}`     | UTC timestamp at time of execution      |
 
 ---
 
@@ -446,7 +458,7 @@ Available placeholders in every prompt:
 
 ### The Manual Signal
 
-OpsGrid does not start automatically. Work begins when you explicitly trigger it. This is intentional — you control when it runs.
+SMBFlow does not start automatically. Work begins when you explicitly trigger it. This is intentional — you control when it runs.
 
 ```bash
 # Basic trigger — uses default config
@@ -529,7 +541,7 @@ python main.py dashboard
 ### What You See
 
 ```
-⚡ OpsGrid  ● LIVE    2026-03-24 08:14:22    Session Cost: $0.0043
+⚡ SMBFlow  ● LIVE    2026-03-24 08:14:22    Session Cost: $0.0043
 ┌──────────────────────────────────────────────────────────────────┐
 │ Active Workflows                                                  │
 │ Run ID   │ Workflow                │ Status  │ Node       │ Cost  │
@@ -592,16 +604,16 @@ Or use the **Escalation Queue** page in the React dashboard — it shows the ful
 
 ## 10. Multi-LLM Setup
 
-OpsGrid uses [LiteLLM](https://docs.litellm.ai) as its LLM abstraction layer. This means you can use any provider with the same interface.
+SMBFlow uses [LiteLLM](https://docs.litellm.ai) as its LLM abstraction layer. This means you can use any provider with the same interface.
 
 ### Model Tiers
 
-| Tier | Default Model | Best Used For | Approx Cost/1M tokens |
-|------|--------------|---------------|----------------------|
-| `heavy` | Claude Sonnet 4 | Reasoning, drafting (quality critical) | $3 in / $15 out |
-| `fast` | Groq Llama-3.1-70B | Research, tool calls (speed critical) | $0.59 in / $0.79 out |
-| `mini` | Claude Haiku 4.5 | Verification, execution (deterministic) | $0.80 in / $4.00 out |
-| `balanced` | Gemini 2.0 Flash | Orchestration decisions | $0.075 in / $0.30 out |
+| Tier         | Default Model      | Best Used For                           | Approx Cost/1M tokens |
+| ------------ | ------------------ | --------------------------------------- | --------------------- |
+| `heavy`    | Claude Sonnet 4    | Reasoning, drafting (quality critical)  | $3 in / $15 out       |
+| `fast`     | Groq Llama-3.1-70B | Research, tool calls (speed critical)   | $0.59 in / $0.79 out  |
+| `mini`     | Claude Haiku 4.5   | Verification, execution (deterministic) | $0.80 in / $4.00 out  |
+| `balanced` | Gemini 2.0 Flash   | Orchestration decisions                 | $0.075 in / $0.30 out |
 
 ### Switching Models
 
@@ -632,24 +644,24 @@ In a client config JSON:
 
 ### Supported Providers (LiteLLM model string format)
 
-| Provider | Model String Example |
-|----------|---------------------|
-| Anthropic | `anthropic/claude-sonnet-4-20250514` |
-| Anthropic | `anthropic/claude-haiku-4-5-20251001` |
-| OpenAI | `openai/gpt-4o` |
-| OpenAI | `openai/gpt-4o-mini` |
-| Google | `gemini/gemini-2.0-flash` |
-| Google | `gemini/gemini-2.0-pro` |
-| Groq | `groq/llama-3.1-70b-versatile` |
-| Groq | `groq/llama-3.1-8b-instant` |
-| Groq | `groq/mixtral-8x7b-32768` |
-| Ollama (local) | `ollama/llama3.2` |
+| Provider       | Model String Example                    |
+| -------------- | --------------------------------------- |
+| Anthropic      | `anthropic/claude-sonnet-4-20250514`  |
+| Anthropic      | `anthropic/claude-haiku-4-5-20251001` |
+| OpenAI         | `openai/gpt-4o`                       |
+| OpenAI         | `openai/gpt-4o-mini`                  |
+| Google         | `gemini/gemini-2.0-flash`             |
+| Google         | `gemini/gemini-2.0-pro`               |
+| Groq           | `groq/llama-3.1-70b-versatile`        |
+| Groq           | `groq/llama-3.1-8b-instant`           |
+| Groq           | `groq/mixtral-8x7b-32768`             |
+| Ollama (local) | `ollama/llama3.2`                     |
 
 For Ollama, also set `OPENAI_API_BASE=http://localhost:11434/v1` in your `.env`.
 
 ### Fallback Chains
 
-If a model fails (rate limit, timeout, API error), OpsGrid automatically tries the next model in the fallback chain. Configure in `llm_config.json`:
+If a model fails (rate limit, timeout, API error), SMBFlow automatically tries the next model in the fallback chain. Configure in `llm_config.json`:
 
 ```json
 "fallback_chain": {
@@ -725,7 +737,7 @@ All values are per million tokens in USD.
 
 ## 12. EPI Evidence & Audit Trail
 
-OpsGrid uses [EPI Recorder](https://github.com/mohdibrahimaiml/epi-recorder) (v2.8.6+) to create a tamper-evident `.epi` artifact for every workflow run. This gives you an immutable, cryptographically signed audit trail of every decision made.
+SMBFlow uses [EPI Recorder](https://github.com/mohdibrahimaiml/epi-recorder) (v2.8.6+) to create a tamper-evident `.epi` artifact for every workflow run. This gives you an immutable, cryptographically signed audit trail of every decision made.
 
 ### What Each `.epi` File Contains
 
@@ -782,54 +794,54 @@ python main.py api
 
 #### System
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
+| Method  | Endpoint           | Description                                    |
+| ------- | ------------------ | ---------------------------------------------- |
 | `GET` | `/api/v1/health` | System health — DB, Redis, LLM providers, EPI |
 
 #### Tenants
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/v1/tenants` | List all tenants |
-| `POST` | `/api/v1/tenants` | Create tenant — body is the client config JSON |
-| `GET` | `/api/v1/tenants/{id}` | Get tenant including full config |
-| `PUT` | `/api/v1/tenants/{id}/config` | Update tenant config |
-| `GET` | `/api/v1/tenants/{id}/workflows` | List workflow runs for a tenant |
+| Method   | Endpoint                           | Description                                     |
+| -------- | ---------------------------------- | ----------------------------------------------- |
+| `GET`  | `/api/v1/tenants`                | List all tenants                                |
+| `POST` | `/api/v1/tenants`                | Create tenant — body is the client config JSON |
+| `GET`  | `/api/v1/tenants/{id}`           | Get tenant including full config                |
+| `PUT`  | `/api/v1/tenants/{id}/config`    | Update tenant config                            |
+| `GET`  | `/api/v1/tenants/{id}/workflows` | List workflow runs for a tenant                 |
 
 #### Workflows
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/v1/workflows/trigger` | Manually trigger a workflow |
-| `GET` | `/api/v1/workflows/{run_id}/status` | Get full workflow status + agent runs |
-| `POST` | `/api/v1/workflows/{run_id}/pause` | Pause at next node boundary |
-| `POST` | `/api/v1/workflows/{run_id}/stop` | Immediately stop |
-| `POST` | `/api/v1/workflows/{run_id}/resume` | Resume from pause |
+| Method   | Endpoint                              | Description                           |
+| -------- | ------------------------------------- | ------------------------------------- |
+| `POST` | `/api/v1/workflows/trigger`         | Manually trigger a workflow           |
+| `GET`  | `/api/v1/workflows/{run_id}/status` | Get full workflow status + agent runs |
+| `POST` | `/api/v1/workflows/{run_id}/pause`  | Pause at next node boundary           |
+| `POST` | `/api/v1/workflows/{run_id}/stop`   | Immediately stop                      |
+| `POST` | `/api/v1/workflows/{run_id}/resume` | Resume from pause                     |
 
 #### Escalations
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/v1/escalations` | List pending escalations |
+| Method   | Endpoint                            | Description                               |
+| -------- | ----------------------------------- | ----------------------------------------- |
+| `GET`  | `/api/v1/escalations`             | List pending escalations                  |
 | `POST` | `/api/v1/escalations/{id}/decide` | Submit human decision — resumes workflow |
 
 #### Analytics
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
+| Method  | Endpoint                          | Description                      |
+| ------- | --------------------------------- | -------------------------------- |
 | `GET` | `/api/v1/analytics/{tenant_id}` | Performance metrics for a tenant |
 
 #### Webhooks
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
+| Method   | Endpoint                         | Description                                          |
+| -------- | -------------------------------- | ---------------------------------------------------- |
 | `POST` | `/api/v1/webhooks/{tenant_id}` | Receive inbound webhook — may auto-trigger workflow |
 
 #### Evidence
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/v1/evidence` | List all `.epi` artifact files |
+| Method  | Endpoint             | Description                     |
+| ------- | -------------------- | ------------------------------- |
+| `GET` | `/api/v1/evidence` | List all`.epi` artifact files |
 
 ---
 
@@ -844,13 +856,13 @@ npm run dev
 
 ### Pages
 
-| Page | What It Shows |
-|------|-------------|
-| **Dashboard** | Live workflow feed, system status, stats, one-click trigger |
-| **Workflows** | All runs with status, current node, cost, pause/stop/resume buttons |
-| **Escalations** | Human review queue with context brief and decision form |
-| **Tokens & Cost** | Breakdown by workflow — runs, tokens in/out, cost, cost-per-run |
-| **Evidence** | List of `.epi` artifacts with trust state |
+| Page                    | What It Shows                                                       |
+| ----------------------- | ------------------------------------------------------------------- |
+| **Dashboard**     | Live workflow feed, system status, stats, one-click trigger         |
+| **Workflows**     | All runs with status, current node, cost, pause/stop/resume buttons |
+| **Escalations**   | Human review queue with context brief and decision form             |
+| **Tokens & Cost** | Breakdown by workflow — runs, tokens in/out, cost, cost-per-run    |
+| **Evidence**      | List of`.epi` artifacts with trust state                          |
 
 The dashboard polls the API every 3 seconds. All data is fetched from `http://localhost:8000/api/v1`.
 
@@ -920,6 +932,7 @@ cp workflows/dags/saas_churn_prevention.json workflows/dags/legal_matter_intake.
 ```
 
 Edit the DAG:
+
 - Set `_meta.workflow_id`, `_meta.industry`, `_meta.name`
 - Update `nodes[*].prompt_file` to point to your new prompt folder
 - Update `nodes[*].tools` to list the integration tools needed
@@ -932,6 +945,7 @@ mkdir -p workflows/prompts/legal
 ```
 
 Create one `.txt` file per agent node. At minimum:
+
 - `research_intake.txt`
 - `reasoning_intake.txt`
 - `drafting_intake.txt`
@@ -968,14 +982,14 @@ All connectors are in `integrations/connectors.py`. They are wired to agent tool
 
 ### Available Connectors
 
-| Connector | Class | Auth Method | Available Tools |
-|-----------|-------|-------------|-----------------|
-| HubSpot CRM | `HubSpotConnector` | API Key / OAuth2 | `hubspot_read_contacts`, `hubspot_read_deals`, `hubspot_create_task`, `hubspot_update_property`, `hubspot_read_activity_log` |
-| Gmail | `GmailConnector` | OAuth2 | `gmail_queue_email`, `gmail_read_recent_threads` |
-| Slack | `SlackConnector` | Bot Token | `slack_post_message`, `slack_post_risk_alert` |
-| Stripe | `StripeConnector` | Secret Key | `stripe_read_subscriptions`, `stripe_read_customers` |
-| Generic REST | `GenericRESTConnector` | API Key | Configurable per endpoint |
-| Database | (built-in) | Internal | `db_write_outcome`, `db_update_pattern` |
+| Connector    | Class                    | Auth Method      | Available Tools                                                                                                                        |
+| ------------ | ------------------------ | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| HubSpot CRM  | `HubSpotConnector`     | API Key / OAuth2 | `hubspot_read_contacts`, `hubspot_read_deals`, `hubspot_create_task`, `hubspot_update_property`, `hubspot_read_activity_log` |
+| Gmail        | `GmailConnector`       | OAuth2           | `gmail_queue_email`, `gmail_read_recent_threads`                                                                                   |
+| Slack        | `SlackConnector`       | Bot Token        | `slack_post_message`, `slack_post_risk_alert`                                                                                      |
+| Stripe       | `StripeConnector`      | Secret Key       | `stripe_read_subscriptions`, `stripe_read_customers`                                                                               |
+| Generic REST | `GenericRESTConnector` | API Key          | Configurable per endpoint                                                                                                              |
+| Database     | (built-in)               | Internal         | `db_write_outcome`, `db_update_pattern`                                                                                            |
 
 ### Adding a New Connector
 
@@ -998,7 +1012,6 @@ if integrations.get("mytool", {}).get("enabled") and "mytool" in credentials:
 ```
 
 3. Add the tool to the DAG node's `"tools"` list in the workflow JSON.
-
 4. Enable it in the client config:
 
 ```json
@@ -1181,33 +1194,33 @@ Copy `.env.example` to `.env` and fill in these values:
 
 ### Required
 
-| Variable | Description |
-|----------|-------------|
+| Variable              | Description                                             |
+| --------------------- | ------------------------------------------------------- |
 | `ANTHROPIC_API_KEY` | Anthropic API key — minimum required for any LLM calls |
 
 ### Recommended
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `GROQ_API_KEY` | Groq API key — enables fast/cheap research tier | — |
-| `GOOGLE_API_KEY` | Google AI Studio key — enables Gemini balanced tier | — |
-| `OPENAI_API_KEY` | OpenAI API key — enables GPT-4o as alternative heavy model | — |
-| `DATABASE_URL` | PostgreSQL connection string | `postgresql+asyncpg://opsgrid:opsgrid_dev_password@localhost:5432/opsgrid` |
-| `REDIS_URL` | Redis connection string | `redis://:opsgrid_redis_dev@localhost:6379/0` |
+| Variable           | Description                                                 | Default                                                                      |
+| ------------------ | ----------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `GROQ_API_KEY`   | Groq API key — enables fast/cheap research tier            | —                                                                           |
+| `GOOGLE_API_KEY` | Google AI Studio key — enables Gemini balanced tier        | —                                                                           |
+| `OPENAI_API_KEY` | OpenAI API key — enables GPT-4o as alternative heavy model | —                                                                           |
+| `DATABASE_URL`   | PostgreSQL connection string                                | `postgresql+asyncpg://opsgrid:opsgrid_dev_password@localhost:5432/opsgrid` |
+| `REDIS_URL`      | Redis connection string                                     | `redis://:opsgrid_redis_dev@localhost:6379/0`                              |
 
 ### Optional
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `ENVIRONMENT` | `development` or `production` | `development` |
-| `SECRET_KEY` | JWT signing key — change in production | `dev_secret_key_...` |
-| `EPI_EVIDENCE_DIR` | Where `.epi` files are saved | `./evidence` |
-| `EPI_AUTO_RECORD` | Auto-record all LLM calls | `true` |
-| `ADMIN_REFRESH_RATE` | Dashboard refresh rate in seconds | `2` |
-| `LOG_LEVEL` | Logging level | `INFO` |
-| `LLM_HEAVY_MODEL` | Override the heavy tier model | `anthropic/claude-sonnet-4-20250514` |
-| `LLM_FAST_MODEL` | Override the fast tier model | `groq/llama-3.1-70b-versatile` |
-| `LLM_MINI_MODEL` | Override the mini tier model | `anthropic/claude-haiku-4-5-20251001` |
+| Variable               | Description                             | Default                                 |
+| ---------------------- | --------------------------------------- | --------------------------------------- |
+| `ENVIRONMENT`        | `development` or `production`       | `development`                         |
+| `SECRET_KEY`         | JWT signing key — change in production | `dev_secret_key_...`                  |
+| `EPI_EVIDENCE_DIR`   | Where`.epi` files are saved           | `./evidence`                          |
+| `EPI_AUTO_RECORD`    | Auto-record all LLM calls               | `true`                                |
+| `ADMIN_REFRESH_RATE` | Dashboard refresh rate in seconds       | `2`                                   |
+| `LOG_LEVEL`          | Logging level                           | `INFO`                                |
+| `LLM_HEAVY_MODEL`    | Override the heavy tier model           | `anthropic/claude-sonnet-4-20250514`  |
+| `LLM_FAST_MODEL`     | Override the fast tier model            | `groq/llama-3.1-70b-versatile`        |
+| `LLM_MINI_MODEL`     | Override the mini tier model            | `anthropic/claude-haiku-4-5-20251001` |
 
 ---
 
@@ -1253,4 +1266,4 @@ curl -X POST localhost:8000/api/v1/workflows/{run_id}/resume
 
 ---
 
-*Built by FracsNet · OpsGrid Intern Build Program*
+*Built by FracsNet · SMBFlow Intern Build Program*
