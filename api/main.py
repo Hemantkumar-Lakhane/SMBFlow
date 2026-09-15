@@ -193,7 +193,7 @@ async def lifespan(app: FastAPI):
     log.info("SMBFlow API stopped")
 
 
-from api.routers import connections, reviews, medical_tourism
+from api.routers import connections, reviews, medical_tourism, product_launch
 
 app = FastAPI(
     title="SMBFlow API v3",
@@ -205,6 +205,8 @@ app = FastAPI(
 app.include_router(connections.router)
 app.include_router(reviews.router)
 app.include_router(medical_tourism.router)
+app.include_router(product_launch.router)
+
 
 app.add_middleware(
     CORSMiddleware,

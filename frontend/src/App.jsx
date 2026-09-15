@@ -36,6 +36,7 @@ import ConnectionsPage from './pages/setup/ConnectionsPage'
 import CasesPage from './pages/medical/CasesPage'
 
 import EmailSummarizerPage from './pages/client/EmailSummarizerPage'
+import ProductLaunchPage from './pages/client/ProductLaunchPage'
 
 // Client — new Figma-matched pages
 import Dashboard          from './pages/client/Dashboard'
@@ -153,6 +154,10 @@ function AppRoutes() {
       <Route path="/workflows"                  element={<Wrap><WorkflowsPage /></Wrap>} />
       <Route path="/workflows/email_summarizer" element={<Wrap><EmailSummarizerPage /></Wrap>} />
       <Route path="/email-summarizer"           element={<Wrap><EmailSummarizerPage /></Wrap>} />
+      <Route path="/workflows/product_launch"   element={<Wrap><ProductLaunchPage /></Wrap>} />
+      <Route path="/workflows/product_launch_sprint" element={<Wrap><ProductLaunchPage /></Wrap>} />
+      <Route path="/product-launch"             element={<Wrap><ProductLaunchPage /></Wrap>} />
+
 
       {/* Configuration */}
       <Route path="/workflow-library" element={<Wrap><WorkflowLibrary /></Wrap>} />

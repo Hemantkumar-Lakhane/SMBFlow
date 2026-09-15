@@ -118,6 +118,10 @@ export default function WorkflowsPage() {
       navigate('/workflows/email_summarizer')
       return
     }
+    if (name === 'product_launch' || name === 'product_launch_sprint' || name.includes('product_launch')) {
+      navigate('/workflows/product_launch')
+      return
+    }
     setTargetWf({
       name: name,
       displayName: getDisplayName(wf.name, wf.display_name),
@@ -287,7 +291,13 @@ export default function WorkflowsPage() {
                 filteredWorkflows.map(wf => (
                   <tr
                     key={wf.name}
-                    onClick={() => navigate(`/workflows/builder?wf=${encodeURIComponent(wf.name)}`)}
+                    onClick={() => {
+                      if (wf.name === 'product_launch' || wf.name === 'product_launch_sprint' || wf.name?.includes('product_launch')) {
+                        navigate('/workflows/product_launch')
+                      } else {
+                        navigate(`/workflows/builder?wf=${encodeURIComponent(wf.name)}`)
+                      }
+                    }}
                     className="border-b border-gray-50 hover:bg-gray-50/80 cursor-pointer transition-colors last:border-0 group"
                   >
                     <td className="px-5 py-4">

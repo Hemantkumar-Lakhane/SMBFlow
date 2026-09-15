@@ -11,8 +11,10 @@ import RunWorkflowModal from '../../components/workflow/RunWorkflowModal'
 const CATEGORY_TABS = ['All','Sales','Customer Support','Finance','Operations','HR','Procurement','Custom']
 
 const REUSABLE_TEMPLATES = [
+  { id: 'product_launch_sprint', name: 'Product Launch Sprint', category: 'Sales', desc: 'Turn your product launch into a ready-to-publish 7-day multi-channel campaign with messaging, visuals, and schedule.', tools: ['Figma-Guided','Multi-Platform','Campaign Generator'] },
   { id: 'customer_support_triage', name: 'Customer Support Triage', category: 'Customer Support', desc: 'Automatically classify, prioritize, and route incoming support tickets. Escalates high-severity cases for human review.', tools: ['LLM Agent','Rule Engine','Support Tool'] },
   { id: 'invoice_exception_review', name: 'Invoice Exception Review', category: 'Finance', desc: 'Detect anomalies in invoices against purchase orders. Flags discrepancies and routes to finance team for approval.', tools: ['Rule Engine','ML Model','ERP Tool'] },
+
   { id: 'customer_followup', name: 'Customer Follow-up', category: 'Sales', desc: 'Automate personalized follow-up sequences after customer interactions. Tracks engagement and surfaces opportunities.', tools: ['LLM Agent','CRM Tool','Email Tool'] },
   { id: 'supplier_exception', name: 'Supplier Exception', category: 'Procurement', desc: 'Monitor supplier performance metrics and escalate exceptions. Tracks SLA breaches and recommends corrective action.', tools: ['Rule Engine','API Tool'] },
   { id: 'employee_onboarding', name: 'Employee Onboarding', category: 'HR', desc: 'Orchestrate the new employee onboarding checklist across systems. Tracks completion and escalates blockers.', tools: ['Rule Engine','API Tool','Email Tool'] },
@@ -115,6 +117,10 @@ export default function WorkflowLibrary() {
   const filtered = category === 'All' ? REUSABLE_TEMPLATES : REUSABLE_TEMPLATES.filter(t => t.category === category)
 
   const handleUse = (template) => {
+    if (template.id === 'product_launch_sprint') {
+      navigate('/workflows/product_launch')
+      return
+    }
     navigate('/workflows/builder')
   }
 
