@@ -105,7 +105,7 @@ function ProgressRow({ name, pct, color, runs, onOpen }) {
 // ── Main Dashboard ────────────────────────────────────────────────────────────
 export default function Dashboard() {
   const navigate      = useNavigate()
-  const { user, api } = useAuth()
+  const { user, api, isAdmin } = useAuth()
   const { subscribe } = useWebSocket()
 
   const [data,    setData]    = useState(null)
@@ -228,7 +228,7 @@ export default function Dashboard() {
               <h2 className="text-base font-bold text-gray-900">Recent Activity</h2>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => navigate('/workflows/builder')}
+                  onClick={() => navigate('/workflows')}
                   className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1"
                 >
                   View all <ArrowUpRight className="w-3.5 h-3.5" />
@@ -268,7 +268,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-base font-bold text-gray-900">Workflow Performance</h2>
               <button
-                onClick={() => navigate('/workflows/builder')}
+                onClick={() => navigate('/workflows')}
                 className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1"
               >
                 View all <ArrowUpRight className="w-3.5 h-3.5" />
@@ -282,18 +282,20 @@ export default function Dashboard() {
                   <p className="text-sm font-medium text-gray-500">No workflows to report</p>
                   <p className="text-xs text-gray-400 mt-0.5">Create a workflow to see performance data.</p>
                 </div>
-                <button
-                  onClick={() => navigate('/workflows/builder')}
-                  className="mt-1 px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors"
-                >
-                  Create workflow
-                </button>
+                {isAdmin && (
+                  <button
+                    onClick={() => navigate('/workflows/builder')}
+                    className="mt-1 px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors"
+                  >
+                    Create workflow
+                  </button>
+                )}
               </div>
             ) : (
               <div className="space-y-4">
                 {performance.slice(0, 5).map((p, i) => {
                   const colors = ['bg-green-500', 'bg-blue-500', 'bg-blue-400', 'bg-amber-500', 'bg-red-400']
-                  return <ProgressRow key={p.name} name={p.name} pct={p.success_rate || 0} color={colors[i] || 'bg-blue-500'} runs={p.runs} onOpen={() => navigate(`/workflows/builder?wf=${encodeURIComponent(p.name)}`)} />
+                  return <ProgressRow key={p.name} name={p.name} pct={p.success_rate || 0} color={colors[i] || 'bg-blue-500'} runs={p.runs} onOpen={() => navigate(isAdmin ? `/workflows/builder?wf=${encodeURIComponent(p.name)}` : '/workflows')} />
                 })}
               </div>
             )}

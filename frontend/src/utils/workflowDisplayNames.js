@@ -2,6 +2,8 @@
 
 const DISPLAY_NAME_MAP = {
   email_summarizer: 'Email Summarizer',
+  product_launch: 'Product Launch Sprint',
+  product_launch_sprint: 'Product Launch Sprint',
   account_signal_expansion: 'Account Signals',
   billing_agent: 'Billing Agent',
   case_brief_summarization: 'Case Summarizer',

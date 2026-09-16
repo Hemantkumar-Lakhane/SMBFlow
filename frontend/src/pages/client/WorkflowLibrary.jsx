@@ -11,8 +11,10 @@ import RunWorkflowModal from '../../components/workflow/RunWorkflowModal'
 const CATEGORY_TABS = ['All','Sales','Customer Support','Finance','Operations','HR','Procurement','Custom']
 
 const REUSABLE_TEMPLATES = [
+  { id: 'product_launch_sprint', name: 'Product Launch Sprint', category: 'Sales', desc: 'Turn your product launch into a ready-to-publish 7-day multi-channel campaign with messaging, visuals, and schedule.', tools: ['Figma-Guided','Multi-Platform','Campaign Generator'] },
   { id: 'customer_support_triage', name: 'Customer Support Triage', category: 'Customer Support', desc: 'Automatically classify, prioritize, and route incoming support tickets. Escalates high-severity cases for human review.', tools: ['LLM Agent','Rule Engine','Support Tool'] },
   { id: 'invoice_exception_review', name: 'Invoice Exception Review', category: 'Finance', desc: 'Detect anomalies in invoices against purchase orders. Flags discrepancies and routes to finance team for approval.', tools: ['Rule Engine','ML Model','ERP Tool'] },
+
   { id: 'customer_followup', name: 'Customer Follow-up', category: 'Sales', desc: 'Automate personalized follow-up sequences after customer interactions. Tracks engagement and surfaces opportunities.', tools: ['LLM Agent','CRM Tool','Email Tool'] },
   { id: 'supplier_exception', name: 'Supplier Exception', category: 'Procurement', desc: 'Monitor supplier performance metrics and escalate exceptions. Tracks SLA breaches and recommends corrective action.', tools: ['Rule Engine','API Tool'] },
   { id: 'employee_onboarding', name: 'Employee Onboarding', category: 'HR', desc: 'Orchestrate the new employee onboarding checklist across systems. Tracks completion and escalates blockers.', tools: ['Rule Engine','API Tool','Email Tool'] },
@@ -28,6 +30,7 @@ function ToolChip({ label }) {
 }
 
 function UserWorkflowCard({ wf }) {
+  const { isAdmin } = useAuth()
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm hover:border-blue-300 transition-colors flex flex-col">
       <div className="flex items-start justify-between mb-2">
@@ -49,16 +52,17 @@ function UserWorkflowCard({ wf }) {
         >
           <Play className="w-4 h-4" /> Run Now
         </button>
-        <button
-          onClick={() => {
-            // navigate to builder for this workflow
-            const url = `/workflows/builder?wf=${encodeURIComponent(wf.name)}`;
-            window.location.href = url;
-          }}
-          className="flex items-center gap-1.5 px-3.5 py-2 border border-gray-200 hover:border-blue-300 text-sm font-semibold text-gray-700 hover:text-blue-600 rounded-lg transition-colors"
-        >
-          Configure <ArrowRight className="w-3.5 h-3.5" />
-        </button>
+        {isAdmin && (
+          <button
+            onClick={() => {
+              const url = `/workflows/builder?wf=${encodeURIComponent(wf.name)}`;
+              window.location.href = url;
+            }}
+            className="flex items-center gap-1.5 px-3.5 py-2 border border-gray-200 hover:border-blue-300 text-sm font-semibold text-gray-700 hover:text-blue-600 rounded-lg transition-colors"
+          >
+            Configure <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
     </div>
   );
@@ -90,7 +94,7 @@ function TemplateCard({ template, onUse }) {
 
 export default function WorkflowLibrary() {
   const navigate      = useNavigate()
-  const { api }       = useAuth()
+  const { api, isAdmin } = useAuth()
   const [category,    setCategory]    = useState('All')
   const [activeWfs,   setActiveWfs]   = useState([])
   const [loading,     setLoading]     = useState(true)
@@ -115,7 +119,19 @@ export default function WorkflowLibrary() {
   const filtered = category === 'All' ? REUSABLE_TEMPLATES : REUSABLE_TEMPLATES.filter(t => t.category === category)
 
   const handleUse = (template) => {
-    navigate('/workflows/builder')
+    if (template.id === 'product_launch_sprint') {
+      navigate('/workflows/product_launch')
+      return
+    }
+    if (template.id === 'email_summarizer' || template.id?.includes('email')) {
+      navigate('/workflows/email_summarizer')
+      return
+    }
+    if (isAdmin) {
+      navigate('/workflows/builder')
+    } else {
+      handleRunNow({ name: template.id, display_name: template.name })
+    }
   }
 
   const handleRunNow = (wf) => {
@@ -157,19 +173,23 @@ export default function WorkflowLibrary() {
           <h1 className="text-2xl font-bold text-gray-900">Workflow Library</h1>
           <p className="text-sm text-gray-500 mt-0.5">Start from proven templates or run active AI workflow pipelines</p>
         </div>
-        <button
-          onClick={() => navigate('/workflows/builder')}
-          className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm"
-        >
-          + Create Custom
-        </button>
-        <button
-          onClick={handlePrepareDemoData}
-          disabled={demoLoading}
-          className="ml-2 flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm"
-        >
-          {demoLoading ? 'Preparing...' : 'Prepare Demo Data'}
-        </button>
+        <div className="flex items-center gap-2">
+          {isAdmin && (
+            <button
+              onClick={() => navigate('/workflows/builder')}
+              className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm"
+            >
+              + Create Custom
+            </button>
+          )}
+          <button
+            onClick={handlePrepareDemoData}
+            disabled={demoLoading}
+            className="flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm"
+          >
+            {demoLoading ? 'Preparing...' : 'Prepare Demo Data'}
+          </button>
+        </div>
       </div>
 
       {demoData && demoData.length > 0 && (

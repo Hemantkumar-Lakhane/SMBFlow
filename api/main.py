@@ -193,7 +193,7 @@ async def lifespan(app: FastAPI):
     log.info("SMBFlow API stopped")
 
 
-from api.routers import connections, reviews, medical_tourism
+from api.routers import connections, reviews, medical_tourism, product_launch
 
 app = FastAPI(
     title="SMBFlow API v3",
@@ -205,6 +205,8 @@ app = FastAPI(
 app.include_router(connections.router)
 app.include_router(reviews.router)
 app.include_router(medical_tourism.router)
+app.include_router(product_launch.router)
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -1255,10 +1257,27 @@ async def list_tenants(
 ):
     filter_id = get_tenant_filter(current_user)
     tenants = await crud.list_tenants(db, tenant_id_filter=filter_id)
-    return [
-        {"id": str(t.id), "name": t.name, "industry": t.industry, "active": t.active}
-        for t in tenants
-    ]
+    instances = await crud.list_workflow_instances(db, limit=1000)
+    users = await crud.list_users(db)
+
+    res = []
+    for t in tenants:
+        tid_str = str(t.id)
+        t_users = [u for u in users if str(u.tenant_id or "") == tid_str]
+        t_runs = [i for i in instances if str(i.tenant_id or "") == tid_str]
+        t_cost = sum((i.total_cost_usd or 0) for i in t_runs)
+        res.append({
+            "id": tid_str,
+            "name": t.name,
+            "industry": t.industry,
+            "active": t.active,
+            "config": t.config,
+            "user_count": len(t_users),
+            "run_count": len(t_runs),
+            "total_cost_usd": round(t_cost, 4),
+            "created_at": t.created_at.isoformat() if hasattr(t, "created_at") and t.created_at else None,
+        })
+    return res
 
 
 @app.post("/api/v1/tenants", tags=["Tenants"])

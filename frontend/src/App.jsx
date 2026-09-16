@@ -36,6 +36,7 @@ import ConnectionsPage from './pages/setup/ConnectionsPage'
 import CasesPage from './pages/medical/CasesPage'
 
 import EmailSummarizerPage from './pages/client/EmailSummarizerPage'
+import ProductLaunchPage from './pages/client/ProductLaunchPage'
 
 // Client — new Figma-matched pages
 import Dashboard          from './pages/client/Dashboard'
@@ -153,27 +154,31 @@ function AppRoutes() {
       <Route path="/workflows"                  element={<Wrap><WorkflowsPage /></Wrap>} />
       <Route path="/workflows/email_summarizer" element={<Wrap><EmailSummarizerPage /></Wrap>} />
       <Route path="/email-summarizer"           element={<Wrap><EmailSummarizerPage /></Wrap>} />
+      <Route path="/workflows/product_launch"   element={<Wrap><ProductLaunchPage /></Wrap>} />
+      <Route path="/workflows/product_launch_sprint" element={<Wrap><ProductLaunchPage /></Wrap>} />
+      <Route path="/product-launch"             element={<Wrap><ProductLaunchPage /></Wrap>} />
+
 
       {/* Configuration */}
       <Route path="/workflow-library" element={<Wrap><WorkflowLibrary /></Wrap>} />
-      <Route path="/ai-engine"        element={<Wrap><AIEngine /></Wrap>} />
+      <Route path="/ai-engine"        element={<Wrap adminOnly><AIEngine /></Wrap>} />
 
       {/* Settings */}
       <Route path="/settings/general"      element={<Wrap><GeneralSettings /></Wrap>} />
-      <Route path="/settings/ai-engine"    element={<Wrap><AIEngineSettings /></Wrap>} />
+      <Route path="/settings/ai-engine"    element={<Wrap adminOnly><AIEngineSettings /></Wrap>} />
       <Route path="/settings/integrations" element={<Wrap><ConnectionsPage /></Wrap>} />
       <Route path="/budget"                element={<Wrap><BudgetPage /></Wrap>} />
       <Route path="/evidence"              element={<Wrap><EvidencePage /></Wrap>} />
 
-      {/* Legacy routes kept working */}
-      <Route path="/workflows/builder"     element={<Wrap><WorkflowBuilder /></Wrap>} />
+      {/* Legacy / technical routes kept working for admins only */}
+      <Route path="/workflows/builder"     element={<Wrap adminOnly><WorkflowBuilder /></Wrap>} />
       <Route path="/workflows/:runId"      element={<Wrap><WorkflowDetail /></Wrap>} />
-      <Route path="/models"                element={<Wrap><ModelSettings /></Wrap>} />
-      <Route path="/tools"                 element={<Wrap><ToolsPage /></Wrap>} />
+      <Route path="/models"                element={<Wrap adminOnly><ModelSettings /></Wrap>} />
+      <Route path="/tools"                 element={<Wrap adminOnly><ToolsPage /></Wrap>} />
       <Route path="/config"                element={<Wrap><GeneralSettings /></Wrap>} />
-      <Route path="/prompts"               element={<Wrap><PromptStudio /></Wrap>} />
+      <Route path="/prompts"               element={<Wrap adminOnly><PromptStudio /></Wrap>} />
       <Route path="/email-queue"           element={<Wrap><EmailQueuePage /></Wrap>} />
-      <Route path="/patterns"              element={<Wrap><PatternsPage /></Wrap>} />
+      <Route path="/patterns"              element={<Wrap adminOnly><PatternsPage /></Wrap>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
