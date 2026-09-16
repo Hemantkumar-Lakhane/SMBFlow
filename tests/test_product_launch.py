@@ -63,15 +63,32 @@ class MockAsyncSession:
         return self.store.get(str(obj_id))
 
     async def execute(self, stmt):
-        # Mock result filtering for workflow instances, approval items, and tools
         mock_res = MagicMock()
         items = list(self.store.values())
-        
-        # Filter if applicable
+
+        target_model = None
+        if hasattr(stmt, "column_descriptions") and stmt.column_descriptions:
+            target_model = stmt.column_descriptions[0].get("type")
+
+        if target_model and isinstance(target_model, type):
+            items = [x for x in items if isinstance(x, target_model)]
+
+        # Filter items by SQLAlchemy _where_criteria if present
+        if hasattr(stmt, "_where_criteria") and stmt._where_criteria:
+            for crit in stmt._where_criteria:
+                try:
+                    if hasattr(crit, "right") and hasattr(crit.right, "value"):
+                        val = crit.right.value
+                        if hasattr(crit, "left") and hasattr(crit.left, "key"):
+                            key = crit.left.key
+                            items = [x for x in items if hasattr(x, key) and getattr(x, key) == val]
+                except Exception:
+                    pass
+
         scalars_mock = MagicMock()
         scalars_mock.all.return_value = items
         scalars_mock.first.return_value = items[0] if items else None
-        
+
         mock_res.scalars.return_value = scalars_mock
         mock_res.scalar_one_or_none.return_value = items[0] if items else None
         return mock_res
@@ -564,6 +581,383 @@ async def test_campaign_visual_failed_generation(mock_db):
         assert "Gemini API 404" in gen_resp["visual"]["error"]
         assert gen_resp["posts"][0]["visual_status"] == "failed"
         assert gen_resp["posts"][0]["generated_asset_url"] is None
+
+
+@pytest.mark.asyncio
+async def test_schedule_product_launch_post(mock_db):
+    """Verify scheduling a post updates payload to status='Scheduled', updates date/time/timezone, and logs AuditEvent."""
+    from api.routers.product_launch import schedule_product_launch_post, SchedulePostRequest
+
+    org_uuid = uuid.UUID(TEST_ORG_ID)
+    approval_id = uuid.uuid4()
+    inst_id = uuid.uuid4()
+
+    appr = ApprovalItem(
+        id=approval_id,
+        instance_id=inst_id,
+        organization_id=org_uuid,
+        review_type="product_launch_post",
+        reason="Campaign post requires scheduling",
+        context_brief="TaskFlow Pro - LinkedIn",
+        payload={
+            "post_id": "li-1",
+            "platform": "LinkedIn",
+            "dateStr": "Wed 1",
+            "timeStr": "9:00 AM",
+            "timezone": "America/New_York",
+            "post_status": "Approved"
+        },
+        status="approved",
+        created_at=datetime.utcnow(),
+    )
+    mock_db.add(appr)
+
+    wf_inst = WorkflowInstance(
+        id=inst_id,
+        organization_id=org_uuid,
+        workflow_name="product_launch_sprint",
+        status=WorkflowStatus.ESCALATED.value,
+        context={
+            "brief": {"productName": "TaskFlow Pro"},
+            "posts": [
+                {"id": "li-1", "approval_id": str(approval_id), "platform": "LinkedIn", "status": "Approved"}
+            ]
+        },
+        started_at=datetime.utcnow()
+    )
+    mock_db.add(wf_inst)
+
+    sched_req = SchedulePostRequest(
+        scheduled_date="2026-10-05",
+        scheduled_time="10:30 AM",
+        timezone="America/Los_Angeles",
+        platform="LinkedIn"
+    )
+
+    resp = await schedule_product_launch_post(str(approval_id), req=sched_req, db=mock_db, current_user=MOCK_USER)
+    assert resp["status"] == "Scheduled"
+    assert resp["post_status"] == "Scheduled"
+    assert resp["payload"]["dateStr"] == "2026-10-05"
+    assert resp["payload"]["timeStr"] == "10:30 AM"
+    assert resp["payload"]["timezone"] == "America/Los_Angeles"
+
+    # Verify AuditEvent written to DB
+    audit_evt = next((o for o in mock_db.added if isinstance(o, AuditEvent) and o.action == "product_launch_post_scheduled"), None)
+    assert audit_evt is not None
+    assert audit_evt.metadata_["internal_scheduling_only"] is True
+
+
+@pytest.mark.asyncio
+async def test_get_product_launch_campaign_rehydration_and_usage(mock_db):
+    """Verify fetching campaign re-hydrates post status from ApprovalItem and computes usage summary from AgentRunRecords."""
+    from api.routers.product_launch import get_product_launch_campaign
+
+    org_uuid = uuid.UUID(TEST_ORG_ID)
+    inst_id = uuid.uuid4()
+    appr_id_1 = uuid.uuid4()
+    appr_id_2 = uuid.uuid4()
+
+    # 2 ApprovalItems: 1 Approved, 1 Scheduled
+    appr1 = ApprovalItem(
+        id=appr_id_1,
+        instance_id=inst_id,
+        organization_id=org_uuid,
+        review_type="product_launch_post",
+        payload={"post_id": "li-1", "platform": "LinkedIn", "post_status": "Approved"},
+        status="approved",
+        created_at=datetime.utcnow(),
+    )
+    appr2 = ApprovalItem(
+        id=appr_id_2,
+        instance_id=inst_id,
+        organization_id=org_uuid,
+        review_type="product_launch_post",
+        payload={"post_id": "x-1", "platform": "X", "post_status": "Scheduled", "dateStr": "2026-10-02", "timeStr": "2:00 PM"},
+        status="approved",
+        created_at=datetime.utcnow(),
+    )
+    mock_db.add(appr1)
+    mock_db.add(appr2)
+
+    wf_inst = WorkflowInstance(
+        id=inst_id,
+        organization_id=org_uuid,
+        workflow_name="product_launch_sprint",
+        status=WorkflowStatus.ESCALATED.value,
+        context={
+            "brief": {"productName": "TaskFlow Pro"},
+            "posts": [
+                {"id": "li-1", "approval_id": str(appr_id_1), "platform": "LinkedIn", "status": "Draft"},
+                {"id": "x-1", "approval_id": str(appr_id_2), "platform": "X", "status": "Draft"}
+            ]
+        },
+        started_at=datetime.utcnow()
+    )
+    mock_db.add(wf_inst)
+
+    # 2 AgentRunRecords: 1 LLM drafting, 1 Image router
+    run1 = AgentRunRecord(
+        id=uuid.uuid4(),
+        instance_id=inst_id,
+        node_id="draft_assets",
+        agent_capability="drafting_agent",
+        status="success",
+        tokens_in=1200,
+        tokens_out=800,
+        cost_usd=0.005,
+        completed_at=datetime.utcnow()
+    )
+    run2 = AgentRunRecord(
+        id=uuid.uuid4(),
+        instance_id=inst_id,
+        node_id="image_generation",
+        agent_capability="image_router",
+        status="success",
+        tokens_in=50,
+        tokens_out=100,
+        cost_usd=0.02,
+        completed_at=datetime.utcnow()
+    )
+    mock_db.add(run1)
+    mock_db.add(run2)
+
+    resp = await get_product_launch_campaign(str(inst_id), db=mock_db, current_user=MOCK_USER)
+    assert resp["instance_id"] == str(inst_id)
+    assert len(resp["posts"]) == 2
+
+    # Verify post status rehydrated correctly
+    post_li = next(p for p in resp["posts"] if p["id"] == "li-1")
+    post_x = next(p for p in resp["posts"] if p["id"] == "x-1")
+    assert post_li["status"] == "Approved"
+    assert post_x["status"] == "Scheduled"
+    assert post_x["dateStr"] == "2026-10-02"
+
+    # Verify usage summary computation
+    usage = resp["usage_summary"]
+    assert usage["tokens_in"] == 1250
+    assert usage["tokens_out"] == 900
+    assert usage["total_tokens"] == 2150
+    assert usage["llm_calls_count"] == 1
+    assert usage["image_generations_count"] == 1
+    assert usage["total_cost_usd"] == 0.025
+
+
+@pytest.mark.asyncio
+async def test_get_campaign_org_isolation(mock_db):
+    """Verify attempting to fetch campaign from another organization raises 404/Access Denied."""
+    from api.routers.product_launch import get_product_launch_campaign
+
+    other_org_uuid = uuid.uuid4()
+    inst_id = uuid.uuid4()
+
+    wf_inst = WorkflowInstance(
+        id=inst_id,
+        organization_id=other_org_uuid, # Different org!
+        workflow_name="product_launch_sprint",
+        status=WorkflowStatus.ESCALATED.value,
+        context={"brief": {"productName": "Secret Competitor Product"}},
+        started_at=datetime.utcnow()
+    )
+    mock_db.add(wf_inst)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await get_product_launch_campaign(str(inst_id), db=mock_db, current_user=MOCK_USER)
+    assert exc_info.value.status_code == 404
+    assert "not found or access denied" in exc_info.value.detail
+
+
+@pytest.mark.asyncio
+async def test_image_router_gemini_success_no_fallback():
+    """Verify that when Gemini succeeds, Pollinations fallback is NOT called."""
+    from core.image_router import ImageRouter
+
+    router = ImageRouter()
+
+    mock_gemini_success = {
+        "status": "generated",
+        "generated_asset_url": "data:image/png;base64,gemini_image_data",
+        "storage_path": "/path/to/gemini.png",
+        "generation_model": "gemini-3.1-flash-image",
+        "provider": "google_genai"
+    }
+
+    with patch.object(router, "_generate_gemini", new_callable=AsyncMock) as mock_gem, \
+         patch.object(router, "_generate_pollinations", new_callable=AsyncMock) as mock_poll:
+        
+        mock_gem.return_value = mock_gemini_success
+
+        res = await router.generate(
+            prompt="Product hero graphic",
+            visual_role="Product Hero",
+            aspect_ratio="16:9"
+        )
+
+        assert res["status"] == "generated"
+        assert res["provider"] == "google_genai"
+        assert res["generated_asset_url"] == "data:image/png;base64,gemini_image_data"
+        mock_gem.assert_called_once()
+        mock_poll.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_image_router_gemini_quota_error_pollinations_fallback_success():
+    """Verify that when Gemini returns 429 / quota error, Pollinations fallback is called ONCE and succeeds."""
+    from core.image_router import ImageRouter
+
+    router = ImageRouter()
+
+    mock_gemini_failure = {
+        "status": "failed",
+        "generated_asset_url": None,
+        "error": "Gemini 429 Quota Exceeded",
+        "generation_model": "gemini-3.1-flash-image",
+        "provider": "google_genai"
+    }
+
+    mock_pollinations_success = {
+        "status": "generated",
+        "generated_asset_url": "data:image/png;base64,pollinations_image_data",
+        "storage_path": "/path/to/pollinations.png",
+        "generation_model": "flux",
+        "provider": "pollinations"
+    }
+
+    with patch.object(router, "_generate_gemini", new_callable=AsyncMock) as mock_gem, \
+         patch.object(router, "_generate_pollinations", new_callable=AsyncMock) as mock_poll, \
+         patch.dict("os.environ", {"GEMINI_API_KEY": "test_gemini_key", "POLLINATIONS_API_KEY": "test_poll_key"}):
+        
+        mock_gem.return_value = mock_gemini_failure
+        mock_poll.return_value = mock_pollinations_success
+
+        res = await router.generate(
+            prompt="Product hero graphic",
+            visual_role="Product Hero",
+            aspect_ratio="16:9"
+        )
+
+        assert res["status"] == "generated"
+        assert res["provider"] == "pollinations"
+        assert res["generated_asset_url"] == "data:image/png;base64,pollinations_image_data"
+        assert res.get("fallback_used") is True
+        mock_gem.assert_called_once()
+        mock_poll.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_image_router_both_providers_fail():
+    """Verify that when both Gemini and Pollinations fail, correct generation_unavailable/failed status is returned."""
+    from core.image_router import ImageRouter
+
+    router = ImageRouter()
+
+    mock_gemini_failure = {
+        "status": "failed",
+        "generated_asset_url": None,
+        "error": "Gemini 429 Quota Exceeded",
+        "provider": "google_genai"
+    }
+
+    mock_pollinations_failure = {
+        "status": "failed",
+        "generated_asset_url": None,
+        "error": "Pollinations HTTP 503 Provider Unavailable",
+        "provider": "pollinations"
+    }
+
+    with patch.object(router, "_generate_gemini", new_callable=AsyncMock) as mock_gem, \
+         patch.object(router, "_generate_pollinations", new_callable=AsyncMock) as mock_poll, \
+         patch.dict("os.environ", {"GEMINI_API_KEY": "test_gemini_key", "POLLINATIONS_API_KEY": "test_poll_key"}):
+
+        mock_gem.return_value = mock_gemini_failure
+        mock_poll.return_value = mock_pollinations_failure
+
+        res = await router.generate(
+            prompt="Product hero graphic",
+            visual_role="Product Hero",
+            aspect_ratio="16:9"
+        )
+
+        assert res["status"] == "failed"
+        assert res["generated_asset_url"] is None
+        assert "Gemini" in res["error"] and "Pollinations" in res["error"]
+        assert "test_poll_key" not in res["error"]  # Key Privacy Check!
+        assert "test_gemini_key" not in res["error"]
+        mock_gem.assert_called_once()
+        mock_poll.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_visual_brief_builder_verbatim_product_name():
+    """Verify that VisualBriefBuilder preserves exact product name verbatim without paraphrasing."""
+    from core.visual_brief_builder import VisualBriefBuilder
+
+    product_brief = {
+        "productName": "NovaBooks AI Enterprise",
+        "shortDescription": "Autonomous bookkeeping for enterprise accounting firms",
+        "keyFeatures": ["Bank Reconciliation", "GST Audit Helper"],
+        "topBenefit1": "Saves 10+ hours per week",
+        "targetAudience": "Enterprise CFOs"
+    }
+
+    brief = VisualBriefBuilder.build_brief(
+        product_brief=product_brief,
+        visual_role="Product Hero",
+        platform="LinkedIn",
+        aspect_ratio="16:9"
+    )
+
+    assert brief["product"]["name"] == "NovaBooks AI Enterprise"
+    assert brief["grounded_facts"]["exact_text"] == ["NovaBooks AI Enterprise"]
+    assert "NovaBooks AI Enterprise" in brief["formatted_grounded_prompt"]
+    assert "Do not misspell, alter, or paraphrase product name 'NovaBooks AI Enterprise'" in brief["negative_constraints"][0]
+
+
+@pytest.mark.asyncio
+async def test_visual_brief_builder_source_priority():
+    """Verify source priority: approved user input -> document facts -> visual direction."""
+    from core.visual_brief_builder import VisualBriefBuilder
+
+    product_brief = {
+        "productName": "TaskFlow Pro",
+        "shortDescription": "User approved description",
+        "keyFeatures": ["User Feature 1"],
+        "document_text": "Extracted Document Fact 1: Reduces accounting overhead by 40%.\nExtracted Document Fact 2: Multi-currency support."
+    }
+
+    brief = VisualBriefBuilder.build_brief(
+        product_brief=product_brief,
+        visual_role="Workflow / Feature",
+        platform="X",
+        aspect_ratio="16:9",
+        visual_prompt="Generated visual prompt direction"
+    )
+
+    assert brief["product"]["name"] == "TaskFlow Pro"
+    assert brief["product"]["short_description"] == "User approved description"
+    assert "uploaded_document" in brief["source_fields"]
+    assert len(brief["grounded_facts"]["document_facts"]) == 2
+    assert "Extracted Document Fact 1" in brief["grounded_facts"]["document_facts"][0]
+    assert brief["visual_direction"]["raw_direction"] == "Generated visual prompt direction"
+
+
+@pytest.mark.asyncio
+async def test_visual_brief_builder_role_and_platform_composition():
+    """Verify visual role and platform influence visual composition instructions."""
+    from core.visual_brief_builder import VisualBriefBuilder
+
+    brief = VisualBriefBuilder.build_brief(
+        product_brief={"productName": "CloudScale Engine"},
+        visual_role="Workflow / Feature",
+        platform="Instagram",
+        aspect_ratio="1:1"
+    )
+
+    assert brief["visual_meta"]["platform"] == "Instagram"
+    assert brief["visual_meta"]["aspect_ratio"] == "1:1"
+    assert "Clean modern UI interface graphic for Instagram (1:1)" in brief["visual_direction"]["composition"]
+
+
+
 
 
 

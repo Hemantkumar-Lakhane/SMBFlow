@@ -212,6 +212,14 @@ export default function ProductLaunchPage() {
     },
   ])
   const [isGeneratingVisual, setIsGeneratingVisual] = useState({})
+  const [usageSummary, setUsageSummary] = useState(null)
+  const [toastMessage, setToastMessage] = useState(null)
+  const [editingScheduleId, setEditingScheduleId] = useState(null)
+
+  const showToast = (msg) => {
+    setToastMessage(msg)
+    setTimeout(() => setToastMessage(null), 3500)
+  }
 
   // Load existing draft from backend on mount
   useEffect(() => {
@@ -228,6 +236,21 @@ export default function ProductLaunchPage() {
     }
     loadDraft()
   }, [api])
+
+  const loadCampaignInstance = async (instanceId) => {
+    if (!api || !instanceId) return
+    try {
+      const resp = await api.get(`/workflows/product-launch/campaign/${instanceId}`)
+      if (resp) {
+        if (resp.visuals) setCampaignVisuals(resp.visuals)
+        if (resp.posts) setPosts(resp.posts.map(p => ({ ...p, status: p.status === 'Needs review' ? 'Draft' : p.status })))
+        if (resp.usage_summary) setUsageSummary(resp.usage_summary)
+        if (resp.brief) setFormData(prev => ({ ...prev, ...resp.brief }))
+      }
+    } catch (err) {
+      console.warn('Failed to load campaign instance from server', err)
+    }
+  }
 
   // Handler for form field changes — updates field value and clears AI-filled badge on manual edit
   const handleChange = (field, value) => {
@@ -552,9 +575,13 @@ export default function ProductLaunchPage() {
         clearInterval(stepInterval)
         setBuildingStep(5)
         if (resp) {
-          if (resp.instance_id) setCampaignInstanceId(resp.instance_id)
-          if (resp.visuals) setCampaignVisuals(resp.visuals)
-          if (resp.posts) setPosts(resp.posts)
+          if (resp.instance_id) {
+            setCampaignInstanceId(resp.instance_id)
+            await loadCampaignInstance(resp.instance_id)
+          } else {
+            if (resp.visuals) setCampaignVisuals(resp.visuals)
+            if (resp.posts) setPosts(resp.posts.map(p => ({ ...p, status: p.status === 'Needs review' ? 'Draft' : p.status })))
+          }
           setViewMode('campaign')
           return
         }
@@ -594,7 +621,7 @@ export default function ProductLaunchPage() {
         timeStr: '9:00 AM',
         caption: `Excited to announce ${name} — ${formData.shortDescription || 'built for small businesses, not enterprise departments'}. ${formData.launchDescription || 'Designed to give your team clarity without the enterprise bloat.'}`,
         hashtags: ['#ProductLaunch', '#SmallBusiness', '#ProjectManagement', `#${name.replace(/\s+/g, '')}`],
-        status: 'Needs review',
+        status: 'Draft',
         actionLabel: cta,
       },
       {
@@ -630,7 +657,7 @@ export default function ProductLaunchPage() {
         timeStr: '10:00 AM',
         caption: `Introducing ${name} ✨ ${formData.shortDescription || 'Project management that finally makes sense for small teams'}. Link in bio!`,
         hashtags: [`#${name.replace(/\s+/g, '')}`, '#ProductLaunch', '#SmallBusiness'],
-        status: 'Needs review',
+        status: 'Draft',
         actionLabel: cta,
       },
       {
@@ -666,7 +693,7 @@ export default function ProductLaunchPage() {
         timeStr: '9:00 AM',
         caption: `Launching ${name} today — ${formData.shortDescription || 'project management for small teams'}. Free trial, no credit card required.`,
         hashtags: ['#ProductLaunch', `#${name.replace(/\s+/g, '')}`, '#BuildInPublic'],
-        status: 'Needs review',
+        status: 'Draft',
         actionLabel: cta,
       },
       {
@@ -702,7 +729,7 @@ export default function ProductLaunchPage() {
         timeStr: '11:00 AM',
         caption: `We built ${name} because we kept seeing the same problem: great teams held back by disorganized work. Today we're excited to share our solution!`,
         hashtags: [`#${name.replace(/\s+/g, '')}`, '#SmallBusiness', '#ProductLaunch'],
-        status: 'Needs review',
+        status: 'Draft',
         actionLabel: cta,
       },
       {
@@ -734,32 +761,145 @@ export default function ProductLaunchPage() {
     setPosts(generatedPosts)
   }
 
-  // Toggle post status (Approve / Needs review)
-  const togglePostApproval = async (postId) => {
+  // Manual publishing & post action handlers
+  const handleCopyCaption = (post) => {
+    const textToCopy = `${post.caption || ''}\n\n${(post.hashtags || []).join(' ')}`
+    navigator.clipboard.writeText(textToCopy)
+    showToast('Caption & hashtags copied to clipboard!')
+  }
+
+  const handleOpenPlatform = (post) => {
+    if (!post) return
+
+    // 1. Build text to share (caption + hashtags)
+    const captionText = post.caption || ''
+    const hashtagsText = Array.isArray(post.hashtags)
+      ? post.hashtags.join(' ')
+      : (post.hashtags || '')
+    const fullText = hashtagsText ? `${captionText}\n\n${hashtagsText}` : captionText
+
+    // 2. Automatically copy caption & hashtags to clipboard for instant pasting
+    try {
+      navigator.clipboard.writeText(fullText)
+    } catch (_) {}
+
+    // 3. Find visual asset URL if present & download visual image so it's ready in downloads folder
+    const vis = campaignVisuals.find(v => v.visual_id === post.visual_id)
+    const assetUrl = post.generated_asset_url || vis?.generated_asset_url
+
+    if (assetUrl) {
+      handleDownloadVisual(assetUrl, `${post.platform || 'post'}_visual`)
+    }
+
+    // 4. Construct platform-specific pre-filled share intent URL
+    const platformName = post.platform || 'LinkedIn'
+    const encodedText = encodeURIComponent(fullText)
+
+    let targetUrl = ''
+    if (platformName === 'LinkedIn') {
+      targetUrl = `https://www.linkedin.com/feed/?shareActive=true&text=${encodedText}`
+    } else if (platformName === 'X' || platformName === 'Twitter') {
+      targetUrl = `https://x.com/intent/post?text=${encodedText}`
+    } else if (platformName === 'Facebook') {
+      targetUrl = `https://www.facebook.com/sharer/sharer.php?quote=${encodedText}`
+    } else if (platformName === 'Instagram') {
+      targetUrl = `https://www.instagram.com/`
+    } else {
+      targetUrl = `https://www.linkedin.com/feed/?shareActive=true&text=${encodedText}`
+    }
+
+    // 5. Open social platform pre-filled URL in a new window/tab
+    window.open(targetUrl, '_blank', 'noopener,noreferrer')
+
+    // 6. Show clean toast feedback
+    if (assetUrl) {
+      showToast(`Opening ${platformName}! Caption copied to clipboard & image downloaded for upload.`)
+    } else {
+      showToast(`Opening ${platformName} with caption pre-filled & copied to clipboard!`)
+    }
+  }
+
+  const handleDownloadVisual = (assetUrl, title = 'visual_asset') => {
+    if (!assetUrl) return
+    const link = document.createElement('a')
+    link.href = assetUrl
+    link.download = `${title.replace(/\s+/g, '_')}.png`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
+  const handleApprovePost = async (postId) => {
     const targetPost = posts.find(p => p.id === postId)
-    const approvalId = targetPost?.approval_id || targetPost?.id
+    if (!targetPost) return
+    const approvalId = targetPost.approval_id || targetPost.id
 
-    const newStatus = targetPost?.status === 'Approved' ? 'Needs review' : 'Approved'
+    const newStatus = targetPost.status === 'Approved' ? 'Draft' : 'Approved'
 
-    // Update state locally
-    setPosts(prev => prev.map(p => {
-      if (p.id === postId) {
-        return { ...p, status: newStatus }
-      }
-      return p
-    }))
+    setPosts(prev => prev.map(p => p.id === postId ? { ...p, status: newStatus } : p))
 
     if (api && approvalId) {
       try {
         if (newStatus === 'Approved') {
           await api.post(`/workflows/product-launch/posts/${approvalId}/approve`, {})
+          showToast('Post approved!')
         } else {
           await api.post(`/workflows/product-launch/posts/${approvalId}/reject`, {})
+          showToast('Post returned to Draft.')
         }
       } catch (err) {
-        console.warn('Backend approval record call skipped/failed (non-fatal)', err)
+        console.warn('Backend approval update failed', err)
       }
     }
+  }
+
+  const handleSchedulePost = async (postId, dateOverride, timeOverride, tzOverride, platOverride) => {
+    const targetPost = posts.find(p => p.id === postId)
+    if (!targetPost) return
+    const approvalId = targetPost.approval_id || targetPost.id
+
+    const dateStr = dateOverride || targetPost.dateStr || 'Wed 1'
+    const timeStr = timeOverride || targetPost.timeStr || '9:00 AM'
+    const timezone = tzOverride || targetPost.timezone || formData.timezone || getDetectedTimezone()
+    const platform = platOverride || targetPost.platform || 'LinkedIn'
+    const scheduledTime = `${dateStr} - ${timeStr}`
+
+    setPosts(prev => prev.map(p => p.id === postId ? {
+      ...p,
+      status: 'Scheduled',
+      dateStr,
+      timeStr,
+      timezone,
+      platform,
+      scheduledTime,
+    } : p))
+
+    showToast(`Post scheduled inside SMBFlow for ${dateStr} ${timeStr}!`)
+
+    if (api && approvalId) {
+      try {
+        await api.post(`/workflows/product-launch/posts/${approvalId}/schedule`, {
+          scheduled_date: dateStr,
+          scheduled_time: timeStr,
+          timezone,
+          platform,
+        })
+      } catch (err) {
+        console.warn('Backend scheduling update failed', err)
+      }
+    }
+  }
+
+  const handleScheduleAllApproved = async () => {
+    const postsToSchedule = posts.filter(p => p.status === 'Approved' || p.status === 'Draft')
+    for (const p of postsToSchedule) {
+      await handleSchedulePost(p.id, p.dateStr, p.timeStr, p.timezone, p.platform)
+    }
+    showToast('All posts scheduled in SMBFlow calendar!')
+  }
+
+  const togglePostApproval = (postId) => {
+    handleApprovePost(postId)
   }
 
   // Export campaign schedule to CSV
@@ -1934,7 +2074,7 @@ export default function ProductLaunchPage() {
                     <div className="w-5 h-5 rounded-full border border-slate-300 shrink-0" />
                   )}
                   <span className={`text-xs font-semibold ${
-                    isCompleted ? 'text-slate-800' : isActive ? 'text-blue-600 font-bold' : 'text-slate-400'
+                    isCompleted ? 'text-slate-900' : isActive ? 'text-blue-700 font-bold' : 'text-slate-400'
                   }`}>
                     {label}
                   </span>
@@ -1942,10 +2082,6 @@ export default function ProductLaunchPage() {
               )
             })}
           </div>
-
-          <p className="text-[11px] text-slate-400">
-            You can leave this page. Your campaign will be available when it's ready.
-          </p>
         </div>
       )}
 
@@ -1954,11 +2090,24 @@ export default function ProductLaunchPage() {
         <div className="max-w-5xl mx-auto space-y-6">
           {activeTab === 'overview' ? (
             <>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {/* COST & USAGE SUMMARY CARDS */}
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                 <StatCard label="Platforms" value={Object.values(formData.platforms).filter(p => p.selected).length} />
                 <StatCard label="Posts created" value={posts.length} />
                 <StatCard label="Core Visuals" value={campaignVisuals.length} />
-                <StatCard label="Launch date" value={formData.startDate || 'Oct 1'} />
+                <StatCard label="AI Tokens" value={usageSummary ? usageSummary.total_tokens.toLocaleString() : '0'} />
+                <StatCard label="Recorded Cost" value={usageSummary && usageSummary.total_cost_usd !== undefined ? `$${Number(usageSummary.total_cost_usd).toFixed(4)}` : '$0.00'} highlight />
+              </div>
+
+              {/* SOCIAL OAUTH DISCLAIMER BANNER */}
+              <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-200/90 text-amber-900 text-xs flex items-start gap-3 shadow-2xs">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <span className="font-bold block mb-0.5">SMBFlow Internal Scheduling Active</span>
+                  <p className="text-amber-800/90 text-[11px] leading-relaxed">
+                    Until social network OAuth connections (LinkedIn, Instagram, X) are implemented, posts set to <strong>Scheduled</strong> are managed within SMBFlow only and are not published externally. Use <strong>Open Platform</strong>, <strong>Copy Caption</strong>, and <strong>Download Visual</strong> to publish directly to your accounts.
+                  </p>
+                </div>
               </div>
 
               <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-2">
@@ -2025,14 +2174,13 @@ export default function ProductLaunchPage() {
                                 >
                                   <Edit3 className="w-4 h-4" />
                                 </button>
-                                <a
-                                  href={vis.generated_asset_url}
-                                  download={`${vis.visual_role.replace(/\s+/g, '_')}.svg`}
+                                <button
+                                  onClick={() => handleDownloadVisual(vis.generated_asset_url, vis.visual_role)}
                                   className="p-2 bg-white text-slate-900 rounded-lg text-xs font-bold hover:bg-slate-100"
                                   title="Download"
                                 >
                                   <Download className="w-4 h-4" />
-                                </a>
+                                </button>
                               </div>
                             </div>
                           ) : (
@@ -2130,6 +2278,13 @@ export default function ProductLaunchPage() {
                   </span>
                   <button
                     type="button"
+                    onClick={handleScheduleAllApproved}
+                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all shadow-xs flex items-center gap-1.5"
+                  >
+                    <CalendarIcon className="w-3.5 h-3.5" /> Schedule All Approved
+                  </button>
+                  <button
+                    type="button"
                     onClick={handleExportCampaign}
                     className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-all shadow-xs flex items-center gap-1.5"
                   >
@@ -2153,9 +2308,11 @@ export default function ProductLaunchPage() {
                             <img src={assetUrl} alt={post.category} className="w-full h-36 object-cover" />
                             <div className="absolute top-2 right-2">
                               <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full border ${
-                                post.status === 'Approved'
-                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200 shadow-xs'
-                                  : 'bg-amber-50 text-amber-700 border-amber-200 shadow-xs'
+                                post.status === 'Scheduled'
+                                  ? 'bg-blue-50 text-blue-700 border-blue-200 shadow-2xs'
+                                  : post.status === 'Approved'
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200 shadow-2xs'
+                                  : 'bg-amber-50 text-amber-700 border-amber-200 shadow-2xs'
                               }`}>
                                 {post.status}
                               </span>
@@ -2169,11 +2326,11 @@ export default function ProductLaunchPage() {
                                 <span className="text-xs font-bold text-slate-800">AI Visual Brief</span>
                               </div>
                               <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full border ${
-                                post.status === 'Approved'
+                                post.status === 'Scheduled'
+                                  ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                  : post.status === 'Approved'
                                   ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                  : post.status === 'Needs review'
-                                  ? 'bg-amber-50 text-amber-700 border-amber-200'
-                                  : 'bg-slate-100 text-slate-600 border-slate-200'
+                                  : 'bg-amber-50 text-amber-700 border-amber-200'
                               }`}>
                                 {post.status}
                               </span>
@@ -2203,7 +2360,7 @@ export default function ProductLaunchPage() {
                         <div className="p-4 space-y-2 flex-grow">
                           <div className="flex items-center justify-between text-[11px]">
                             <span className="font-bold uppercase tracking-wider text-slate-400">{post.category}</span>
-                            <span className="text-slate-400">{post.scheduledTime}</span>
+                            <span className="text-slate-400 font-semibold">{post.scheduledTime}</span>
                           </div>
 
                           <p className="text-xs text-slate-700 line-clamp-3 leading-relaxed">
@@ -2219,32 +2376,65 @@ export default function ProductLaunchPage() {
                           </div>
                         </div>
 
-                        <div className="p-3 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between gap-1">
-                          <button
-                            onClick={() => {
-                              setSelectedPostId(post.id)
-                              setViewMode('post-review')
-                            }}
-                            className="px-2.5 py-1 text-xs font-semibold text-slate-600 hover:text-slate-900 border border-slate-200 rounded-lg bg-white hover:bg-slate-50"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleGenerateVisual(post.visual_id || 'vis-hero-1')}
-                            className="px-2.5 py-1 text-xs font-semibold text-slate-600 hover:text-slate-900 border border-slate-200 rounded-lg bg-white hover:bg-slate-50"
-                          >
-                            Redo Visual
-                          </button>
-                          <button
-                            onClick={() => togglePostApproval(post.id)}
-                            className={`px-3 py-1 text-xs font-bold rounded-lg transition-colors ${
-                              post.status === 'Approved'
-                                ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                                : 'bg-emerald-600 text-white hover:bg-emerald-700'
-                            }`}
-                          >
-                            {post.status === 'Approved' ? '✓ Approved' : '✓ Approve'}
-                          </button>
+                        {/* MANUAL PUBLISHING & ACTION ROW */}
+                        <div className="p-2.5 bg-slate-50/70 border-t border-slate-100 flex flex-wrap items-center justify-between gap-1 text-xs">
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => {
+                                setSelectedPostId(post.id)
+                                setViewMode('post-review')
+                              }}
+                              className="px-2 py-1 text-[11px] font-semibold text-slate-600 hover:text-slate-900 border border-slate-200 rounded-lg bg-white hover:bg-slate-50"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleCopyCaption(post)}
+                              className="px-2 py-1 text-[11px] font-semibold text-slate-600 hover:text-slate-900 border border-slate-200 rounded-lg bg-white hover:bg-slate-50 flex items-center gap-1"
+                              title="Copy Caption"
+                            >
+                              Copy
+                            </button>
+                            <button
+                              onClick={() => handleOpenPlatform(post)}
+                              className="px-2 py-1 text-[11px] font-semibold text-blue-600 hover:text-blue-700 border border-blue-200 rounded-lg bg-white hover:bg-blue-50 flex items-center gap-1"
+                              title="Open platform with pre-filled caption & visual"
+                            >
+                              <ExternalLink className="w-3 h-3" /> Open
+                            </button>
+                            {assetUrl && (
+                              <button
+                                onClick={() => handleDownloadVisual(assetUrl, post.category)}
+                                className="p-1 text-slate-500 hover:text-slate-900 border border-slate-200 rounded-lg bg-white hover:bg-slate-50"
+                                title="Download Visual"
+                              >
+                                <Download className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => handleApprovePost(post.id)}
+                              className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-colors ${
+                                post.status === 'Approved'
+                                  ? 'bg-emerald-600 text-white'
+                                  : 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
+                              }`}
+                            >
+                              {post.status === 'Approved' ? '✓ Approved' : 'Approve'}
+                            </button>
+                            <button
+                              onClick={() => handleSchedulePost(post.id, post.dateStr, post.timeStr, post.timezone, post.platform)}
+                              className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-colors ${
+                                post.status === 'Scheduled'
+                                  ? 'bg-blue-600 text-white'
+                                  : 'bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100'
+                              }`}
+                            >
+                              {post.status === 'Scheduled' ? '📅 Scheduled' : 'Schedule'}
+                            </button>
+                          </div>
                         </div>
                       </div>
                     )
@@ -2561,6 +2751,13 @@ export default function ProductLaunchPage() {
           </div>
         </div>
       )}
+
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-xl border border-slate-700 text-xs font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-bottom-3">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
     </div>
   )
 }
@@ -2669,11 +2866,11 @@ function BriefRow({ label, value, isLink = false }) {
   )
 }
 
-function StatCard({ label, value }) {
+function StatCard({ label, value, highlight = false }) {
   return (
-    <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-xs">
+    <div className={`border p-4 rounded-2xl shadow-2xs ${highlight ? 'bg-blue-50/60 border-blue-200' : 'bg-white border-slate-200'}`}>
       <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-0.5">{label}</span>
-      <span className="text-2xl font-bold text-slate-900">{value}</span>
+      <span className={`text-2xl font-bold ${highlight ? 'text-blue-700' : 'text-slate-900'}`}>{value}</span>
     </div>
   )
 }

@@ -22,7 +22,6 @@ const ownerNav = [
     title: 'Configuration',
     items: [
       { label: 'Workflow Library', to: '/workflow-library', icon: BookOpen },
-      { label: 'AI Engine',        to: '/ai-engine',        icon: Bot },
       { label: 'Integrations',     to: '/integrations',     icon: Plug },
     ],
   },
@@ -30,7 +29,6 @@ const ownerNav = [
     title: 'Settings',
     items: [
       { label: 'General',          to: '/settings/general',       icon: Settings },
-      { label: 'AI Engine',        to: '/settings/ai-engine',     icon: Bot },
       { label: 'Budget & Billing', to: '/budget',                 icon: CreditCard },
       { label: 'Evidence',         to: '/evidence',               icon: FileSearch },
     ],

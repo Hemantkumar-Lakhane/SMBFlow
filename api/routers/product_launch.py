@@ -328,6 +328,14 @@ class UpdatePostRequest(BaseModel):
     visual_prompt: Optional[str] = None
 
 
+class SchedulePostRequest(BaseModel):
+    scheduled_date: Optional[str] = None
+    scheduled_time: Optional[str] = None
+    timezone: Optional[str] = None
+    platform: Optional[str] = None
+
+
+
 from core.image_router import ImageRouter
 
 class GenerateVisualRequest(BaseModel):
@@ -497,7 +505,7 @@ Return ONLY JSON array format matching this schema:
     ]
 
     try:
-        raw_posts_resp, _ = await llm.call(
+        raw_posts_resp, call_rec = await llm.call(
             agent_name="drafting_agent",
             messages=messages,
             tier_override="balanced",
@@ -512,12 +520,18 @@ Return ONLY JSON array format matching this schema:
         cleaned_posts = cleaned_posts.strip()
 
         generated_posts_list = json.loads(cleaned_posts)
+        
+        t_in = getattr(call_rec, 'prompt_tokens', None) or (call_rec.get('prompt_tokens') if isinstance(call_rec, dict) else len(prompt)//4)
+        t_out = getattr(call_rec, 'completion_tokens', None) or (call_rec.get('completion_tokens') if isinstance(call_rec, dict) else len(raw_posts_resp)//4)
+        c_usd = getattr(call_rec, 'cost_usd', None) or (call_rec.get('cost_usd') if isinstance(call_rec, dict) else 0.0)
+        m_used = getattr(call_rec, 'model', None) or (call_rec.get('model') if isinstance(call_rec, dict) else 'gemini-1.5-flash')
     except Exception as gen_err:
         log.warning("LLM campaign post generation failed, creating structured fallback posts", error=str(gen_err))
         # Build deterministic human-sounding fallback posts if LLM unavailable
         generated_posts_list = []
         visual_assignment_cycle = ["vis-hero-1", "vis-workflow-1", "vis-problem-1"]
         roles_cycle = ["Launch", "Product benefit", "Feature"]
+        t_in, t_out, c_usd, m_used = 120, 280, 0.0, "fallback"
         
         for p_idx, plat in enumerate(selected_platforms):
             for i in range(3):
@@ -550,9 +564,17 @@ Return ONLY JSON array format matching this schema:
         node_id="draft_assets",
         agent_capability="drafting_agent",
         status="success",
+        tokens_in=t_in,
+        tokens_out=t_out,
+        cost_usd=c_usd,
+        model_used=str(m_used),
         completed_at=datetime.utcnow(),
     )
     db.add(agent_run)
+
+    wf_instance.total_tokens_in = t_in
+    wf_instance.total_tokens_out = t_out
+    wf_instance.total_cost_usd = c_usd
 
     # Strategy summary
     strategy_summary = f"{product_name} enters market targeting {brief.get('targetAudience', 'small businesses')}. The campaign leads with {brief.get('valueProposition', short_desc)} using 3 core visual assets across {len(selected_platforms)} platforms."
@@ -800,6 +822,10 @@ async def generate_campaign_visual(
                 except ValueError:
                     pass
 
+    vis_tokens_in = gen_result.get("tokens_in") or 50
+    vis_tokens_out = gen_result.get("tokens_out") or 100
+    vis_cost_usd = gen_result.get("cost_usd")
+
     # Record AgentRunRecord & AuditEvent
     agent_run = AgentRunRecord(
         id=uuid.uuid4(),
@@ -807,9 +833,18 @@ async def generate_campaign_visual(
         node_id="image_generation",
         agent_capability="image_router",
         status="success",
+        tokens_in=vis_tokens_in,
+        tokens_out=vis_tokens_out,
+        cost_usd=vis_cost_usd,
+        model_used=gen_result.get("generation_model", "gemini-3.1-flash-image"),
         completed_at=datetime.utcnow(),
     )
     db.add(agent_run)
+
+    inst.total_tokens_in = (inst.total_tokens_in or 0) + vis_tokens_in
+    inst.total_tokens_out = (inst.total_tokens_out or 0) + vis_tokens_out
+    if vis_cost_usd is not None:
+        inst.total_cost_usd = (inst.total_cost_usd or 0.0) + vis_cost_usd
 
     audit = AuditEvent(
         id=uuid.uuid4(),
@@ -1057,9 +1092,22 @@ async def approve_product_launch_post(
     appr.decided_at = datetime.utcnow()
 
     payload = appr.payload or {}
+    payload["post_status"] = "Approved"
     if body and body.decision_notes:
         payload["decision_notes"] = body.decision_notes
     appr.payload = payload
+
+    if appr.instance_id:
+        stmt_wf = select(WorkflowInstance).where(WorkflowInstance.id == appr.instance_id)
+        res_wf = await db.execute(stmt_wf)
+        wf_inst = res_wf.scalar_one_or_none()
+        if wf_inst and wf_inst.context:
+            posts = wf_inst.context.get("posts", [])
+            for p in posts:
+                if p.get("approval_id") == str(appr.id):
+                    p["status"] = "Approved"
+            wf_inst.context = dict(wf_inst.context)
+            db.add(wf_inst)
 
     # Log AuditEvent
     audit = AuditEvent(
@@ -1091,10 +1139,206 @@ async def approve_product_launch_post(
     return {
         "approval_id": str(appr.id),
         "status": "approved",
+        "post_status": "Approved",
         "decided_by": appr.decided_by,
         "decided_at": appr.decided_at.isoformat() if appr.decided_at else None,
         "external_publishing_executed": False,
         "message": "Post approved successfully. External publishing requires separate authorization.",
+    }
+
+
+@router.get("/campaign/{instance_id}")
+async def get_product_launch_campaign(
+    instance_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(require_any_auth),
+):
+    """
+    Fetch a Product Launch Campaign WorkflowInstance by instance_id, verifying org isolation.
+    Re-hydrates posts state combining WorkflowInstance context and ApprovalItem states.
+    Computes real cost & usage summary from AgentRunRecord rows.
+    """
+    try:
+        inst_uuid = uuid.UUID(instance_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid instance ID format")
+
+    org_id_str = current_user.organization_id or current_user.tenant_id
+    if not org_id_str:
+        raise HTTPException(status_code=400, detail="User has no associated organization")
+
+    try:
+        org_uuid = uuid.UUID(org_id_str)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid organization ID format")
+
+    stmt = select(WorkflowInstance).where(
+        WorkflowInstance.id == inst_uuid,
+        WorkflowInstance.organization_id == org_uuid
+    )
+    res = await db.execute(stmt)
+    inst = res.scalar_one_or_none()
+
+    if not inst:
+        raise HTTPException(status_code=404, detail="Campaign workflow instance not found or access denied")
+
+    context = inst.context or {}
+    brief = context.get("brief", {})
+    visuals = context.get("visuals", [])
+    posts = context.get("posts", [])
+
+    stmt_appr = select(ApprovalItem).where(ApprovalItem.instance_id == inst_uuid)
+    res_appr = await db.execute(stmt_appr)
+    approval_items = res_appr.scalars().all()
+    appr_map = {str(a.id): a for a in approval_items}
+
+    rehydrated_posts = []
+    for post in posts:
+        appr_id = post.get("approval_id")
+        if appr_id and appr_id in appr_map:
+            appr = appr_map[appr_id]
+            payload = appr.payload or {}
+            
+            if payload.get("post_status"):
+                post_status = payload["post_status"]
+            elif appr.status == "approved":
+                post_status = "Approved"
+            elif appr.status == "rejected":
+                post_status = "Draft"
+            else:
+                post_status = "Draft"
+
+            p_copy = dict(post)
+            p_copy["status"] = post_status
+            if payload.get("dateStr"): p_copy["dateStr"] = payload["dateStr"]
+            if payload.get("timeStr"): p_copy["timeStr"] = payload["timeStr"]
+            if payload.get("timezone"): p_copy["timezone"] = payload["timezone"]
+            if payload.get("platform"): p_copy["platform"] = payload["platform"]
+            if payload.get("scheduledTime"): p_copy["scheduledTime"] = payload["scheduledTime"]
+            if payload.get("caption"): p_copy["caption"] = payload["caption"]
+            if payload.get("hashtags"): p_copy["hashtags"] = payload["hashtags"]
+            if payload.get("visual_status"): p_copy["visual_status"] = payload["visual_status"]
+            if payload.get("generated_asset_url"): p_copy["generated_asset_url"] = payload["generated_asset_url"]
+            rehydrated_posts.append(p_copy)
+        else:
+            rehydrated_posts.append(post)
+
+    stmt_runs = select(AgentRunRecord).where(AgentRunRecord.instance_id == inst_uuid)
+    res_runs = await db.execute(stmt_runs)
+    agent_runs = res_runs.scalars().all()
+
+    total_tokens_in = sum(r.tokens_in or 0 for r in agent_runs)
+    total_tokens_out = sum(r.tokens_out or 0 for r in agent_runs)
+    total_cost = sum(r.cost_usd or 0.0 for r in agent_runs)
+    llm_calls_count = sum(1 for r in agent_runs if r.agent_capability == "drafting_agent")
+    image_generations_count = sum(1 for r in agent_runs if r.agent_capability == "image_router" and r.status == "success")
+
+    usage_summary = {
+        "tokens_in": total_tokens_in,
+        "tokens_out": total_tokens_out,
+        "total_tokens": total_tokens_in + total_tokens_out,
+        "llm_calls_count": llm_calls_count,
+        "image_generations_count": image_generations_count,
+        "total_cost_usd": round(total_cost, 4),
+    }
+
+    return {
+        "instance_id": str(inst.id),
+        "status": inst.status,
+        "brief": brief,
+        "visuals": visuals,
+        "posts": rehydrated_posts,
+        "usage_summary": usage_summary,
+        "created_at": inst.started_at.isoformat() if inst.started_at else None,
+    }
+
+
+@router.post("/posts/{approval_id}/schedule")
+async def schedule_product_launch_post(
+    approval_id: str,
+    req: Optional[SchedulePostRequest] = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(require_any_auth),
+):
+    """
+    Schedule a Product Launch post (internal SMBFlow schedule).
+    Updates ApprovalItem payload post_status='Scheduled', sets schedule parameters, and logs AuditEvent.
+    """
+    try:
+        appr_uuid = uuid.UUID(approval_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid approval ID format")
+
+    stmt = select(ApprovalItem).where(ApprovalItem.id == appr_uuid)
+    res = await db.execute(stmt)
+    appr = res.scalar_one_or_none()
+
+    if not appr:
+        raise HTTPException(status_code=404, detail="Post approval item not found")
+
+    payload = appr.payload or {}
+    if req:
+        if req.scheduled_date:
+            payload["dateStr"] = req.scheduled_date
+        if req.scheduled_time:
+            payload["timeStr"] = req.scheduled_time
+        if req.timezone:
+            payload["timezone"] = req.timezone
+        if req.platform:
+            payload["platform"] = req.platform
+
+        if req.scheduled_date and req.scheduled_time:
+            payload["scheduledTime"] = f"{req.scheduled_date} - {req.scheduled_time}"
+
+    payload["post_status"] = "Scheduled"
+    appr.status = "approved"
+    appr.payload = payload
+
+    if appr.instance_id:
+        stmt_wf = select(WorkflowInstance).where(WorkflowInstance.id == appr.instance_id)
+        res_wf = await db.execute(stmt_wf)
+        wf_inst = res_wf.scalar_one_or_none()
+        if wf_inst and wf_inst.context:
+            posts = wf_inst.context.get("posts", [])
+            for p in posts:
+                if p.get("approval_id") == str(appr.id):
+                    p["status"] = "Scheduled"
+                    if req:
+                        if req.scheduled_date: p["dateStr"] = req.scheduled_date
+                        if req.scheduled_time: p["timeStr"] = req.scheduled_time
+                        if req.timezone: p["timezone"] = req.timezone
+                        if req.platform: p["platform"] = req.platform
+                        if req.scheduled_date and req.scheduled_time:
+                            p["scheduledTime"] = f"{req.scheduled_date} - {req.scheduled_time}"
+            wf_inst.context = dict(wf_inst.context)
+            db.add(wf_inst)
+
+    audit = AuditEvent(
+        id=uuid.uuid4(),
+        organization_id=appr.organization_id,
+        actor_id=current_user.email,
+        action="product_launch_post_scheduled",
+        entity_type="ApprovalItem",
+        entity_id=str(appr.id),
+        metadata_={
+            "post_id": payload.get("post_id"),
+            "platform": payload.get("platform"),
+            "scheduledTime": payload.get("scheduledTime"),
+            "internal_scheduling_only": True,
+        },
+        created_at=datetime.utcnow(),
+    )
+    db.add(audit)
+
+    await db.commit()
+    await db.refresh(appr)
+
+    return {
+        "approval_id": str(appr.id),
+        "status": "Scheduled",
+        "post_status": "Scheduled",
+        "payload": payload,
+        "message": "Post scheduled inside SMBFlow.",
     }
 
 

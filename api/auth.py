@@ -384,10 +384,10 @@ async def require_any_auth(current_user: TokenData = Depends(get_current_user)) 
 def get_tenant_filter(current_user: TokenData) -> Optional[str]:
     """
     Returns tenant_id filter:
-    - super_admin: None (can see everything)
+    - super_admin / platform_admin: None (can see everything across all organizations)
     - tenant_user: their tenant_id (scoped)
     """
-    if current_user.role == "super_admin":
+    if current_user.role in ("super_admin", "platform_admin"):
         return None
     return current_user.tenant_id
 

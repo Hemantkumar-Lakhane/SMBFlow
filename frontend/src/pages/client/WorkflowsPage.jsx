@@ -48,7 +48,7 @@ function TriggerBadge({ triggerType }) {
 
 export default function WorkflowsPage() {
   const navigate      = useNavigate()
-  const { api }       = useAuth()
+  const { api, isAdmin } = useAuth()
   const [workflows,   setWorkflows]   = useState([])
   const [instances,   setInstances]   = useState([])
   const [search,      setSearch]      = useState('')
@@ -149,30 +149,41 @@ export default function WorkflowsPage() {
         title="Trigger Workflow"
         width="max-w-lg"
       >
-        <div className="space-y-4">
+        <div className="space-y-2 py-1">
           {enriched.length === 0 ? (
-            <p className="text-sm text-gray-500">No workflows available.</p>
+            <p className="text-sm text-gray-500 py-4 text-center">No workflows available.</p>
           ) : (
-            <div className="max-h-96 overflow-y-auto">
+            <div className="max-h-96 overflow-y-auto space-y-2 pr-1">
               {enriched.map(wf => (
                 <button
                   key={wf.name}
-                  className="flex items-center justify-between w-full px-3 py-2 text-sm hover:bg-gray-100 rounded"
+                  className="flex items-center justify-between w-full p-3 bg-white border border-gray-200 hover:border-blue-400 hover:shadow-sm rounded-xl transition-all text-left group"
                   onClick={() => {
+                    const name = wf.name || 'email_summarizer'
+                    if (name === 'email_summarizer' || name.includes('email')) {
+                      setSelectModalOpen(false)
+                      navigate('/workflows/email_summarizer')
+                      return
+                    }
+                    if (name === 'product_launch' || name === 'product_launch_sprint' || name.includes('product_launch')) {
+                      setSelectModalOpen(false)
+                      navigate('/workflows/product_launch')
+                      return
+                    }
                     setTargetWf({ name: wf.name, displayName: getDisplayName(wf.name, wf.display_name) })
                     setModalOpen(true)
                     setSelectModalOpen(false)
                   }}
                 >
-                  <div className="flex flex-col items-start">
-                    <span className="font-medium">{getDisplayName(wf.name, wf.display_name)}</span>
-                    <span className="text-xs text-gray-500">{wf.name}</span>
+                  <div className="flex flex-col items-start gap-0.5">
+                    <span className="font-semibold text-gray-900 group-hover:text-blue-600 text-sm transition-colors">
+                      {getDisplayName(wf.name, wf.display_name)}
+                    </span>
+                    <span className="text-xs text-gray-400 font-mono">{wf.name}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-2">
-                      <StatusBadge status={wf.displayStatus} />
-                      <TriggerBadge triggerType={wf.triggerType} />
-                    </div>
+                    <StatusBadge status={wf.displayStatus} />
+                    <TriggerBadge triggerType={wf.triggerType} />
                   </div>
                 </button>
               ))}
@@ -193,12 +204,14 @@ export default function WorkflowsPage() {
           >
             <Play className="w-4 h-4 text-blue-600 fill-blue-600" /> Trigger Workflow
           </button>
-          <button
-            onClick={() => navigate('/workflows/builder')}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm"
-          >
-            <Plus className="w-4 h-4" /> Create Workflow
-          </button>
+          {isAdmin && (
+            <button
+              onClick={() => navigate('/workflows/builder')}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm"
+            >
+              <Plus className="w-4 h-4" /> Create Workflow
+            </button>
+          )}
         </div>
       </div>
 
@@ -280,10 +293,12 @@ export default function WorkflowsPage() {
                         <Plus className="w-5 h-5 text-gray-400" />
                       </div>
                       <p className="text-sm font-medium text-gray-500">No workflows found</p>
-                      <button onClick={() => navigate('/workflows/builder')}
-                        className="mt-2 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors">
-                        Create Workflow
-                      </button>
+                      {isAdmin && (
+                        <button onClick={() => navigate('/workflows/builder')}
+                          className="mt-2 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors">
+                          Create Workflow
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -294,8 +309,12 @@ export default function WorkflowsPage() {
                     onClick={() => {
                       if (wf.name === 'product_launch' || wf.name === 'product_launch_sprint' || wf.name?.includes('product_launch')) {
                         navigate('/workflows/product_launch')
-                      } else {
+                      } else if (wf.name === 'email_summarizer' || wf.name?.includes('email')) {
+                        navigate('/workflows/email_summarizer')
+                      } else if (isAdmin) {
                         navigate(`/workflows/builder?wf=${encodeURIComponent(wf.name)}`)
+                      } else {
+                        openRunModal(wf)
                       }
                     }}
                     className="border-b border-gray-50 hover:bg-gray-50/80 cursor-pointer transition-colors last:border-0 group"

@@ -30,6 +30,7 @@ function ToolChip({ label }) {
 }
 
 function UserWorkflowCard({ wf }) {
+  const { isAdmin } = useAuth()
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm hover:border-blue-300 transition-colors flex flex-col">
       <div className="flex items-start justify-between mb-2">
@@ -51,16 +52,17 @@ function UserWorkflowCard({ wf }) {
         >
           <Play className="w-4 h-4" /> Run Now
         </button>
-        <button
-          onClick={() => {
-            // navigate to builder for this workflow
-            const url = `/workflows/builder?wf=${encodeURIComponent(wf.name)}`;
-            window.location.href = url;
-          }}
-          className="flex items-center gap-1.5 px-3.5 py-2 border border-gray-200 hover:border-blue-300 text-sm font-semibold text-gray-700 hover:text-blue-600 rounded-lg transition-colors"
-        >
-          Configure <ArrowRight className="w-3.5 h-3.5" />
-        </button>
+        {isAdmin && (
+          <button
+            onClick={() => {
+              const url = `/workflows/builder?wf=${encodeURIComponent(wf.name)}`;
+              window.location.href = url;
+            }}
+            className="flex items-center gap-1.5 px-3.5 py-2 border border-gray-200 hover:border-blue-300 text-sm font-semibold text-gray-700 hover:text-blue-600 rounded-lg transition-colors"
+          >
+            Configure <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
     </div>
   );
@@ -92,7 +94,7 @@ function TemplateCard({ template, onUse }) {
 
 export default function WorkflowLibrary() {
   const navigate      = useNavigate()
-  const { api }       = useAuth()
+  const { api, isAdmin } = useAuth()
   const [category,    setCategory]    = useState('All')
   const [activeWfs,   setActiveWfs]   = useState([])
   const [loading,     setLoading]     = useState(true)
@@ -121,7 +123,15 @@ export default function WorkflowLibrary() {
       navigate('/workflows/product_launch')
       return
     }
-    navigate('/workflows/builder')
+    if (template.id === 'email_summarizer' || template.id?.includes('email')) {
+      navigate('/workflows/email_summarizer')
+      return
+    }
+    if (isAdmin) {
+      navigate('/workflows/builder')
+    } else {
+      handleRunNow({ name: template.id, display_name: template.name })
+    }
   }
 
   const handleRunNow = (wf) => {
@@ -163,19 +173,23 @@ export default function WorkflowLibrary() {
           <h1 className="text-2xl font-bold text-gray-900">Workflow Library</h1>
           <p className="text-sm text-gray-500 mt-0.5">Start from proven templates or run active AI workflow pipelines</p>
         </div>
-        <button
-          onClick={() => navigate('/workflows/builder')}
-          className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm"
-        >
-          + Create Custom
-        </button>
-        <button
-          onClick={handlePrepareDemoData}
-          disabled={demoLoading}
-          className="ml-2 flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm"
-        >
-          {demoLoading ? 'Preparing...' : 'Prepare Demo Data'}
-        </button>
+        <div className="flex items-center gap-2">
+          {isAdmin && (
+            <button
+              onClick={() => navigate('/workflows/builder')}
+              className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm"
+            >
+              + Create Custom
+            </button>
+          )}
+          <button
+            onClick={handlePrepareDemoData}
+            disabled={demoLoading}
+            className="flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm"
+          >
+            {demoLoading ? 'Preparing...' : 'Prepare Demo Data'}
+          </button>
+        </div>
       </div>
 
       {demoData && demoData.length > 0 && (

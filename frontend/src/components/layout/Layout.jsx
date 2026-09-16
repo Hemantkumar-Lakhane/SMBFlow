@@ -25,12 +25,11 @@ const OPERATIONS_NAV = [
 ]
 
 const CONFIGURATION_NAV = [
-  { to: '/workflows/builder', Icon: Settings2,       label: 'Workflow Library' },
+  { to: '/workflow-library', Icon: Settings2,       label: 'Workflow Library' },
 ]
 
 const SETTINGS_NAV = [
   { to: '/config',            Icon: Settings2,       label: 'General' },
-  { to: '/models',            Icon: Brain,           label: 'AI Engine' },
   { to: '/tools',             Icon: Wrench,          label: 'Integrations' },
   { to: '/budget',            Icon: DollarSign,      label: 'Budget & Billing' },
   { to: '/evidence',          Icon: Shield,          label: 'Evidence' },
