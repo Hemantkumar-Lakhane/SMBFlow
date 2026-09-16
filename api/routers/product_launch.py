@@ -328,6 +328,27 @@ class UpdatePostRequest(BaseModel):
     visual_prompt: Optional[str] = None
 
 
+from core.image_router import ImageRouter
+
+class GenerateVisualRequest(BaseModel):
+    prompt: Optional[str] = None
+    visual_role: Optional[str] = None
+    aspect_ratio: Optional[str] = "16:9"
+    resolution: Optional[str] = "1K"
+
+
+class EditVisualRequest(BaseModel):
+    new_prompt: str
+    visual_role: Optional[str] = None
+    aspect_ratio: Optional[str] = None
+
+
+class CreateVisualRequest(BaseModel):
+    visual_role: str = "Product Highlight"
+    visual_prompt: str
+    aspect_ratio: str = "16:9"
+
+
 @router.post("/create-campaign")
 async def create_product_launch_campaign(
     req: CreateCampaignRequest,
@@ -335,8 +356,8 @@ async def create_product_launch_campaign(
     current_user: TokenData = Depends(require_any_auth),
 ):
     """
-    Validate brief (supports manually created or AI-extracted briefs + additionalContext),
-    check tool connections, run campaign generation, create WorkflowInstance in 'escalated' status,
+    Validate brief, check tool connections, run campaign generation using human-quality prompts,
+    initialize 2-3 core reusable campaign visuals, assign posts to visuals, create WorkflowInstance in 'escalated' status,
     record AgentRunRecord, EvidenceRecord, and populate pending ApprovalItem records for each post.
     """
     org_id_str = current_user.organization_id or current_user.tenant_id
@@ -375,44 +396,103 @@ async def create_product_launch_campaign(
     )
     db.add(wf_instance)
 
-    # Generate multi-platform post content via LLMRouter
+    # Build 2-3 CORE VISUAL ASSETS at campaign level
+    core_visuals = [
+        {
+            "visual_id": "vis-hero-1",
+            "visual_role": "Product Hero",
+            "visual_prompt": f"Modern, sleek hero graphic featuring {product_name} with vibrant gradient backdrop, highlighting {brief.get('primaryBenefit', short_desc)}.",
+            "aspect_ratio": "16:9",
+            "status": "pending_generation",
+            "generation_model": "gemini-3.1-flash-image",
+            "generated_asset_url": None,
+            "created_at": datetime.utcnow().isoformat(),
+        },
+        {
+            "visual_id": "vis-workflow-1",
+            "visual_role": "Product / Workflow / Feature",
+            "visual_prompt": f"Clean UI workflow graphic showing {product_name} in action, solving {brief.get('customerProblem', 'team coordination')} effortlessly.",
+            "aspect_ratio": "16:9",
+            "status": "pending_generation",
+            "generation_model": "gemini-3.1-flash-image",
+            "generated_asset_url": None,
+            "created_at": datetime.utcnow().isoformat(),
+        },
+        {
+            "visual_id": "vis-problem-1",
+            "visual_role": "Customer Problem / Founder Context",
+            "visual_prompt": f"High-contrast editorial graphic illustrating the daily struggle before {product_name}: {brief.get('customerProblem', 'disorganized workflow and missed deadlines')}.",
+            "aspect_ratio": "16:9",
+            "status": "pending_generation",
+            "generation_model": "gemini-3.1-flash-image",
+            "generated_asset_url": None,
+            "created_at": datetime.utcnow().isoformat(),
+        },
+    ]
+
+    # Generate multi-platform post content via LLMRouter using strict HUMAN COPY instructions
     llm = LLMRouter()
-    prompt = f"""You are SMBFlow Content Generator. Generate multi-platform campaign posts based on this product launch brief:
+    prompt = f"""You are a seasoned founder and growth marketer crafting a genuine product launch campaign.
 
-PRODUCT NAME: {product_name}
-SHORT DESCRIPTION: {short_desc}
-LAUNCH DESCRIPTION: {brief.get('launchDescription', '')}
-TARGET AUDIENCE: {brief.get('targetAudience', '')}
-PRIMARY BENEFIT: {brief.get('primaryBenefit') or brief.get('topBenefit1', '')}
-DESIRED CTA: {cta}
-TONE OF VOICE: {brief.get('toneOfVoice', 'Professional')}
-THINGS TO AVOID: {brief.get('thingsToAvoid', '')}
-ADDITIONAL PRODUCT CONTEXT (DOCUMENTS/SPECS): {brief.get('additionalContext') or brief.get('additional_context', '')}
-TARGET PLATFORMS: {', '.join(selected_platforms)}
+PRODUCT BRIEF:
+- Product Name: {product_name}
+- One-line Summary: {short_desc}
+- Full Description: {brief.get('launchDescription', '')}
+- Target Audience: {brief.get('targetAudience', '')}
+- Customer Problem: {brief.get('customerProblem', '')}
+- Primary Benefit: {brief.get('primaryBenefit') or brief.get('topBenefit1', '')}
+- Top Benefits: {brief.get('topBenefit1', '')}, {brief.get('topBenefit2', '')}, {brief.get('topBenefit3', '')}
+- Key Features: {brief.get('keyFeatures', '')}
+- Differentiator: {brief.get('differentiator', '')}
+- Desired CTA: {cta}
+- Tone of Voice: {brief.get('toneOfVoice', 'Professional')}
+- Things to Avoid: {brief.get('thingsToAvoid', '')}
+- Additional Context: {brief.get('additionalContext') or brief.get('additional_context', '')}
+- Platforms: {', '.join(selected_platforms)}
 
-Generate 3 distinct posts for EACH selected platform:
-1. LAUNCH ANNOUNCEMENT
-2. PRODUCT BENEFIT
-3. FEATURE HIGHLIGHT
+WRITING STYLE RULES (STRICT):
+1. Sound like a real human founder or marketer — thoughtful, conversational, direct.
+2. DO NOT use AI marketing clichés: NEVER use "We're excited to announce", "game-changing", "revolutionary", "delighted to share", "paradigm shift", or "next level".
+3. Use specific product details from the brief. Vary sentence length. Focus on concrete problems and real workflow benefits.
+4. Adapt copy per platform:
+   - LinkedIn: Thoughtful, founder/business perspective, structured paragraphs.
+   - X: Short, sharp, punchy, conversational.
+   - Email: Personal, direct, 1-on-1 tone.
+   - Facebook/Instagram: Visual storytelling, relatable.
+5. NEVER invent fake testimonials, false stats, pricing claims, or guarantees not in the brief.
+6. Keep emojis minimal (0-2 per post). Do NOT stuff hashtags (2-3 relevant hashtags max).
 
-Return ONLY JSON format matching this array schema:
+CONTENT ROLES:
+Classify each post into one of these exact roles:
+"Launch", "Problem", "Product benefit", "Feature", "Educational", "Founder perspective", "Use case", "Reminder", "CTA"
+
+CORE VISUAL ASSIGNMENT:
+Assign each post to one of these 3 visual IDs:
+- "vis-hero-1" (Product Hero)
+- "vis-workflow-1" (Product / Workflow / Feature)
+- "vis-problem-1" (Customer Problem / Founder Context)
+
+Generate 3 distinct posts for EACH selected platform ({', '.join(selected_platforms)}). Total ~12 posts if 4 platforms selected, 6 posts if 2 platforms selected.
+
+Return ONLY JSON array format matching this schema:
 [
   {{
     "platform": "LinkedIn | Instagram | X | Facebook",
     "category": "LAUNCH ANNOUNCEMENT | PRODUCT BENEFIT | FEATURE HIGHLIGHT",
+    "content_role": "Launch | Problem | Product benefit | Feature | Educational | Founder perspective | Use case | Reminder | CTA",
+    "visual_id": "vis-hero-1 | vis-workflow-1 | vis-problem-1",
     "scheduledTime": "Oct 1 - 9:00 AM",
     "dateStr": "Wed 1",
     "timeStr": "9:00 AM",
-    "caption": "Full post caption...",
+    "caption": "Natural human post caption...",
     "hashtags": ["#Tag1", "#Tag2"],
-    "visualPrompt": "Detailed visual concept description for AI image generation...",
     "actionLabel": "{cta}"
   }}
 ]
 """
 
     messages = [
-        LLMMessage(role="system", content="You generate platform-specific post captions and visual prompts for product launches."),
+        LLMMessage(role="system", content="You are a real human founder and marketing lead writing authentic, non-cliché product launch copy."),
         LLMMessage(role="user", content=prompt),
     ]
 
@@ -434,20 +514,34 @@ Return ONLY JSON format matching this array schema:
         generated_posts_list = json.loads(cleaned_posts)
     except Exception as gen_err:
         log.warning("LLM campaign post generation failed, creating structured fallback posts", error=str(gen_err))
-        # Build deterministic posts if LLM unavailable
+        # Build deterministic human-sounding fallback posts if LLM unavailable
         generated_posts_list = []
-        for plat in selected_platforms:
-            generated_posts_list.append({
-                "platform": plat,
-                "category": "LAUNCH ANNOUNCEMENT",
-                "scheduledTime": "Oct 1 - 9:00 AM",
-                "dateStr": "Wed 1",
-                "timeStr": "9:00 AM",
-                "caption": f"Excited to announce {product_name} — {short_desc}. {cta} today!",
-                "hashtags": [f"#{product_name.replace(' ', '')}", "#ProductLaunch"],
-                "visualPrompt": f"Modern gradient hero banner introducing {product_name} with key benefit highlight.",
-                "actionLabel": cta
-            })
+        visual_assignment_cycle = ["vis-hero-1", "vis-workflow-1", "vis-problem-1"]
+        roles_cycle = ["Launch", "Product benefit", "Feature"]
+        
+        for p_idx, plat in enumerate(selected_platforms):
+            for i in range(3):
+                v_id = visual_assignment_cycle[(p_idx + i) % 3]
+                role = roles_cycle[i]
+                if role == "Launch":
+                    cap = f"Building {product_name} came out of a simple observation: {short_desc}. We built this specifically for teams who need clarity without enterprise overhead. {cta}."
+                elif role == "Product benefit":
+                    cap = f"Most teams waste 5+ hours a week trying to figure out who owns what. {product_name} fixes this with simple, direct coordination. Here is how it works: {brief.get('primaryBenefit', short_desc)}."
+                else:
+                    cap = f"A quick look under the hood of {product_name}: clean task tracking, automated updates, and zero setup time. Designed for focus."
+
+                generated_posts_list.append({
+                    "platform": plat,
+                    "category": "LAUNCH ANNOUNCEMENT" if i == 0 else ("PRODUCT BENEFIT" if i == 1 else "FEATURE HIGHLIGHT"),
+                    "content_role": role,
+                    "visual_id": v_id,
+                    "scheduledTime": f"Oct {i+1} - 9:00 AM",
+                    "dateStr": f"Wed {i+1}",
+                    "timeStr": "9:00 AM",
+                    "caption": cap,
+                    "hashtags": [f"#{product_name.replace(' ', '')}", "#SMBFlow"],
+                    "actionLabel": cta
+                })
 
     # Record AgentRunRecord for drafting_agent
     agent_run = AgentRunRecord(
@@ -461,7 +555,7 @@ Return ONLY JSON format matching this array schema:
     db.add(agent_run)
 
     # Strategy summary
-    strategy_summary = f"{product_name} enters market targeting {brief.get('targetAudience', 'small businesses')}. The campaign leads with {brief.get('valueProposition', short_desc)}."
+    strategy_summary = f"{product_name} enters market targeting {brief.get('targetAudience', 'small businesses')}. The campaign leads with {brief.get('valueProposition', short_desc)} using 3 core visual assets across {len(selected_platforms)} platforms."
 
     # Record EvidenceRecord for campaign strategy and visual asset prompts
     evidence = EvidenceRecord(
@@ -473,9 +567,9 @@ Return ONLY JSON format matching this array schema:
     )
     db.add(evidence)
 
-    # Create ApprovalItem records for each post (Human-in-the-Loop Gating)
-    approval_items = []
+    # Create ApprovalItem records for each post
     created_posts_payload = []
+    vis_map = {v["visual_id"]: v for v in core_visuals}
 
     for idx, post in enumerate(generated_posts_list):
         plat_name = post.get("platform", "LinkedIn")
@@ -484,9 +578,11 @@ Return ONLY JSON format matching this array schema:
 
         post_id = f"{plat_name.lower()}-{idx+1}"
         approval_id = uuid.uuid4()
-        aspect_ratio = "1:1" if plat_name in ["Instagram", "Facebook"] else "16:9"
+        v_id = post.get("visual_id") or "vis-hero-1"
+        assigned_vis = vis_map.get(v_id, core_visuals[0])
 
-        visual_prompt = post.get("visualPrompt") or f"Clean visual design for {product_name}: {post.get('category', 'Launch')}"
+        aspect_ratio = assigned_vis.get("aspect_ratio") or ("1:1" if plat_name in ["Instagram", "Facebook"] else "16:9")
+        visual_prompt = assigned_vis.get("visual_prompt")
 
         appr = ApprovalItem(
             id=approval_id,
@@ -500,14 +596,17 @@ Return ONLY JSON format matching this array schema:
                 "post_id": post_id,
                 "platform": plat_name,
                 "category": post.get("category", "LAUNCH ANNOUNCEMENT"),
+                "content_role": post.get("content_role", "Launch"),
                 "scheduledTime": post.get("scheduledTime", "Oct 1 - 9:00 AM"),
                 "dateStr": post.get("dateStr", "Wed 1"),
                 "timeStr": post.get("timeStr", "9:00 AM"),
                 "caption": post.get("caption", ""),
                 "hashtags": post.get("hashtags", []),
                 "actionLabel": post.get("actionLabel", cta),
+                "visual_id": v_id,
                 "visual_prompt": visual_prompt,
-                "visual_status": "pending_generation",
+                "visual_status": assigned_vis.get("status", "pending_generation"),
+                "generated_asset_url": assigned_vis.get("generated_asset_url"),
                 "visual_aspect_ratio": aspect_ratio,
                 "is_executable_connection": is_executable,
                 "approval_required": True,
@@ -522,13 +621,16 @@ Return ONLY JSON format matching this array schema:
             "approval_id": str(approval_id),
             "platform": plat_name,
             "category": post.get("category", "LAUNCH ANNOUNCEMENT"),
+            "content_role": post.get("content_role", "Launch"),
             "scheduledTime": post.get("scheduledTime", "Oct 1 - 9:00 AM"),
             "dateStr": post.get("dateStr", "Wed 1"),
             "timeStr": post.get("timeStr", "9:00 AM"),
             "caption": post.get("caption", ""),
             "hashtags": post.get("hashtags", []),
+            "visual_id": v_id,
             "visual_prompt": visual_prompt,
-            "visual_status": "pending_generation",
+            "visual_status": assigned_vis.get("status", "pending_generation"),
+            "generated_asset_url": assigned_vis.get("generated_asset_url"),
             "visual_aspect_ratio": aspect_ratio,
             "status": "Needs review",
             "is_executable": is_executable,
@@ -544,7 +646,7 @@ Return ONLY JSON format matching this array schema:
         action="product_launch_campaign_created",
         entity_type="WorkflowInstance",
         entity_id=str(instance_id),
-        metadata_={"post_count": len(created_posts_payload), "product_name": product_name},
+        metadata_={"post_count": len(created_posts_payload), "visual_count": len(core_visuals), "product_name": product_name},
         created_at=datetime.utcnow(),
     )
     db.add(audit)
@@ -552,6 +654,7 @@ Return ONLY JSON format matching this array schema:
     # Save context in WorkflowInstance
     wf_instance.context = {
         "brief": brief,
+        "visuals": core_visuals,
         "posts": created_posts_payload,
         "posts_count": len(created_posts_payload),
     }
@@ -561,8 +664,367 @@ Return ONLY JSON format matching this array schema:
     return {
         "instance_id": str(instance_id),
         "status": WorkflowStatus.ESCALATED.value,
+        "visuals": core_visuals,
         "posts": created_posts_payload,
         "strategy_summary": strategy_summary,
+    }
+
+
+# ── VISUAL GENERATION & MANAGEMENT ENDPOINTS ──────────────────────────────────
+
+@router.post("/campaign/{instance_id}/visuals/{visual_id}/generate")
+async def generate_campaign_visual(
+    instance_id: str,
+    visual_id: str,
+    req: Optional[GenerateVisualRequest] = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(require_any_auth),
+):
+    """
+    Generate an actual image asset for a campaign core visual via ImageRouter.
+    Updates visual status, generated_asset_url, and propagates to all assigned posts.
+    """
+    try:
+        inst_uuid = uuid.UUID(instance_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid instance ID format")
+
+    stmt = select(WorkflowInstance).where(WorkflowInstance.id == inst_uuid)
+    res = await db.execute(stmt)
+    inst = res.scalar_one_or_none()
+
+    if not inst:
+        raise HTTPException(status_code=404, detail="Campaign workflow instance not found")
+
+    context = inst.context or {}
+    visuals = context.get("visuals", [])
+    posts = context.get("posts", [])
+    brief = context.get("brief", {})
+
+    target_vis = next((v for v in visuals if v["visual_id"] == visual_id), None)
+    if not target_vis:
+        raise HTTPException(status_code=404, detail=f"Visual asset {visual_id} not found in campaign")
+
+    # Run ImageRouter generation
+    img_router = ImageRouter()
+    prompt = (req.prompt if req and req.prompt else None) or target_vis.get("visual_prompt")
+    role = (req.visual_role if req and req.visual_role else None) or target_vis.get("visual_role")
+    aspect = (req.aspect_ratio if req and req.aspect_ratio else None) or target_vis.get("aspect_ratio", "16:9")
+    resolution = req.resolution if req and req.resolution else "1K"
+
+    gen_result = await img_router.generate(
+        prompt=prompt,
+        visual_role=role,
+        aspect_ratio=aspect,
+        product_brief=brief,
+        resolution=resolution,
+    )
+
+    if gen_result["status"] == "failed":
+        target_vis["status"] = "failed"
+        target_vis["generated_asset_url"] = None
+        target_vis["error"] = gen_result.get("error", "Gemini image generation failed")
+        target_vis["updated_at"] = datetime.utcnow().isoformat()
+
+        # Update posts visual status to failed
+        for post in posts:
+            if post.get("visual_id") == visual_id:
+                post["visual_status"] = "failed"
+                post["generated_asset_url"] = None
+
+        agent_run = AgentRunRecord(
+            id=uuid.uuid4(),
+            instance_id=inst_uuid,
+            node_id="image_generation",
+            agent_capability="image_router",
+            status="failed",
+            completed_at=datetime.utcnow(),
+        )
+        db.add(agent_run)
+
+        audit = AuditEvent(
+            id=uuid.uuid4(),
+            organization_id=inst.organization_id,
+            actor_id=current_user.email,
+            action="product_launch_visual_failed",
+            entity_type="WorkflowInstance",
+            entity_id=str(inst_uuid),
+            metadata_={"visual_id": visual_id, "error": target_vis["error"]},
+            created_at=datetime.utcnow(),
+        )
+        db.add(audit)
+
+        inst.context = context
+        await db.commit()
+
+        return {
+            "visual_id": visual_id,
+            "visual": target_vis,
+            "posts": posts,
+            "message": f"Visual generation failed: {target_vis['error']}",
+        }
+
+    # Update visual object for success or preview_only
+    target_vis["status"] = gen_result["status"]
+    target_vis["generated_asset_url"] = gen_result.get("generated_asset_url")
+    target_vis["generation_model"] = gen_result.get("generation_model")
+    target_vis["provider"] = gen_result.get("provider", "google_genai")
+    target_vis["visual_prompt"] = prompt
+    target_vis["visual_role"] = role
+    target_vis["aspect_ratio"] = aspect
+    target_vis["updated_at"] = datetime.utcnow().isoformat()
+    if "error" in target_vis:
+        del target_vis["error"]
+
+    # Propagate generated asset URL to all assigned posts
+    for post in posts:
+        if post.get("visual_id") == visual_id:
+            post["visual_status"] = target_vis["status"]
+            post["generated_asset_url"] = target_vis["generated_asset_url"]
+            post["visual_prompt"] = prompt
+            post["visual_aspect_ratio"] = aspect
+
+            # Update corresponding ApprovalItem payload
+            if post.get("approval_id"):
+                try:
+                    appr_id = uuid.UUID(post["approval_id"])
+                    stmt_appr = select(ApprovalItem).where(ApprovalItem.id == appr_id)
+                    res_appr = await db.execute(stmt_appr)
+                    appr_item = res_appr.scalar_one_or_none()
+                    if appr_item and appr_item.payload:
+                        appr_item.payload["visual_status"] = target_vis["status"]
+                        appr_item.payload["generated_asset_url"] = target_vis["generated_asset_url"]
+                        appr_item.payload["visual_prompt"] = prompt
+                        appr_item.payload["visual_aspect_ratio"] = aspect
+                        db.add(appr_item)
+                except ValueError:
+                    pass
+
+    # Record AgentRunRecord & AuditEvent
+    agent_run = AgentRunRecord(
+        id=uuid.uuid4(),
+        instance_id=inst_uuid,
+        node_id="image_generation",
+        agent_capability="image_router",
+        status="success",
+        completed_at=datetime.utcnow(),
+    )
+    db.add(agent_run)
+
+    audit = AuditEvent(
+        id=uuid.uuid4(),
+        organization_id=inst.organization_id,
+        actor_id=current_user.email,
+        action="product_launch_visual_generated",
+        entity_type="WorkflowInstance",
+        entity_id=str(inst_uuid),
+        metadata_={
+            "visual_id": visual_id,
+            "visual_role": role,
+            "model": gen_result.get("generation_model"),
+        },
+        created_at=datetime.utcnow(),
+    )
+    db.add(audit)
+
+    inst.context = context
+    await db.commit()
+
+    return {
+        "visual_id": visual_id,
+        "visual": target_vis,
+        "posts": posts,
+        "message": f"Visual {visual_id} generated successfully.",
+    }
+
+
+@router.post("/campaign/{instance_id}/visuals/{visual_id}/regenerate")
+async def regenerate_campaign_visual(
+    instance_id: str,
+    visual_id: str,
+    req: Optional[GenerateVisualRequest] = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(require_any_auth),
+):
+    """Regenerate a core campaign visual with fresh generation model parameters."""
+    return await generate_campaign_visual(
+        instance_id=instance_id,
+        visual_id=visual_id,
+        req=req,
+        db=db,
+        current_user=current_user,
+    )
+
+
+@router.post("/campaign/{instance_id}/visuals/{visual_id}/edit")
+async def edit_campaign_visual(
+    instance_id: str,
+    visual_id: str,
+    req: EditVisualRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(require_any_auth),
+):
+    """Edit visual prompt, role, or aspect ratio and re-run image generation."""
+    gen_req = GenerateVisualRequest(
+        prompt=req.new_prompt,
+        visual_role=req.visual_role,
+        aspect_ratio=req.aspect_ratio,
+    )
+    return await generate_campaign_visual(
+        instance_id=instance_id,
+        visual_id=visual_id,
+        req=gen_req,
+        db=db,
+        current_user=current_user,
+    )
+
+
+@router.post("/campaign/{instance_id}/visuals/{visual_id}/approve")
+async def approve_campaign_visual(
+    instance_id: str,
+    visual_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(require_any_auth),
+):
+    """Approve a generated campaign visual asset."""
+    try:
+        inst_uuid = uuid.UUID(instance_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid instance ID format")
+
+    stmt = select(WorkflowInstance).where(WorkflowInstance.id == inst_uuid)
+    res = await db.execute(stmt)
+    inst = res.scalar_one_or_none()
+
+    if not inst:
+        raise HTTPException(status_code=404, detail="Campaign workflow instance not found")
+
+    context = inst.context or {}
+    visuals = context.get("visuals", [])
+    posts = context.get("posts", [])
+
+    target_vis = next((v for v in visuals if v["visual_id"] == visual_id), None)
+    if not target_vis:
+        raise HTTPException(status_code=404, detail=f"Visual asset {visual_id} not found in campaign")
+
+    target_vis["status"] = "approved"
+    target_vis["approved_at"] = datetime.utcnow().isoformat()
+    target_vis["approved_by"] = current_user.email
+
+    for post in posts:
+        if post.get("visual_id") == visual_id:
+            post["visual_status"] = "approved"
+
+    audit = AuditEvent(
+        id=uuid.uuid4(),
+        organization_id=inst.organization_id,
+        actor_id=current_user.email,
+        action="product_launch_visual_approved",
+        entity_type="WorkflowInstance",
+        entity_id=str(inst_uuid),
+        metadata_={"visual_id": visual_id},
+        created_at=datetime.utcnow(),
+    )
+    db.add(audit)
+
+    inst.context = context
+    await db.commit()
+
+    return {
+        "visual_id": visual_id,
+        "status": "approved",
+        "visual": target_vis,
+        "message": f"Visual {visual_id} approved.",
+    }
+
+
+@router.post("/campaign/{instance_id}/visuals")
+async def create_custom_campaign_visual(
+    instance_id: str,
+    req: CreateVisualRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(require_any_auth),
+):
+    """Manually add an extra visual asset to the campaign visual library."""
+    try:
+        inst_uuid = uuid.UUID(instance_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid instance ID format")
+
+    stmt = select(WorkflowInstance).where(WorkflowInstance.id == inst_uuid)
+    res = await db.execute(stmt)
+    inst = res.scalar_one_or_none()
+
+    if not inst:
+        raise HTTPException(status_code=404, detail="Campaign workflow instance not found")
+
+    context = inst.context or {}
+    visuals = context.get("visuals", [])
+
+    new_vis_id = f"vis-custom-{uuid.uuid4().hex[:6]}"
+    new_vis = {
+        "visual_id": new_vis_id,
+        "visual_role": req.visual_role,
+        "visual_prompt": req.visual_prompt,
+        "aspect_ratio": req.aspect_ratio,
+        "status": "pending_generation",
+        "generation_model": "gemini-3.1-flash-image",
+        "generated_asset_url": None,
+        "created_at": datetime.utcnow().isoformat(),
+    }
+    visuals.append(new_vis)
+
+    context["visuals"] = visuals
+    inst.context = context
+    await db.commit()
+
+    return {
+        "visual_id": new_vis_id,
+        "visual": new_vis,
+        "visuals": visuals,
+    }
+
+
+@router.delete("/campaign/{instance_id}/visuals/{visual_id}")
+async def delete_campaign_visual(
+    instance_id: str,
+    visual_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(require_any_auth),
+):
+    """Remove a visual asset from the campaign visual library."""
+    try:
+        inst_uuid = uuid.UUID(instance_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid instance ID format")
+
+    stmt = select(WorkflowInstance).where(WorkflowInstance.id == inst_uuid)
+    res = await db.execute(stmt)
+    inst = res.scalar_one_or_none()
+
+    if not inst:
+        raise HTTPException(status_code=404, detail="Campaign workflow instance not found")
+
+    context = inst.context or {}
+    visuals = context.get("visuals", [])
+    posts = context.get("posts", [])
+
+    context["visuals"] = [v for v in visuals if v["visual_id"] != visual_id]
+
+    # Clear visual reference from posts using this visual
+    for p in posts:
+        if p.get("visual_id") == visual_id:
+            p["visual_id"] = None
+            p["visual_status"] = "no_visual"
+            p["generated_asset_url"] = None
+
+    inst.context = context
+    await db.commit()
+
+    return {
+        "visual_id": visual_id,
+        "status": "deleted",
+        "visuals": context["visuals"],
     }
 
 

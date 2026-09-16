@@ -437,3 +437,134 @@ async def test_export_product_launch_campaign(mock_db):
     assert audit_evt is not None
     assert audit_evt.action == "product_launch_campaign_exported"
 
+
+@pytest.mark.asyncio
+@pytest.mark.asyncio
+async def test_campaign_visual_sharing_and_generation(mock_db):
+    """Test that campaign creates core visual assets shared across posts and ImageRouter generates visual assets."""
+    from api.routers.product_launch import generate_campaign_visual, approve_campaign_visual
+
+    org_uuid = uuid.UUID(TEST_ORG_ID)
+    inst_id = uuid.uuid4()
+
+    core_vis = [
+        {
+            "visual_id": "vis-hero-1",
+            "visual_role": "Product Hero",
+            "visual_prompt": "Hero graphic for TaskFlow Pro",
+            "aspect_ratio": "16:9",
+            "status": "pending_generation",
+            "generated_asset_url": None,
+        },
+        {
+            "visual_id": "vis-workflow-1",
+            "visual_role": "Product / Workflow / Feature",
+            "visual_prompt": "Workflow graphic for TaskFlow Pro",
+            "aspect_ratio": "16:9",
+            "status": "pending_generation",
+            "generated_asset_url": None,
+        }
+    ]
+
+    posts = [
+        {
+            "id": "li-1",
+            "platform": "LinkedIn",
+            "category": "LAUNCH ANNOUNCEMENT",
+            "visual_id": "vis-hero-1",
+            "visual_status": "pending_generation",
+            "generated_asset_url": None,
+        },
+        {
+            "id": "li-2",
+            "platform": "LinkedIn",
+            "category": "PRODUCT BENEFIT",
+            "visual_id": "vis-hero-1",
+            "visual_status": "pending_generation",
+            "generated_asset_url": None,
+        }
+    ]
+
+    wf_inst = WorkflowInstance(
+        id=inst_id,
+        organization_id=org_uuid,
+        workflow_name="product_launch_sprint",
+        status=WorkflowStatus.ESCALATED.value,
+        context={
+            "brief": {"productName": "TaskFlow Pro"},
+            "visuals": core_vis,
+            "posts": posts
+        },
+        started_at=datetime.utcnow()
+    )
+    mock_db.add(wf_inst)
+
+    mock_gen_result = {
+        "status": "generated",
+        "generated_asset_url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+        "generation_model": "gemini-3.1-flash-image",
+        "provider": "google_genai"
+    }
+
+    with patch("core.image_router.ImageRouter.generate", new_callable=AsyncMock) as mock_gen:
+        mock_gen.return_value = mock_gen_result
+
+        # Generate visual for vis-hero-1
+        gen_resp = await generate_campaign_visual(str(inst_id), "vis-hero-1", db=mock_db, current_user=MOCK_USER)
+        assert gen_resp["visual_id"] == "vis-hero-1"
+        assert gen_resp["visual"]["status"] == "generated"
+        assert gen_resp["visual"]["generated_asset_url"].startswith("data:image/png;base64,")
+
+        # Check both posts referencing vis-hero-1 were updated
+        assert gen_resp["posts"][0]["generated_asset_url"] == gen_resp["visual"]["generated_asset_url"]
+        assert gen_resp["posts"][1]["generated_asset_url"] == gen_resp["visual"]["generated_asset_url"]
+
+    # Approve visual
+    appr_resp = await approve_campaign_visual(str(inst_id), "vis-hero-1", db=mock_db, current_user=MOCK_USER)
+    assert appr_resp["status"] == "approved"
+    assert appr_resp["visual"]["status"] == "approved"
+
+
+@pytest.mark.asyncio
+async def test_campaign_visual_failed_generation(mock_db):
+    """Test that Gemini API failure produces status='failed' and error details, not fake success."""
+    from api.routers.product_launch import generate_campaign_visual
+
+    org_uuid = uuid.UUID(TEST_ORG_ID)
+    inst_id = uuid.uuid4()
+
+    wf_inst = WorkflowInstance(
+        id=inst_id,
+        organization_id=org_uuid,
+        workflow_name="product_launch_sprint",
+        status=WorkflowStatus.ESCALATED.value,
+        context={
+            "brief": {"productName": "TaskFlow Pro"},
+            "visuals": [{"visual_id": "vis-hero-1", "visual_role": "Product Hero", "status": "pending_generation"}],
+            "posts": [{"id": "li-1", "visual_id": "vis-hero-1", "visual_status": "pending_generation"}]
+        },
+        started_at=datetime.utcnow()
+    )
+    mock_db.add(wf_inst)
+
+    mock_failed_result = {
+        "status": "failed",
+        "generated_asset_url": None,
+        "error": "Gemini API 404 NOT_FOUND",
+        "generation_model": "gemini-3.1-flash-image",
+        "provider": "google_genai"
+    }
+
+    with patch("core.image_router.ImageRouter.generate", new_callable=AsyncMock) as mock_gen:
+        mock_gen.return_value = mock_failed_result
+
+        gen_resp = await generate_campaign_visual(str(inst_id), "vis-hero-1", db=mock_db, current_user=MOCK_USER)
+        assert gen_resp["visual"]["status"] == "failed"
+        assert gen_resp["visual"]["generated_asset_url"] is None
+        assert "Gemini API 404" in gen_resp["visual"]["error"]
+        assert gen_resp["posts"][0]["visual_status"] == "failed"
+        assert gen_resp["posts"][0]["generated_asset_url"] is None
+
+
+
+

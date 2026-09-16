@@ -180,10 +180,38 @@ export default function ProductLaunchPage() {
   // Loading animation step tracker
   const [buildingStep, setBuildingStep] = useState(0)
 
-  // Posts state for campaign view
+  // Posts and Visuals state for campaign view
   const [posts, setPosts] = useState([])
   const [selectedPostId, setSelectedPostId] = useState(null)
   const [platformFilter, setPlatformFilter] = useState('All')
+  const [campaignInstanceId, setCampaignInstanceId] = useState(null)
+  const [campaignVisuals, setCampaignVisuals] = useState([
+    {
+      visual_id: 'vis-hero-1',
+      visual_role: 'Product Hero',
+      visual_prompt: 'Modern, sleek hero graphic featuring product launch banner.',
+      aspect_ratio: '16:9',
+      status: 'pending_generation',
+      generated_asset_url: null,
+    },
+    {
+      visual_id: 'vis-workflow-1',
+      visual_role: 'Product / Workflow / Feature',
+      visual_prompt: 'Clean UI workflow graphic showing product in action.',
+      aspect_ratio: '16:9',
+      status: 'pending_generation',
+      generated_asset_url: null,
+    },
+    {
+      visual_id: 'vis-problem-1',
+      visual_role: 'Customer Problem / Founder Context',
+      visual_prompt: 'Editorial graphic illustrating the customer challenge before solution.',
+      aspect_ratio: '16:9',
+      status: 'pending_generation',
+      generated_asset_url: null,
+    },
+  ])
+  const [isGeneratingVisual, setIsGeneratingVisual] = useState({})
 
   // Load existing draft from backend on mount
   useEffect(() => {
@@ -393,6 +421,120 @@ export default function ProductLaunchPage() {
     }))
   }
 
+  // Campaign Visual Asset Actions
+  const handleGenerateVisual = async (visualId, promptOverride) => {
+    const targetVis = campaignVisuals.find(v => v.visual_id === visualId) || {}
+    const role = targetVis.visual_role || 'Product Highlight'
+
+    if (!campaignInstanceId || !api) {
+      // Offline fallback SVG Data URL generator
+      const cleanProd = encodeURIComponent(formData.productName || 'SMBFlow Launch')
+      const cleanRole = encodeURIComponent(role)
+      const svgStr = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675"><rect width="100%" height="100%" fill="#1e1b4b"/><text x="60" y="100" fill="#818cf8" font-size="20" font-family="sans-serif">${cleanRole}</text><text x="60" y="220" fill="#ffffff" font-size="48" font-family="sans-serif">${cleanProd}</text></svg>`
+      const mockAsset = `data:image/svg+xml;base64,${btoa(svgStr)}`
+
+      setCampaignVisuals(prev => prev.map(v => v.visual_id === visualId ? { ...v, status: 'generated', generated_asset_url: mockAsset } : v))
+      setPosts(prev => prev.map(p => p.visual_id === visualId ? { ...p, visual_status: 'generated', generated_asset_url: mockAsset } : p))
+      return
+    }
+
+    setIsGeneratingVisual(prev => ({ ...prev, [visualId]: true }))
+    try {
+      const resp = await api.post(`/workflows/product-launch/campaign/${campaignInstanceId}/visuals/${visualId}/generate`, {
+        prompt: promptOverride
+      })
+      if (resp && resp.visual) {
+        setCampaignVisuals(prev => prev.map(v => v.visual_id === visualId ? resp.visual : v))
+      }
+      if (resp && resp.posts) {
+        setPosts(resp.posts)
+      }
+    } catch (err) {
+      console.error(`Failed to generate visual ${visualId}`, err)
+      alert(`Visual generation error: ${err?.response?.data?.detail || err?.message}`)
+    } finally {
+      setIsGeneratingVisual(prev => ({ ...prev, [visualId]: false }))
+    }
+  }
+
+  const handleRegenerateVisual = async (visualId) => {
+    await handleGenerateVisual(visualId)
+  }
+
+  const handleEditVisualPrompt = async (visualId) => {
+    const currentVis = campaignVisuals.find(v => v.visual_id === visualId)
+    const newPrompt = prompt('Edit visual prompt:', currentVis?.visual_prompt || '')
+    if (newPrompt && newPrompt.trim()) {
+      await handleGenerateVisual(visualId, newPrompt.trim())
+    }
+  }
+
+  const handleApproveVisual = async (visualId) => {
+    if (campaignInstanceId && api) {
+      try {
+        const resp = await api.post(`/workflows/product-launch/campaign/${campaignInstanceId}/visuals/${visualId}/approve`)
+        if (resp && resp.visual) {
+          setCampaignVisuals(prev => prev.map(v => v.visual_id === visualId ? resp.visual : v))
+        }
+        if (resp && resp.posts) {
+          setPosts(resp.posts)
+        }
+      } catch (err) {
+        console.error('Failed to approve visual', err)
+      }
+    } else {
+      setCampaignVisuals(prev => prev.map(v => v.visual_id === visualId ? { ...v, status: 'approved' } : v))
+      setPosts(prev => prev.map(p => p.visual_id === visualId ? { ...p, visual_status: 'approved' } : p))
+    }
+  }
+
+  const handleCreateCustomVisual = async () => {
+    const role = prompt('Enter visual role (e.g. Founder Story, Feature Demo):', 'Product Highlight')
+    if (!role) return
+    const vPrompt = prompt('Enter visual prompt for AI image generation:', `High contrast visual graphic for ${formData.productName || 'our launch'}`)
+    if (!vPrompt) return
+
+    if (campaignInstanceId && api) {
+      try {
+        const resp = await api.post(`/workflows/product-launch/campaign/${campaignInstanceId}/visuals`, {
+          visual_role: role,
+          visual_prompt: vPrompt,
+          aspect_ratio: '16:9'
+        })
+        if (resp && resp.visuals) {
+          setCampaignVisuals(resp.visuals)
+        }
+      } catch (err) {
+        console.error('Failed to create custom visual', err)
+      }
+    } else {
+      const newVis = {
+        visual_id: `vis-custom-${Date.now()}`,
+        visual_role: role,
+        visual_prompt: vPrompt,
+        aspect_ratio: '16:9',
+        status: 'pending_generation',
+        generated_asset_url: null,
+      }
+      setCampaignVisuals(prev => [...prev, newVis])
+    }
+  }
+
+  const handleDeleteVisual = async (visualId) => {
+    if (campaignInstanceId && api) {
+      try {
+        const resp = await api.delete(`/workflows/product-launch/campaign/${campaignInstanceId}/visuals/${visualId}`)
+        if (resp && resp.visuals) {
+          setCampaignVisuals(resp.visuals)
+        }
+      } catch (err) {
+        console.error('Failed to delete visual', err)
+      }
+    } else {
+      setCampaignVisuals(prev => prev.filter(v => v.visual_id !== visualId))
+    }
+  }
+
   // Trigger building launch campaign (Backend API call create-campaign)
   const startBuildingCampaign = async () => {
     setViewMode('building')
@@ -409,8 +551,10 @@ export default function ProductLaunchPage() {
         })
         clearInterval(stepInterval)
         setBuildingStep(5)
-        if (resp && resp.posts) {
-          setPosts(resp.posts)
+        if (resp) {
+          if (resp.instance_id) setCampaignInstanceId(resp.instance_id)
+          if (resp.visuals) setCampaignVisuals(resp.visuals)
+          if (resp.posts) setPosts(resp.posts)
           setViewMode('campaign')
           return
         }
@@ -1813,7 +1957,7 @@ export default function ProductLaunchPage() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <StatCard label="Platforms" value={Object.values(formData.platforms).filter(p => p.selected).length} />
                 <StatCard label="Posts created" value={posts.length} />
-                <StatCard label="Visuals" value={posts.length} />
+                <StatCard label="Core Visuals" value={campaignVisuals.length} />
                 <StatCard label="Launch date" value={formData.startDate || 'Oct 1'} />
               </div>
 
@@ -1826,8 +1970,141 @@ export default function ProductLaunchPage() {
                   <span className="text-[10px] text-slate-400 font-medium">Generated by SMBFlow</span>
                 </div>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  {formData.productName || 'TaskFlow Pro'} enters a competitive but underserved niche: project management for small teams who need power without complexity. The campaign leads with the core insight that most SMB teams lose hours every week to disorganized tasks — not because they don't care, but because enterprise tools like Jira or Asana are built for companies 10× their size. The campaign strategy runs over 7 days across 4 platforms. LinkedIn content targets founders and operations managers with data-backed messaging around time savings and team clarity. Instagram leads with visual storytelling — the transformation from chaos to calm. X captures the launch moment with punchy announcements designed for share velocity. Facebook focuses on community trust and social proof. Every post ties back to a single CTA: start a free trial.
+                  {formData.productName || 'TaskFlow Pro'} enters a competitive but underserved niche: project management for small teams who need power without complexity. The campaign leads with the core insight that most SMB teams lose hours every week to disorganized tasks — not because they don't care, but because enterprise tools like Jira or Asana are built for companies 10× their size. The campaign strategy runs over 7 days across 4 platforms with 3 reusable core visual assets. LinkedIn content targets founders and operations managers with data-backed messaging around time savings and team clarity. Instagram leads with visual storytelling — the transformation from chaos to calm. X captures the launch moment with punchy announcements designed for share velocity. Facebook focuses on community trust and social proof. Every post ties back to a single CTA: start a free trial.
                 </p>
+              </div>
+
+              {/* ── CAMPAIGN VISUALS LIBRARY (2-3 Core Visuals reused across posts) ────────── */}
+              <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">Campaign Visuals</h3>
+                    <p className="text-xs text-slate-500">Core reusable visual assets shared across all campaign posts (Max 3 default)</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleCreateCustomVisual}
+                    className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-all flex items-center gap-1.5"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Create another visual
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {campaignVisuals.map((vis) => {
+                    const postsUsingVis = posts.filter(p => p.visual_id === vis.visual_id || p.visual_prompt === vis.visual_prompt)
+                    const isLoading = isGeneratingVisual[vis.visual_id]
+
+                    return (
+                      <div key={vis.visual_id} className="border border-slate-200 rounded-2xl overflow-hidden bg-slate-50/50 flex flex-col justify-between">
+                        <div className="p-3 bg-white border-b border-slate-100 flex items-center justify-between">
+                          <span className="px-2 py-0.5 text-[10px] font-bold bg-blue-50 text-blue-700 rounded-full border border-blue-200">
+                            {vis.visual_role}
+                          </span>
+                          <span className="text-[10px] font-semibold text-slate-500">
+                            {vis.aspect_ratio || '16:9'} • Used in {postsUsingVis.length} posts
+                          </span>
+                        </div>
+
+                        <div className="p-3">
+                          {vis.generated_asset_url ? (
+                            <div className="relative group rounded-xl overflow-hidden border border-slate-200 bg-black/5">
+                              <img src={vis.generated_asset_url} alt={vis.visual_role} className="w-full h-44 object-cover" />
+                              <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 p-2">
+                                <button
+                                  onClick={() => handleRegenerateVisual(vis.visual_id)}
+                                  className="p-2 bg-white text-slate-900 rounded-lg text-xs font-bold hover:bg-slate-100"
+                                  title="Regenerate"
+                                >
+                                  <RefreshCw className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleEditVisualPrompt(vis.visual_id)}
+                                  className="p-2 bg-white text-slate-900 rounded-lg text-xs font-bold hover:bg-slate-100"
+                                  title="Edit prompt"
+                                >
+                                  <Edit3 className="w-4 h-4" />
+                                </button>
+                                <a
+                                  href={vis.generated_asset_url}
+                                  download={`${vis.visual_role.replace(/\s+/g, '_')}.svg`}
+                                  className="p-2 bg-white text-slate-900 rounded-lg text-xs font-bold hover:bg-slate-100"
+                                  title="Download"
+                                >
+                                  <Download className="w-4 h-4" />
+                                </a>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="bg-slate-100 rounded-xl p-4 border border-slate-200 space-y-3 text-center min-h-[160px] flex flex-col justify-between">
+                              <div>
+                                <div className="flex items-center justify-center gap-1 text-[11px] font-bold text-slate-700 mb-1">
+                                  <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                                  <span>AI Visual Brief</span>
+                                </div>
+                                <p className="text-[11px] text-slate-600 italic line-clamp-3 bg-white/80 p-2 rounded-lg border border-slate-200/60">
+                                  "{vis.visual_prompt}"
+                                </p>
+                              </div>
+
+                              <button
+                                type="button"
+                                disabled={isLoading}
+                                onClick={() => handleGenerateVisual(vis.visual_id)}
+                                className="w-full py-2 px-3 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+                              >
+                                {isLoading ? (
+                                  <>
+                                    <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Generating...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Sparkles className="w-3.5 h-3.5" /> Generate Visual
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="p-2.5 bg-white border-t border-slate-100 flex items-center justify-between text-xs">
+                          <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full border ${
+                            vis.status === 'approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                            vis.status === 'generated' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-slate-100 text-slate-600 border-slate-200'
+                          }`}>
+                            {vis.status === 'approved' ? 'Approved' : (vis.status === 'generated' ? 'Generated' : 'Pending')}
+                          </span>
+
+                          <div className="flex items-center gap-1">
+                            {vis.status === 'generated' && (
+                              <button
+                                onClick={() => handleApproveVisual(vis.visual_id)}
+                                className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold rounded-lg"
+                              >
+                                ✓ Approve
+                              </button>
+                            )}
+                            {vis.generated_asset_url && (
+                              <button
+                                onClick={() => handleRegenerateVisual(vis.visual_id)}
+                                className="px-2.5 py-1 border border-slate-200 hover:bg-slate-50 text-slate-700 text-[11px] font-semibold rounded-lg"
+                              >
+                                Regenerate
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleDeleteVisual(vis.visual_id)}
+                              className="p-1 text-slate-400 hover:text-red-600"
+                              title="Remove"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
 
               <div className="flex items-center justify-between border-b border-slate-200 pb-2">
@@ -1864,82 +2141,114 @@ export default function ProductLaunchPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {posts
                   .filter(p => platformFilter === 'All' || p.platform === platformFilter)
-                  .map(post => (
-                    <div key={post.id} className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs flex flex-col justify-between hover:border-slate-300 transition-all">
-                      <div className="p-4 bg-slate-100/90 border-b border-slate-100 flex flex-col justify-between relative min-h-[110px]">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex items-center gap-1.5">
-                            <Sparkles className="w-4 h-4 text-blue-600 shrink-0" />
-                            <span className="text-xs font-bold text-slate-800">AI Visual Brief</span>
+                  .map(post => {
+                    const assignedVis = campaignVisuals.find(v => v.visual_id === post.visual_id) || {}
+                    const assetUrl = post.generated_asset_url || assignedVis.generated_asset_url
+                    const isVisLoading = isGeneratingVisual[post.visual_id]
+
+                    return (
+                      <div key={post.id} className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs flex flex-col justify-between hover:border-slate-300 transition-all">
+                        {assetUrl ? (
+                          <div className="relative group overflow-hidden border-b border-slate-100">
+                            <img src={assetUrl} alt={post.category} className="w-full h-36 object-cover" />
+                            <div className="absolute top-2 right-2">
+                              <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full border ${
+                                post.status === 'Approved'
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200 shadow-xs'
+                                  : 'bg-amber-50 text-amber-700 border-amber-200 shadow-xs'
+                              }`}>
+                                {post.status}
+                              </span>
+                            </div>
                           </div>
-                          <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full border ${
-                            post.status === 'Approved'
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                              : post.status === 'Needs review'
-                              ? 'bg-amber-50 text-amber-700 border-amber-200'
-                              : 'bg-slate-100 text-slate-600 border-slate-200'
-                          }`}>
-                            {post.status}
-                          </span>
+                        ) : (
+                          <div className="p-4 bg-slate-100/90 border-b border-slate-100 flex flex-col justify-between relative min-h-[110px]">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex items-center gap-1.5">
+                                <Sparkles className="w-4 h-4 text-blue-600 shrink-0" />
+                                <span className="text-xs font-bold text-slate-800">AI Visual Brief</span>
+                              </div>
+                              <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full border ${
+                                post.status === 'Approved'
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                  : post.status === 'Needs review'
+                                  ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                  : 'bg-slate-100 text-slate-600 border-slate-200'
+                              }`}>
+                                {post.status}
+                              </span>
+                            </div>
+
+                            <p className="text-[11px] text-slate-600 italic line-clamp-2 mt-2 bg-white/70 p-2 rounded-lg border border-slate-200/60">
+                              "{post.visual_prompt || assignedVis.visual_prompt || `Clean visual design for ${formData.productName}: ${post.category}`}"
+                            </p>
+
+                            <div className="mt-2 flex items-center justify-between">
+                              <span className="text-[10px] text-amber-800 font-semibold bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/80">
+                                Pending Generation • {post.visual_aspect_ratio || '16:9'}
+                              </span>
+                              <button
+                                type="button"
+                                disabled={isVisLoading}
+                                onClick={() => handleGenerateVisual(post.visual_id || 'vis-hero-1')}
+                                className="px-2.5 py-1 text-[11px] font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-xs transition-colors flex items-center gap-1 disabled:opacity-50"
+                              >
+                                {isVisLoading ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                                Generate Visual
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="p-4 space-y-2 flex-grow">
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="font-bold uppercase tracking-wider text-slate-400">{post.category}</span>
+                            <span className="text-slate-400">{post.scheduledTime}</span>
+                          </div>
+
+                          <p className="text-xs text-slate-700 line-clamp-3 leading-relaxed">
+                            {post.caption}
+                          </p>
+
+                          <div className="flex flex-wrap gap-1 pt-1">
+                            {post.hashtags.map((h, i) => (
+                              <span key={i} className="text-[10px] text-blue-600 font-medium">
+                                {h}
+                              </span>
+                            ))}
+                          </div>
                         </div>
 
-                        <p className="text-[11px] text-slate-600 italic line-clamp-2 mt-2 bg-white/70 p-2 rounded-lg border border-slate-200/60">
-                          "{post.visual_prompt || post.visualPrompt || `Clean visual design for ${formData.productName}: ${post.category}`}"
-                        </p>
-
-                        <div className="mt-2 flex items-center justify-between text-[10px] text-amber-800 font-semibold bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/80 w-fit">
-                          <span>Pending Generation • {post.visual_aspect_ratio || '16:9'}</span>
+                        <div className="p-3 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between gap-1">
+                          <button
+                            onClick={() => {
+                              setSelectedPostId(post.id)
+                              setViewMode('post-review')
+                            }}
+                            className="px-2.5 py-1 text-xs font-semibold text-slate-600 hover:text-slate-900 border border-slate-200 rounded-lg bg-white hover:bg-slate-50"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleGenerateVisual(post.visual_id || 'vis-hero-1')}
+                            className="px-2.5 py-1 text-xs font-semibold text-slate-600 hover:text-slate-900 border border-slate-200 rounded-lg bg-white hover:bg-slate-50"
+                          >
+                            Redo Visual
+                          </button>
+                          <button
+                            onClick={() => togglePostApproval(post.id)}
+                            className={`px-3 py-1 text-xs font-bold rounded-lg transition-colors ${
+                              post.status === 'Approved'
+                                ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                                : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                            }`}
+                          >
+                            {post.status === 'Approved' ? '✓ Approved' : '✓ Approve'}
+                          </button>
                         </div>
                       </div>
-
-                      <div className="p-4 space-y-2 flex-grow">
-                        <div className="flex items-center justify-between text-[11px]">
-                          <span className="font-bold uppercase tracking-wider text-slate-400">{post.category}</span>
-                          <span className="text-slate-400">{post.scheduledTime}</span>
-                        </div>
-
-                        <p className="text-xs text-slate-700 line-clamp-3 leading-relaxed">
-                          {post.caption}
-                        </p>
-
-                        <div className="flex flex-wrap gap-1 pt-1">
-                          {post.hashtags.map((h, i) => (
-                            <span key={i} className="text-[10px] text-blue-600 font-medium">
-                              {h}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="p-3 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between gap-1">
-                        <button
-                          onClick={() => {
-                            setSelectedPostId(post.id)
-                            setViewMode('post-review')
-                          }}
-                          className="px-2.5 py-1 text-xs font-semibold text-slate-600 hover:text-slate-900 border border-slate-200 rounded-lg bg-white hover:bg-slate-50"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => alert(`Refining prompt for post: ${post.id}`)}
-                          className="px-2.5 py-1 text-xs font-semibold text-slate-600 hover:text-slate-900 border border-slate-200 rounded-lg bg-white hover:bg-slate-50"
-                        >
-                          Redo
-                        </button>
-                        <button
-                          onClick={() => togglePostApproval(post.id)}
-                          className={`px-3 py-1 text-xs font-bold rounded-lg transition-colors ${
-                            post.status === 'Approved'
-                              ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                              : 'bg-emerald-600 text-white hover:bg-emerald-700'
-                          }`}
-                        >
-                          {post.status === 'Approved' ? '✓ Approved' : '✓ Approve'}
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    )
+                  })}
               </div>
             </>
           ) : (
@@ -2062,27 +2371,93 @@ export default function ProductLaunchPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
             <div className="md:col-span-2 space-y-4">
-              <div className="bg-slate-100/90 rounded-2xl border border-slate-200 p-5 space-y-3 text-center relative">
-                <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mx-auto mb-1">
-                  <Sparkles className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">AI Visual Brief</h4>
-                  <span className="inline-block px-2 py-0.5 text-[10px] font-semibold bg-amber-100 text-amber-800 rounded-full mt-1">
-                    Pending generation ({currentPost.visual_aspect_ratio || '16:9'})
-                  </span>
-                </div>
-                <p className="text-xs text-slate-600 italic bg-white p-3 rounded-xl border border-slate-200 text-left leading-relaxed">
-                  "{currentPost.visual_prompt || currentPost.visualPrompt || `Clean visual design for ${formData.productName}: ${currentPost.category}`}"
-                </p>
-                <button
-                  type="button"
-                  onClick={() => alert("Visual generation queue is ready. Actual image rendering requires separate authorization.")}
-                  className="w-full py-2 px-3 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs transition-colors flex items-center justify-center gap-1.5"
-                >
-                  <Sparkles className="w-3.5 h-3.5" /> Generate Visual Concept
-                </button>
-              </div>
+              {(() => {
+                const assignedVis = campaignVisuals.find(v => v.visual_id === currentPost.visual_id) || {}
+                const assetUrl = currentPost.generated_asset_url || assignedVis.generated_asset_url
+                const isVisLoading = isGeneratingVisual[currentPost.visual_id]
+
+                if (assetUrl) {
+                  return (
+                    <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-3 shadow-xs">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">Campaign Visual</span>
+                        <span className="px-2 py-0.5 text-[10px] font-bold bg-emerald-50 text-emerald-700 rounded-full border border-emerald-200">
+                          {currentPost.visual_status || 'Generated'}
+                        </span>
+                      </div>
+                      <div className="relative group rounded-xl overflow-hidden border border-slate-200">
+                        <img src={assetUrl} alt={currentPost.category} className="w-full h-52 object-cover" />
+                        <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 p-2">
+                          <button
+                            onClick={() => handleRegenerateVisual(currentPost.visual_id || 'vis-hero-1')}
+                            className="p-2 bg-white text-slate-900 rounded-lg text-xs font-bold hover:bg-slate-100"
+                            title="Regenerate"
+                          >
+                            <RefreshCw className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleEditVisualPrompt(currentPost.visual_id || 'vis-hero-1')}
+                            className="p-2 bg-white text-slate-900 rounded-lg text-xs font-bold hover:bg-slate-100"
+                            title="Edit prompt"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                          <a
+                            href={assetUrl}
+                            download="campaign_visual.svg"
+                            className="p-2 bg-white text-slate-900 rounded-lg text-xs font-bold hover:bg-slate-100"
+                            title="Download"
+                          >
+                            <Download className="w-4 h-4" />
+                          </a>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between pt-1">
+                        <button
+                          type="button"
+                          onClick={() => handleRegenerateVisual(currentPost.visual_id || 'vis-hero-1')}
+                          className="w-full py-2 px-3 text-xs font-bold border border-slate-200 hover:bg-slate-50 text-slate-800 rounded-xl transition-colors flex items-center justify-center gap-1.5"
+                        >
+                          <RefreshCw className="w-3.5 h-3.5" /> Regenerate Visual
+                        </button>
+                      </div>
+                    </div>
+                  )
+                }
+
+                return (
+                  <div className="bg-slate-100/90 rounded-2xl border border-slate-200 p-5 space-y-3 text-center relative">
+                    <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mx-auto mb-1">
+                      <Sparkles className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">AI Visual Brief</h4>
+                      <span className="inline-block px-2 py-0.5 text-[10px] font-semibold bg-amber-100 text-amber-800 rounded-full mt-1">
+                        Pending generation ({currentPost.visual_aspect_ratio || '16:9'})
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-600 italic bg-white p-3 rounded-xl border border-slate-200 text-left leading-relaxed">
+                      "{currentPost.visual_prompt || assignedVis.visual_prompt || `Clean visual design for ${formData.productName}: ${currentPost.category}`}"
+                    </p>
+                    <button
+                      type="button"
+                      disabled={isVisLoading}
+                      onClick={() => handleGenerateVisual(currentPost.visual_id || 'vis-hero-1')}
+                      className="w-full py-2 px-3 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+                    >
+                      {isVisLoading ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-3.5 h-3.5" /> Generate Visual
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )
+              })()}
 
               <div className="p-4 rounded-2xl bg-white border border-slate-200 space-y-2 text-xs">
                 <div className="flex justify-between">
