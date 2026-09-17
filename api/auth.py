@@ -306,7 +306,7 @@ def decode_token(token: str) -> TokenData:
             full_name = payload.get("full_name") or user_meta.get("full_name") or user_meta.get("name")
             return TokenData(
                 user_id=str(payload["sub"]),
-                email=payload["email"],
+                email=payload.get("email") or payload.get("sub") or "user@smbflow.com",
                 role=role,
                 organization_id=str(org_id) if org_id else None,
                 tenant_id=str(org_id) if org_id else None,

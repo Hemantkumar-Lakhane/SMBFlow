@@ -5,58 +5,60 @@ import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { WSProvider }    from './contexts/WSContext'
 import { ThemeProvider } from './contexts/ThemeContext'
 import { AppShell }      from './components/shell/AppShell'
-import LoginPage         from './pages/LoginPage'
-import SignupPage        from './pages/SignupPage'
-import AuthCallbackPage  from './pages/AuthCallbackPage'
+import LoginPage          from './pages/LoginPage'
+import SignupPage         from './pages/SignupPage'
+import AuthCallbackPage   from './pages/AuthCallbackPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import ResetPasswordPage  from './pages/ResetPasswordPage'
-import AccessDenied      from './components/shell/AccessDenied'
-import { Spinner }       from './components/ui'
+import AccessDenied       from './components/shell/AccessDenied'
+import { Spinner }        from './components/ui'
 
-// Admin
-import GodView   from './pages/admin/GodView'
-import FleetCost from './pages/admin/FleetCost'
-import UsersPage from './pages/admin/UsersPage'
-import AdminPlatformOverview     from './pages/admin/AdminPlatformOverview'
-import AdminOrganizations        from './pages/admin/AdminOrganizations'
-import AdminWorkflowFleet        from './pages/admin/AdminWorkflowFleet'
-import AdminWorkflowRuns         from './pages/admin/AdminWorkflowRuns'
-import AdminReviewQueue          from './pages/admin/AdminReviewQueue'
-import AdminAIServices           from './pages/admin/AdminAIServices'
-import AdminProviderConnections  from './pages/admin/AdminProviderConnections'
-import AdminModelCatalog         from './pages/admin/AdminModelCatalog'
-import AdminRoutingAssignments   from './pages/admin/AdminRoutingAssignments'
-import AdminSystemHealth         from './pages/admin/AdminSystemHealth'
-import AdminPlatformIntegrations from './pages/admin/AdminPlatformIntegrations'
-import AdminUsageCost            from './pages/admin/AdminUsageCost'
-import AdminAuditLog             from './pages/admin/AdminAuditLog'
-import AdminPlatformSettings     from './pages/admin/AdminPlatformSettings'
+// ── Platform Admin pages ───────────────────────────────────────────────────────
+import AdminPlatformOverview    from './pages/admin/AdminPlatformOverview'
+// CUSTOMERS
+import AdminOrganizations       from './pages/admin/AdminOrganizations'
+import AdminOrgDetail           from './pages/admin/AdminOrgDetail'
+import UsersPage                from './pages/admin/UsersPage'
+// WORKFLOWS
+import AdminWorkflowCatalog     from './pages/admin/AdminWorkflowCatalog'
+import AdminWorkflowAssignments from './pages/admin/AdminWorkflowAssignments'
+import AdminRoutingAssignments  from './pages/admin/AdminRoutingAssignments'
+import AdminWorkflowRuns        from './pages/admin/AdminWorkflowRuns'
+// BILLING
+import AdminPlans               from './pages/admin/AdminPlans'
+import AdminSubscriptions       from './pages/admin/AdminSubscriptions'
+import AdminUsageCost           from './pages/admin/AdminUsageCost'
+import AdminInvoices            from './pages/admin/AdminInvoices'
+// AI PLATFORM
+import AdminProviderConnections from './pages/admin/AdminProviderConnections'
+import AdminModelCatalog        from './pages/admin/AdminModelCatalog'
+// OPERATIONS
+import AdminSystemHealth        from './pages/admin/AdminSystemHealth'
+import AdminAuditLog            from './pages/admin/AdminAuditLog'
+import AdminExceptions          from './pages/admin/AdminExceptions'
+// SYSTEM
+import AdminPlatformSettings    from './pages/admin/AdminPlatformSettings'
 
-import ConnectionsPage from './pages/setup/ConnectionsPage'
-import CasesPage from './pages/medical/CasesPage'
-
+// ── SMB Owner pages ────────────────────────────────────────────────────────────
+import ConnectionsPage     from './pages/setup/ConnectionsPage'
+import CasesPage           from './pages/medical/CasesPage'
 import EmailSummarizerPage from './pages/client/EmailSummarizerPage'
-import ProductLaunchPage from './pages/client/ProductLaunchPage'
+import ProductLaunchPage   from './pages/client/ProductLaunchPage'
+import Dashboard           from './pages/client/Dashboard'
+import EscalationsPage     from './pages/client/EscalationsPage'
+import WorkflowsPage       from './pages/client/WorkflowsPage'
+import WorkflowLibrary     from './pages/client/WorkflowLibrary'
+import AIEngine            from './pages/client/AIEngine'
+import AIEngineSettings    from './pages/client/AIEngineSettings'
+import GeneralSettings     from './pages/client/GeneralSettings'
+import BudgetPage          from './pages/client/BudgetPage'
+import EvidencePage        from './pages/client/EvidencePage'
 
-// Client — new Figma-matched pages
-import Dashboard          from './pages/client/Dashboard'
-import EscalationsPage    from './pages/client/EscalationsPage'
-import WorkflowsPage      from './pages/client/WorkflowsPage'
-import WorkflowLibrary    from './pages/client/WorkflowLibrary'
-import AIEngine           from './pages/client/AIEngine'
-import AIEngineSettings   from './pages/client/AIEngineSettings'
-import IntegrationsPage   from './pages/client/IntegrationsPage'
-import GeneralSettings    from './pages/client/GeneralSettings'
-import BudgetPage         from './pages/client/BudgetPage'
-import EvidencePage       from './pages/client/EvidencePage'
-import IntegrationSettings from './pages/client/IntegrationSettings'
-
-// Client — existing pages kept for builder/detail/admin tools
+// ── Admin-accessible technical tools (kept for operational use) ───────────────
 import WorkflowDetail  from './pages/client/WorkflowDetail'
 import WorkflowBuilder from './pages/client/WorkflowBuilder'
 import ModelSettings   from './pages/client/ModelSettings'
 import ToolsPage       from './pages/client/ToolsPage'
-import ConfigStudio    from './pages/client/ConfigStudio'
 import PromptStudio    from './pages/client/PromptStudio'
 import EmailQueuePage  from './pages/client/EmailQueuePage'
 import PatternsPage    from './pages/client/PatternsPage'
@@ -107,7 +109,6 @@ function ProtectedRoute({ children, adminOnly = false }) {
   return children
 }
 
-
 function Wrap({ adminOnly = false, children }) {
   return (
     <ProtectedRoute adminOnly={adminOnly}>
@@ -119,7 +120,7 @@ function Wrap({ adminOnly = false, children }) {
 function AppRoutes() {
   return (
     <Routes>
-      {/* Auth */}
+      {/* ── Auth ─────────────────────────────────────────────────────────── */}
       <Route path="/auth"                 element={<LoginPage />} />
       <Route path="/auth/signup"          element={<SignupPage />} />
       <Route path="/auth/callback"        element={<AuthCallbackPage />} />
@@ -127,58 +128,73 @@ function AppRoutes() {
       <Route path="/auth/reset-password"  element={<ResetPasswordPage />} />
       <Route path="/" element={<HomeRedirect />} />
 
-      {/* Admin */}
-      <Route path="/admin"                  element={<Wrap adminOnly><AdminPlatformOverview /></Wrap>} />
-      <Route path="/admin/organizations"    element={<Wrap adminOnly><AdminOrganizations /></Wrap>} />
-      <Route path="/admin/users"            element={<Wrap adminOnly><UsersPage /></Wrap>} />
-      <Route path="/admin/workflows"        element={<Wrap adminOnly><AdminWorkflowFleet /></Wrap>} />
-      <Route path="/admin/runs"             element={<Wrap adminOnly><AdminWorkflowRuns /></Wrap>} />
-      <Route path="/admin/reviews"          element={<Wrap adminOnly><AdminReviewQueue /></Wrap>} />
-      <Route path="/admin/ai-services"      element={<Wrap adminOnly><AdminAIServices /></Wrap>} />
-      <Route path="/admin/providers"        element={<Wrap adminOnly><AdminProviderConnections /></Wrap>} />
-      <Route path="/admin/models"           element={<Wrap adminOnly><AdminModelCatalog /></Wrap>} />
-      <Route path="/admin/routing"          element={<Wrap adminOnly><AdminRoutingAssignments /></Wrap>} />
-      <Route path="/admin/health"           element={<Wrap adminOnly><AdminSystemHealth /></Wrap>} />
-      <Route path="/admin/integrations"     element={<Wrap adminOnly><AdminPlatformIntegrations /></Wrap>} />
-      <Route path="/admin/usage"            element={<Wrap adminOnly><AdminUsageCost /></Wrap>} />
-      <Route path="/admin/audit"            element={<Wrap adminOnly><AdminAuditLog /></Wrap>} />
-      <Route path="/admin/settings"         element={<Wrap adminOnly><AdminPlatformSettings /></Wrap>} />
-      <Route path="/admin/fleet"            element={<Wrap adminOnly><AdminUsageCost /></Wrap>} />
+      {/* ── Platform Admin — OVERVIEW ─────────────────────────────────────── */}
+      <Route path="/admin" element={<Wrap adminOnly><AdminPlatformOverview /></Wrap>} />
 
-      {/* Operations */}
-      <Route path="/dashboard"         element={<Wrap><Dashboard /></Wrap>} />
-      <Route path="/setup/connections" element={<Wrap><ConnectionsPage /></Wrap>} />
-      <Route path="/integrations"      element={<Wrap><ConnectionsPage /></Wrap>} />
-      <Route path="/medical/cases"     element={<Wrap><CasesPage /></Wrap>} />
-      <Route path="/escalations"       element={<Wrap><EscalationsPage /></Wrap>} />
-      <Route path="/workflows"                  element={<Wrap><WorkflowsPage /></Wrap>} />
-      <Route path="/workflows/email_summarizer" element={<Wrap><EmailSummarizerPage /></Wrap>} />
-      <Route path="/email-summarizer"           element={<Wrap><EmailSummarizerPage /></Wrap>} />
-      <Route path="/workflows/product_launch"   element={<Wrap><ProductLaunchPage /></Wrap>} />
+      {/* ── Platform Admin — CUSTOMERS ───────────────────────────────────── */}
+      <Route path="/admin/organizations"        element={<Wrap adminOnly><AdminOrganizations /></Wrap>} />
+      <Route path="/admin/organizations/:orgId" element={<Wrap adminOnly><AdminOrgDetail /></Wrap>} />
+      <Route path="/admin/users"                element={<Wrap adminOnly><UsersPage /></Wrap>} />
+
+      {/* ── Platform Admin — WORKFLOWS ───────────────────────────────────── */}
+      <Route path="/admin/workflows/catalog"      element={<Wrap adminOnly><AdminWorkflowCatalog /></Wrap>} />
+      <Route path="/admin/workflows/assignments"  element={<Wrap adminOnly><AdminWorkflowAssignments /></Wrap>} />
+      <Route path="/admin/runs"                   element={<Wrap adminOnly><AdminWorkflowRuns /></Wrap>} />
+
+      {/* ── Platform Admin — BILLING ─────────────────────────────────────── */}
+      <Route path="/admin/plans"         element={<Wrap adminOnly><AdminPlans /></Wrap>} />
+      <Route path="/admin/subscriptions" element={<Wrap adminOnly><AdminSubscriptions /></Wrap>} />
+      <Route path="/admin/usage"         element={<Wrap adminOnly><AdminUsageCost /></Wrap>} />
+      <Route path="/admin/invoices"      element={<Wrap adminOnly><AdminInvoices /></Wrap>} />
+
+      {/* ── Platform Admin — AI PLATFORM ─────────────────────────────────── */}
+      <Route path="/admin/providers" element={<Wrap adminOnly><AdminProviderConnections /></Wrap>} />
+      <Route path="/admin/models"    element={<Wrap adminOnly><AdminModelCatalog /></Wrap>} />
+      <Route path="/admin/routing"   element={<Wrap adminOnly><AdminRoutingAssignments /></Wrap>} />
+
+      {/* ── Platform Admin — OPERATIONS ──────────────────────────────────── */}
+      <Route path="/admin/health"      element={<Wrap adminOnly><AdminSystemHealth /></Wrap>} />
+      <Route path="/admin/audit"       element={<Wrap adminOnly><AdminAuditLog /></Wrap>} />
+      <Route path="/admin/exceptions"  element={<Wrap adminOnly><AdminExceptions /></Wrap>} />
+
+      {/* ── Platform Admin — SYSTEM ──────────────────────────────────────── */}
+      <Route path="/admin/settings" element={<Wrap adminOnly><AdminPlatformSettings /></Wrap>} />
+
+      {/* ── SMB Owner — Operations ───────────────────────────────────────── */}
+      <Route path="/dashboard"    element={<Wrap><Dashboard /></Wrap>} />
+      <Route path="/escalations"  element={<Wrap><EscalationsPage /></Wrap>} />
+      <Route path="/workflows"    element={<Wrap><WorkflowsPage /></Wrap>} />
+      <Route path="/medical/cases" element={<Wrap><CasesPage /></Wrap>} />
+
+      {/* Workflow run pages */}
+      <Route path="/workflows/email_summarizer"      element={<Wrap><EmailSummarizerPage /></Wrap>} />
+      <Route path="/email-summarizer"                element={<Wrap><EmailSummarizerPage /></Wrap>} />
+      <Route path="/workflows/product_launch"        element={<Wrap><ProductLaunchPage /></Wrap>} />
       <Route path="/workflows/product_launch_sprint" element={<Wrap><ProductLaunchPage /></Wrap>} />
-      <Route path="/product-launch"             element={<Wrap><ProductLaunchPage /></Wrap>} />
+      <Route path="/product-launch"                  element={<Wrap><ProductLaunchPage /></Wrap>} />
 
-
-      {/* Configuration */}
-      <Route path="/workflow-library" element={<Wrap><WorkflowLibrary /></Wrap>} />
-      <Route path="/ai-engine"        element={<Wrap adminOnly><AIEngine /></Wrap>} />
-
-      {/* Settings */}
-      <Route path="/settings/general"      element={<Wrap><GeneralSettings /></Wrap>} />
-      <Route path="/settings/ai-engine"    element={<Wrap adminOnly><AIEngineSettings /></Wrap>} />
+      {/* ── SMB Owner — Configuration ────────────────────────────────────── */}
+      <Route path="/workflow-library"      element={<Wrap><WorkflowLibrary /></Wrap>} />
+      <Route path="/integrations"          element={<Wrap><ConnectionsPage /></Wrap>} />
+      <Route path="/setup/connections"     element={<Wrap><ConnectionsPage /></Wrap>} />
       <Route path="/settings/integrations" element={<Wrap><ConnectionsPage /></Wrap>} />
-      <Route path="/budget"                element={<Wrap><BudgetPage /></Wrap>} />
-      <Route path="/evidence"              element={<Wrap><EvidencePage /></Wrap>} />
+      <Route path="/ai-engine"             element={<Wrap adminOnly><AIEngine /></Wrap>} />
 
-      {/* Legacy / technical routes kept working for admins only */}
-      <Route path="/workflows/builder"     element={<Wrap adminOnly><WorkflowBuilder /></Wrap>} />
-      <Route path="/workflows/:runId"      element={<Wrap><WorkflowDetail /></Wrap>} />
-      <Route path="/models"                element={<Wrap adminOnly><ModelSettings /></Wrap>} />
-      <Route path="/tools"                 element={<Wrap adminOnly><ToolsPage /></Wrap>} />
-      <Route path="/config"                element={<Wrap><GeneralSettings /></Wrap>} />
-      <Route path="/prompts"               element={<Wrap adminOnly><PromptStudio /></Wrap>} />
-      <Route path="/email-queue"           element={<Wrap><EmailQueuePage /></Wrap>} />
-      <Route path="/patterns"              element={<Wrap adminOnly><PatternsPage /></Wrap>} />
+      {/* ── SMB Owner — Settings ─────────────────────────────────────────── */}
+      <Route path="/settings/general"   element={<Wrap><GeneralSettings /></Wrap>} />
+      <Route path="/settings/ai-engine" element={<Wrap adminOnly><AIEngineSettings /></Wrap>} />
+      <Route path="/budget"             element={<Wrap><BudgetPage /></Wrap>} />
+      <Route path="/evidence"           element={<Wrap><EvidencePage /></Wrap>} />
+      <Route path="/config"             element={<Wrap><GeneralSettings /></Wrap>} />
+
+      {/* ── Admin-accessible technical tools ─────────────────────────────── */}
+      <Route path="/workflows/builder" element={<Wrap adminOnly><WorkflowBuilder /></Wrap>} />
+      <Route path="/workflows/:runId"  element={<Wrap><WorkflowDetail /></Wrap>} />
+      <Route path="/models"            element={<Wrap adminOnly><ModelSettings /></Wrap>} />
+      <Route path="/tools"             element={<Wrap adminOnly><ToolsPage /></Wrap>} />
+      <Route path="/prompts"           element={<Wrap adminOnly><PromptStudio /></Wrap>} />
+      <Route path="/email-queue"       element={<Wrap><EmailQueuePage /></Wrap>} />
+      <Route path="/patterns"          element={<Wrap adminOnly><PatternsPage /></Wrap>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

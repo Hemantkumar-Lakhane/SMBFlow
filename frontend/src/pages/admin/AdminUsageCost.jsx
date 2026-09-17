@@ -1,150 +1,335 @@
-import { useState, useEffect, useCallback } from 'react'
-import { Users, Activity, DollarSign } from 'lucide-react'
+// AdminUsageCost — Usage & Metering
+// Data from: GET /api/v1/admin/usage?days=N (platform-wide)
+//            GET /api/v1/admin/usage/:orgId?days=N (per-org drill-down)
+// No legacy god-view or fleet endpoints used.
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
+import {
+  BarChart3, RefreshCw, XCircle, Search,
+  DollarSign, Zap, Cpu, Image, ChevronRight,
+} from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
-import { useWebSocket } from '../../contexts/WSContext'
-import { fmtCost, fmtTokens, timeAgo } from '../../utils/helpers'
+import { EmptyState } from '../../components/ui'
 
-export default function AdminUsageCost() {
-  const { api } = useAuth()
-  const { events } = useWebSocket()
-  const [fleet, setFleet] = useState(null)
-  const [god,   setGod]   = useState(null)
-  const [loading, setLoading] = useState(true)
+// ── helpers ───────────────────────────────────────────────────────────────────
+function fmtCost(v) {
+  if (v === null || v === undefined) return 'No data'
+  return `$${Number(v).toFixed(4)}`
+}
+function fmtTokens(n) {
+  if (!n) return '0'
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`
+  if (n >= 1_000)     return `${(n / 1_000).toFixed(1)}K`
+  return n.toString()
+}
+function fmt(n) {
+  if (n === null || n === undefined) return '—'
+  return Number(n).toLocaleString()
+}
 
-  const load = useCallback(async () => {
-    try {
-      const [f, g] = await Promise.all([
-        api.get('/analytics/admin/fleet').catch(() => null),
-        api.get('/admin/god-view').catch(() => null),
-      ])
-      setFleet(f); setGod(g)
-    } finally { setLoading(false) }
-  }, [api])
+const DAYS_OPTIONS = [7, 14, 30, 60, 90]
 
-  useEffect(() => { load() }, [load])
-
-  const tenants   = god?.tenants || []
-  const allRuns   = god?.all_workflows || []
-  const byTenant  = fleet?.by_tenant || {}
-  const totalCost = fleet?.total_cost_usd || 0
-  const totalRuns = fleet?.total_runs || 0
-
-  const costEvents = [...events].filter(e => ['agent_completed','workflow_completed'].includes(e.type) && e.data?.cost_usd > 0).reverse().slice(0, 20)
-
-  const KPI = ({ label, value, sub }) => (
-    <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">{label}</p>
-      <p className="text-lg font-bold text-gray-900">{value || <span className="text-gray-300 font-normal">—</span>}</p>
-      {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
+// ── Summary card ──────────────────────────────────────────────────────────────
+function MetricCard({ label, value, icon: Icon, accent = 'slate', note }) {
+  const accents = {
+    blue:   'bg-blue-50   text-blue-600',
+    purple: 'bg-purple-50 text-purple-600',
+    orange: 'bg-orange-50 text-orange-600',
+    green:  'bg-emerald-50 text-emerald-600',
+    slate:  'bg-slate-100  text-slate-500',
+  }
+  return (
+    <div className="bg-white border border-slate-200 rounded-xl p-5 flex items-start gap-4">
+      <div className={`p-2.5 rounded-xl shrink-0 ${accents[accent]}`}>
+        <Icon size={17} strokeWidth={1.8} />
+      </div>
+      <div className="min-w-0">
+        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-0.5">{label}</p>
+        <p className="text-xl font-bold text-slate-900">{value}</p>
+        {note && <p className="text-xs text-slate-400 mt-0.5">{note}</p>}
+      </div>
     </div>
   )
+}
+
+// ── Usage breakdown table ─────────────────────────────────────────────────────
+function UsageTable({ rows, loading }) {
+  const [search, setSearch] = useState('')
+
+  const filtered = useMemo(() => {
+    if (!search) return rows
+    const q = search.toLowerCase()
+    return rows.filter(r =>
+      r.usage_type?.toLowerCase().includes(q) ||
+      r.workflow_key?.toLowerCase().includes(q)
+    )
+  }, [rows, search])
 
   return (
-    <div className="p-6 bg-gray-50 min-h-full">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Fleet Cost &amp; Usage</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Platform-wide AI usage, token consumption, and cost breakdown</p>
-      </div>
-
-      <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-        <p className="text-xs text-gray-500">All cost and usage metrics will populate once the platform API is connected and workflows begin executing. No values are fabricated — '$0.00' is not displayed for unimplemented metrics.</p>
-      </div>
-
-      <div className="grid grid-cols-5 gap-3 mb-6">
-        <KPI label="Total Fleet Cost"   value={totalCost > 0 ? fmtCost(totalCost) : null} sub="All tenants combined" />
-        <KPI label="Total Runs"         value={totalRuns > 0 ? totalRuns : null}           sub="Platform-wide executions" />
-        <KPI label="Active Tenants"     value={tenants.length > 0 ? tenants.length : null} sub="Tenants with recent activity" />
-        <KPI label="Avg Cost / Run"     value={totalRuns > 0 && totalCost > 0 ? fmtCost(totalCost/totalRuns) : null} sub="Mean cost per execution" />
-        <KPI label="Total Tokens"       value={null} sub="LLM tokens consumed" />
-      </div>
-
-      {/* Cost by Tenant */}
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden mb-4">
-        <div className="px-5 py-4 border-b border-gray-100">
-          <h2 className="text-sm font-bold text-gray-900">Cost by Tenant</h2>
+    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100">
+        <h2 className="text-sm font-semibold text-slate-900">Usage Breakdown</h2>
+        <div className="relative">
+          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          <input
+            type="text" placeholder="Filter…" value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-400 w-44"
+          />
         </div>
+      </div>
+      {loading ? (
+        <div className="py-12 text-center text-slate-400 text-sm">Loading…</div>
+      ) : filtered.length === 0 ? (
+        <div className="py-12 text-center text-slate-400 text-sm">
+          {rows.length === 0 ? 'No usage events in this period' : 'No results for your filter'}
+        </div>
+      ) : (
         <table className="w-full text-sm">
-          <thead><tr className="border-b border-gray-100">{['TENANT','RUNS','COMPLETED RUNS','TOKENS','COST'].map(h=><th key={h} className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>)}</tr></thead>
-          <tbody>
-            {Object.keys(byTenant).length === 0 ? (
-              <tr><td colSpan={5} className="px-5 py-16 text-center">
-                <div className="flex flex-col items-center gap-2">
-                  <Users className="w-8 h-8 text-gray-300" />
-                  <p className="text-sm font-medium text-gray-500">No tenant cost data</p>
-                  <p className="text-xs text-gray-400">Cost breakdown by tenant will appear once the platform API is connected.</p>
-                </div>
-              </td></tr>
-            ) : Object.entries(byTenant).map(([tid, d]) => {
-              const t = tenants.find(x => x.id === tid)
-              return (
-                <tr key={tid} className="border-b border-gray-50 hover:bg-gray-50">
-                  <td className="px-5 py-3 text-sm font-semibold text-gray-900">{d.tenant_name || t?.name || tid.slice(0,8)}</td>
-                  <td className="px-5 py-3 text-sm text-gray-500">{d.runs || 0}</td>
-                  <td className="px-5 py-3 text-sm text-gray-500">{d.completed || 0}</td>
-                  <td className="px-5 py-3 text-sm text-gray-500">{fmtTokens(d.tokens || 0)}</td>
-                  <td className="px-5 py-3 text-sm font-semibold text-gray-900">{fmtCost(d.cost || 0)}</td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Live Cost Events */}
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden mb-4">
-        <div className="px-5 py-4 border-b border-gray-100">
-          <h2 className="text-sm font-bold text-gray-900">Live Cost Events</h2>
-        </div>
-        {costEvents.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 gap-2">
-            <Activity className="w-8 h-8 text-gray-300" />
-            <p className="text-sm font-medium text-gray-500">No live cost events</p>
-            <p className="text-xs text-gray-400">Real-time model usage events will stream here when WebSocket is connected.</p>
-          </div>
-        ) : (
-          <div className="px-5 py-3 space-y-1 font-mono text-xs max-h-48 overflow-y-auto">
-            {costEvents.map((e,i) => (
-              <div key={i} className="flex gap-3 text-gray-500">
-                <span className="text-gray-400">{e._receivedAt?.slice(11,19)}</span>
-                <span className="text-amber-600 font-bold">{fmtCost(e.data?.cost_usd)}</span>
-                <span className="truncate">{e.data?.workflow || e.type}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Recent Runs Cost Breakdown */}
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100">
-          <h2 className="text-sm font-bold text-gray-900">Recent Runs — Cost Breakdown</h2>
-        </div>
-        <table className="w-full text-sm">
-          <thead><tr className="border-b border-gray-100">{['RUN ID','WORKFLOW','TENANT','STATUS','TOKENS IN','TOKENS OUT','COST','STARTED'].map(h=><th key={h} className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>)}</tr></thead>
-          <tbody>
-            {allRuns.length === 0 ? (
-              <tr><td colSpan={8} className="px-5 py-16 text-center">
-                <div className="flex flex-col items-center gap-2">
-                  <DollarSign className="w-8 h-8 text-gray-300" />
-                  <p className="text-sm font-medium text-gray-500">Cost tracking unavailable</p>
-                  <p className="text-xs text-blue-500">Per-run cost data will appear once the platform API is connected.</p>
-                </div>
-              </td></tr>
-            ) : allRuns.slice(0,20).map(r => (
-              <tr key={r.run_id} className="border-b border-gray-50 hover:bg-gray-50">
-                <td className="px-5 py-3 text-xs font-mono text-gray-500">{r.run_id?.slice(0,8)}</td>
-                <td className="px-5 py-3 text-xs text-gray-700 truncate max-w-[100px]">{r.workflow_name}</td>
-                <td className="px-5 py-3 text-xs text-gray-500">{r.tenant_id?.slice(0,8)||'—'}</td>
-                <td className="px-5 py-3"><span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${r.status==='completed'?'bg-green-50 text-green-700':'bg-gray-100 text-gray-500'}`}>{r.status}</span></td>
-                <td className="px-5 py-3 text-xs text-gray-500">{fmtTokens(r.total_tokens_in)}</td>
-                <td className="px-5 py-3 text-xs text-gray-500">{fmtTokens(r.total_tokens_out)}</td>
-                <td className="px-5 py-3 text-xs font-semibold text-gray-700">{r.total_cost_usd > 0 ? fmtCost(r.total_cost_usd) : '—'}</td>
-                <td className="px-5 py-3 text-xs text-gray-400">{timeAgo(r.started_at)}</td>
+          <thead>
+            <tr className="border-b border-slate-100 bg-slate-50/50">
+              {['Usage Type', 'Workflow', 'Events', 'Tokens In', 'Tokens Out', 'Quantity'].map(h => (
+                <th key={h} className="px-5 py-2.5 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {filtered.map((row, i) => (
+              <tr key={i} className="hover:bg-slate-50 transition-colors">
+                <td className="px-5 py-3 font-mono text-xs text-slate-700">{row.usage_type}</td>
+                <td className="px-5 py-3 text-xs text-slate-500">{row.workflow_key || '—'}</td>
+                <td className="px-5 py-3 text-sm font-medium text-slate-800">{fmt(row.event_count)}</td>
+                <td className="px-5 py-3 font-mono text-xs text-slate-500">{fmtTokens(row.tokens_in)}</td>
+                <td className="px-5 py-3 font-mono text-xs text-slate-500">{fmtTokens(row.tokens_out)}</td>
+                <td className="px-5 py-3 text-xs text-slate-500">{fmt(row.total_quantity)}</td>
               </tr>
             ))}
           </tbody>
         </table>
+      )}
+    </div>
+  )
+}
+
+// ── Per-org usage drill-down ──────────────────────────────────────────────────
+function OrgUsageTable({ orgs, days, api, navigate }) {
+  const [orgUsage, setOrgUsage] = useState({})
+  const [loading, setLoading]   = useState({})
+
+  async function loadOrg(orgId) {
+    if (orgUsage[orgId] !== undefined) return
+    setLoading(l => ({ ...l, [orgId]: true }))
+    try {
+      const d = await api.get(`/admin/usage/${orgId}?days=${days}`)
+      setOrgUsage(u => ({ ...u, [orgId]: d }))
+    } catch {
+      setOrgUsage(u => ({ ...u, [orgId]: null }))
+    } finally {
+      setLoading(l => ({ ...l, [orgId]: false }))
+    }
+  }
+
+  const [expanded, setExpanded] = useState(null)
+  function toggle(orgId) {
+    if (expanded === orgId) { setExpanded(null); return }
+    setExpanded(orgId)
+    loadOrg(orgId)
+  }
+
+  return (
+    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+      <div className="px-5 py-3.5 border-b border-slate-100">
+        <h2 className="text-sm font-semibold text-slate-900">Usage by Organization</h2>
+        <p className="text-xs text-slate-400 mt-0.5">Click to expand per-org breakdown</p>
       </div>
+      {orgs.length === 0 ? (
+        <div className="py-10 text-center text-slate-400 text-sm">No organizations</div>
+      ) : (
+        <div className="divide-y divide-slate-100">
+          {orgs.map(org => (
+            <div key={org.id}>
+              <div
+                className="flex items-center justify-between px-5 py-3.5 hover:bg-slate-50 cursor-pointer transition-colors"
+                onClick={() => toggle(org.id)}
+              >
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
+                    <span className="text-blue-700 text-xs font-bold">{(org.name || '?')[0].toUpperCase()}</span>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-slate-900">{org.name}</p>
+                    <p className="text-xs text-slate-400">{org.run_count ?? 0} runs · {org.plan_name || org.plan_slug || '—'}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 shrink-0">
+                  <span className="text-xs text-slate-500 font-mono">
+                    {org.total_spend_usd !== null && org.total_spend_usd !== undefined
+                      ? `$${Number(org.total_spend_usd).toFixed(4)}`
+                      : 'No cost data'}
+                  </span>
+                  <button
+                    onClick={e => { e.stopPropagation(); navigate(`/admin/organizations/${org.id}`) }}
+                    className="p-1 text-slate-300 hover:text-blue-500 transition-colors"
+                    title="View org"
+                  >
+                    <ChevronRight size={13} />
+                  </button>
+                  <span className={`text-slate-400 transition-transform ${expanded === org.id ? 'rotate-90' : ''}`}>
+                    <ChevronRight size={13} />
+                  </span>
+                </div>
+              </div>
+
+              {expanded === org.id && (
+                <div className="border-t border-slate-100 bg-slate-50/50 px-5 py-4">
+                  {loading[org.id] ? (
+                    <p className="text-xs text-slate-400 text-center py-4">Loading usage…</p>
+                  ) : !orgUsage[org.id] ? (
+                    <p className="text-xs text-slate-400 text-center py-4">No usage data for this organization</p>
+                  ) : (
+                    <div className="flex flex-col gap-3">
+                      <div className="grid grid-cols-3 gap-3">
+                        {[
+                          { label: 'Total Cost', value: fmtCost(orgUsage[org.id].total_cost_usd) },
+                          { label: 'Reported Events', value: fmt(orgUsage[org.id].reported_events) },
+                          { label: 'Unreported Events', value: fmt(orgUsage[org.id].unreported_events) },
+                        ].map(item => (
+                          <div key={item.label} className="bg-white border border-slate-200 rounded-lg p-3">
+                            <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">{item.label}</p>
+                            <p className="text-sm font-bold text-slate-900 mt-0.5">{item.value}</p>
+                          </div>
+                        ))}
+                      </div>
+                      {orgUsage[org.id].breakdown?.length > 0 && (
+                        <table className="w-full text-xs bg-white border border-slate-200 rounded-lg overflow-hidden">
+                          <thead>
+                            <tr className="border-b border-slate-100 bg-slate-50">
+                              {['Type', 'Workflow', 'Events', 'Tokens In', 'Tokens Out'].map(h => (
+                                <th key={h} className="px-3 py-2 text-left text-[10px] font-semibold text-slate-500 uppercase tracking-wide">{h}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {orgUsage[org.id].breakdown.map((row, i) => (
+                              <tr key={i}>
+                                <td className="px-3 py-2 font-mono text-slate-600">{row.usage_type}</td>
+                                <td className="px-3 py-2 text-slate-500">{row.workflow_key || '—'}</td>
+                                <td className="px-3 py-2 text-slate-700">{fmt(row.event_count)}</td>
+                                <td className="px-3 py-2 font-mono text-slate-500">{fmtTokens(row.tokens_in)}</td>
+                                <td className="px-3 py-2 font-mono text-slate-500">{fmtTokens(row.tokens_out)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Main component ─────────────────────────────────────────────────────────────
+export default function AdminUsageCost() {
+  const { api } = useAuth()
+  const navigate = useNavigate()
+
+  const [days, setDays]         = useState(30)
+  const [usage, setUsage]       = useState(null)
+  const [orgs, setOrgs]         = useState([])
+  const [loading, setLoading]   = useState(true)
+  const [error, setError]       = useState(null)
+
+  const load = useCallback(async () => {
+    setLoading(true); setError(null)
+    try {
+      const [u, o] = await Promise.all([
+        api.get(`/admin/usage?days=${days}`),
+        api.get('/admin/organizations').catch(() => []),
+      ])
+      setUsage(u)
+      setOrgs(Array.isArray(o) ? o : [])
+    } catch (e) {
+      setError(e?.response?.data?.detail || e.message || 'Failed to load usage data')
+    } finally {
+      setLoading(false) }
+  }, [api, days])
+
+  useEffect(() => { load() }, [load])
+
+  // Aggregate summary metrics from breakdown
+  const summary = useMemo(() => {
+    const b = usage?.breakdown || []
+    return {
+      wf_runs:    b.filter(r => r.usage_type === 'workflow_run').reduce((s, r) => s + (r.event_count || 0), 0),
+      tokens_in:  b.reduce((s, r) => s + (r.tokens_in  || 0), 0),
+      tokens_out: b.reduce((s, r) => s + (r.tokens_out || 0), 0),
+      img_gens:   b.filter(r => r.usage_type === 'image_gen').reduce((s, r) => s + (r.event_count || 0), 0),
+      cost:       usage?.total_cost_usd,
+    }
+  }, [usage])
+
+  return (
+    <div className="flex flex-col gap-5 p-6 min-h-full bg-slate-50">
+
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-slate-900">Usage &amp; Metering</h1>
+          <p className="text-sm text-slate-500 mt-0.5">Platform-wide AI usage, token consumption, and cost</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <select
+            value={days}
+            onChange={e => setDays(Number(e.target.value))}
+            className="px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none"
+          >
+            {DAYS_OPTIONS.map(d => <option key={d} value={d}>Last {d} days</option>)}
+          </select>
+          <button onClick={load} disabled={loading}
+            className="p-2 rounded-lg text-slate-500 bg-white border border-slate-200 hover:bg-slate-50 transition-colors disabled:opacity-50">
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+          </button>
+        </div>
+      </div>
+
+      {error && (
+        <div className="flex items-center gap-2 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+          <XCircle size={15} className="shrink-0" />{error}
+        </div>
+      )}
+
+      {/* KPI cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <MetricCard label="Workflow Runs" value={loading ? '…' : fmt(summary.wf_runs)}
+          icon={Zap} accent="blue" note={`last ${days} days`} />
+        <MetricCard label="AI Tokens In" value={loading ? '…' : fmtTokens(summary.tokens_in)}
+          icon={Cpu} accent="purple" note="prompt tokens" />
+        <MetricCard label="AI Tokens Out" value={loading ? '…' : fmtTokens(summary.tokens_out)}
+          icon={Cpu} accent="slate" note="completion tokens" />
+        <MetricCard label="Platform Cost" value={loading ? '…' : fmtCost(summary.cost)}
+          icon={DollarSign} accent="green" note="reported events only" />
+      </div>
+
+      {/* Reported/unreported note */}
+      {!loading && usage && (
+        <div className="flex items-center gap-4 px-4 py-3 bg-slate-100 border border-slate-200 rounded-xl text-xs text-slate-600">
+          <span><span className="font-semibold">{fmt(usage.reported_events)}</span> events with cost data</span>
+          <span className="text-slate-300">·</span>
+          <span><span className="font-semibold">{fmt(usage.unreported_events)}</span> events without cost (provider did not report)</span>
+        </div>
+      )}
+
+      {/* Platform breakdown table */}
+      <UsageTable rows={usage?.breakdown || []} loading={loading} />
+
+      {/* Per-org drill-down */}
+      <OrgUsageTable orgs={orgs} days={days} api={api} navigate={navigate} />
     </div>
   )
 }

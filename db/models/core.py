@@ -154,3 +154,183 @@ class ProcessedEmailEvent(Base):
     source          = Column(String(100), default="synthetic_email")
     processed_at    = Column(DateTime, default=datetime.utcnow)
 
+
+# =============================================================================
+# Billing & Entitlement Models (Migration 003)
+# =============================================================================
+
+from sqlalchemy import Numeric, UniqueConstraint
+
+class WorkflowCatalog(Base):
+    """Platform-level catalog of all workflow products SMBFlow offers."""
+    __tablename__ = "workflow_catalog"
+
+    id                    = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name                  = Column(String(255), nullable=False)
+    key                   = Column(String(100), nullable=False, unique=True)
+    description           = Column(Text)
+    category              = Column(String(100), nullable=False, default="general")
+    status                = Column(String(50),  nullable=False, default="active")   # active | beta | deprecated
+    version               = Column(String(20),  nullable=False, default="1.0.0")
+    pricing_model         = Column(String(50),  nullable=False, default="included")  # included | per_run | metered
+    required_integrations = Column(JSONB, nullable=False, default=list)
+    supported_modules     = Column(JSONB, nullable=False, default=list)
+    metadata_             = Column("metadata", JSONB, nullable=False, default=dict)
+    active                = Column(Boolean, nullable=False, default=True)
+    created_at            = Column(DateTime, default=datetime.utcnow)
+    updated_at            = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class BillingPlan(Base):
+    """SaaS billing plans (Free, Starter, Growth, Enterprise)."""
+    __tablename__ = "billing_plans"
+
+    id                      = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name                    = Column(String(100), nullable=False)
+    slug                    = Column(String(100), nullable=False, unique=True)
+    description             = Column(Text)
+    monthly_price_usd       = Column(Numeric(10, 2), nullable=False, default=0)
+    annual_price_usd        = Column(Numeric(10, 2), nullable=False, default=0)
+    included_workflow_runs  = Column(Integer, nullable=False, default=0)
+    included_ai_tokens      = Column(Integer, nullable=False, default=0)
+    included_image_gens     = Column(Integer, nullable=False, default=0)
+    included_users          = Column(Integer, nullable=False, default=1)
+    overage_run_price_usd   = Column(Numeric(10, 6), nullable=False, default=0)
+    overage_token_price_usd = Column(Numeric(10, 9), nullable=False, default=0)
+    overage_image_price_usd = Column(Numeric(10, 6), nullable=False, default=0)
+    max_workflow_runs       = Column(Integer, nullable=False, default=0)  # 0 = unlimited
+    max_users               = Column(Integer, nullable=False, default=0)  # 0 = unlimited
+    status                  = Column(String(50), nullable=False, default="active")  # active | archived | hidden
+    is_public               = Column(Boolean, nullable=False, default=True)
+    sort_order              = Column(Integer, nullable=False, default=0)
+    metadata_               = Column("metadata", JSONB, nullable=False, default=dict)
+    created_at              = Column(DateTime, default=datetime.utcnow)
+    updated_at              = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class PlanWorkflowEntitlement(Base):
+    """Which workflow catalog entries a billing plan includes."""
+    __tablename__ = "plan_workflow_entitlements"
+    __table_args__ = (UniqueConstraint("plan_id", "workflow_id"),)
+
+    id          = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    plan_id     = Column(UUID(as_uuid=True), nullable=False)
+    workflow_id = Column(UUID(as_uuid=True), nullable=False)
+    created_at  = Column(DateTime, default=datetime.utcnow)
+
+
+class OrganizationSubscription(Base):
+    """One active subscription per organization, linking org → plan."""
+    __tablename__ = "organization_subscriptions"
+    __table_args__ = (UniqueConstraint("organization_id"),)
+
+    id                   = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id      = Column(UUID(as_uuid=True), nullable=False)
+    plan_id              = Column(UUID(as_uuid=True), nullable=False)
+    status               = Column(String(50), nullable=False, default="active")  # active | trialing | past_due | cancelled | paused
+    billing_cycle        = Column(String(20), nullable=False, default="monthly")  # monthly | annual
+    current_period_start = Column(DateTime, default=datetime.utcnow)
+    current_period_end   = Column(DateTime)
+    trial_ends_at        = Column(DateTime)
+    cancelled_at         = Column(DateTime)
+    cancel_reason        = Column(Text)
+    notes                = Column(Text)
+    metadata_            = Column("metadata", JSONB, nullable=False, default=dict)
+    created_at           = Column(DateTime, default=datetime.utcnow)
+    updated_at           = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class OrganizationWorkflowAssignment(Base):
+    """Admin-assigned workflow → organization mapping. Both plan entitlement AND this record are required."""
+    __tablename__ = "organization_workflow_assignments"
+    __table_args__ = (UniqueConstraint("organization_id", "workflow_id"),)
+
+    id              = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id = Column(UUID(as_uuid=True), nullable=False)
+    workflow_id     = Column(UUID(as_uuid=True), nullable=False)
+    assigned_by     = Column(String(255))
+    status          = Column(String(50), nullable=False, default="active")  # active | suspended
+    config_override = Column(JSONB, nullable=False, default=dict)
+    notes           = Column(Text)
+    assigned_at     = Column(DateTime, default=datetime.utcnow)
+    updated_at      = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class BillingPeriod(Base):
+    """Billing period per organization; aggregated totals populated at period close."""
+    __tablename__ = "billing_periods"
+
+    id                   = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id      = Column(UUID(as_uuid=True), nullable=False)
+    subscription_id      = Column(UUID(as_uuid=True))
+    period_start         = Column(DateTime, nullable=False)
+    period_end           = Column(DateTime, nullable=False)
+    status               = Column(String(50), nullable=False, default="open")  # open | closed | invoiced
+    total_workflow_runs  = Column(Integer, nullable=False, default=0)
+    total_tokens_in      = Column(Integer, nullable=False, default=0)
+    total_tokens_out     = Column(Integer, nullable=False, default=0)
+    total_token_cost_usd = Column(Numeric(12, 6), nullable=False, default=0)
+    total_image_gens     = Column(Integer, nullable=False, default=0)
+    total_image_cost_usd = Column(Numeric(12, 6), nullable=False, default=0)
+    total_cost_usd       = Column(Numeric(12, 6), nullable=False, default=0)
+    billable_runs        = Column(Integer, nullable=False, default=0)
+    billable_tokens      = Column(Integer, nullable=False, default=0)
+    billable_amount_usd  = Column(Numeric(12, 6), nullable=False, default=0)
+    created_at           = Column(DateTime, default=datetime.utcnow)
+    updated_at           = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class UsageRecord(Base):
+    """Granular per-event usage — one row per billable event. cost_usd=NULL means provider did not report cost."""
+    __tablename__ = "usage_records"
+
+    id                   = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id      = Column(UUID(as_uuid=True), nullable=False)
+    billing_period_id    = Column(UUID(as_uuid=True))
+    workflow_id          = Column(UUID(as_uuid=True))
+    workflow_key         = Column(String(100))
+    workflow_instance_id = Column(UUID(as_uuid=True))
+    agent_run_id         = Column(UUID(as_uuid=True))
+    usage_type           = Column(String(50), nullable=False)   # workflow_run | llm_tokens | image_gen | tool_call
+    provider             = Column(String(100))
+    model                = Column(String(200))
+    quantity             = Column(Integer, nullable=False, default=1)
+    tokens_in            = Column(Integer, nullable=False, default=0)
+    tokens_out           = Column(Integer, nullable=False, default=0)
+    cost_usd             = Column(Numeric(12, 9))   # NULL = not reported; do NOT default to 0
+    recorded_at          = Column(DateTime, default=datetime.utcnow)
+
+
+class Invoice(Base):
+    """Invoice / billing ledger per organization per period."""
+    __tablename__ = "invoices"
+
+    id                  = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id     = Column(UUID(as_uuid=True), nullable=False)
+    billing_period_id   = Column(UUID(as_uuid=True))
+    subscription_id     = Column(UUID(as_uuid=True))
+    invoice_number      = Column(String(50), unique=True)
+    status              = Column(String(50), nullable=False, default="draft")  # draft | open | paid | void | uncollectible
+    subtotal_usd        = Column(Numeric(12, 2), nullable=False, default=0)
+    tax_usd             = Column(Numeric(12, 2), nullable=False, default=0)
+    total_usd           = Column(Numeric(12, 2), nullable=False, default=0)
+    due_date            = Column(DateTime)
+    paid_at             = Column(DateTime)
+    voided_at           = Column(DateTime)
+    payment_provider    = Column(String(50))
+    external_invoice_id = Column(String(255))
+    line_items          = Column(JSONB, nullable=False, default=list)
+    notes               = Column(Text)
+    created_at          = Column(DateTime, default=datetime.utcnow)
+    updated_at          = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class PlatformSetting(Base):
+    """Key-value store for platform-wide admin settings."""
+    __tablename__ = "platform_settings"
+
+    key         = Column(String(255), primary_key=True)
+    value       = Column(JSONB, nullable=False, default=dict)
+    description = Column(Text)
+    updated_by  = Column(String(255))
+    updated_at  = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

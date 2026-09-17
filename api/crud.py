@@ -1664,3 +1664,949 @@ async def record_processed_emails(
     return count
 
 
+
+
+# =============================================================================
+# Billing & Entitlement CRUD  (Migration 003)
+# =============================================================================
+
+from db.models.core import (
+    AuditEvent,
+    BillingPeriod,
+    BillingPlan,
+    Invoice,
+    OrganizationSubscription,
+    OrganizationWorkflowAssignment,
+    PlanWorkflowEntitlement,
+    PlatformSetting,
+    ToolConnection,
+    UsageRecord,
+    WorkflowCatalog,
+    WorkflowDefinition,
+    WorkflowInstance as WFInstance,
+    AgentRunRecord,
+    ApprovalItem,
+)
+
+# ─── Workflow Catalog ─────────────────────────────────────────────────────────
+
+async def list_workflow_catalog(db: AsyncSession, *, active_only: bool = False) -> list[WorkflowCatalog]:
+    stmt = select(WorkflowCatalog).order_by(WorkflowCatalog.name)
+    if active_only:
+        stmt = stmt.where(WorkflowCatalog.active.is_(True))
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
+
+
+async def get_workflow_catalog_entry(db: AsyncSession, workflow_id: str) -> Optional[WorkflowCatalog]:
+    try:
+        wid = uuid.UUID(str(workflow_id))
+    except (ValueError, AttributeError):
+        return None
+    result = await db.execute(select(WorkflowCatalog).where(WorkflowCatalog.id == wid))
+    return result.scalar_one_or_none()
+
+
+async def get_workflow_catalog_by_key(db: AsyncSession, key: str) -> Optional[WorkflowCatalog]:
+    result = await db.execute(select(WorkflowCatalog).where(WorkflowCatalog.key == key))
+    return result.scalar_one_or_none()
+
+
+async def create_workflow_catalog_entry(db: AsyncSession, data: dict) -> WorkflowCatalog:
+    entry = WorkflowCatalog(
+        name=data["name"],
+        key=data["key"],
+        description=data.get("description"),
+        category=data.get("category", "general"),
+        status=data.get("status", "active"),
+        version=data.get("version", "1.0.0"),
+        pricing_model=data.get("pricing_model", "included"),
+        required_integrations=data.get("required_integrations", []),
+        supported_modules=data.get("supported_modules", []),
+        active=data.get("active", True),
+    )
+    db.add(entry)
+    await db.commit()
+    await db.refresh(entry)
+    return entry
+
+
+async def update_workflow_catalog_entry(db: AsyncSession, workflow_id: str, data: dict) -> Optional[WorkflowCatalog]:
+    entry = await get_workflow_catalog_entry(db, workflow_id)
+    if not entry:
+        return None
+    allowed = ("name", "description", "category", "status", "version", "pricing_model",
+               "required_integrations", "supported_modules", "active")
+    for field in allowed:
+        if field in data:
+            setattr(entry, field, data[field])
+    await db.commit()
+    await db.refresh(entry)
+    return entry
+
+
+def workflow_catalog_to_dict(w: WorkflowCatalog) -> dict:
+    return {
+        "id":                     str(w.id),
+        "name":                   w.name,
+        "key":                    w.key,
+        "description":            w.description,
+        "category":               w.category,
+        "status":                 w.status,
+        "version":                w.version,
+        "pricing_model":          w.pricing_model,
+        "required_integrations":  w.required_integrations or [],
+        "supported_modules":      w.supported_modules or [],
+        "active":                 w.active,
+        "created_at":             w.created_at.isoformat() if w.created_at else None,
+        "updated_at":             w.updated_at.isoformat() if w.updated_at else None,
+    }
+
+
+# ─── Billing Plans ────────────────────────────────────────────────────────────
+
+async def list_billing_plans(db: AsyncSession, *, include_archived: bool = False) -> list[BillingPlan]:
+    stmt = select(BillingPlan).order_by(BillingPlan.sort_order, BillingPlan.name)
+    if not include_archived:
+        stmt = stmt.where(BillingPlan.status != "archived")
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
+
+
+async def get_billing_plan(db: AsyncSession, plan_id: str) -> Optional[BillingPlan]:
+    try:
+        pid = uuid.UUID(str(plan_id))
+    except (ValueError, AttributeError):
+        return None
+    result = await db.execute(select(BillingPlan).where(BillingPlan.id == pid))
+    return result.scalar_one_or_none()
+
+
+async def get_billing_plan_by_slug(db: AsyncSession, slug: str) -> Optional[BillingPlan]:
+    result = await db.execute(select(BillingPlan).where(BillingPlan.slug == slug))
+    return result.scalar_one_or_none()
+
+
+async def create_billing_plan(db: AsyncSession, data: dict) -> BillingPlan:
+    plan = BillingPlan(
+        name=data["name"],
+        slug=data["slug"],
+        description=data.get("description"),
+        monthly_price_usd=data.get("monthly_price_usd", 0),
+        annual_price_usd=data.get("annual_price_usd", 0),
+        included_workflow_runs=data.get("included_workflow_runs", 0),
+        included_ai_tokens=data.get("included_ai_tokens", 0),
+        included_image_gens=data.get("included_image_gens", 0),
+        included_users=data.get("included_users", 1),
+        overage_run_price_usd=data.get("overage_run_price_usd", 0),
+        overage_token_price_usd=data.get("overage_token_price_usd", 0),
+        overage_image_price_usd=data.get("overage_image_price_usd", 0),
+        max_workflow_runs=data.get("max_workflow_runs", 0),
+        max_users=data.get("max_users", 0),
+        status=data.get("status", "active"),
+        is_public=data.get("is_public", True),
+        sort_order=data.get("sort_order", 0),
+    )
+    db.add(plan)
+    await db.commit()
+    await db.refresh(plan)
+    return plan
+
+
+async def update_billing_plan(db: AsyncSession, plan_id: str, data: dict) -> Optional[BillingPlan]:
+    plan = await get_billing_plan(db, plan_id)
+    if not plan:
+        return None
+    allowed = (
+        "name", "description", "monthly_price_usd", "annual_price_usd",
+        "included_workflow_runs", "included_ai_tokens", "included_image_gens", "included_users",
+        "overage_run_price_usd", "overage_token_price_usd", "overage_image_price_usd",
+        "max_workflow_runs", "max_users", "status", "is_public", "sort_order",
+    )
+    for field in allowed:
+        if field in data:
+            setattr(plan, field, data[field])
+    await db.commit()
+    await db.refresh(plan)
+    return plan
+
+
+def billing_plan_to_dict(p: BillingPlan) -> dict:
+    def _num(v) -> Optional[float]:
+        return float(v) if v is not None else None
+    return {
+        "id":                      str(p.id),
+        "name":                    p.name,
+        "slug":                    p.slug,
+        "description":             p.description,
+        "monthly_price_usd":       _num(p.monthly_price_usd),
+        "annual_price_usd":        _num(p.annual_price_usd),
+        "included_workflow_runs":  p.included_workflow_runs,
+        "included_ai_tokens":      p.included_ai_tokens,
+        "included_image_gens":     p.included_image_gens,
+        "included_users":          p.included_users,
+        "overage_run_price_usd":   _num(p.overage_run_price_usd),
+        "overage_token_price_usd": _num(p.overage_token_price_usd),
+        "overage_image_price_usd": _num(p.overage_image_price_usd),
+        "max_workflow_runs":       p.max_workflow_runs,
+        "max_users":               p.max_users,
+        "status":                  p.status,
+        "is_public":               p.is_public,
+        "sort_order":              p.sort_order,
+        "created_at":              p.created_at.isoformat() if p.created_at else None,
+        "updated_at":              p.updated_at.isoformat() if p.updated_at else None,
+    }
+
+
+# ─── Plan Workflow Entitlements ───────────────────────────────────────────────
+
+async def get_plan_entitlements(db: AsyncSession, plan_id: str) -> list[str]:
+    """Return list of workflow_ids entitled to this plan."""
+    try:
+        pid = uuid.UUID(str(plan_id))
+    except (ValueError, AttributeError):
+        return []
+    result = await db.execute(
+        select(PlanWorkflowEntitlement.workflow_id)
+        .where(PlanWorkflowEntitlement.plan_id == pid)
+    )
+    return [str(r) for r in result.scalars().all()]
+
+
+async def set_plan_entitlements(db: AsyncSession, plan_id: str, workflow_ids: list[str]) -> None:
+    """Replace all entitlements for a plan with the given workflow_ids list."""
+    try:
+        pid = uuid.UUID(str(plan_id))
+    except (ValueError, AttributeError):
+        return
+    await db.execute(
+        delete(PlanWorkflowEntitlement).where(PlanWorkflowEntitlement.plan_id == pid)
+    )
+    for wid_str in workflow_ids:
+        try:
+            wid = uuid.UUID(str(wid_str))
+            db.add(PlanWorkflowEntitlement(plan_id=pid, workflow_id=wid))
+        except (ValueError, AttributeError):
+            pass
+    await db.commit()
+
+
+# ─── Organization Subscriptions ───────────────────────────────────────────────
+
+async def get_org_subscription(db: AsyncSession, organization_id: str) -> Optional[OrganizationSubscription]:
+    try:
+        oid = uuid.UUID(str(organization_id))
+    except (ValueError, AttributeError):
+        return None
+    result = await db.execute(
+        select(OrganizationSubscription).where(OrganizationSubscription.organization_id == oid)
+    )
+    return result.scalar_one_or_none()
+
+
+async def list_org_subscriptions(db: AsyncSession) -> list[OrganizationSubscription]:
+    result = await db.execute(
+        select(OrganizationSubscription).order_by(OrganizationSubscription.created_at.desc())
+    )
+    return list(result.scalars().all())
+
+
+async def create_org_subscription(db: AsyncSession, organization_id: str, plan_id: str,
+                                   billing_cycle: str = "monthly") -> OrganizationSubscription:
+    from datetime import timedelta
+    sub = OrganizationSubscription(
+        organization_id=uuid.UUID(str(organization_id)),
+        plan_id=uuid.UUID(str(plan_id)),
+        status="active",
+        billing_cycle=billing_cycle,
+        current_period_start=datetime.utcnow(),
+        current_period_end=(
+            datetime.utcnow() + timedelta(days=365 if billing_cycle == "annual" else 30)
+        ),
+    )
+    db.add(sub)
+    await db.commit()
+    await db.refresh(sub)
+    return sub
+
+
+async def update_org_subscription(db: AsyncSession, organization_id: str, data: dict) -> Optional[OrganizationSubscription]:
+    sub = await get_org_subscription(db, organization_id)
+    if not sub:
+        return None
+    allowed = ("plan_id", "status", "billing_cycle", "current_period_end",
+               "trial_ends_at", "cancelled_at", "cancel_reason", "notes")
+    for field in allowed:
+        if field in data:
+            val = data[field]
+            if field == "plan_id" and val:
+                try:
+                    val = uuid.UUID(str(val))
+                except (ValueError, AttributeError):
+                    continue
+            setattr(sub, field, val)
+    await db.commit()
+    await db.refresh(sub)
+    return sub
+
+
+def org_subscription_to_dict(s: OrganizationSubscription, plan: Optional[BillingPlan] = None) -> dict:
+    return {
+        "id":                    str(s.id),
+        "organization_id":       str(s.organization_id),
+        "plan_id":               str(s.plan_id),
+        "plan_name":             plan.name if plan else None,
+        "plan_slug":             plan.slug if plan else None,
+        "status":                s.status,
+        "billing_cycle":         s.billing_cycle,
+        "current_period_start":  s.current_period_start.isoformat() if s.current_period_start else None,
+        "current_period_end":    s.current_period_end.isoformat() if s.current_period_end else None,
+        "trial_ends_at":         s.trial_ends_at.isoformat() if s.trial_ends_at else None,
+        "cancelled_at":          s.cancelled_at.isoformat() if s.cancelled_at else None,
+        "cancel_reason":         s.cancel_reason,
+        "notes":                 s.notes,
+        "created_at":            s.created_at.isoformat() if s.created_at else None,
+        "updated_at":            s.updated_at.isoformat() if s.updated_at else None,
+    }
+
+
+# ─── Organization Workflow Assignments ────────────────────────────────────────
+
+async def get_org_workflow_assignments(db: AsyncSession, organization_id: str) -> list[OrganizationWorkflowAssignment]:
+    try:
+        oid = uuid.UUID(str(organization_id))
+    except (ValueError, AttributeError):
+        return []
+    result = await db.execute(
+        select(OrganizationWorkflowAssignment)
+        .where(OrganizationWorkflowAssignment.organization_id == oid)
+        .order_by(OrganizationWorkflowAssignment.assigned_at.desc())
+    )
+    return list(result.scalars().all())
+
+
+async def get_org_workflow_assignment(db: AsyncSession, organization_id: str,
+                                       workflow_id: str) -> Optional[OrganizationWorkflowAssignment]:
+    try:
+        oid = uuid.UUID(str(organization_id))
+        wid = uuid.UUID(str(workflow_id))
+    except (ValueError, AttributeError):
+        return []
+    result = await db.execute(
+        select(OrganizationWorkflowAssignment)
+        .where(
+            OrganizationWorkflowAssignment.organization_id == oid,
+            OrganizationWorkflowAssignment.workflow_id == wid,
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+async def list_all_workflow_assignments(db: AsyncSession) -> list[OrganizationWorkflowAssignment]:
+    result = await db.execute(
+        select(OrganizationWorkflowAssignment)
+        .order_by(OrganizationWorkflowAssignment.assigned_at.desc())
+    )
+    return list(result.scalars().all())
+
+
+async def assign_workflow_to_org(db: AsyncSession, organization_id: str, workflow_id: str,
+                                  assigned_by: str = None, notes: str = None) -> OrganizationWorkflowAssignment:
+    existing = await get_org_workflow_assignment(db, organization_id, workflow_id)
+    if existing:
+        existing.status = "active"
+        existing.updated_at = datetime.utcnow()
+        if assigned_by:
+            existing.assigned_by = assigned_by
+        await db.commit()
+        await db.refresh(existing)
+        return existing
+    assignment = OrganizationWorkflowAssignment(
+        organization_id=uuid.UUID(str(organization_id)),
+        workflow_id=uuid.UUID(str(workflow_id)),
+        assigned_by=assigned_by,
+        notes=notes,
+        status="active",
+    )
+    db.add(assignment)
+    await db.commit()
+    await db.refresh(assignment)
+    return assignment
+
+
+async def unassign_workflow_from_org(db: AsyncSession, organization_id: str, workflow_id: str) -> bool:
+    assignment = await get_org_workflow_assignment(db, organization_id, workflow_id)
+    if not assignment:
+        return False
+    await db.delete(assignment)
+    await db.commit()
+    return True
+
+
+async def check_org_workflow_access(db: AsyncSession, organization_id: str, workflow_key: str) -> dict:
+    """
+    Returns {allowed: bool, reason: str}.
+    Enforces: org active + subscription active + plan entitles workflow + workflow assigned to org + workflow active.
+    This is the server-side authorization check — never trust the frontend.
+    """
+    try:
+        oid = uuid.UUID(str(organization_id))
+    except (ValueError, AttributeError):
+        return {"allowed": False, "reason": "Invalid organization ID"}
+
+    # 1. Check org exists and is active
+    org_result = await db.execute(select(Organization).where(Organization.id == oid))
+    org = org_result.scalar_one_or_none()
+    if not org:
+        return {"allowed": False, "reason": "Organization not found"}
+    if not org.active:
+        return {"allowed": False, "reason": "Organization is not active"}
+
+    # 2. Resolve workflow catalog entry
+    wf = await get_workflow_catalog_by_key(db, workflow_key)
+    if not wf:
+        return {"allowed": False, "reason": f"Workflow '{workflow_key}' not found in catalog"}
+    if not wf.active:
+        return {"allowed": False, "reason": f"Workflow '{workflow_key}' is not active"}
+
+    # 3. Check org has an active subscription
+    sub = await get_org_subscription(db, organization_id)
+    if not sub or sub.status not in ("active", "trialing"):
+        return {"allowed": False, "reason": "No active subscription for this organization"}
+
+    # 4. Check plan entitles this workflow
+    entitlements = await get_plan_entitlements(db, str(sub.plan_id))
+    if str(wf.id) not in entitlements:
+        return {"allowed": False, "reason": f"Current plan does not include '{workflow_key}'"}
+
+    # 5. Check explicit workflow assignment
+    assignment = await get_org_workflow_assignment(db, organization_id, str(wf.id))
+    if not assignment or assignment.status != "active":
+        return {"allowed": False, "reason": f"Workflow '{workflow_key}' has not been assigned to this organization"}
+
+    return {"allowed": True, "reason": "Access granted", "workflow_id": str(wf.id),
+            "workflow_name": wf.name, "assignment_id": str(assignment.id)}
+
+
+def workflow_assignment_to_dict(a: OrganizationWorkflowAssignment,
+                                 catalog_entry: Optional[WorkflowCatalog] = None) -> dict:
+    return {
+        "id":              str(a.id),
+        "organization_id": str(a.organization_id),
+        "workflow_id":     str(a.workflow_id),
+        "workflow_name":   catalog_entry.name if catalog_entry else None,
+        "workflow_key":    catalog_entry.key  if catalog_entry else None,
+        "workflow_status": catalog_entry.status if catalog_entry else None,
+        "assigned_by":     a.assigned_by,
+        "status":          a.status,
+        "notes":           a.notes,
+        "assigned_at":     a.assigned_at.isoformat() if a.assigned_at else None,
+        "updated_at":      a.updated_at.isoformat() if a.updated_at else None,
+    }
+
+
+# ─── Usage Records ────────────────────────────────────────────────────────────
+
+async def record_usage(db: AsyncSession, organization_id: str, usage_type: str,
+                        workflow_key: str = None, workflow_instance_id: str = None,
+                        agent_run_id: str = None, provider: str = None, model: str = None,
+                        quantity: int = 1, tokens_in: int = 0, tokens_out: int = 0,
+                        cost_usd=None) -> UsageRecord:
+    """Create a granular usage record. cost_usd=None means provider did not report cost."""
+    rec = UsageRecord(
+        organization_id=uuid.UUID(str(organization_id)),
+        workflow_key=workflow_key,
+        workflow_instance_id=uuid.UUID(str(workflow_instance_id)) if workflow_instance_id else None,
+        agent_run_id=uuid.UUID(str(agent_run_id)) if agent_run_id else None,
+        usage_type=usage_type,
+        provider=provider,
+        model=model,
+        quantity=quantity,
+        tokens_in=tokens_in,
+        tokens_out=tokens_out,
+        cost_usd=cost_usd,  # intentionally nullable
+    )
+    # Attempt to link to catalog entry
+    if workflow_key:
+        wf = await get_workflow_catalog_by_key(db, workflow_key)
+        if wf:
+            rec.workflow_id = wf.id
+    db.add(rec)
+    await db.commit()
+    await db.refresh(rec)
+    return rec
+
+
+async def get_usage_summary(db: AsyncSession, organization_id: str = None,
+                             days: int = 30) -> dict:
+    """Aggregate usage for platform or a specific org over the last N days."""
+    from datetime import timedelta
+    from sqlalchemy import and_
+    cutoff = datetime.utcnow() - timedelta(days=days)
+
+    stmt = select(
+        UsageRecord.organization_id,
+        UsageRecord.usage_type,
+        UsageRecord.workflow_key,
+        func.count().label("event_count"),
+        func.sum(UsageRecord.tokens_in).label("tokens_in"),
+        func.sum(UsageRecord.tokens_out).label("tokens_out"),
+        func.sum(UsageRecord.quantity).label("total_quantity"),
+    ).where(UsageRecord.recorded_at >= cutoff)
+
+    if organization_id:
+        try:
+            oid = uuid.UUID(str(organization_id))
+            stmt = stmt.where(UsageRecord.organization_id == oid)
+        except (ValueError, AttributeError):
+            pass
+
+    stmt = stmt.group_by(
+        UsageRecord.organization_id, UsageRecord.usage_type, UsageRecord.workflow_key
+    ).order_by(func.count().desc())
+
+    result = await db.execute(stmt)
+    rows = result.all()
+
+    # Cost totals are separate because cost_usd is nullable
+    cost_stmt = select(
+        func.sum(UsageRecord.cost_usd).label("total_cost"),
+        func.count().filter(UsageRecord.cost_usd.isnot(None)).label("reported_events"),
+        func.count().filter(UsageRecord.cost_usd.is_(None)).label("unreported_events"),
+    ).where(UsageRecord.recorded_at >= cutoff)
+    if organization_id:
+        try:
+            cost_stmt = cost_stmt.where(UsageRecord.organization_id == uuid.UUID(str(organization_id)))
+        except (ValueError, AttributeError):
+            pass
+    cost_result = await db.execute(cost_stmt)
+    cost_row = cost_result.one_or_none()
+
+    breakdown = []
+    for row in rows:
+        breakdown.append({
+            "organization_id": str(row.organization_id),
+            "usage_type":      row.usage_type,
+            "workflow_key":    row.workflow_key,
+            "event_count":     row.event_count,
+            "tokens_in":       int(row.tokens_in or 0),
+            "tokens_out":      int(row.tokens_out or 0),
+            "total_quantity":  int(row.total_quantity or 0),
+        })
+
+    total_cost = float(cost_row.total_cost) if cost_row and cost_row.total_cost is not None else None
+    return {
+        "period_days":         days,
+        "total_cost_usd":      total_cost,             # None = no reported cost data
+        "reported_events":     cost_row.reported_events if cost_row else 0,
+        "unreported_events":   cost_row.unreported_events if cost_row else 0,
+        "breakdown":           breakdown,
+    }
+
+
+async def list_usage_records(db: AsyncSession, organization_id: str = None,
+                              workflow_key: str = None, limit: int = 200,
+                              offset: int = 0) -> list[UsageRecord]:
+    stmt = select(UsageRecord).order_by(UsageRecord.recorded_at.desc()).limit(limit).offset(offset)
+    if organization_id:
+        try:
+            stmt = stmt.where(UsageRecord.organization_id == uuid.UUID(str(organization_id)))
+        except (ValueError, AttributeError):
+            pass
+    if workflow_key:
+        stmt = stmt.where(UsageRecord.workflow_key == workflow_key)
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
+
+
+def usage_record_to_dict(r: UsageRecord) -> dict:
+    return {
+        "id":                    str(r.id),
+        "organization_id":       str(r.organization_id),
+        "workflow_key":          r.workflow_key,
+        "workflow_instance_id":  str(r.workflow_instance_id) if r.workflow_instance_id else None,
+        "usage_type":            r.usage_type,
+        "provider":              r.provider,
+        "model":                 r.model,
+        "quantity":              r.quantity,
+        "tokens_in":             r.tokens_in,
+        "tokens_out":            r.tokens_out,
+        # Never fake cost — None means provider did not report it
+        "cost_usd":              float(r.cost_usd) if r.cost_usd is not None else None,
+        "recorded_at":           r.recorded_at.isoformat() if r.recorded_at else None,
+    }
+
+
+# ─── Invoices ─────────────────────────────────────────────────────────────────
+
+async def list_invoices(db: AsyncSession, organization_id: str = None,
+                         limit: int = 100) -> list[Invoice]:
+    stmt = select(Invoice).order_by(Invoice.created_at.desc()).limit(limit)
+    if organization_id:
+        try:
+            stmt = stmt.where(Invoice.organization_id == uuid.UUID(str(organization_id)))
+        except (ValueError, AttributeError):
+            pass
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
+
+
+def invoice_to_dict(inv: Invoice, org_name: str = None) -> dict:
+    return {
+        "id":                  str(inv.id),
+        "organization_id":     str(inv.organization_id),
+        "organization_name":   org_name,
+        "invoice_number":      inv.invoice_number,
+        "status":              inv.status,
+        "subtotal_usd":        float(inv.subtotal_usd) if inv.subtotal_usd is not None else 0.0,
+        "tax_usd":             float(inv.tax_usd) if inv.tax_usd is not None else 0.0,
+        "total_usd":           float(inv.total_usd) if inv.total_usd is not None else 0.0,
+        "due_date":            inv.due_date.isoformat() if inv.due_date else None,
+        "paid_at":             inv.paid_at.isoformat() if inv.paid_at else None,
+        "line_items":          inv.line_items or [],
+        "notes":               inv.notes,
+        "created_at":          inv.created_at.isoformat() if inv.created_at else None,
+    }
+
+
+# ─── Audit Events ─────────────────────────────────────────────────────────────
+
+async def create_audit_event(db: AsyncSession, actor_id: str, action: str,
+                              entity_type: str, entity_id: str = None,
+                              organization_id: str = None, metadata: dict = None) -> AuditEvent:
+    evt = AuditEvent(
+        organization_id=uuid.UUID(str(organization_id)) if organization_id else None,
+        actor_id=actor_id,
+        action=action,
+        entity_type=entity_type,
+        entity_id=str(entity_id) if entity_id else None,
+        metadata_=metadata or {},
+    )
+    db.add(evt)
+    await db.commit()
+    return evt
+
+
+async def list_audit_events(db: AsyncSession, organization_id: str = None,
+                             action: str = None, entity_type: str = None,
+                             limit: int = 200, offset: int = 0) -> list[AuditEvent]:
+    stmt = (
+        select(AuditEvent)
+        .order_by(AuditEvent.created_at.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    if organization_id:
+        try:
+            stmt = stmt.where(AuditEvent.organization_id == uuid.UUID(str(organization_id)))
+        except (ValueError, AttributeError):
+            pass
+    if action:
+        stmt = stmt.where(AuditEvent.action.ilike(f"%{action}%"))
+    if entity_type:
+        stmt = stmt.where(AuditEvent.entity_type == entity_type)
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
+
+
+def audit_event_to_dict(e: AuditEvent) -> dict:
+    return {
+        "id":              str(e.id),
+        "organization_id": str(e.organization_id) if e.organization_id else None,
+        "actor_id":        e.actor_id,
+        "action":          e.action,
+        "entity_type":     e.entity_type,
+        "entity_id":       e.entity_id,
+        "metadata":        e.metadata_ or {},
+        "created_at":      e.created_at.isoformat() if e.created_at else None,
+    }
+
+
+# ─── Platform Settings ────────────────────────────────────────────────────────
+
+async def get_platform_setting(db: AsyncSession, key: str) -> Optional[Any]:
+    result = await db.execute(select(PlatformSetting).where(PlatformSetting.key == key))
+    row = result.scalar_one_or_none()
+    return row.value if row else None
+
+
+async def set_platform_setting(db: AsyncSession, key: str, value: Any,
+                                updated_by: str = None, description: str = None) -> PlatformSetting:
+    result = await db.execute(select(PlatformSetting).where(PlatformSetting.key == key))
+    row = result.scalar_one_or_none()
+    if row:
+        row.value = value
+        row.updated_by = updated_by
+        row.updated_at = datetime.utcnow()
+    else:
+        row = PlatformSetting(key=key, value=value, updated_by=updated_by, description=description)
+        db.add(row)
+    await db.commit()
+    return row
+
+
+async def get_all_platform_settings(db: AsyncSession) -> dict:
+    result = await db.execute(select(PlatformSetting))
+    rows = result.scalars().all()
+    return {r.key: r.value for r in rows}
+
+
+# ─── Admin Dashboard Aggregates ───────────────────────────────────────────────
+
+async def get_admin_platform_metrics(db: AsyncSession) -> dict:
+    """
+    Return KPI metrics for the Platform Overview dashboard.
+    All values are from real DB queries — no fabricated numbers.
+    """
+    from datetime import timedelta
+    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    month_start = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+    # Active organizations
+    active_orgs_result = await db.execute(
+        select(func.count()).select_from(Organization).where(Organization.active.is_(True))
+    )
+    active_orgs = active_orgs_result.scalar() or 0
+
+    # Total users (organization_users)
+    total_users_result = await db.execute(select(func.count()).select_from(OrganizationUser))
+    total_users = total_users_result.scalar() or 0
+
+    # Active users = org users with active role (proxy: total org_users)
+    active_users = total_users
+
+    # Enabled workflows across all orgs (active assignments)
+    enabled_wf_result = await db.execute(
+        select(func.count()).select_from(OrganizationWorkflowAssignment)
+        .where(OrganizationWorkflowAssignment.status == "active")
+    )
+    enabled_workflows = enabled_wf_result.scalar() or 0
+
+    # Workflow runs today (using organization_id on workflow_instances)
+    runs_today_result = await db.execute(
+        select(func.count()).select_from(WFInstance)
+        .where(WFInstance.started_at >= today_start)
+    )
+    runs_today = runs_today_result.scalar() or 0
+
+    # Total runs all time
+    total_runs_result = await db.execute(select(func.count()).select_from(WFInstance))
+    total_runs = total_runs_result.scalar() or 0
+
+    # Pending exceptions (approval_items with status=pending and review_type indicating failure/escalation)
+    pending_exc_result = await db.execute(
+        select(func.count()).select_from(ApprovalItem)
+        .where(ApprovalItem.status == "pending")
+    )
+    pending_exceptions = pending_exc_result.scalar() or 0
+
+    # AI spend this month — sum of cost_usd from usage_records where recorded_at >= month_start
+    spend_result = await db.execute(
+        select(func.sum(UsageRecord.cost_usd))
+        .where(UsageRecord.recorded_at >= month_start)
+        .where(UsageRecord.cost_usd.isnot(None))
+    )
+    ai_spend_month = spend_result.scalar()
+    ai_spend_month = float(ai_spend_month) if ai_spend_month is not None else None
+
+    # Also aggregate spend from workflow_instances as fallback (existing runtime data)
+    if ai_spend_month is None:
+        inst_spend_result = await db.execute(
+            select(func.sum(WFInstance.total_cost_usd))
+            .where(WFInstance.started_at >= month_start)
+        )
+        inst_spend = inst_spend_result.scalar()
+        ai_spend_month = float(inst_spend) if inst_spend else None
+
+    # Active subscriptions count
+    active_subs_result = await db.execute(
+        select(func.count()).select_from(OrganizationSubscription)
+        .where(OrganizationSubscription.status.in_(["active", "trialing"]))
+    )
+    active_subscriptions = active_subs_result.scalar() or 0
+
+    return {
+        "active_organizations":  active_orgs,
+        "active_users":          active_users,
+        "total_users":           total_users,
+        "enabled_workflows":     enabled_workflows,
+        "runs_today":            runs_today,
+        "total_runs":            total_runs,
+        "pending_exceptions":    pending_exceptions,
+        "ai_spend_month_usd":    ai_spend_month,   # None = no cost data recorded yet
+        "active_subscriptions":  active_subscriptions,
+    }
+
+
+async def get_org_activity_feed(db: AsyncSession, limit: int = 20) -> list[dict]:
+    """Recent workflow runs across all orgs for the platform overview activity table."""
+    stmt = (
+        select(WFInstance, Organization.name.label("org_name"))
+        .join(Organization, WFInstance.organization_id == Organization.id, isouter=True)
+        .order_by(WFInstance.started_at.desc())
+        .limit(limit)
+    )
+    result = await db.execute(stmt)
+    rows = result.all()
+    out = []
+    for inst, org_name in rows:
+        out.append({
+            "run_id":          str(inst.id),
+            "organization":    org_name or "Unknown",
+            "organization_id": str(inst.organization_id),
+            "workflow":        inst.workflow_name,
+            "status":          inst.status,
+            "started_at":      inst.started_at.isoformat() if inst.started_at else None,
+            "completed_at":    inst.completed_at.isoformat() if inst.completed_at else None,
+            "cost_usd":        float(inst.total_cost_usd) if inst.total_cost_usd else None,
+            "tokens":          (inst.total_tokens_in or 0) + (inst.total_tokens_out or 0),
+        })
+    return out
+
+
+async def get_org_with_details(db: AsyncSession, organization_id: str) -> Optional[dict]:
+    """
+    Return a single org with its subscription, plan, workflow assignments, user count,
+    and recent run stats — used by the org detail page.
+    """
+    try:
+        oid = uuid.UUID(str(organization_id))
+    except (ValueError, AttributeError):
+        return None
+
+    org_result = await db.execute(select(Organization).where(Organization.id == oid))
+    org = org_result.scalar_one_or_none()
+    if not org:
+        return None
+
+    # Users
+    users_result = await db.execute(
+        select(OrganizationUser).where(OrganizationUser.organization_id == oid)
+    )
+    users = list(users_result.scalars().all())
+
+    # Subscription + plan
+    sub = await get_org_subscription(db, organization_id)
+    plan = await get_billing_plan(db, str(sub.plan_id)) if sub else None
+
+    # Workflow assignments with catalog info
+    assignments = await get_org_workflow_assignments(db, organization_id)
+    assignment_dicts = []
+    for a in assignments:
+        cat = await get_workflow_catalog_entry(db, str(a.workflow_id))
+        assignment_dicts.append(workflow_assignment_to_dict(a, cat))
+
+    # Run stats
+    runs_result = await db.execute(
+        select(
+            func.count().label("total_runs"),
+            func.sum(WFInstance.total_cost_usd).label("total_cost"),
+            func.sum(WFInstance.total_tokens_in + WFInstance.total_tokens_out).label("total_tokens"),
+        ).where(WFInstance.organization_id == oid)
+    )
+    run_stats = runs_result.one_or_none()
+
+    return {
+        "id":           str(org.id),
+        "name":         org.name,
+        "industry":     org.industry,
+        "active":       org.active,
+        "created_at":   org.created_at.isoformat() if org.created_at else None,
+        "updated_at":   org.updated_at.isoformat() if org.updated_at else None,
+        "user_count":   len(users),
+        "users":        [
+            {
+                "id":       str(u.id),
+                "user_id":  str(u.user_id),
+                "email":    u.email,
+                "full_name": u.full_name,
+                "role":     u.role,
+                "created_at": u.created_at.isoformat() if u.created_at else None,
+            }
+            for u in users
+        ],
+        "subscription": org_subscription_to_dict(sub, plan) if sub else None,
+        "plan":         billing_plan_to_dict(plan) if plan else None,
+        "workflow_assignments": assignment_dicts,
+        "run_stats": {
+            "total_runs":    run_stats.total_runs if run_stats else 0,
+            "total_cost_usd": float(run_stats.total_cost or 0) if run_stats else None,
+            "total_tokens":   int(run_stats.total_tokens or 0) if run_stats else 0,
+        },
+    }
+
+
+async def list_organizations_with_details(db: AsyncSession) -> list[dict]:
+    """
+    Return all organizations with subscription, plan, assignment counts, user counts,
+    and recent run activity — used by the organizations list page.
+    """
+    orgs_result = await db.execute(select(Organization).order_by(Organization.created_at.desc()))
+    orgs = list(orgs_result.scalars().all())
+
+    # Bulk-load subscriptions
+    subs_result = await db.execute(select(OrganizationSubscription))
+    subs_map: dict[str, OrganizationSubscription] = {
+        str(s.organization_id): s for s in subs_result.scalars().all()
+    }
+
+    # Bulk-load plans
+    plans_result = await db.execute(select(BillingPlan))
+    plans_map: dict[str, BillingPlan] = {
+        str(p.id): p for p in plans_result.scalars().all()
+    }
+
+    # Bulk user counts
+    users_count_result = await db.execute(
+        select(OrganizationUser.organization_id, func.count().label("cnt"))
+        .group_by(OrganizationUser.organization_id)
+    )
+    users_count: dict[str, int] = {str(r.organization_id): r.cnt for r in users_count_result.all()}
+
+    # Bulk assignment counts
+    assign_count_result = await db.execute(
+        select(OrganizationWorkflowAssignment.organization_id, func.count().label("cnt"))
+        .where(OrganizationWorkflowAssignment.status == "active")
+        .group_by(OrganizationWorkflowAssignment.organization_id)
+    )
+    assign_count: dict[str, int] = {str(r.organization_id): r.cnt for r in assign_count_result.all()}
+
+    # Bulk run counts + latest activity
+    runs_result = await db.execute(
+        select(
+            WFInstance.organization_id,
+            func.count().label("run_count"),
+            func.max(WFInstance.started_at).label("last_activity"),
+            func.sum(WFInstance.total_cost_usd).label("total_cost"),
+        ).group_by(WFInstance.organization_id)
+    )
+    run_stats: dict[str, Any] = {}
+    for row in runs_result.all():
+        run_stats[str(row.organization_id)] = {
+            "run_count":    row.run_count,
+            "last_activity": row.last_activity.isoformat() if row.last_activity else None,
+            "total_cost":   float(row.total_cost) if row.total_cost else None,
+        }
+
+    result = []
+    for org in orgs:
+        oid = str(org.id)
+        sub = subs_map.get(oid)
+        plan = plans_map.get(str(sub.plan_id)) if sub else None
+        stats = run_stats.get(oid, {})
+        result.append({
+            "id":               oid,
+            "name":             org.name,
+            "industry":         org.industry,
+            "active":           org.active,
+            "created_at":       org.created_at.isoformat() if org.created_at else None,
+            "user_count":       users_count.get(oid, 0),
+            "assigned_workflows": assign_count.get(oid, 0),
+            "plan_name":        plan.name if plan else None,
+            "plan_slug":        plan.slug if plan else None,
+            "subscription_status": sub.status if sub else None,
+            "run_count":        stats.get("run_count", 0),
+            "last_activity":    stats.get("last_activity"),
+            "total_spend_usd":  stats.get("total_cost"),
+        })
+    return result

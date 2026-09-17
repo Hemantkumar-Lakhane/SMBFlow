@@ -101,9 +101,12 @@ async def lifespan(app: FastAPI):
     """Startup: ensure DB tables exist, seed super-admin, recover stuck workflows."""
     from core.database import engine
     from core.state_manager import Base
+    # Also ensure the new billing/entitlement models are created
+    from db.models.core import Base as OrgBase  # noqa: F401 — triggers create_all for new tables
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        await conn.run_sync(OrgBase.metadata.create_all)
 
     # Additive, idempotent column migrations. create_all() only creates missing
     # TABLES — it never adds a column to a table that already exists — so any
@@ -194,6 +197,7 @@ async def lifespan(app: FastAPI):
 
 
 from api.routers import connections, reviews, medical_tourism, product_launch
+from api.routers import admin as admin_router
 
 app = FastAPI(
     title="SMBFlow API v3",
@@ -202,6 +206,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.include_router(admin_router.router)   # /api/v1/admin/* — must be first to win over legacy admin routes
 app.include_router(connections.router)
 app.include_router(reviews.router)
 app.include_router(medical_tourism.router)
@@ -1456,6 +1461,48 @@ async def trigger_workflow(
     effective_tenant_id = body.tenant_id or (current_user.organization_id or current_user.tenant_id)
     # Load tenant config via bridge — handles both legacy tenants table and new organizations table.
     _resolved_tid, tenant_config = await crud.resolve_tenant_config_bridge(db, effective_tenant_id) if effective_tenant_id else (effective_tenant_id, {})
+
+    # ── Workflow entitlement enforcement (server-side — frontend is NOT the boundary) ──
+    # Only enforce when the org has a subscription record (new-model orgs).
+    # Legacy tenants without subscriptions are permitted through unchanged.
+    if effective_tenant_id and current_user.role not in ("platform_admin", "super_admin"):
+        try:
+            access = await crud.check_org_workflow_access(db, effective_tenant_id, body.workflow_name)
+            if not access.get("allowed"):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail={
+                        "error_code": "WORKFLOW_ACCESS_DENIED",
+                        "message": access.get("reason", "Workflow not authorized for this organization"),
+                        "workflow": body.workflow_name,
+                        "organization_id": effective_tenant_id,
+                    },
+                )
+        except HTTPException:
+            raise
+        except Exception as _ent_err:
+            # Entitlement tables are missing (pre-migration environment).
+            # Log at WARNING — this is a configuration gap, not a benign skip.
+            # In production (post-migration) this branch should never be reached.
+            log.warning(
+                "Workflow entitlement check could not be completed — "
+                "entitlement tables may not exist yet (pre-migration). "
+                "Blocking execution to fail safe.",
+                workflow=body.workflow_name,
+                tenant_id=effective_tenant_id,
+                error=str(_ent_err),
+            )
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail={
+                    "error_code": "ENTITLEMENT_CHECK_UNAVAILABLE",
+                    "message": (
+                        "Workflow access cannot be verified at this time. "
+                        "Run database migrations and try again."
+                    ),
+                    "workflow": body.workflow_name,
+                },
+            )
 
     # Pre-flight config validation — block ALL users when config is invalid.
     # The workflow would fail in the background anyway; surfacing the error here
@@ -3692,6 +3739,27 @@ async def _execute_workflow_background(
                 except Exception as _cost_e:
                     log.debug("Cost reconciliation failed (non-fatal)", error=str(_cost_e))
                 await _write_evidence_summary(run_id, workflow_name, tenant_config, result)
+
+                # ── Write usage record for billing/metering ───────────────────
+                try:
+                    org_id = tenant_config.get("client_id") or tenant_config.get("organization_id")
+                    if org_id:
+                        inst_final = await crud.get_workflow_instance(db, run_id)
+                        if inst_final:
+                            await crud.record_usage(
+                                db,
+                                organization_id=org_id,
+                                usage_type="workflow_run",
+                                workflow_key=workflow_name,
+                                workflow_instance_id=run_id,
+                                quantity=1,
+                                tokens_in=inst_final.total_tokens_in or 0,
+                                tokens_out=inst_final.total_tokens_out or 0,
+                                cost_usd=float(inst_final.total_cost_usd) if inst_final.total_cost_usd else None,
+                            )
+                            log.debug("Usage record written", run_id=run_id[:8], workflow=workflow_name)
+                except Exception as _usage_e:
+                    log.warning("Usage record write failed (non-fatal)", error=str(_usage_e), run_id=run_id[:8])
 
             await broadcast_event(
                 "workflow_completed" if final_status == "completed" else f"workflow_{final_status}",
