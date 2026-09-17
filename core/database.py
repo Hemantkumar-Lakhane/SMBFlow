@@ -32,6 +32,10 @@ _connect_args: dict = {}
 # Only enable SSL for remote hosts (e.g. Supabase pooler).
 if "localhost" in DATABASE_URL or "127.0.0.1" in DATABASE_URL:
     _connect_args["ssl"] = False
+else:
+    # Supabase transaction-mode pooler requires statement_cache_size=0
+    # (no prepared statements — pooler doesn't support them)
+    _connect_args["statement_cache_size"] = 0
 
 engine = create_async_engine(
     DATABASE_URL,
