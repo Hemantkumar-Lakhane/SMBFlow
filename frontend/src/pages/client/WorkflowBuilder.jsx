@@ -813,8 +813,163 @@ function AssignWorkflowModal({ open, onClose, workflowKey, workflowName, api, on
   )
 }
 
+// ── AI WORKFLOW COPILOT MODAL ──────────────────────────────────────────────────
+function AICopilotModal({ open, onClose, api, onWorkflowGenerated }) {
+  const [prompt, setPrompt]         = useState('')
+  const [industry, setIndustry]     = useState('general')
+  const [generating, setGenerating] = useState(false)
+  const [stepIndex, setStepIndex]   = useState(0)
+  const [error, setError]           = useState('')
+
+  const STEPS = [
+    '🧠 Analyzing prompt semantics & business rules...',
+    '🤖 Selecting multi-agent roles (Research, Reasoning, Drafting, Verification)...',
+    '🔀 Constructing branching logic & HITL approval gates...',
+    '🎨 Calculating 2D layout & compiling DAG...',
+  ]
+
+  useEffect(() => {
+    let timer
+    if (generating) {
+      setStepIndex(0)
+      timer = setInterval(() => {
+        setStepIndex(prev => (prev < STEPS.length - 1 ? prev + 1 : prev))
+      }, 600)
+    }
+    return () => clearInterval(timer)
+  }, [generating])
+
+  const PROMPT_SUGGESTIONS = [
+    { label: '🛡️ Fraud & Invoice Triage', text: 'Build an automated invoice fraud detector that parses vendor PDFs, queries past purchase orders, flags suspicious amounts > $5,000 for SME Manager approval, and notifies accounting.' },
+    { label: '🏥 Patient Clinic Triage', text: 'Create a patient clinic booking & reminder workflow that ingests calendar appointments, verifies patient SMS consent, crafts WhatsApp reminders, routes rescheduling to receptionist HITL gate, and updates clinic DB.' },
+    { label: '📉 SaaS Churn Prevention', text: 'Build a B2B SaaS customer churn prevention workflow that detects high drop-off risk, queries CRM data, reasons on retention strategies, requests manager approval for discounts > 20%, and sends a customized email offer.' },
+    { label: '⚡ Support SLA Escalator', text: 'Design an AI customer support ticket escalation workflow that ingests Zendesk webhooks, classifies ticket sentiment and urgency, drafts resolution responses, and escalates VIP complaints to engineering leads.' },
+  ]
+
+  const handleGenerate = async (e) => {
+    e?.preventDefault()
+    if (!prompt.trim()) { setError('Please enter a description of the workflow'); return }
+    setGenerating(true); setError('')
+    try {
+      const resp = await api.post('/admin/workflows/ai-generate', {
+        prompt: prompt.trim(),
+        industry: industry,
+      })
+      onWorkflowGenerated(resp)
+      onClose()
+    } catch (err) {
+      setError(err?.response?.data?.detail || err.message || 'AI synthesis failed')
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  if (!open) return null
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xl flex flex-col overflow-hidden animate-scale-in">
+        <div className="px-5 py-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center backdrop-blur-xs">
+              <Sparkles className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold tracking-tight">SMBFlow AI Workflow Copilot</h3>
+              <p className="text-[11px] text-white/80">Generate complete multi-agent DAG automations from natural language</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-white/70 hover:text-white text-xl font-bold">×</button>
+        </div>
+
+        <form onSubmit={handleGenerate} className="p-5 space-y-4">
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700">
+              {error}
+            </div>
+          )}
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5">
+              Describe the workflow you want to create
+            </label>
+            <textarea
+              value={prompt}
+              onChange={e => setPrompt(e.target.value)}
+              disabled={generating}
+              rows={3}
+              placeholder="e.g. Build an automated medical appointment reminder and triage workflow that ingests calendar bookings, verifies patient details, reasons on priority, alerts nurse SME if urgent, and sends SMS notifications."
+              className="w-full text-xs p-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 resize-none font-medium leading-relaxed"
+            />
+          </div>
+
+          <div>
+            <p className="text-[11px] font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">
+              Prompt Inspirations
+            </p>
+            <div className="grid grid-cols-2 gap-1.5">
+              {PROMPT_SUGGESTIONS.map((item, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setPrompt(item.text)}
+                  className="text-left p-2 rounded-lg border border-slate-200 bg-slate-50 hover:bg-blue-50 hover:border-blue-200 transition-all text-[11px] text-slate-700 font-medium truncate"
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 pt-1">
+            <Select
+              label="Target Industry"
+              value={industry}
+              onChange={e => setIndustry(e.target.value)}
+              options={INDUSTRIES.map(i => ({ value: i, label: i.charAt(0).toUpperCase() + i.slice(1) }))}
+            />
+            <div className="flex flex-col justify-end">
+              <p className="text-[11px] text-slate-400 pb-1">
+                AI will automatically pick the best triggers, agents, HITL gates &amp; tools.
+              </p>
+            </div>
+          </div>
+
+          {generating && (
+            <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-xl space-y-2">
+              <div className="flex items-center gap-2 text-xs font-bold text-indigo-900">
+                <Spinner size="sm" />
+                <span>Generating Multi-Agent Workflow...</span>
+              </div>
+              <p className="text-xs text-indigo-700 font-medium pl-6">
+                {STEPS[stepIndex]}
+              </p>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+            <Button variant="secondary" size="sm" type="button" onClick={onClose} disabled={generating}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              type="submit"
+              loading={generating}
+              icon={<Sparkles size={13} />}
+              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold"
+            >
+              Synthesize &amp; Load to Canvas
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 // ── MAIN CANVAS COMPONENT ──────────────────────────────────────────────────────
-function FlowCanvas({ workflowName, dag, allTools, promptFiles, onSave, isSaving, onRun, onTestRun, onOpenAssign }) {
+function FlowCanvas({ workflowName, dag, allTools, promptFiles, onSave, isSaving, onRun, onTestRun, onOpenAssign, onOpenAICopilot }) {
   const [nodes, setNodes, onNodesChange] = useNodesState([])
   const [edges, setEdges, onEdgesChange] = useEdgesState([])
   const [editingNode, setEditingNode]    = useState(null)
@@ -947,6 +1102,15 @@ function FlowCanvas({ workflowName, dag, allTools, promptFiles, onSave, isSaving
             <Button size="xs" variant="secondary" onClick={() => setNodes([])} icon={<RotateCcw className="w-3 h-3" />}>
               Clear
             </Button>
+            <Button
+              size="xs"
+              variant="secondary"
+              onClick={onOpenAICopilot}
+              icon={<Sparkles className="w-3 h-3 text-indigo-600" />}
+              className="bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100 font-semibold"
+            >
+              AI Copilot
+            </Button>
           </div>
 
           <div className="flex items-center gap-2">
@@ -1064,6 +1228,7 @@ export default function WorkflowBuilder() {
   const [error, setError]             = useState('')
   const [success, setSuccess]         = useState('')
   const [showCreate, setShowCreate]   = useState(false)
+  const [aiCopilotOpen, setAiCopilotOpen] = useState(false)
   const [testDrawerOpen, setTestDrawerOpen] = useState(false)
   const [assignModalOpen, setAssignModalOpen] = useState(false)
 
@@ -1134,6 +1299,61 @@ export default function WorkflowBuilder() {
       setTimeout(() => setSuccess(''), 4000)
     } catch (e) {
       setError(e?.response?.data?.detail || e.message || 'Save failed')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleWorkflowGenerated = async (generatedWf) => {
+    const initialDag = {
+      _meta: {
+        workflow_id: generatedWf.key,
+        name: generatedWf.name,
+        industry: generatedWf.industry,
+        category: generatedWf.category,
+        version: '1.0.0',
+        description: generatedWf.description,
+        trigger: { type: generatedWf.trigger_type, source: 'ai_copilot' },
+        trigger_types: [generatedWf.trigger_type],
+        sla_hours: generatedWf.sla_hours || 4,
+        is_custom: true,
+      },
+      nodes: generatedWf.nodes.map(n => ({
+        id: n.id,
+        agent: n.data?.agentType || 'reasoning_agent',
+        name: n.data?.name || n.id,
+        description: n.data?.prompt_directive || '',
+        timeout_seconds: n.data?.timeout_seconds || 60,
+        tools: n.data?.tools || [],
+      })),
+      edges: generatedWf.edges.map(e => ({
+        from: e.source,
+        to: e.target,
+        condition: e.condition || null,
+      })),
+      escalation_config: { sla_hours: generatedWf.sla_hours || 4, resume_after_decision: true },
+    }
+
+    try {
+      setSaving(true)
+      await api.post('/admin/workflows/custom', {
+        name: generatedWf.name,
+        key: generatedWf.key,
+        description: generatedWf.description,
+        category: generatedWf.category,
+        industry: generatedWf.industry,
+        scope: generatedWf.scope || 'GLOBAL',
+        trigger_type: generatedWf.trigger_type,
+        sla_hours: generatedWf.sla_hours || 4,
+        dag: initialDag,
+      })
+      await load()
+      setSelected(generatedWf.key)
+      setDag(initialDag)
+      setSuccess(`✨ AI Copilot synthesized '${generatedWf.name}' with ${generatedWf.nodes.length} nodes!`)
+      setTimeout(() => setSuccess(''), 5000)
+    } catch (e) {
+      setError(e?.response?.data?.detail || e.message || 'Could not load generated workflow')
     } finally {
       setSaving(false)
     }
@@ -1225,6 +1445,15 @@ export default function WorkflowBuilder() {
         <div className="flex items-center gap-2">
           {error   && <div className="px-3 py-1.5 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg font-medium">{error}</div>}
           {success && <div className="px-3 py-1.5 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs rounded-lg font-medium">{success}</div>}
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setAiCopilotOpen(true)}
+            icon={<Sparkles size={14} className="text-indigo-600" />}
+            className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 text-blue-900 hover:from-blue-100 hover:to-indigo-100 font-semibold"
+          >
+            Generate with AI Copilot
+          </Button>
           <Button variant="primary" size="sm" onClick={() => setShowCreate(true)} icon={<Plus size={14} />}>
             New Workflow
           </Button>
@@ -1281,26 +1510,46 @@ export default function WorkflowBuilder() {
                 isSaving={saving}
                 onTestRun={() => setTestDrawerOpen(true)}
                 onOpenAssign={() => setAssignModalOpen(true)}
+                onOpenAICopilot={() => setAiCopilotOpen(true)}
               />
             </ReactFlowProvider>
           ) : (
             <div className="h-full flex items-center justify-center p-8 bg-slate-50/50">
               <div className="text-center max-w-sm">
                 <div className="w-14 h-14 rounded-2xl bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center mx-auto mb-3 shadow-sm">
-                  <GitBranch size={24} />
+                  <Sparkles size={24} />
                 </div>
-                <h3 className="text-sm font-bold text-slate-900 mb-1">Select or Create a Workflow</h3>
+                <h3 className="text-sm font-bold text-slate-900 mb-1">Create with AI Copilot or Select Workflow</h3>
                 <p className="text-xs text-slate-500 mb-4 leading-relaxed">
-                  Choose a workflow from the catalog sidebar to view and customize its DAG nodes, or create a brand new custom automation.
+                  Describe what business process you want to automate, or select an existing workflow from the catalog sidebar.
                 </p>
-                <Button variant="primary" size="sm" onClick={() => setShowCreate(true)} icon={<Plus size={14} />}>
-                  Create New Workflow
-                </Button>
+                <div className="flex items-center justify-center gap-2">
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => setAiCopilotOpen(true)}
+                    icon={<Sparkles size={14} />}
+                    className="bg-gradient-to-r from-blue-600 to-indigo-600 font-semibold"
+                  >
+                    Generate with AI Copilot
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={() => setShowCreate(true)} icon={<Plus size={14} />}>
+                    Blank Canvas
+                  </Button>
+                </div>
               </div>
             </div>
           )}
         </div>
       </div>
+
+      {/* AI Copilot Modal */}
+      <AICopilotModal
+        open={aiCopilotOpen}
+        onClose={() => setAiCopilotOpen(false)}
+        api={api}
+        onWorkflowGenerated={handleWorkflowGenerated}
+      />
 
       {/* Test Run Drawer */}
       <TestRunDrawer

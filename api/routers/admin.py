@@ -234,6 +234,13 @@ class WorkflowTestRunRequest(BaseModel):
     mock_mode:     bool = True
 
 
+class AIWorkflowGenerateRequest(BaseModel):
+    prompt:      str = Field(..., min_length=4)
+    industry:    Optional[str] = "general"
+    category:    Optional[str] = None
+    target_plan: Optional[str] = None
+
+
 class PlatformSettingsUpdateRequest(BaseModel):
     settings: dict[str, Any]
 
@@ -965,6 +972,31 @@ async def get_builder_tools_library(
             {"id": "tool_image_generation", "name": "Imagen Visual Generator", "description": "Generates promotional visuals and graphics", "category": "tool", "color": "#A855F7"},
         ]
     }
+
+
+@router.post("/workflows/ai-generate")
+async def ai_generate_workflow(
+    body: AIWorkflowGenerateRequest,
+    current_user: TokenData = Depends(_require_admin),
+):
+    """
+    AI Copilot Workflow Synthesizer:
+    Translates natural language prompt into a multi-agent DAG workflow
+    with nodes, layout coordinates, tool bindings, and branching rules.
+    """
+    from core.workflow_ai_generator import generate_workflow_from_prompt
+    try:
+        generated = await generate_workflow_from_prompt(
+            prompt=body.prompt,
+            industry=body.industry,
+            category=body.category,
+        )
+        # Validate topological acyclic constraint
+        _validate_dag_graph(generated)
+        return generated
+    except Exception as e:
+        log.error("AI workflow generation failed", error=str(e))
+        raise HTTPException(500, f"AI generation failed: {str(e)}")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
