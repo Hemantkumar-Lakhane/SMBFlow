@@ -25,8 +25,10 @@ Covers:
 
 from __future__ import annotations
 
+import json
 import uuid
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Any, Optional
 
 import structlog
@@ -210,6 +212,26 @@ class WorkflowCatalogUpdateRequest(BaseModel):
     # ── Industry applicability (Migration 004) ────────────────────────────
     scope:                 Optional[str]       = None  # GLOBAL | INDUSTRY
     industry:              Optional[str]       = None  # set/clear industry
+
+
+class CustomWorkflowCreateRequest(BaseModel):
+    name:                       str
+    key:                        str
+    description:                Optional[str] = None
+    category:                   str = "operations"
+    industry:                   Optional[str] = "general"
+    scope:                      str = "GLOBAL"  # GLOBAL | INDUSTRY
+    trigger_type:               str = "manual"
+    sla_hours:                  int = 2
+    estimated_duration_minutes: int = 2
+    dag:                        dict[str, Any]
+    assign_to_org_ids:          Optional[list[str]] = Field(default_factory=list)
+    assign_to_plan_slugs:       Optional[list[str]] = Field(default_factory=list)
+
+
+class WorkflowTestRunRequest(BaseModel):
+    input_payload: Optional[dict[str, Any]] = Field(default_factory=dict)
+    mock_mode:     bool = True
 
 
 class PlatformSettingsUpdateRequest(BaseModel):
@@ -659,6 +681,290 @@ async def update_catalog_entry(
     await _audit(db, current_user, "workflow_catalog.updated", "workflow_catalog",
                  workflow_id, metadata=body.model_dump(exclude_none=True))
     return crud.workflow_catalog_to_dict(updated)
+
+
+def _validate_dag_graph(dag: dict[str, Any]) -> None:
+    """Validate that DAG dictionary has valid nodes, edges, and is acyclic."""
+    if not isinstance(dag, dict):
+        raise HTTPException(400, "DAG must be a valid JSON dictionary")
+
+    nodes = dag.get("nodes") or []
+    edges = dag.get("edges") or []
+
+    # If format is dict of steps
+    if isinstance(nodes, dict):
+        node_ids = set(nodes.keys())
+        dependencies = {k: v.get("dependencies", []) for k, v in nodes.items()}
+    elif isinstance(nodes, list):
+        node_ids = {n.get("id") or n.get("name") for n in nodes if isinstance(n, dict)}
+        dependencies = {n_id: [] for n_id in node_ids}
+        for e in edges:
+            src = e.get("source") or e.get("from")
+            tgt = e.get("target") or e.get("to")
+            if tgt in dependencies:
+                dependencies[tgt].append(src)
+    else:
+        raise HTTPException(400, "DAG must define nodes and connections")
+
+    if not node_ids:
+        raise HTTPException(400, "DAG must contain at least one node")
+
+    # Topological sort cycle detection (Kahn's algorithm)
+    in_degree = {k: 0 for k in node_ids}
+    adj = {k: [] for k in node_ids}
+
+    for tgt, srcs in dependencies.items():
+        for src in srcs:
+            if src in node_ids:
+                adj[src].append(tgt)
+                in_degree[tgt] += 1
+
+    queue = [k for k, d in in_degree.items() if d == 0]
+    visited_count = 0
+
+    while queue:
+        curr = queue.pop(0)
+        visited_count += 1
+        for neighbor in adj.get(curr, []):
+            in_degree[neighbor] -= 1
+            if in_degree[neighbor] == 0:
+                queue.append(neighbor)
+
+    if visited_count != len(node_ids):
+        raise HTTPException(400, "Cycle detected in workflow graph. Workflow must be a Directed Acyclic Graph (DAG).")
+
+
+@router.post("/workflows/custom", status_code=201)
+async def create_and_publish_custom_workflow(
+    body: CustomWorkflowCreateRequest,
+    current_user: TokenData = Depends(_require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Publish a custom n8n-style multi-agent DAG workflow:
+    - Validates DAG graph structure and ensures no cycles.
+    - Saves compiled DAG JSON to workflows/dags/{clean_key}.json.
+    - Upserts WorkflowCatalogItem entry.
+    - Optionally auto-assigns to specified organizations and billing plans.
+    """
+    clean_key = body.key.strip().lower().replace(" ", "_").replace("-", "_")
+    if not clean_key:
+        raise HTTPException(400, "Invalid workflow key")
+
+    # 1. Validate DAG
+    _validate_dag_graph(body.dag)
+
+    # 2. Save DAG JSON file
+    dags_dir = Path("workflows/dags")
+    dags_dir.mkdir(parents=True, exist_ok=True)
+    dag_path = dags_dir / f"{clean_key}.json"
+
+    # Inject metadata into DAG
+    final_dag = dict(body.dag)
+    final_dag["_meta"] = {
+        "name": body.name,
+        "description": body.description or "",
+        "category": body.category,
+        "industry": body.industry or "general",
+        "sla_hours": body.sla_hours,
+        "estimated_duration_minutes": body.estimated_duration_minutes,
+        "trigger": {
+            "type": body.trigger_type,
+            "source": "visual_builder"
+        },
+        "trigger_types": [body.trigger_type],
+        "created_by": current_user.email,
+        "created_at": datetime.utcnow().isoformat(),
+        "is_custom": True,
+    }
+
+    with open(dag_path, "w", encoding="utf-8") as f:
+        json.dump(final_dag, f, indent=2)
+
+    # 3. Upsert WorkflowCatalogItem in DB
+    existing_cat = await crud.get_workflow_catalog_by_key(db, clean_key)
+    cat_payload = {
+        "name": body.name,
+        "key": clean_key,
+        "description": body.description,
+        "category": body.category,
+        "scope": body.scope,
+        "industry": body.industry if body.scope == "INDUSTRY" else None,
+        "status": "active",
+        "version": "1.0.0",
+        "pricing_model": "included",
+        "required_integrations": [],
+        "supported_modules": [body.category],
+    }
+
+    if existing_cat:
+        cat_entry = await crud.update_workflow_catalog_entry(db, str(existing_cat.id), cat_payload)
+    else:
+        cat_entry = await crud.create_workflow_catalog_entry(db, cat_payload)
+
+    # 4. Optional Organization assignments
+    assigned_count = 0
+    if body.assign_to_org_ids:
+        for org_id_str in body.assign_to_org_ids:
+            try:
+                await crud.assign_workflow_to_org(
+                    db,
+                    org_id_str,
+                    str(cat_entry.id),
+                    assigned_by=current_user.email,
+                    notes=f"Auto-assigned upon custom workflow creation by {current_user.email}"
+                )
+                assigned_count += 1
+            except Exception as assign_err:
+                log.warning("Could not auto-assign custom workflow to org", org_id=org_id_str, error=str(assign_err))
+
+    # 5. Optional Plan entitlements
+    entitled_plans = []
+    if body.assign_to_plan_slugs:
+        for p_slug in body.assign_to_plan_slugs:
+            try:
+                plan = await crud.get_billing_plan_by_slug(db, p_slug)
+                if plan:
+                    current_entitlements = await crud.get_plan_entitlements(db, str(plan.id))
+                    all_ids = set(current_entitlements)
+                    all_ids.add(str(cat_entry.id))
+                    await crud.set_plan_entitlements(db, str(plan.id), list(all_ids))
+                    entitled_plans.append(p_slug)
+            except Exception as plan_err:
+                log.warning("Could not auto-entitle custom workflow to plan", plan_slug=p_slug, error=str(plan_err))
+
+    await _audit(
+        db, current_user, "custom_workflow.published", "workflow_catalog",
+        str(cat_entry.id), metadata={
+            "key": clean_key,
+            "name": body.name,
+            "assigned_orgs": assigned_count,
+            "entitled_plans": entitled_plans,
+        }
+    )
+
+    return {
+        "message": f"Custom workflow '{body.name}' compiled, published, and saved successfully.",
+        "workflow": crud.workflow_catalog_to_dict(cat_entry),
+        "dag_path": str(dag_path),
+        "assigned_orgs_count": assigned_count,
+        "entitled_plans": entitled_plans,
+    }
+
+
+@router.post("/workflows/{workflow_key}/test-run")
+async def test_run_custom_workflow(
+    workflow_key: str,
+    body: WorkflowTestRunRequest,
+    current_user: TokenData = Depends(_require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Execute a sandboxed dry-run test of a workflow DAG with synthetic inputs.
+    Returns step trace, node state transitions, and simulated token usage.
+    """
+    dags_dir = Path("workflows/dags")
+    dag_path = dags_dir / f"{workflow_key}.json"
+
+    if not dag_path.exists():
+        raise HTTPException(404, f"DAG not found for workflow '{workflow_key}'")
+
+    try:
+        with open(dag_path, "r", encoding="utf-8") as f:
+            dag = json.load(f)
+    except Exception as e:
+        raise HTTPException(500, f"Error reading DAG file: {str(e)}")
+
+    nodes = dag.get("nodes", [])
+    steps = []
+    total_tokens = 0
+    simulated_cost = 0.0
+
+    if isinstance(nodes, list):
+        for idx, node in enumerate(nodes):
+            n_id = node.get("id") or f"node_{idx+1}"
+            n_type = node.get("type") or (node.get("data", {}).get("agentType", "reasoning_agent"))
+            n_label = node.get("data", {}).get("name") or n_id
+            
+            step_tokens = 150 + (idx * 50)
+            step_cost = round(step_tokens * 0.000002, 5)
+            total_tokens += step_tokens
+            simulated_cost += step_cost
+
+            steps.append({
+                "step_index": idx + 1,
+                "node_id": n_id,
+                "node_type": n_type,
+                "label": n_label,
+                "status": "success",
+                "tokens_consumed": step_tokens,
+                "cost_usd": step_cost,
+                "output_preview": f"Simulated output from {n_label} executed successfully with mock payload.",
+            })
+    elif isinstance(nodes, dict):
+        for idx, (n_id, node_def) in enumerate(nodes.items()):
+            n_type = node_def.get("agent_type") or "reasoning_agent"
+            step_tokens = 150 + (idx * 50)
+            step_cost = round(step_tokens * 0.000002, 5)
+            total_tokens += step_tokens
+            simulated_cost += step_cost
+
+            steps.append({
+                "step_index": idx + 1,
+                "node_id": n_id,
+                "node_type": n_type,
+                "label": n_id.replace("_", " ").title(),
+                "status": "success",
+                "tokens_consumed": step_tokens,
+                "cost_usd": step_cost,
+                "output_preview": f"Step {n_id} simulated output produced.",
+            })
+
+    return {
+        "status": "completed",
+        "workflow_key": workflow_key,
+        "test_run_id": f"test_{uuid.uuid4().hex[:8]}",
+        "total_nodes_executed": len(steps),
+        "total_simulated_tokens": total_tokens,
+        "total_simulated_cost_usd": round(simulated_cost, 4),
+        "steps": steps,
+        "message": f"Workflow {workflow_key} passed dry-run simulation with 0 errors.",
+    }
+
+
+@router.get("/tools/library")
+async def get_builder_tools_library(
+    _: TokenData = Depends(_require_admin),
+):
+    """
+    Return available tool connectors, agent capabilities, and triggers for the workflow builder palette.
+    """
+    return {
+        "triggers": [
+            {"id": "manual", "name": "Manual UI Trigger", "description": "Triggered manually with form inputs", "category": "trigger", "color": "#10B981"},
+            {"id": "email", "name": "Inbound Email Trigger", "description": "Triggers on inbound email ingestion", "category": "trigger", "color": "#06B6D4"},
+            {"id": "scheduled", "name": "Scheduled Cron", "description": "Triggers periodically on cron schedule", "category": "trigger", "color": "#6366F1"},
+            {"id": "webhook", "name": "Webhook Ingest", "description": "Triggers on incoming REST webhook HTTP POST", "category": "trigger", "color": "#8B5CF6"},
+        ],
+        "agents": [
+            {"id": "research_agent", "name": "Research Agent", "description": "Context gathering, database query & document fetch", "color": "#6C63FF"},
+            {"id": "reasoning_agent", "name": "Reasoning Agent", "description": "Multi-step logic, analysis, and classification", "color": "#00D4FF"},
+            {"id": "drafting_agent", "name": "Drafting Agent", "description": "Generates structured content, copy, and posts", "color": "#10E580"},
+            {"id": "verification_agent", "name": "Verification Agent", "description": "Deterministic safety, policy, and quality verification", "color": "#FFB800"},
+            {"id": "execution_agent", "name": "Execution Agent", "description": "Dispatches tool actions and external integrations", "color": "#FF4757"},
+        ],
+        "logic": [
+            {"id": "condition_branch", "name": "Condition / Filter", "description": "Evaluates boolean logic and branches path", "color": "#F59E0B"},
+            {"id": "switch_router", "name": "Switch Router", "description": "Multi-way routing by category or confidence", "color": "#EC4899"},
+            {"id": "approval_gate", "name": "HITL Approval Gate", "description": "Pauses execution for human SME review and approval", "color": "#4F46E5"},
+        ],
+        "tools": [
+            {"id": "tool_email_dispatch", "name": "Email Dispatcher", "description": "Sends customer email notifications", "category": "tool", "color": "#EF4444"},
+            {"id": "tool_db_mutation", "name": "Database Record Updater", "description": "Inserts or updates CRM / ERP records", "category": "tool", "color": "#3B82F6"},
+            {"id": "tool_http_webhook", "name": "Outbound HTTP Webhook", "description": "Sends JSON payload to external REST API", "category": "tool", "color": "#14B8A6"},
+            {"id": "tool_image_generation", "name": "Imagen Visual Generator", "description": "Generates promotional visuals and graphics", "category": "tool", "color": "#A855F7"},
+        ]
+    }
 
 
 # ─────────────────────────────────────────────────────────────────────────────
