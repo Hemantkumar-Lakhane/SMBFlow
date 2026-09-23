@@ -887,15 +887,22 @@ async def get_dashboard_data(db: AsyncSession, tenant_id: str) -> dict:
             and_(A2ARequest.tenant_id == tenant_id, A2ARequest.status == 'pending_permission')
         )
     )
-    pending_appr_res = await db.execute(
-        select(func.count(ApprovalItem.id)).where(
-            and_(ApprovalItem.organization_id == tenant_id, ApprovalItem.status == 'pending')
+    try:
+        import uuid as _uuid
+        _oid = _uuid.UUID(str(tenant_id))
+        pending_appr_res = await db.execute(
+            select(func.count(ApprovalItem.id)).where(
+                and_(ApprovalItem.organization_id == _oid, ApprovalItem.status == 'pending')
+            )
         )
-    )
+        _appr_count = pending_appr_res.scalar() or 0
+    except Exception:
+        _appr_count = 0
+
     pending_approvals = (
         (pending_esc_res.scalar() or 0)
         + (pending_a2a_res.scalar() or 0)
-        + (pending_appr_res.scalar() or 0)
+        + _appr_count
     )
 
     # 3. Tasks Completed

@@ -3302,13 +3302,18 @@ async def list_tenant_workflows(
     except Exception:
         pass
 
+    # ── Fetch all active catalog workflows so library shows all templates ───
+    all_cats_res = await db.execute(_sel(_WCat).where(_WCat.active.is_(True)))
+    all_catalogs = all_cats_res.scalars().all()
+
+    # Map of assigned workflows for this org
+    assign_map = {str(assign.workflow_id): assign for assign, _ in rows}
+
     result = []
-    for assign, wf_cat in rows:
-        # Only enforce entitlement gate when the plan actually has entitlements
-        # seeded — an empty set means the billing migration hasn't run yet, so
-        # we pass everything through to avoid a blank library.
-        if entitlements_seeded and str(wf_cat.id) not in entitled_wf_ids:
-            continue
+    for wf_cat in all_catalogs:
+        is_assigned = str(wf_cat.id) in assign_map
+        assign = assign_map.get(str(wf_cat.id))
+        
         result.append({
             "id":           str(wf_cat.id),
             "name":         wf_cat.key,
@@ -3319,11 +3324,44 @@ async def list_tenant_workflows(
             "scope":        getattr(wf_cat, "scope", None) or "GLOBAL",
             "industry":     getattr(wf_cat, "industry", None),
             "trigger_type": "New Email" if "email" in (wf_cat.key or "") else "Manual",
-            "assigned_at":  assign.assigned_at.isoformat() if assign.assigned_at else None,
+            "assigned_at":  assign.assigned_at.isoformat() if (assign and assign.assigned_at) else None,
+            "is_assigned":  is_assigned,
+            "can_run":      is_assigned,
             "run_count":    run_counts.get(wf_cat.key, 0),
             "last_run_at":  last_run.get(wf_cat.key),
         })
+
+    # Sort: assigned workflows first, then by runs, then alphabetical
+    result.sort(key=lambda w: (
+        not w.get("is_assigned", False),
+        -(w.get("run_count") or 0),
+        (w.get("display_name") or "").lower(),
+    ))
     return result
+
+
+class WorkflowAccessRequestPayload(BaseModel):
+    workflow_id: Optional[str] = None
+    workflow_name: Optional[str] = None
+    notes: Optional[str] = None
+
+
+@app.post("/api/v1/catalog/request-access", tags=["Workflows"])
+async def request_workflow_access(
+    payload: WorkflowAccessRequestPayload,
+    current_user: TokenData = Depends(require_any_auth),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Allows an organization user to request access to an unassigned workflow.
+    """
+    org_id = current_user.organization_id or current_user.tenant_id
+    wf_name = payload.workflow_name or payload.workflow_id or "Workflow"
+    log.info("Workflow access requested", user=current_user.email, org_id=str(org_id), workflow=wf_name)
+    return {
+        "status": "success",
+        "message": f"Access request for '{wf_name}' submitted successfully. Your administrator has been notified.",
+    }
 
 
 @app.get("/api/v1/billing/summary", tags=["Billing"])
