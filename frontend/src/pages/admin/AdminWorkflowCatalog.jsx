@@ -1,10 +1,9 @@
-// AdminWorkflowCatalog — platform-level workflow product catalog
-// Admins see the full catalog.  Each card shows scope (GLOBAL / INDUSTRY) and
-// the applicable industry so admins understand who can access each workflow.
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Layers, Plus, RefreshCw, Search, XCircle,
   Edit2, ToggleLeft, ToggleRight, Tag, Plug, Globe, Building2,
+  Sparkles, ArrowRight,
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { Modal, Button, Input, Select, EmptyState } from '../../components/ui'
@@ -65,6 +64,7 @@ function ScopeBadge({ scope, industry }) {
 
 // ── Edit / Create modal ───────────────────────────────────────────────────────
 function WorkflowModal({ open, onClose, api, existing, onDone }) {
+  const navigate = useNavigate()
   const isEdit = !!existing
   const [form, setForm] = useState({
     name: '', key: '', description: '', category: 'general',
@@ -141,6 +141,27 @@ function WorkflowModal({ open, onClose, api, existing, onDone }) {
       width="max-w-xl"
     >
       <form onSubmit={submit} className="flex flex-col gap-4">
+        {!isEdit && (
+          <div className="flex items-center justify-between p-3.5 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl text-xs text-blue-900 shadow-sm">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                <Sparkles size={16} />
+              </div>
+              <div>
+                <p className="font-semibold text-slate-900">Want to build nodes visually like n8n?</p>
+                <p className="text-slate-500 text-[11px]">Drag agents, logic gates, and trigger connectors onto a live canvas.</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => { onClose(); navigate('/workflows/builder'); }}
+              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition shadow-xs flex items-center gap-1 shrink-0 ml-2"
+            >
+              Open Builder <ArrowRight size={13} />
+            </button>
+          </div>
+        )}
+
         {error && (
           <div className="flex items-center gap-2 px-3 py-2.5 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
             <XCircle size={14} className="shrink-0" />{error}
@@ -269,6 +290,7 @@ export default function AdminWorkflowCatalog() {
     return list
   }, [catalog, search, filterStatus, filterCategory, filterScope])
 
+  const navigate = useNavigate()
   const categories = useMemo(() => [...new Set(catalog.map(w => w.category).filter(Boolean))], [catalog])
   const globalCount   = useMemo(() => catalog.filter(w => (w.scope || 'GLOBAL') === 'GLOBAL').length, [catalog])
   const industryCount = useMemo(() => catalog.filter(w => w.scope === 'INDUSTRY').length, [catalog])
@@ -288,6 +310,9 @@ export default function AdminWorkflowCatalog() {
             className="p-2 rounded-lg text-slate-500 bg-white border border-slate-200 hover:bg-slate-50 transition-colors disabled:opacity-50">
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           </button>
+          <Button variant="secondary" size="sm" icon={<Sparkles size={14} className="text-blue-600" />} onClick={() => navigate('/workflows/builder')}>
+            Visual Workflow Builder
+          </Button>
           <Button variant="primary" size="sm" icon={<Plus size={14} />} onClick={() => setShowCreate(true)}>
             Add Workflow
           </Button>
@@ -370,7 +395,13 @@ export default function AdminWorkflowCatalog() {
                   <p className="text-xs text-slate-400 font-mono mt-0.5">{wf.key}</p>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
+                  <button onClick={() => navigate(`/workflows/builder?wf=${encodeURIComponent(wf.name || wf.key)}`)}
+                    title="Open in Visual Builder"
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">
+                    <Sparkles size={13} />
+                  </button>
                   <button onClick={() => setEditItem(wf)}
+                    title="Edit Metadata"
                     className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">
                     <Edit2 size={13} />
                   </button>
