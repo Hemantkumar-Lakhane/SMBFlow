@@ -4144,31 +4144,35 @@ async def _execute_workflow_background(
                     log.debug("Cost reconciliation failed (non-fatal)", error=str(_cost_e))
                 await _write_evidence_summary(run_id, workflow_name, tenant_config, result)
 
-                # ── Write usage record for billing/metering ───────────────────
-                try:
-                    org_id = tenant_config.get("client_id") or tenant_config.get("organization_id")
-                    if org_id:
-                        inst_final = await crud.get_workflow_instance(db, run_id)
-                        if inst_final:
-                            await crud.record_usage(
-                                db,
-                                organization_id=org_id,
-                                usage_type="workflow_run",
-                                workflow_key=workflow_name,
-                                workflow_instance_id=run_id,
-                                quantity=1,
-                                tokens_in=inst_final.total_tokens_in or 0,
-                                tokens_out=inst_final.total_tokens_out or 0,
-                                cost_usd=float(inst_final.total_cost_usd) if inst_final.total_cost_usd else None,
-                            )
-                            log.debug("Usage record written", run_id=run_id[:8], workflow=workflow_name)
-                except Exception as _usage_e:
-                    log.warning("Usage record write failed (non-fatal)", error=str(_usage_e), run_id=run_id[:8])
+            # ── Write usage record for billing/metering (Atomic & Consistent across all statuses) ──
+            try:
+                inst_final = await crud.get_workflow_instance(db, run_id)
+                org_id = (
+                    tenant_config.get("organization_id")
+                    or tenant_config.get("client_id")
+                    or tenant_config.get("tenant_id")
+                    or (str(inst_final.tenant_id) if inst_final and inst_final.tenant_id else None)
+                )
+                if org_id and inst_final:
+                    await crud.record_usage(
+                        db,
+                        organization_id=org_id,
+                        usage_type="workflow_run",
+                        workflow_key=workflow_name,
+                        workflow_instance_id=run_id,
+                        quantity=1,
+                        tokens_in=inst_final.total_tokens_in or 0,
+                        tokens_out=inst_final.total_tokens_out or 0,
+                        cost_usd=float(inst_final.total_cost_usd) if inst_final.total_cost_usd else None,
+                    )
+                    log.debug("Usage record written", run_id=run_id[:8], workflow=workflow_name, org_id=org_id)
+            except Exception as _usage_e:
+                log.warning("Usage record write failed (non-fatal)", error=str(_usage_e), run_id=run_id[:8])
 
             await broadcast_event(
                 "workflow_completed" if final_status == "completed" else f"workflow_{final_status}",
                 {"run_id": run_id, "workflow": workflow_name,
-                 "tenant_id": tenant_config.get("client_id"), "status": final_status},
+                 "tenant_id": tenant_config.get("client_id") or tenant_config.get("tenant_id"), "status": final_status},
             )
 
         except Exception as e:
@@ -4249,10 +4253,34 @@ async def _resume_workflow_background(
                 )
                 await _write_evidence_summary(run_id, inst.workflow_name, tenant_config, result)
 
+            # Record resumed usage
+            try:
+                inst_resumed = await crud.get_workflow_instance(db, run_id)
+                res_org_id = (
+                    tenant_config.get("organization_id")
+                    or tenant_config.get("client_id")
+                    or tenant_config.get("tenant_id")
+                    or (str(inst_resumed.tenant_id) if inst_resumed and inst_resumed.tenant_id else None)
+                )
+                if res_org_id and inst_resumed:
+                    await crud.record_usage(
+                        db,
+                        organization_id=res_org_id,
+                        usage_type="workflow_run",
+                        workflow_key=inst.workflow_name,
+                        workflow_instance_id=run_id,
+                        quantity=1,
+                        tokens_in=inst_resumed.total_tokens_in or 0,
+                        tokens_out=inst_resumed.total_tokens_out or 0,
+                        cost_usd=float(inst_resumed.total_cost_usd) if inst_resumed.total_cost_usd else None,
+                    )
+            except Exception as _res_usage_e:
+                log.warning("Resume usage record failed (non-fatal)", error=str(_res_usage_e))
+
             await broadcast_event(
                 f"workflow_{final_status}",
                 {"run_id": run_id, "workflow": inst.workflow_name,
-                 "tenant_id": tenant_config.get("client_id"), "status": final_status},
+                 "tenant_id": tenant_config.get("client_id") or tenant_config.get("tenant_id"), "status": final_status},
             )
         except Exception as e:
             log.error("Resume workflow failed", run_id=run_id, error=str(e))

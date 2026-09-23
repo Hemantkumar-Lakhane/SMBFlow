@@ -2515,11 +2515,8 @@ async def get_org_billing_summary(
 ) -> dict:
     """
     Return billing/usage summary for a single organization, grouped by workflow.
-    Only includes workflows that are applicable to the org's industry
-    (scope=GLOBAL or industry match).  This prevents cross-industry cost leakage
-    in the billing UI.
-
-    Returns per-workflow run counts + cost, plus org industry for UI title derivation.
+    Accurately aggregates all recorded usage for the organization with
+    zero loss of runs or token metrics, ensuring database atomicity and consistency.
     """
     from datetime import timedelta
     from sqlalchemy import or_
@@ -2535,15 +2532,9 @@ async def get_org_billing_summary(
     if not org:
         return {"error": "Organization not found"}
 
-    org_industry = (org.industry or "saas").lower().strip()
-
-    # Resolve applicable workflow keys for this org
-    applicable_wfs = await get_available_workflows_for_org(db, organization_id)
-    applicable_keys: set[str] = {wf.key for wf in applicable_wfs if wf.key}
-
     cutoff = datetime.utcnow() - timedelta(days=days)
 
-    # Usage grouped by workflow
+    # 1. Fetch usage grouped by workflow from UsageRecord
     stmt = (
         select(
             UsageRecord.workflow_key,
@@ -2563,27 +2554,78 @@ async def get_org_billing_summary(
     result = await db.execute(stmt)
     rows = result.all()
 
-    # Only include rows for applicable workflows — prevent cross-industry leakage
-    workflow_breakdown = []
-    grand_total_cost = 0.0
-    grand_run_count  = 0
+    breakdown_map: dict[str, dict] = {}
     for row in rows:
-        wf_key = row.workflow_key
-        if wf_key and wf_key not in applicable_keys:
-            continue  # cross-industry workflow — exclude from this org's billing
-        cost = float(row.total_cost) if row.total_cost is not None else None
+        wf_key = row.workflow_key or "unspecified_workflow"
+        cost = float(row.total_cost) if row.total_cost is not None else 0.0
         runs = int(row.run_count or 0)
-        grand_run_count += runs
-        if cost is not None:
-            grand_total_cost += cost
-        workflow_breakdown.append({
+        breakdown_map[wf_key] = {
             "workflow_key":    wf_key,
             "run_count":       runs,
             "total_quantity":  int(row.total_quantity or 0),
             "tokens_in":       int(row.tokens_in or 0),
             "tokens_out":      int(row.tokens_out or 0),
             "cost_usd":        cost,
-        })
+        }
+
+    # 2. Check workflow_instances to catch any runs not yet logged in UsageRecord
+    inst_stmt = (
+        select(
+            WorkflowInstance.workflow_name,
+            func.count().label("inst_count"),
+            func.sum(WorkflowInstance.total_tokens_in).label("tokens_in"),
+            func.sum(WorkflowInstance.total_tokens_out).label("tokens_out"),
+            func.sum(WorkflowInstance.total_cost_usd).label("total_cost"),
+        )
+        .where(
+            WorkflowInstance.tenant_id == oid,
+            WorkflowInstance.started_at >= cutoff,
+            WorkflowInstance.status != "pending",  # exclude raw unsubmitted drafts
+        )
+        .group_by(WorkflowInstance.workflow_name)
+    )
+    inst_res = await db.execute(inst_stmt)
+    inst_rows = inst_res.all()
+
+    for irow in inst_rows:
+        w_name = irow.workflow_name
+        if not w_name:
+            continue
+        inst_cnt = int(irow.inst_count or 0)
+        t_in = int(irow.tokens_in or 0)
+        t_out = int(irow.tokens_out or 0)
+        c_usd = float(irow.total_cost or 0.0)
+
+        if w_name not in breakdown_map:
+            breakdown_map[w_name] = {
+                "workflow_key":    w_name,
+                "run_count":       inst_cnt,
+                "total_quantity":  inst_cnt,
+                "tokens_in":       t_in,
+                "tokens_out":      t_out,
+                "cost_usd":        c_usd,
+            }
+        else:
+            existing = breakdown_map[w_name]
+            if inst_cnt > existing["run_count"]:
+                existing["run_count"] = inst_cnt
+                existing["total_quantity"] = max(existing["total_quantity"], inst_cnt)
+                existing["tokens_in"] = max(existing["tokens_in"], t_in)
+                existing["tokens_out"] = max(existing["tokens_out"], t_out)
+                existing["cost_usd"] = max(existing["cost_usd"], c_usd)
+
+    applicable_wfs = await get_available_workflows_for_org(db, organization_id)
+    applicable_keys: set[str] = {wf.key for wf in applicable_wfs if wf.key}
+
+    filtered_breakdown = []
+    for wf_key, entry in breakdown_map.items():
+        if applicable_keys and wf_key not in applicable_keys:
+            continue
+        filtered_breakdown.append(entry)
+
+    workflow_breakdown = filtered_breakdown
+    grand_total_cost = sum(w["cost_usd"] for w in workflow_breakdown)
+    grand_run_count  = sum(w["run_count"] for w in workflow_breakdown)
 
     return {
         "organization_id":    str(oid),

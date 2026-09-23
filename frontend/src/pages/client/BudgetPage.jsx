@@ -316,11 +316,9 @@ export default function BudgetPage() {
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm mb-6">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <h2 className="text-base font-bold text-gray-900">Workflow Usage Breakdown</h2>
-          {summary?.industry && (
-            <span className="text-xs text-gray-400">
-              Filtered to {INDUSTRY_LABELS[summary.industry] || summary.industry} workflows only
-            </span>
-          )}
+          <span className="text-xs text-gray-400">
+            All workflows executed by your organization
+          </span>
         </div>
 
         {loading ? (

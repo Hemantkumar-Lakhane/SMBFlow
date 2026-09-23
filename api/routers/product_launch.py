@@ -23,7 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.auth import TokenData, require_any_auth
 from api.dependencies import get_db
-from db.models.core import AgentRunRecord, ApprovalItem, AuditEvent, EvidenceRecord, ToolConnection, WorkflowInstance
+from db.models.core import AgentRunRecord, ApprovalItem, AuditEvent, EvidenceRecord, ToolConnection, UsageRecord, WorkflowInstance
 from core.llm_router import LLMRouter, LLMMessage
 from core.state_manager import WorkflowStatus
 
@@ -681,6 +681,24 @@ Return ONLY JSON array format matching this schema:
         "posts_count": len(created_posts_payload),
     }
 
+    # Atomically record usage for billing
+    rec = UsageRecord(
+        id=uuid.uuid4(),
+        organization_id=org_uuid,
+        workflow_key="product_launch_sprint",
+        workflow_instance_id=instance_id,
+        agent_run_id=agent_run.id,
+        usage_type="workflow_run",
+        provider="gemini",
+        model=str(m_used),
+        quantity=1,
+        tokens_in=t_in,
+        tokens_out=t_out,
+        cost_usd=c_usd,
+        recorded_at=datetime.utcnow(),
+    )
+    db.add(rec)
+
     await db.commit()
 
     return {
@@ -861,6 +879,25 @@ async def generate_campaign_visual(
         created_at=datetime.utcnow(),
     )
     db.add(audit)
+
+    # Record image generation usage
+    if gen_result.get("status") == "success":
+        rec_img = UsageRecord(
+            id=uuid.uuid4(),
+            organization_id=inst.organization_id,
+            workflow_key="product_launch_sprint",
+            workflow_instance_id=inst.id,
+            agent_run_id=agent_run.id,
+            usage_type="image_generation",
+            provider=str(gen_result.get("provider", "gemini")),
+            model=str(gen_result.get("generation_model", "gemini-3.1-flash-image")),
+            quantity=1,
+            tokens_in=vis_tokens_in,
+            tokens_out=vis_tokens_out,
+            cost_usd=vis_cost_usd,
+            recorded_at=datetime.utcnow(),
+        )
+        db.add(rec_img)
 
     inst.context = context
     await db.commit()
