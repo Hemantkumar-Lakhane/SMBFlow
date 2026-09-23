@@ -1435,6 +1435,7 @@ async def validate_tenant_config_endpoint(
 @app.get("/api/v1/evidence/{filename}/content", tags=["Evidence"])
 async def get_evidence_file_content(
     filename: str,
+    db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(require_any_auth),
 ):
     """Return the parsed content of an evidence artifact for the UI viewer."""
@@ -1442,30 +1443,74 @@ async def get_evidence_file_content(
     # Sanitize — no path traversal
     safe = filename.replace("..", "").replace("/", "").replace("\\", "")
     p = evidence_dir / safe
-    if not p.exists():
-        raise HTTPException(status_code=404, detail="Evidence file not found")
-    try:
-        size_kb = round(p.stat().st_size / 1024, 1)
-        if p.suffix == ".json":
-            data = json.loads(p.read_text())
-            return {"filename": safe, "type": "json_summary", "data": data, "size_kb": size_kb}
-        elif p.suffix == ".epi":
-            try:
+    if p.exists():
+        try:
+            size_kb = round(p.stat().st_size / 1024, 1)
+            if p.suffix == ".json":
                 data = json.loads(p.read_text())
-                return {"filename": safe, "type": "epi", "data": data, "size_kb": size_kb}
-            except Exception:
-                return {
-                    "filename": safe,
-                    "type": "epi_binary",
-                    "data": None,
-                    "note": f"Binary EPI artifact — use CLI: epi view evidence/{safe}",
-                    "size_kb": size_kb,
-                }
-        raise HTTPException(status_code=400, detail="Unsupported file type")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+                return {"filename": safe, "type": "json_summary", "data": data, "size_kb": size_kb}
+            elif p.suffix == ".epi":
+                try:
+                    data = json.loads(p.read_text())
+                    return {"filename": safe, "type": "epi", "data": data, "size_kb": size_kb}
+                except Exception:
+                    return {
+                        "filename": safe,
+                        "type": "epi_binary",
+                        "data": None,
+                        "note": f"Binary EPI artifact — use CLI: epi view evidence/{safe}",
+                        "size_kb": size_kb,
+                    }
+            raise HTTPException(status_code=400, detail="Unsupported file type")
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    # DB Fallback for workflow instances
+    try:
+        from db.models.core import WorkflowInstance, AgentRunRecord
+        raw_target = safe.replace(".json", "").replace("product_launch_", "").replace("email_summarizer_", "").replace("finance_expense_monitoring_", "")
+        stmt = select(WorkflowInstance)
+        res = await db.execute(stmt)
+        all_wf = res.scalars().all()
+        target_wf = next((w for w in all_wf if str(w.id).startswith(raw_target) or raw_target in str(w.id)), None)
+
+        if target_wf:
+            stmt_runs = select(AgentRunRecord).where(AgentRunRecord.instance_id == target_wf.id)
+            res_runs = await db.execute(stmt_runs)
+            runs = res_runs.scalars().all()
+
+            synth_data = {
+                "run_id": str(target_wf.id),
+                "workflow_name": target_wf.workflow_name,
+                "status": target_wf.status,
+                "created_at": target_wf.started_at.isoformat() if target_wf.started_at else datetime.utcnow().isoformat(),
+                "total_cost_usd": target_wf.total_cost_usd or 0.0,
+                "total_tokens_in": target_wf.total_tokens_in or 0,
+                "total_tokens_out": target_wf.total_tokens_out or 0,
+                "outcome": {
+                    "situation_summary": f"Workflow {target_wf.workflow_name} executed with status {target_wf.status}.",
+                    "details": target_wf.context or {},
+                },
+                "agent_runs": [
+                    {
+                        "node_id": r.node_id,
+                        "agent_type": r.agent_capability,
+                        "status": r.status,
+                        "tokens_in": r.tokens_in,
+                        "tokens_out": r.tokens_out,
+                        "cost_usd": r.cost_usd,
+                        "model_used": r.model_used,
+                    }
+                    for r in runs
+                ],
+            }
+            return {"filename": safe, "type": "json_summary", "data": synth_data, "size_kb": 1.5}
+    except Exception as db_err:
+        log.warning("Evidence DB fallback error", error=str(db_err))
+
+    raise HTTPException(status_code=404, detail="Evidence file not found")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Workflows
@@ -2964,7 +3009,10 @@ async def reject_email_draft(
 # ─────────────────────────────────────────────────────────────────────────────
 
 @app.get("/api/v1/evidence", tags=["Evidence"])
-async def list_evidence(current_user: TokenData = Depends(require_any_auth)):
+async def list_evidence(
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(require_any_auth),
+):
     try:
         evidence_dir = Path(os.getenv("EPI_EVIDENCE_DIR", "./evidence"))
         evidence_dir.mkdir(parents=True, exist_ok=True)
@@ -2979,7 +3027,8 @@ async def list_evidence(current_user: TokenData = Depends(require_any_auth)):
                 try:
                     data = json.loads(p.read_text())
                     artifacts.append({
-                        "filename": p.name, "path": str(p),
+                        "filename": p.name,
+                        "path": str(p),
                         "size_kb": round(p.stat().st_size / 1024, 1),
                         "created": datetime.fromtimestamp(p.stat().st_mtime).isoformat(),
                         "type": "workflow_summary",
@@ -2990,6 +3039,38 @@ async def list_evidence(current_user: TokenData = Depends(require_any_auth)):
                     })
                 except Exception:
                     pass
+
+        # Also pull database WorkflowInstance records to guarantee 100% audit visibility
+        try:
+            from db.models.core import WorkflowInstance
+            stmt_wf = select(WorkflowInstance).order_by(WorkflowInstance.started_at.desc()).limit(100)
+            res_wf = await db.execute(stmt_wf)
+            wf_instances = res_wf.scalars().all()
+            for wf in wf_instances:
+                inst_id_str = str(wf.id)
+                prefix_id = inst_id_str[:8]
+                has_disk_match = any(
+                    inst_id_str in (a.get("run_id") or "") or
+                    prefix_id in (a.get("filename") or "") or
+                    inst_id_str in (a.get("filename") or "")
+                    for a in artifacts
+                )
+                if not has_disk_match:
+                    fn = f"{wf.workflow_name}_{prefix_id}.json"
+                    artifacts.append({
+                        "filename": fn,
+                        "path": f"evidence/{fn}",
+                        "size_kb": 1.5,
+                        "created": wf.started_at.isoformat() if wf.started_at else datetime.utcnow().isoformat(),
+                        "type": "workflow_summary",
+                        "workflow_name": wf.workflow_name,
+                        "run_id": inst_id_str,
+                        "status": wf.status,
+                        "total_cost_usd": wf.total_cost_usd or 0.0,
+                    })
+        except Exception as db_err:
+            log.warning("Could not query DB workflow instances in list_evidence", error=str(db_err))
+
         return sorted(artifacts, key=lambda x: x.get("created", ""), reverse=True)
     except Exception:
         return []

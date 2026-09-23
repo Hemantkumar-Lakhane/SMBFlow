@@ -242,16 +242,32 @@ function PlanModal({ open, onClose, api, existing, catalog, onDone }) {
 }
 
 // ── Plan card ─────────────────────────────────────────────────────────────────
-function PlanCard({ plan, onEdit }) {
+function PlanCard({ plan, catalog = [], onEdit }) {
   const [expanded, setExpanded] = useState(false)
   const price = plan.monthly_price_usd
+
+  // Map entitlement IDs/slugs to clean display names
+  const entitledNames = useMemo(() => {
+    if (!plan.entitlements || plan.entitlements.length === 0) return []
+    return plan.entitlements.map(id => {
+      const match = catalog.find(c => c.id === id || c.key === id || c.name?.toLowerCase() === id?.toLowerCase())
+      return {
+        id,
+        name: match ? match.name : id.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+      }
+    })
+  }, [plan.entitlements, catalog])
+
   return (
-    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-      <div className="p-5">
+    <div 
+      onClick={() => onEdit(plan)}
+      className="bg-white border border-slate-200 hover:border-blue-300 hover:shadow-md transition-all duration-200 rounded-xl overflow-hidden cursor-pointer flex flex-col group"
+    >
+      <div className="p-5 flex-1">
         <div className="flex items-start justify-between gap-3 mb-3">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 mb-1 flex-wrap">
-              <h3 className="text-sm font-bold text-slate-900">{plan.name}</h3>
+              <h3 className="text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{plan.name}</h3>
               <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${STATUS_COLORS[plan.status] || 'bg-slate-100 text-slate-500'}`}>
                 {plan.status}
               </span>
@@ -260,44 +276,71 @@ function PlanCard({ plan, onEdit }) {
               )}
             </div>
             <p className="text-xs text-slate-400 font-mono">{plan.slug}</p>
-            {plan.description && <p className="text-xs text-slate-500 mt-1">{plan.description}</p>}
+            {plan.description && <p className="text-xs text-slate-600 mt-1 leading-relaxed">{plan.description}</p>}
           </div>
           <div className="text-right shrink-0">
-            <p className="text-lg font-bold text-slate-900">
+            <p className="text-xl font-bold text-slate-900">
               {Number(price) === 0 ? 'Free' : `$${Number(price).toFixed(2)}`}
             </p>
             {Number(price) > 0 && <p className="text-[11px] text-slate-400">/month</p>}
           </div>
         </div>
 
-        {/* Quotas row */}
-        <div className="flex items-center gap-4 text-xs text-slate-500 flex-wrap">
-          <span>{plan.included_workflow_runs === 0 ? '∞' : plan.included_workflow_runs.toLocaleString()} runs</span>
-          <span>{plan.included_ai_tokens === 0 ? '∞' : (plan.included_ai_tokens / 1_000_000).toFixed(1) + 'M'} tokens</span>
-          <span>{plan.included_users === 0 ? '∞' : plan.included_users} users</span>
-          {plan.entitlements?.length > 0 && (
-            <span className="flex items-center gap-1">
-              <Tag size={10} /> {plan.entitlements.length} workflow{plan.entitlements.length !== 1 ? 's' : ''}
-            </span>
-          )}
+        {/* Quotas grid */}
+        <div className="grid grid-cols-2 gap-2 my-3 p-3 bg-slate-50 rounded-lg border border-slate-100 text-xs text-slate-600">
+          <div>
+            <span className="text-[10px] uppercase tracking-wider text-slate-400 block font-medium">Included Runs</span>
+            <span className="font-semibold text-slate-800">{plan.included_workflow_runs === 0 ? 'Unlimited' : plan.included_workflow_runs.toLocaleString()}</span>
+          </div>
+          <div>
+            <span className="text-[10px] uppercase tracking-wider text-slate-400 block font-medium">AI Tokens</span>
+            <span className="font-semibold text-slate-800">{plan.included_ai_tokens === 0 ? 'Unlimited' : (plan.included_ai_tokens / 1_000_000).toFixed(1) + 'M'}</span>
+          </div>
+          <div>
+            <span className="text-[10px] uppercase tracking-wider text-slate-400 block font-medium">Image Gens</span>
+            <span className="font-semibold text-slate-800">{plan.included_image_gens === 0 ? '0 included' : `${plan.included_image_gens} images`}</span>
+          </div>
+          <div>
+            <span className="text-[10px] uppercase tracking-wider text-slate-400 block font-medium">Seats</span>
+            <span className="font-semibold text-slate-800">{plan.included_users === 0 ? 'Unlimited' : `${plan.included_users} user${plan.included_users !== 1 ? 's' : ''}`}</span>
+          </div>
+        </div>
+
+        {/* Entitled Workflows Chips */}
+        <div>
+          <span className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold block mb-1.5">
+            Entitled Workflows ({entitledNames.length})
+          </span>
+          <div className="flex flex-wrap gap-1.5">
+            {entitledNames.length > 0 ? (
+              entitledNames.map(w => (
+                <span key={w.id} className="inline-flex items-center gap-1 text-[11px] font-medium bg-blue-50 text-blue-700 px-2 py-0.5 rounded-md border border-blue-100">
+                  <CheckCircle2 size={10} className="text-blue-500" />
+                  {w.name}
+                </span>
+              ))
+            ) : (
+              <span className="text-xs text-slate-400 italic">All catalog workflows entitled</span>
+            )}
+          </div>
         </div>
       </div>
 
-      <div className="border-t border-slate-100 px-5 py-3 flex items-center justify-between">
+      <div className="border-t border-slate-100 px-5 py-3 flex items-center justify-between bg-slate-50/50" onClick={e => e.stopPropagation()}>
         <button
           onClick={() => setExpanded(v => !v)}
-          className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-600 transition-colors"
+          className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 transition-colors font-medium"
         >
           {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-          {expanded ? 'Hide details' : 'View details'}
+          {expanded ? 'Hide limits' : 'View limits & overage'}
         </button>
         <Button variant="secondary" size="xs" icon={<Edit2 size={11} />} onClick={() => onEdit(plan)}>
-          Edit
+          Edit Plan
         </Button>
       </div>
 
       {expanded && (
-        <div className="border-t border-slate-100 px-5 py-4 bg-slate-50 grid grid-cols-2 gap-2 text-xs text-slate-600">
+        <div className="border-t border-slate-100 px-5 py-3 bg-slate-50 grid grid-cols-2 gap-2 text-xs text-slate-600" onClick={e => e.stopPropagation()}>
           <div><span className="font-semibold text-slate-500">Annual price:</span> {Number(plan.annual_price_usd) === 0 ? 'Free' : `$${Number(plan.annual_price_usd).toFixed(2)}/yr`}</div>
           <div><span className="font-semibold text-slate-500">Max runs:</span> {plan.max_workflow_runs === 0 ? 'Unlimited' : plan.max_workflow_runs.toLocaleString()}</div>
           <div><span className="font-semibold text-slate-500">Max users:</span> {plan.max_users === 0 ? 'Unlimited' : plan.max_users}</div>
@@ -308,12 +351,6 @@ function PlanCard({ plan, onEdit }) {
             {' '} · ${Number(plan.overage_token_price_usd).toFixed(9)}/token
             {' '} · ${Number(plan.overage_image_price_usd).toFixed(6)}/image
           </div>
-          {plan.entitlements?.length > 0 && (
-            <div className="col-span-2">
-              <span className="font-semibold text-slate-500">Workflows:</span>
-              {' '}{plan.entitlements.join(', ')}
-            </div>
-          )}
         </div>
       )}
     </div>
@@ -398,7 +435,7 @@ export default function AdminPlans() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {visible.map(p => (
-            <PlanCard key={p.id} plan={p} onEdit={setEditPlan} />
+            <PlanCard key={p.id} plan={p} catalog={catalog} onEdit={setEditPlan} />
           ))}
         </div>
       )}
