@@ -120,17 +120,17 @@ export default function GeneralSettings() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Organization Name</label>
               <input value={form.orgName} onChange={e => set('orgName', e.target.value)} placeholder="Your Company Ltd."
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white font-medium placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Industry</label>
               <div className="relative">
                 <select value={form.industry} onChange={e => set('industry', e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none bg-white">
-                  <option value="">Select Industry...</option>
-                  {INDUSTRIES.map(i => <option key={i} value={i.toLowerCase()}>{i}</option>)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none">
+                  <option value="" className="text-gray-500">Select Industry...</option>
+                  {INDUSTRIES.map(i => <option key={i} value={i.toLowerCase()} className="text-gray-900">{i}</option>)}
                 </select>
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">▾</div>
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">▾</div>
               </div>
             </div>
           </div>
@@ -138,10 +138,10 @@ export default function GeneralSettings() {
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Timezone</label>
             <div className="relative w-48">
               <select value={form.timezone} onChange={e => set('timezone', e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none bg-white">
-                {TIMEZONES.map(tz => <option key={tz}>{tz}</option>)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none">
+                {TIMEZONES.map(tz => <option key={tz} className="text-gray-900">{tz}</option>)}
               </select>
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">▾</div>
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">▾</div>
             </div>
           </div>
         </Section>
@@ -175,7 +175,7 @@ export default function GeneralSettings() {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Session timeout (minutes)</label>
             <input type="number" value={form.sessionTimeout} onChange={e => set('sessionTimeout', parseInt(e.target.value) || 30)} min={5} max={1440}
-              className="w-32 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              className="w-32 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white font-medium focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
         </Section>
 

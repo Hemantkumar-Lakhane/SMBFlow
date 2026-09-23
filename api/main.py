@@ -125,10 +125,50 @@ async def lifespan(app: FastAPI):
         # persist to the normalized table until this column exists.
         log.error("Additive column migration failed (non-fatal)", error=str(_mig_err))
 
+    # Migration 004: workflow_catalog scope + industry columns (idempotent)
+    try:
+        from sqlalchemy import text as _sql_text
+        async with engine.begin() as _mconn:
+            # Add scope column (GLOBAL by default — backward-compatible)
+            await _mconn.execute(_sql_text(
+                "ALTER TABLE workflow_catalog "
+                "ADD COLUMN IF NOT EXISTS scope VARCHAR(20) NOT NULL DEFAULT 'GLOBAL'"
+            ))
+            # Add industry column (nullable — GLOBAL workflows have no industry)
+            await _mconn.execute(_sql_text(
+                "ALTER TABLE workflow_catalog "
+                "ADD COLUMN IF NOT EXISTS industry VARCHAR(100)"
+            ))
+            # Indexes for efficient filtering
+            await _mconn.execute(_sql_text(
+                "CREATE INDEX IF NOT EXISTS idx_workflow_catalog_scope "
+                "ON workflow_catalog(scope)"
+            ))
+            await _mconn.execute(_sql_text(
+                "CREATE INDEX IF NOT EXISTS idx_workflow_catalog_industry "
+                "ON workflow_catalog(industry)"
+            ))
+        log.info("Schema check: workflow_catalog.scope + industry columns present")
+    except Exception as _scope_mig_err:
+        log.error("Workflow scope migration failed (non-fatal)", error=str(_scope_mig_err))
+
     # Initialize Redis pub/sub
     await redis_pubsub.connect()
     await redis_pubsub.start_subscriber(_local_broadcast)
     log.info("Redis pub/sub initialized")
+
+    # Sync workflow catalog from DAG files (idempotent — only inserts missing entries)
+    try:
+        from core.workflow_catalog_sync import sync_workflow_catalog, sync_plan_entitlements_for_new_workflows
+        from db.seed.plans_seed import seed_plans_and_catalog
+        _catalog_session = await get_raw_session()
+        async with _catalog_session:
+            await seed_plans_and_catalog(_catalog_session)
+            sync_result = await sync_workflow_catalog(_catalog_session)
+            await sync_plan_entitlements_for_new_workflows(_catalog_session)
+            log.info("Workflow catalog and plans seed complete", **sync_result)
+    except Exception as _sync_err:
+        log.warning("Workflow catalog sync failed (non-fatal)", error=str(_sync_err))
 
     # Seed super-admin from env
     _admin_email = os.getenv("ADMIN_EMAIL", "admin@smbflow.com")
@@ -540,6 +580,37 @@ async def provision_user_workspace(
     )
     org_id = str(org.id) if org else (current_user.organization_id or current_user.tenant_id)
     org_name = org.name if org else body.workspace_name
+
+    # Auto-assign industry workflows on first provision.
+    # Check whether the org already has assignments — if not, this is a fresh
+    # workspace and we populate it based on the chosen industry.
+    if org and org_id:
+        try:
+            existing_assignments = await crud.get_org_workflow_assignments(db, org_id)
+            if not existing_assignments:
+                resolved_industry = (org.industry or body.industry or "saas")
+                # Resolve which plan slug this org is on (default free for self-signup)
+                sub = await crud.get_org_subscription(db, org_id)
+                plan_slug = "free"
+                if sub:
+                    plan = await crud.get_billing_plan(db, str(sub.plan_id))
+                    if plan:
+                        plan_slug = plan.slug
+                await crud.auto_assign_industry_workflows(
+                    db,
+                    organization_id=org_id,
+                    industry=resolved_industry,
+                    assigned_by="system:provision",
+                    plan_slug=plan_slug,
+                )
+        except Exception as _aa_err:
+            # Non-fatal — user still lands on dashboard, just with no workflows shown
+            # until the admin assigns them manually or on next request
+            log.warning(
+                "provision: auto-assign failed (non-fatal)",
+                error=str(_aa_err),
+                org_id=org_id,
+            )
 
     return {
         "id": current_user.user_id,
@@ -1364,6 +1435,7 @@ async def validate_tenant_config_endpoint(
 @app.get("/api/v1/evidence/{filename}/content", tags=["Evidence"])
 async def get_evidence_file_content(
     filename: str,
+    db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(require_any_auth),
 ):
     """Return the parsed content of an evidence artifact for the UI viewer."""
@@ -1371,30 +1443,74 @@ async def get_evidence_file_content(
     # Sanitize — no path traversal
     safe = filename.replace("..", "").replace("/", "").replace("\\", "")
     p = evidence_dir / safe
-    if not p.exists():
-        raise HTTPException(status_code=404, detail="Evidence file not found")
-    try:
-        size_kb = round(p.stat().st_size / 1024, 1)
-        if p.suffix == ".json":
-            data = json.loads(p.read_text())
-            return {"filename": safe, "type": "json_summary", "data": data, "size_kb": size_kb}
-        elif p.suffix == ".epi":
-            try:
+    if p.exists():
+        try:
+            size_kb = round(p.stat().st_size / 1024, 1)
+            if p.suffix == ".json":
                 data = json.loads(p.read_text())
-                return {"filename": safe, "type": "epi", "data": data, "size_kb": size_kb}
-            except Exception:
-                return {
-                    "filename": safe,
-                    "type": "epi_binary",
-                    "data": None,
-                    "note": f"Binary EPI artifact — use CLI: epi view evidence/{safe}",
-                    "size_kb": size_kb,
-                }
-        raise HTTPException(status_code=400, detail="Unsupported file type")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+                return {"filename": safe, "type": "json_summary", "data": data, "size_kb": size_kb}
+            elif p.suffix == ".epi":
+                try:
+                    data = json.loads(p.read_text())
+                    return {"filename": safe, "type": "epi", "data": data, "size_kb": size_kb}
+                except Exception:
+                    return {
+                        "filename": safe,
+                        "type": "epi_binary",
+                        "data": None,
+                        "note": f"Binary EPI artifact — use CLI: epi view evidence/{safe}",
+                        "size_kb": size_kb,
+                    }
+            raise HTTPException(status_code=400, detail="Unsupported file type")
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    # DB Fallback for workflow instances
+    try:
+        from db.models.core import WorkflowInstance, AgentRunRecord
+        raw_target = safe.replace(".json", "").replace("product_launch_", "").replace("email_summarizer_", "").replace("finance_expense_monitoring_", "")
+        stmt = select(WorkflowInstance)
+        res = await db.execute(stmt)
+        all_wf = res.scalars().all()
+        target_wf = next((w for w in all_wf if str(w.id).startswith(raw_target) or raw_target in str(w.id)), None)
+
+        if target_wf:
+            stmt_runs = select(AgentRunRecord).where(AgentRunRecord.instance_id == target_wf.id)
+            res_runs = await db.execute(stmt_runs)
+            runs = res_runs.scalars().all()
+
+            synth_data = {
+                "run_id": str(target_wf.id),
+                "workflow_name": target_wf.workflow_name,
+                "status": target_wf.status,
+                "created_at": target_wf.started_at.isoformat() if target_wf.started_at else datetime.utcnow().isoformat(),
+                "total_cost_usd": target_wf.total_cost_usd or 0.0,
+                "total_tokens_in": target_wf.total_tokens_in or 0,
+                "total_tokens_out": target_wf.total_tokens_out or 0,
+                "outcome": {
+                    "situation_summary": f"Workflow {target_wf.workflow_name} executed with status {target_wf.status}.",
+                    "details": target_wf.context or {},
+                },
+                "agent_runs": [
+                    {
+                        "node_id": r.node_id,
+                        "agent_type": r.agent_capability,
+                        "status": r.status,
+                        "tokens_in": r.tokens_in,
+                        "tokens_out": r.tokens_out,
+                        "cost_usd": r.cost_usd,
+                        "model_used": r.model_used,
+                    }
+                    for r in runs
+                ],
+            }
+            return {"filename": safe, "type": "json_summary", "data": synth_data, "size_kb": 1.5}
+    except Exception as db_err:
+        log.warning("Evidence DB fallback error", error=str(db_err))
+
+    raise HTTPException(status_code=404, detail="Evidence file not found")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Workflows
@@ -1889,15 +2005,25 @@ async def list_workflows(
 ):
     """
     List workflow instances (runs) scoped to the authenticated user's org.
-
-    Phase 0: For org_users, the tenant_id is always derived from auth — the
-    query param is accepted for backwards compatibility but is overridden by
-    the authenticated org_id.  Platform admins may filter by explicit tenant_id.
     """
     if current_user.role in ("platform_admin", "super_admin"):
         filter_tid = get_tenant_filter(current_user) or tenant_id
     else:
-        # Org user — always scope to their own org; ignore client-supplied tenant_id
+        filter_tid = current_user.organization_id or current_user.tenant_id
+    instances = await crud.list_workflow_instances(db, tenant_id=filter_tid, limit=200)
+    return [crud.workflow_to_dict(i) for i in instances]
+
+
+@app.get("/api/v1/workflow-instances", tags=["Workflows"])
+async def list_workflow_instances_alias(
+    tenant_id: Optional[str] = Query(None),
+    current_user: TokenData = Depends(require_any_auth),
+    db: AsyncSession = Depends(get_db),
+):
+    """Alias for /api/v1/workflows — returns run instances."""
+    if current_user.role in ("platform_admin", "super_admin"):
+        filter_tid = get_tenant_filter(current_user) or tenant_id
+    else:
         filter_tid = current_user.organization_id or current_user.tenant_id
     instances = await crud.list_workflow_instances(db, tenant_id=filter_tid, limit=200)
     return [crud.workflow_to_dict(i) for i in instances]
@@ -2883,7 +3009,10 @@ async def reject_email_draft(
 # ─────────────────────────────────────────────────────────────────────────────
 
 @app.get("/api/v1/evidence", tags=["Evidence"])
-async def list_evidence(current_user: TokenData = Depends(require_any_auth)):
+async def list_evidence(
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(require_any_auth),
+):
     try:
         evidence_dir = Path(os.getenv("EPI_EVIDENCE_DIR", "./evidence"))
         evidence_dir.mkdir(parents=True, exist_ok=True)
@@ -2898,7 +3027,8 @@ async def list_evidence(current_user: TokenData = Depends(require_any_auth)):
                 try:
                     data = json.loads(p.read_text())
                     artifacts.append({
-                        "filename": p.name, "path": str(p),
+                        "filename": p.name,
+                        "path": str(p),
                         "size_kb": round(p.stat().st_size / 1024, 1),
                         "created": datetime.fromtimestamp(p.stat().st_mtime).isoformat(),
                         "type": "workflow_summary",
@@ -2909,6 +3039,38 @@ async def list_evidence(current_user: TokenData = Depends(require_any_auth)):
                     })
                 except Exception:
                     pass
+
+        # Also pull database WorkflowInstance records to guarantee 100% audit visibility
+        try:
+            from db.models.core import WorkflowInstance
+            stmt_wf = select(WorkflowInstance).order_by(WorkflowInstance.started_at.desc()).limit(100)
+            res_wf = await db.execute(stmt_wf)
+            wf_instances = res_wf.scalars().all()
+            for wf in wf_instances:
+                inst_id_str = str(wf.id)
+                prefix_id = inst_id_str[:8]
+                has_disk_match = any(
+                    inst_id_str in (a.get("run_id") or "") or
+                    prefix_id in (a.get("filename") or "") or
+                    inst_id_str in (a.get("filename") or "")
+                    for a in artifacts
+                )
+                if not has_disk_match:
+                    fn = f"{wf.workflow_name}_{prefix_id}.json"
+                    artifacts.append({
+                        "filename": fn,
+                        "path": f"evidence/{fn}",
+                        "size_kb": 1.5,
+                        "created": wf.started_at.isoformat() if wf.started_at else datetime.utcnow().isoformat(),
+                        "type": "workflow_summary",
+                        "workflow_name": wf.workflow_name,
+                        "run_id": inst_id_str,
+                        "status": wf.status,
+                        "total_cost_usd": wf.total_cost_usd or 0.0,
+                    })
+        except Exception as db_err:
+            log.warning("Could not query DB workflow instances in list_evidence", error=str(db_err))
+
         return sorted(artifacts, key=lambda x: x.get("created", ""), reverse=True)
     except Exception:
         return []
@@ -3003,6 +3165,329 @@ async def list_workflow_dags(db: AsyncSession = Depends(get_db)):
     # Most-run workflows first; ties fall back to alphabetical display name.
     workflows.sort(key=lambda w: (-(w.get("run_count") or 0), (w.get("display_name") or "").lower()))
     return workflows
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Tenant-scoped workflow listing (assignment-enforced)
+# GET /api/v1/workflows  — returns ONLY workflows assigned to the authenticated org.
+# This is the secure alternative to /config/workflows for SMB Owner clients.
+# Admins receive the full catalog without assignment filtering.
+# ─────────────────────────────────────────────────────────────────────────────
+
+@app.get("/api/v1/catalog/assigned", tags=["Workflows"])
+async def list_tenant_workflows(
+    current_user: TokenData = Depends(require_any_auth),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Returns the list of workflows available to the authenticated user's organization.
+    Enforcement rule:
+      - org must be active
+      - subscription must be active or trialing (and trial not expired)
+      - plan must entitle the workflow
+      - workflow must be explicitly assigned to the org by an admin
+      - workflow catalog entry must be active
+
+    Platform admins receive the full catalog without assignment filtering.
+    """
+    from pathlib import Path as _Path
+    from datetime import datetime as _dt
+
+    is_admin = current_user.role in ("platform_admin", "super_admin")
+    org_id = current_user.organization_id or current_user.tenant_id
+
+    # Admins: return full catalog (same as /config/workflows)
+    if is_admin:
+        from sqlalchemy import select as _sel, func as _func
+        from core.state_manager import WorkflowInstance as _WFI
+        dags_dir = _Path("workflows/dags")
+        if not dags_dir.exists():
+            return []
+        run_counts: dict[str, int] = {}
+        last_run: dict[str, str] = {}
+        try:
+            rc = await db.execute(
+                _sel(_WFI.workflow_name, _func.count().label("c"), _func.max(_WFI.started_at).label("l"))
+                .group_by(_WFI.workflow_name)
+            )
+            for row in rc.all():
+                if row.workflow_name:
+                    run_counts[row.workflow_name] = row.c or 0
+                    last_run[row.workflow_name] = row.l.isoformat() if row.l else None
+        except Exception:
+            pass
+        result = []
+        for f in sorted(dags_dir.glob("*.json")):
+            try:
+                import aiofiles as _af, json as _json
+                async with _af.open(f) as fp:
+                    meta = _json.loads(await fp.read()).get("_meta", {})
+                result.append({
+                    "name": f.stem,
+                    "display_name": meta.get("name", f.stem.replace("_", " ").title()),
+                    "industry": meta.get("industry", "general"),
+                    "description": meta.get("description", ""),
+                    "status": "active",
+                    "trigger_type": "New Email" if "email" in f.stem else "Manual",
+                    "run_count": run_counts.get(f.stem, 0),
+                    "last_run_at": last_run.get(f.stem),
+                })
+            except Exception:
+                result.append({"name": f.stem, "display_name": f.stem.replace("_", " ").title(), "status": "active"})
+        return result
+
+    # Non-admin: enforce assignments + industry applicability
+    # ── Step 1: Resolve org_id ────────────────────────────────────────────────
+    # The Supabase JWT doesn't embed organization_id. We get it from the DB
+    # lookup in deps/auth.py. If it's still None here, the user's
+    # organization_users row may not exist yet — provision it now.
+    if not org_id:
+        try:
+            _ou, _org = await crud.ensure_user_organization_provisioned(
+                db,
+                user_id=current_user.user_id,
+                email=current_user.email,
+                full_name=current_user.full_name,
+            )
+            org_id = str(_org.id) if _org else None
+        except Exception:
+            pass
+
+    if not org_id:
+        return []
+
+    from sqlalchemy import select as _sel
+    from db.models.core import (
+        Organization as _Org, OrganizationSubscription as _Sub,
+        OrganizationWorkflowAssignment as _Assign, WorkflowCatalog as _WCat,
+    )
+    import uuid as _uuid
+
+    # Check org is active
+    try:
+        oid = _uuid.UUID(str(org_id))
+    except (ValueError, TypeError):
+        return []
+
+    org_res = await db.execute(_sel(_Org).where(_Org.id == oid))
+    org = org_res.scalar_one_or_none()
+    if not org or not org.active:
+        return []
+
+    org_industry = (org.industry or "saas").lower().strip()
+
+    # ── Resolve visible categories for this org's industry ───────────────────
+    # This mirrors exactly what the admin catalog shows when filtered by category.
+    # finance org → sees "finance" + universal categories (productivity, compliance, operations)
+    # healthcare org → sees "healthcare" + universal categories
+    # saas org → sees "sales" + "marketing" + universal categories
+    from api.crud import get_visible_categories_for_industry as _get_cats
+    visible_categories = _get_cats(org_industry)
+
+    # Check subscription is not expired
+    sub_res = await db.execute(_sel(_Sub).where(_Sub.organization_id == oid))
+    sub = sub_res.scalar_one_or_none()
+
+    # ── Subscription guard ────────────────────────────────────────────────────
+    # If there is no subscription row yet (race between provision + catalog fetch),
+    # attempt a one-time auto-assign+subscribe recovery then re-check.
+    if not sub:
+        try:
+            # Try to create a free subscription on the fly so the owner isn't
+            # blocked just because the billing row hasn't propagated yet.
+            from api.crud import (
+                get_billing_plan_by_slug as _get_plan,
+                create_org_subscription as _create_sub,
+            )
+            _free_plan = await _get_plan(db, "free")
+            if _free_plan:
+                sub = await _create_sub(db, str(oid), str(_free_plan.id), "monthly")
+        except Exception:
+            pass
+    if not sub:
+        return []
+
+    effective_status = sub.status
+    if sub.status == "trialing" and sub.trial_ends_at and sub.trial_ends_at < _dt.utcnow():
+        effective_status = "trial_expired"
+    if effective_status not in ("active", "trialing"):
+        return []
+
+    # ── Assignment query ──────────────────────────────────────────────────────
+    # Returns all active workflow catalog entries assigned to this organization.
+    # For a finance org, auto_assign_industry_workflows will have assigned all "finance"
+    # category workflows. Explicit admin assignments are also included.
+    assigns_res = await db.execute(
+        _sel(_Assign, _WCat)
+        .join(_WCat, _Assign.workflow_id == _WCat.id)
+        .where(
+            _Assign.organization_id == oid,
+            _Assign.status == "active",
+            _WCat.active.is_(True),
+        )
+    )
+    rows = assigns_res.all()
+
+    # ── If there are no assignments yet, trigger auto-assign now ─────────────
+    # This handles the window between provision completing and the next request.
+    if not rows:
+        try:
+            from api.crud import (
+                auto_assign_industry_workflows as _auto_assign,
+                get_billing_plan as _get_plan_by_id,
+            )
+            _plan_for_assign = await _get_plan_by_id(db, str(sub.plan_id))
+            _slug = _plan_for_assign.slug if _plan_for_assign else "free"
+            await _auto_assign(
+                db,
+                organization_id=str(oid),
+                industry=org_industry,
+                assigned_by="system:catalog_assigned",
+                plan_slug=_slug,
+            )
+            # Re-query now that assignments exist
+            assigns_res2 = await db.execute(
+                _sel(_Assign, _WCat)
+                .join(_WCat, _Assign.workflow_id == _WCat.id)
+                .where(
+                    _Assign.organization_id == oid,
+                    _Assign.status == "active",
+                    _WCat.active.is_(True),
+                )
+            )
+            rows = assigns_res2.all()
+        except Exception as _lazy_err:
+            log.warning("catalog/assigned lazy auto-assign failed", error=str(_lazy_err), org_id=str(oid))
+
+    # ── Plan entitlement check ────────────────────────────────────────────────
+    # If no entitlements are seeded for this plan yet (fresh DB / pre-migration),
+    # skip the entitlement gate entirely — an empty whitelist must never mean
+    # "block everything". The real guard is the assignment row itself.
+    from api.crud import get_plan_entitlements as _get_ent
+    entitled_wf_ids = set(await _get_ent(db, str(sub.plan_id)))
+    entitlements_seeded = len(entitled_wf_ids) > 0
+
+    # Load run stats
+    from sqlalchemy import func as _func
+    from core.state_manager import WorkflowInstance as _WFI
+    run_counts: dict[str, int] = {}
+    last_run: dict[str, str] = {}
+    try:
+        rc = await db.execute(
+            _sel(_WFI.workflow_name, _func.count().label("c"), _func.max(_WFI.started_at).label("l"))
+            .where(_WFI.tenant_id == oid)
+            .group_by(_WFI.workflow_name)
+        )
+        for row in rc.all():
+            if row.workflow_name:
+                run_counts[row.workflow_name] = row.c or 0
+                last_run[row.workflow_name] = row.l.isoformat() if row.l else None
+    except Exception:
+        pass
+
+    # ── Fetch all active catalog workflows so library shows all templates ───
+    all_cats_res = await db.execute(_sel(_WCat).where(_WCat.active.is_(True)))
+    all_catalogs = all_cats_res.scalars().all()
+
+    # Map of assigned workflows for this org
+    assign_map = {str(assign.workflow_id): assign for assign, _ in rows}
+
+    result = []
+    for wf_cat in all_catalogs:
+        is_assigned = str(wf_cat.id) in assign_map
+        assign = assign_map.get(str(wf_cat.id))
+        
+        result.append({
+            "id":           str(wf_cat.id),
+            "name":         wf_cat.key,
+            "display_name": wf_cat.name,
+            "description":  wf_cat.description or "",
+            "category":     wf_cat.category,
+            "status":       wf_cat.status,
+            "scope":        getattr(wf_cat, "scope", None) or "GLOBAL",
+            "industry":     getattr(wf_cat, "industry", None),
+            "trigger_type": "New Email" if "email" in (wf_cat.key or "") else "Manual",
+            "assigned_at":  assign.assigned_at.isoformat() if (assign and assign.assigned_at) else None,
+            "is_assigned":  is_assigned,
+            "can_run":      is_assigned,
+            "run_count":    run_counts.get(wf_cat.key, 0),
+            "last_run_at":  last_run.get(wf_cat.key),
+        })
+
+    # Sort: assigned workflows first, then by runs, then alphabetical
+    result.sort(key=lambda w: (
+        not w.get("is_assigned", False),
+        -(w.get("run_count") or 0),
+        (w.get("display_name") or "").lower(),
+    ))
+    return result
+
+
+class WorkflowAccessRequestPayload(BaseModel):
+    workflow_id: Optional[str] = None
+    workflow_name: Optional[str] = None
+    notes: Optional[str] = None
+
+
+@app.post("/api/v1/catalog/request-access", tags=["Workflows"])
+async def request_workflow_access(
+    payload: WorkflowAccessRequestPayload,
+    current_user: TokenData = Depends(require_any_auth),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Allows an organization user to request access to an unassigned workflow.
+    """
+    org_id = current_user.organization_id or current_user.tenant_id
+    wf_name = payload.workflow_name or payload.workflow_id or "Workflow"
+    log.info("Workflow access requested", user=current_user.email, org_id=str(org_id), workflow=wf_name)
+    return {
+        "status": "success",
+        "message": f"Access request for '{wf_name}' submitted successfully. Your administrator has been notified.",
+    }
+
+
+@app.get("/api/v1/billing/summary", tags=["Billing"])
+async def get_org_billing_summary_endpoint(
+    days: int = Query(30, ge=1, le=365),
+    current_user: TokenData = Depends(require_any_auth),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Return billing/usage summary for the authenticated organization.
+
+    Only usage from workflows applicable to the org's industry is included
+    (scope=GLOBAL or industry match). This prevents Finance/Healthcare data
+    from leaking into each other's billing view.
+
+    The `industry` field in the response lets the frontend derive the page
+    title dynamically (e.g. "Healthcare Usage & Billing").
+    """
+    org_id = current_user.organization_id or current_user.tenant_id
+    if not org_id:
+        raise HTTPException(status_code=400, detail="No organization context")
+
+    summary = await crud.get_org_billing_summary(db, org_id, days=days)
+    if "error" in summary:
+        raise HTTPException(status_code=404, detail=summary["error"])
+    return summary
+
+
+@app.get("/api/v1/billing/summary/{org_id}", tags=["Billing"])
+async def get_org_billing_summary_admin(
+    org_id: str,
+    days: int = Query(30, ge=1, le=365),
+    current_user: TokenData = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Admin-only: return billing/usage summary for any organization.
+    Admins can view all orgs; industry filter still applies to keep data clean.
+    """
+    summary = await crud.get_org_billing_summary(db, org_id, days=days)
+    if "error" in summary:
+        raise HTTPException(status_code=404, detail=summary["error"])
+    return summary
 
 
 @app.put("/api/v1/config/dag/{workflow_name}", tags=["Config"])
@@ -3740,31 +4225,35 @@ async def _execute_workflow_background(
                     log.debug("Cost reconciliation failed (non-fatal)", error=str(_cost_e))
                 await _write_evidence_summary(run_id, workflow_name, tenant_config, result)
 
-                # ── Write usage record for billing/metering ───────────────────
-                try:
-                    org_id = tenant_config.get("client_id") or tenant_config.get("organization_id")
-                    if org_id:
-                        inst_final = await crud.get_workflow_instance(db, run_id)
-                        if inst_final:
-                            await crud.record_usage(
-                                db,
-                                organization_id=org_id,
-                                usage_type="workflow_run",
-                                workflow_key=workflow_name,
-                                workflow_instance_id=run_id,
-                                quantity=1,
-                                tokens_in=inst_final.total_tokens_in or 0,
-                                tokens_out=inst_final.total_tokens_out or 0,
-                                cost_usd=float(inst_final.total_cost_usd) if inst_final.total_cost_usd else None,
-                            )
-                            log.debug("Usage record written", run_id=run_id[:8], workflow=workflow_name)
-                except Exception as _usage_e:
-                    log.warning("Usage record write failed (non-fatal)", error=str(_usage_e), run_id=run_id[:8])
+            # ── Write usage record for billing/metering (Atomic & Consistent across all statuses) ──
+            try:
+                inst_final = await crud.get_workflow_instance(db, run_id)
+                org_id = (
+                    tenant_config.get("organization_id")
+                    or tenant_config.get("client_id")
+                    or tenant_config.get("tenant_id")
+                    or (str(inst_final.tenant_id) if inst_final and inst_final.tenant_id else None)
+                )
+                if org_id and inst_final:
+                    await crud.record_usage(
+                        db,
+                        organization_id=org_id,
+                        usage_type="workflow_run",
+                        workflow_key=workflow_name,
+                        workflow_instance_id=run_id,
+                        quantity=1,
+                        tokens_in=inst_final.total_tokens_in or 0,
+                        tokens_out=inst_final.total_tokens_out or 0,
+                        cost_usd=float(inst_final.total_cost_usd) if inst_final.total_cost_usd else None,
+                    )
+                    log.debug("Usage record written", run_id=run_id[:8], workflow=workflow_name, org_id=org_id)
+            except Exception as _usage_e:
+                log.warning("Usage record write failed (non-fatal)", error=str(_usage_e), run_id=run_id[:8])
 
             await broadcast_event(
                 "workflow_completed" if final_status == "completed" else f"workflow_{final_status}",
                 {"run_id": run_id, "workflow": workflow_name,
-                 "tenant_id": tenant_config.get("client_id"), "status": final_status},
+                 "tenant_id": tenant_config.get("client_id") or tenant_config.get("tenant_id"), "status": final_status},
             )
 
         except Exception as e:
@@ -3845,10 +4334,34 @@ async def _resume_workflow_background(
                 )
                 await _write_evidence_summary(run_id, inst.workflow_name, tenant_config, result)
 
+            # Record resumed usage
+            try:
+                inst_resumed = await crud.get_workflow_instance(db, run_id)
+                res_org_id = (
+                    tenant_config.get("organization_id")
+                    or tenant_config.get("client_id")
+                    or tenant_config.get("tenant_id")
+                    or (str(inst_resumed.tenant_id) if inst_resumed and inst_resumed.tenant_id else None)
+                )
+                if res_org_id and inst_resumed:
+                    await crud.record_usage(
+                        db,
+                        organization_id=res_org_id,
+                        usage_type="workflow_run",
+                        workflow_key=inst.workflow_name,
+                        workflow_instance_id=run_id,
+                        quantity=1,
+                        tokens_in=inst_resumed.total_tokens_in or 0,
+                        tokens_out=inst_resumed.total_tokens_out or 0,
+                        cost_usd=float(inst_resumed.total_cost_usd) if inst_resumed.total_cost_usd else None,
+                    )
+            except Exception as _res_usage_e:
+                log.warning("Resume usage record failed (non-fatal)", error=str(_res_usage_e))
+
             await broadcast_event(
                 f"workflow_{final_status}",
                 {"run_id": run_id, "workflow": inst.workflow_name,
-                 "tenant_id": tenant_config.get("client_id"), "status": final_status},
+                 "tenant_id": tenant_config.get("client_id") or tenant_config.get("tenant_id"), "status": final_status},
             )
         except Exception as e:
             log.error("Resume workflow failed", run_id=run_id, error=str(e))

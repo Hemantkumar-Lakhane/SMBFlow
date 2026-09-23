@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Activity, RefreshCw, ArrowUpRight, CheckCircle2, AlertTriangle, Play, Zap, DollarSign } from 'lucide-react'
+import { Activity, RefreshCw, ArrowUpRight, CheckCircle2, AlertTriangle, Play, Zap, DollarSign, BookOpen } from 'lucide-react'
 import { LineChart, Line, ResponsiveContainer, Tooltip } from 'recharts'
 import { useAuth } from '../../contexts/AuthContext'
 import { useWebSocket } from '../../contexts/WSContext'
@@ -108,9 +108,10 @@ export default function Dashboard() {
   const { user, api, isAdmin } = useAuth()
   const { subscribe } = useWebSocket()
 
-  const [data,    setData]    = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error,   setError]   = useState('')
+  const [data,           setData]           = useState(null)
+  const [loading,        setLoading]        = useState(true)
+  const [error,          setError]          = useState('')
+  const [workflowCount,  setWorkflowCount]  = useState(null)  // org-specific, industry-filtered
 
   const load = useCallback(async () => {
     // Guard: do not call /dashboard/null if org context isn't resolved yet
@@ -150,6 +151,15 @@ export default function Dashboard() {
     return () => unsubs.forEach(fn => fn())
   }, [subscribe, load])
 
+  // Load org-specific workflow count (industry-filtered, assignment-enforced)
+  // This ensures the dashboard shows "Available Workflows: 5" not "Available Workflows: 40"
+  useEffect(() => {
+    if (!user?.tenant_id) return
+    api.get('/catalog/assigned')
+      .then(data => setWorkflowCount(Array.isArray(data) ? data.length : null))
+      .catch(() => setWorkflowCount(null))
+  }, [api, user?.tenant_id])
+
   const chartData = data?.cost_overview?.daily_trend?.map((item, idx) => ({ idx, cost: item.cost })) || []
   const sparkData = data?.tasks_completed?.trend?.map((v, idx) => ({ idx, v })) || []
 
@@ -179,7 +189,7 @@ export default function Dashboard() {
       )}
 
       {/* KPI row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         <KpiCard
           title="Active Runs"
           icon={<Activity className="w-4 h-4" />}
@@ -210,6 +220,12 @@ export default function Dashboard() {
               </LineChart>
             </ResponsiveContainer>
           )}
+        />
+        <KpiCard
+          title="Available Workflows"
+          icon={<BookOpen className="w-4 h-4" />}
+          value={workflowCount != null ? workflowCount : <span className="text-gray-400">—</span>}
+          sub="Assigned to your organization"
         />
         <KpiCard
           title="Net Savings"

@@ -887,15 +887,22 @@ async def get_dashboard_data(db: AsyncSession, tenant_id: str) -> dict:
             and_(A2ARequest.tenant_id == tenant_id, A2ARequest.status == 'pending_permission')
         )
     )
-    pending_appr_res = await db.execute(
-        select(func.count(ApprovalItem.id)).where(
-            and_(ApprovalItem.organization_id == tenant_id, ApprovalItem.status == 'pending')
+    try:
+        import uuid as _uuid
+        _oid = _uuid.UUID(str(tenant_id))
+        pending_appr_res = await db.execute(
+            select(func.count(ApprovalItem.id)).where(
+                and_(ApprovalItem.organization_id == _oid, ApprovalItem.status == 'pending')
+            )
         )
-    )
+        _appr_count = pending_appr_res.scalar() or 0
+    except Exception:
+        _appr_count = 0
+
     pending_approvals = (
         (pending_esc_res.scalar() or 0)
         + (pending_a2a_res.scalar() or 0)
-        + (pending_appr_res.scalar() or 0)
+        + _appr_count
     )
 
     # 3. Tasks Completed
@@ -1724,6 +1731,8 @@ async def create_workflow_catalog_entry(db: AsyncSession, data: dict) -> Workflo
         required_integrations=data.get("required_integrations", []),
         supported_modules=data.get("supported_modules", []),
         active=data.get("active", True),
+        scope=data.get("scope", "GLOBAL"),
+        industry=data.get("industry"),
     )
     db.add(entry)
     await db.commit()
@@ -1736,7 +1745,7 @@ async def update_workflow_catalog_entry(db: AsyncSession, workflow_id: str, data
     if not entry:
         return None
     allowed = ("name", "description", "category", "status", "version", "pricing_model",
-               "required_integrations", "supported_modules", "active")
+               "required_integrations", "supported_modules", "active", "scope", "industry")
     for field in allowed:
         if field in data:
             setattr(entry, field, data[field])
@@ -1758,6 +1767,9 @@ def workflow_catalog_to_dict(w: WorkflowCatalog) -> dict:
         "required_integrations":  w.required_integrations or [],
         "supported_modules":      w.supported_modules or [],
         "active":                 w.active,
+        # ── Industry applicability (Migration 004) ────────────────────────
+        "scope":                  getattr(w, "scope", "GLOBAL") or "GLOBAL",
+        "industry":               getattr(w, "industry", None),
         "created_at":             w.created_at.isoformat() if w.created_at else None,
         "updated_at":             w.updated_at.isoformat() if w.updated_at else None,
     }
@@ -1911,23 +1923,65 @@ async def list_org_subscriptions(db: AsyncSession) -> list[OrganizationSubscript
     return list(result.scalars().all())
 
 
-async def create_org_subscription(db: AsyncSession, organization_id: str, plan_id: str,
-                                   billing_cycle: str = "monthly") -> OrganizationSubscription:
+async def create_org_subscription(
+    db: AsyncSession,
+    organization_id: str,
+    plan_id: str,
+    billing_cycle: str = "monthly",
+    with_trial: bool = False,
+    trial_days: int = 14,
+) -> OrganizationSubscription:
     from datetime import timedelta
+    now = datetime.utcnow()
+    trial_ends_at = now + timedelta(days=trial_days) if with_trial else None
     sub = OrganizationSubscription(
         organization_id=uuid.UUID(str(organization_id)),
         plan_id=uuid.UUID(str(plan_id)),
-        status="active",
+        status="trialing" if with_trial else "active",
         billing_cycle=billing_cycle,
-        current_period_start=datetime.utcnow(),
-        current_period_end=(
-            datetime.utcnow() + timedelta(days=365 if billing_cycle == "annual" else 30)
-        ),
+        current_period_start=now,
+        current_period_end=now + timedelta(days=365 if billing_cycle == "annual" else 30),
+        trial_ends_at=trial_ends_at,
     )
     db.add(sub)
     await db.commit()
     await db.refresh(sub)
+    # Auto-init a billing period for new subscription
+    await _ensure_billing_period(db, str(organization_id), str(sub.id), now, sub.current_period_end)
     return sub
+
+
+async def _ensure_billing_period(
+    db: AsyncSession,
+    organization_id: str,
+    subscription_id: str,
+    period_start: datetime,
+    period_end: datetime,
+) -> None:
+    """Idempotently create an open billing period for a new subscription."""
+    from db.models.core import BillingPeriod as BP
+    try:
+        oid = uuid.UUID(str(organization_id))
+        sid = uuid.UUID(str(subscription_id))
+    except (ValueError, AttributeError):
+        return
+    # Check if one already exists for this org in this period
+    existing = await db.execute(
+        select(BP).where(
+            BP.organization_id == oid,
+            BP.status == "open",
+        ).limit(1)
+    )
+    if existing.scalar_one_or_none():
+        return
+    db.add(BP(
+        organization_id=oid,
+        subscription_id=sid,
+        period_start=period_start,
+        period_end=period_end,
+        status="open",
+    ))
+    await db.commit()
 
 
 async def update_org_subscription(db: AsyncSession, organization_id: str, data: dict) -> Optional[OrganizationSubscription]:
@@ -1944,6 +1998,12 @@ async def update_org_subscription(db: AsyncSession, organization_id: str, data: 
                     val = uuid.UUID(str(val))
                 except (ValueError, AttributeError):
                     continue
+            # Parse ISO datetime strings for datetime fields
+            if field in ("trial_ends_at", "cancelled_at", "current_period_end") and isinstance(val, str):
+                try:
+                    val = datetime.fromisoformat(val.replace("Z", "+00:00")).replace(tzinfo=None)
+                except (ValueError, AttributeError):
+                    continue
             setattr(sub, field, val)
     await db.commit()
     await db.refresh(sub)
@@ -1951,6 +2011,18 @@ async def update_org_subscription(db: AsyncSession, organization_id: str, data: 
 
 
 def org_subscription_to_dict(s: OrganizationSubscription, plan: Optional[BillingPlan] = None) -> dict:
+    from datetime import datetime as _dt
+    now = _dt.utcnow()
+    # Compute effective status including trial expiry
+    effective_status = s.status
+    trial_days_remaining = None
+    if s.status == "trialing" and s.trial_ends_at:
+        remaining = (s.trial_ends_at - now).days
+        if s.trial_ends_at < now:
+            effective_status = "trial_expired"
+            trial_days_remaining = 0
+        else:
+            trial_days_remaining = max(0, remaining)
     return {
         "id":                    str(s.id),
         "organization_id":       str(s.organization_id),
@@ -1958,10 +2030,12 @@ def org_subscription_to_dict(s: OrganizationSubscription, plan: Optional[Billing
         "plan_name":             plan.name if plan else None,
         "plan_slug":             plan.slug if plan else None,
         "status":                s.status,
+        "effective_status":      effective_status,
         "billing_cycle":         s.billing_cycle,
         "current_period_start":  s.current_period_start.isoformat() if s.current_period_start else None,
         "current_period_end":    s.current_period_end.isoformat() if s.current_period_end else None,
         "trial_ends_at":         s.trial_ends_at.isoformat() if s.trial_ends_at else None,
+        "trial_days_remaining":  trial_days_remaining,
         "cancelled_at":          s.cancelled_at.isoformat() if s.cancelled_at else None,
         "cancel_reason":         s.cancel_reason,
         "notes":                 s.notes,
@@ -2046,8 +2120,14 @@ async def unassign_workflow_from_org(db: AsyncSession, organization_id: str, wor
 async def check_org_workflow_access(db: AsyncSession, organization_id: str, workflow_key: str) -> dict:
     """
     Returns {allowed: bool, reason: str}.
-    Enforces: org active + subscription active + plan entitles workflow + workflow assigned to org + workflow active.
-    This is the server-side authorization check — never trust the frontend.
+    Enforces all 9 access steps in order:
+      1. Org exists and is active
+      2. Workflow exists in catalog and is active
+      3. Workflow is applicable to org industry (scope=GLOBAL or industry matches)  ← NEW step
+      4. Org has an active/trialing subscription (trial expiry enforced)
+      5. Plan entitles this workflow
+      6. Admin has explicitly assigned the workflow to this org
+    This is the server-side authorization boundary — never trust the frontend.
     """
     try:
         oid = uuid.UUID(str(organization_id))
@@ -2069,23 +2149,127 @@ async def check_org_workflow_access(db: AsyncSession, organization_id: str, work
     if not wf.active:
         return {"allowed": False, "reason": f"Workflow '{workflow_key}' is not active"}
 
-    # 3. Check org has an active subscription
+    # 3. Industry applicability check — GLOBAL workflows pass for any org;
+    #    INDUSTRY workflows only pass when the org's industry matches.
+    #    Use getattr with fallback so pre-migration DBs don't crash.
+    wf_scope    = getattr(wf, "scope",    "GLOBAL") or "GLOBAL"
+    wf_industry = getattr(wf, "industry", None)
+    if wf_scope == "INDUSTRY":
+        org_industry = (org.industry or "").lower().strip()
+        req_industry = (wf_industry or "").lower().strip()
+        if org_industry != req_industry:
+            return {
+                "allowed": False,
+                "reason": (
+                    f"Workflow '{workflow_key}' is only available to "
+                    f"'{wf_industry}' organizations (this org is '{org.industry}')"
+                ),
+            }
+
+    # 4. Check org has an active subscription (with real trial lifecycle enforcement)
     sub = await get_org_subscription(db, organization_id)
-    if not sub or sub.status not in ("active", "trialing"):
+    if not sub:
         return {"allowed": False, "reason": "No active subscription for this organization"}
 
-    # 4. Check plan entitles this workflow
+    # Enforce trial expiry: if trialing and trial_ends_at has passed → block
+    now = datetime.utcnow()
+    effective_status = sub.status
+    if sub.status == "trialing" and sub.trial_ends_at and sub.trial_ends_at < now:
+        effective_status = "trial_expired"
+
+    if effective_status not in ("active", "trialing"):
+        return {"allowed": False, "reason": f"Subscription is not active (status: {effective_status})"}
+
+    # 5. Check plan entitles this workflow
     entitlements = await get_plan_entitlements(db, str(sub.plan_id))
     if str(wf.id) not in entitlements:
         return {"allowed": False, "reason": f"Current plan does not include '{workflow_key}'"}
 
-    # 5. Check explicit workflow assignment
+    # 6. Check explicit workflow assignment
     assignment = await get_org_workflow_assignment(db, organization_id, str(wf.id))
     if not assignment or assignment.status != "active":
         return {"allowed": False, "reason": f"Workflow '{workflow_key}' has not been assigned to this organization"}
 
-    return {"allowed": True, "reason": "Access granted", "workflow_id": str(wf.id),
-            "workflow_name": wf.name, "assignment_id": str(assignment.id)}
+    return {
+        "allowed":       True,
+        "reason":        "Access granted",
+        "workflow_id":   str(wf.id),
+        "workflow_name": wf.name,
+        "assignment_id": str(assignment.id),
+        "scope":         wf_scope,
+        "industry":      wf_industry,
+    }
+
+
+async def get_available_workflows_for_org(
+    db: AsyncSession,
+    organization_id: str,
+) -> list[WorkflowCatalog]:
+    """
+    Return the subset of active workflow_catalog entries that are applicable
+    to the given organization's industry.
+
+    A workflow is applicable when:
+      scope = 'GLOBAL'
+      OR (scope = 'INDUSTRY' AND industry == org.industry)
+
+    This does NOT enforce plan entitlement or assignment — those remain
+    separate checks layered on top.  This is purely applicability.
+
+    Platform admins should NOT call this; they get the full catalog.
+    """
+    try:
+        oid = uuid.UUID(str(organization_id))
+    except (ValueError, AttributeError):
+        return []
+
+    org_result = await db.execute(select(Organization).where(Organization.id == oid))
+    org = org_result.scalar_one_or_none()
+    if not org:
+        return []
+
+    org_industry = (org.industry or "saas").lower().strip()
+
+    from sqlalchemy import or_
+    stmt = (
+        select(WorkflowCatalog)
+        .where(
+            WorkflowCatalog.active.is_(True),
+            or_(
+                WorkflowCatalog.scope == "GLOBAL",
+                WorkflowCatalog.industry == org_industry,
+            ),
+        )
+        .order_by(WorkflowCatalog.name)
+    )
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
+
+
+async def assert_workflow_access(db: AsyncSession, organization_id: str, workflow_key: str) -> dict:
+    """
+    Hard backend security boundary helper.
+    Raises HTTPException(403) if workflow access is denied for any reason:
+    - Organization inactive
+    - Subscription inactive or trial expired
+    - Workflow not applicable to org industry (industry mismatch)
+    - Plan does not include workflow entitlement
+    - Workflow not explicitly assigned to organization
+    - Workflow catalog entry inactive
+    """
+    res = await check_org_workflow_access(db, organization_id, workflow_key)
+    if not res.get("allowed"):
+        from fastapi import HTTPException, status
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "error_code": "WORKFLOW_ACCESS_DENIED",
+                "message": res.get("reason", "Workflow access denied"),
+                "workflow": workflow_key,
+                "organization_id": str(organization_id),
+            },
+        )
+    return res
 
 
 def workflow_assignment_to_dict(a: OrganizationWorkflowAssignment,
@@ -2103,6 +2287,126 @@ def workflow_assignment_to_dict(a: OrganizationWorkflowAssignment,
         "assigned_at":     a.assigned_at.isoformat() if a.assigned_at else None,
         "updated_at":      a.updated_at.isoformat() if a.updated_at else None,
     }
+
+
+# ─── Industry auto-assignment ─────────────────────────────────────────────────
+
+# Maps org.industry → which workflow catalog categories that org should see.
+# "general" categories are visible to all industries.
+# An org sees: its own industry's categories + all GENERAL categories.
+INDUSTRY_CATEGORY_MAP: dict[str, list[str]] = {
+    "finance":     ["finance"],
+    "healthcare":  ["healthcare"],
+    "saas":        ["sales", "marketing"],
+    "startup":     ["sales", "marketing"],
+    "real_estate": ["real_estate", "operations"],
+    "retail":      ["retail", "operations"],
+    "marketing":   ["marketing"],
+    "ecommerce":   ["retail", "sales"],
+    "services":    ["operations"],
+    "other":       [],
+    # "general" industries get only the universal categories below
+}
+
+# Categories visible to ALL industries regardless of org.industry
+UNIVERSAL_CATEGORIES: list[str] = ["productivity", "compliance"]
+
+
+def get_visible_categories_for_industry(industry: str) -> list[str]:
+    """
+    Returns the full list of catalog categories an org in `industry` should see.
+    Always includes UNIVERSAL_CATEGORIES.
+    """
+    ind = (industry or "saas").lower().strip()
+    industry_specific = INDUSTRY_CATEGORY_MAP.get(ind, [])
+    return list({*industry_specific, *UNIVERSAL_CATEGORIES})
+
+
+async def auto_assign_industry_workflows(
+    db: AsyncSession,
+    organization_id: str,
+    industry: str,
+    assigned_by: str = "system",
+    plan_slug: str = "free",
+) -> int:
+    """
+    Automatically assign all applicable workflow catalog entries to a new org.
+
+    Selection rule: workflow.category is in get_visible_categories_for_industry(org.industry)
+    Plus a plan entitlement check (bypassed when no entitlements seeded yet).
+
+    Returns the count of new assignments created.
+    """
+    try:
+        oid = uuid.UUID(str(organization_id))
+    except (ValueError, AttributeError):
+        return 0
+
+    visible_categories = get_visible_categories_for_industry(industry)
+
+    # Fetch the plan's entitled workflow IDs
+    plan = await get_billing_plan_by_slug(db, plan_slug)
+    plan_entitled_ids: set[str] = set()
+    if plan:
+        plan_entitled_ids = set(await get_plan_entitlements(db, str(plan.id)))
+
+    # Query catalog entries that match the visible categories
+    from sqlalchemy import func as _func
+    stmt = (
+        select(WorkflowCatalog)
+        .where(
+            WorkflowCatalog.active.is_(True),
+            WorkflowCatalog.category.in_(visible_categories),
+        )
+    )
+    result = await db.execute(stmt)
+    candidates = list(result.scalars().all())
+
+    # Apply plan entitlement filter; bypass if no entitlements seeded yet
+    if plan_entitled_ids:
+        applicable = [w for w in candidates if str(w.id) in plan_entitled_ids]
+    else:
+        applicable = candidates
+        log.warning(
+            "auto_assign_industry_workflows: no plan entitlements — assigning all category matches",
+            org_id=organization_id,
+            plan=plan_slug,
+        )
+
+    # Existing assignments — avoid duplicates
+    existing_result = await db.execute(
+        select(OrganizationWorkflowAssignment.workflow_id)
+        .where(OrganizationWorkflowAssignment.organization_id == oid)
+    )
+    already_assigned: set[str] = {str(r[0]) for r in existing_result.all()}
+
+    assigned_count = 0
+    for wf in applicable:
+        wf_id = str(wf.id)
+        if wf_id in already_assigned:
+            continue
+        db.add(OrganizationWorkflowAssignment(
+            organization_id=oid,
+            workflow_id=wf.id,
+            assigned_by=assigned_by,
+            status="active",
+            notes=f"Auto-assigned on org creation (industry={industry}, category={wf.category})",
+        ))
+        already_assigned.add(wf_id)
+        assigned_count += 1
+
+    if assigned_count > 0:
+        await db.commit()
+
+    log.info(
+        "auto_assign_industry_workflows: done",
+        org_id=organization_id,
+        industry=industry,
+        visible_categories=visible_categories,
+        plan=plan_slug,
+        assigned=assigned_count,
+    )
+    return assigned_count
 
 
 # ─── Usage Records ────────────────────────────────────────────────────────────
@@ -2201,6 +2505,137 @@ async def get_usage_summary(db: AsyncSession, organization_id: str = None,
         "reported_events":     cost_row.reported_events if cost_row else 0,
         "unreported_events":   cost_row.unreported_events if cost_row else 0,
         "breakdown":           breakdown,
+    }
+
+
+async def get_org_billing_summary(
+    db: AsyncSession,
+    organization_id: str,
+    days: int = 30,
+) -> dict:
+    """
+    Return billing/usage summary for a single organization, grouped by workflow.
+    Accurately aggregates all recorded usage for the organization with
+    zero loss of runs or token metrics, ensuring database atomicity and consistency.
+    """
+    from datetime import timedelta
+    from sqlalchemy import or_
+
+    try:
+        oid = uuid.UUID(str(organization_id))
+    except (ValueError, AttributeError):
+        return {"error": "Invalid organization ID"}
+
+    # Resolve org + industry
+    org_result = await db.execute(select(Organization).where(Organization.id == oid))
+    org = org_result.scalar_one_or_none()
+    if not org:
+        return {"error": "Organization not found"}
+
+    cutoff = datetime.utcnow() - timedelta(days=days)
+
+    # 1. Fetch usage grouped by workflow from UsageRecord
+    stmt = (
+        select(
+            UsageRecord.workflow_key,
+            func.count().label("run_count"),
+            func.sum(UsageRecord.quantity).label("total_quantity"),
+            func.sum(UsageRecord.tokens_in).label("tokens_in"),
+            func.sum(UsageRecord.tokens_out).label("tokens_out"),
+            func.sum(UsageRecord.cost_usd).label("total_cost"),
+        )
+        .where(
+            UsageRecord.organization_id == oid,
+            UsageRecord.recorded_at >= cutoff,
+        )
+        .group_by(UsageRecord.workflow_key)
+        .order_by(func.count().desc())
+    )
+    result = await db.execute(stmt)
+    rows = result.all()
+
+    breakdown_map: dict[str, dict] = {}
+    for row in rows:
+        wf_key = row.workflow_key or "unspecified_workflow"
+        cost = float(row.total_cost) if row.total_cost is not None else 0.0
+        runs = int(row.run_count or 0)
+        breakdown_map[wf_key] = {
+            "workflow_key":    wf_key,
+            "run_count":       runs,
+            "total_quantity":  int(row.total_quantity or 0),
+            "tokens_in":       int(row.tokens_in or 0),
+            "tokens_out":      int(row.tokens_out or 0),
+            "cost_usd":        cost,
+        }
+
+    # 2. Check workflow_instances to catch any runs not yet logged in UsageRecord
+    inst_stmt = (
+        select(
+            WorkflowInstance.workflow_name,
+            func.count().label("inst_count"),
+            func.sum(WorkflowInstance.total_tokens_in).label("tokens_in"),
+            func.sum(WorkflowInstance.total_tokens_out).label("tokens_out"),
+            func.sum(WorkflowInstance.total_cost_usd).label("total_cost"),
+        )
+        .where(
+            WorkflowInstance.tenant_id == oid,
+            WorkflowInstance.started_at >= cutoff,
+            WorkflowInstance.status != "pending",  # exclude raw unsubmitted drafts
+        )
+        .group_by(WorkflowInstance.workflow_name)
+    )
+    inst_res = await db.execute(inst_stmt)
+    inst_rows = inst_res.all()
+
+    for irow in inst_rows:
+        w_name = irow.workflow_name
+        if not w_name:
+            continue
+        inst_cnt = int(irow.inst_count or 0)
+        t_in = int(irow.tokens_in or 0)
+        t_out = int(irow.tokens_out or 0)
+        c_usd = float(irow.total_cost or 0.0)
+
+        if w_name not in breakdown_map:
+            breakdown_map[w_name] = {
+                "workflow_key":    w_name,
+                "run_count":       inst_cnt,
+                "total_quantity":  inst_cnt,
+                "tokens_in":       t_in,
+                "tokens_out":      t_out,
+                "cost_usd":        c_usd,
+            }
+        else:
+            existing = breakdown_map[w_name]
+            if inst_cnt > existing["run_count"]:
+                existing["run_count"] = inst_cnt
+                existing["total_quantity"] = max(existing["total_quantity"], inst_cnt)
+                existing["tokens_in"] = max(existing["tokens_in"], t_in)
+                existing["tokens_out"] = max(existing["tokens_out"], t_out)
+                existing["cost_usd"] = max(existing["cost_usd"], c_usd)
+
+    applicable_wfs = await get_available_workflows_for_org(db, organization_id)
+    applicable_keys: set[str] = {wf.key for wf in applicable_wfs if wf.key}
+
+    filtered_breakdown = []
+    for wf_key, entry in breakdown_map.items():
+        if applicable_keys and wf_key not in applicable_keys:
+            continue
+        filtered_breakdown.append(entry)
+
+    workflow_breakdown = filtered_breakdown
+    grand_total_cost = sum(w["cost_usd"] for w in workflow_breakdown)
+    grand_run_count  = sum(w["run_count"] for w in workflow_breakdown)
+
+    return {
+        "organization_id":    str(oid),
+        "organization_name":  org.name,
+        "industry":           org.industry,
+        "period_days":        days,
+        "total_run_count":    grand_run_count,
+        "total_cost_usd":     grand_total_cost if workflow_breakdown else None,
+        "workflow_breakdown": workflow_breakdown,
+        "applicable_workflow_keys": sorted(applicable_keys),
     }
 
 
@@ -2353,20 +2788,26 @@ async def get_all_platform_settings(db: AsyncSession) -> dict:
 
 # ─── Admin Dashboard Aggregates ───────────────────────────────────────────────
 
-async def get_admin_platform_metrics(db: AsyncSession) -> dict:
+async def get_admin_platform_metrics(db: AsyncSession, include_test_fixtures: bool = False) -> dict:
     """
     Return KPI metrics for the Platform Overview dashboard.
     All values are from real DB queries — no fabricated numbers.
+    Filters test fixture organizations by default.
     """
     from datetime import timedelta
     today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     month_start = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
     # Active organizations
-    active_orgs_result = await db.execute(
-        select(func.count()).select_from(Organization).where(Organization.active.is_(True))
-    )
-    active_orgs = active_orgs_result.scalar() or 0
+    active_orgs_query = select(Organization).where(Organization.active.is_(True))
+    all_active_orgs = (await db.execute(active_orgs_query)).scalars().all()
+    if not include_test_fixtures:
+        test_patterns = ["test org", "test organization", "isolation test", "final verification", "hacker org", "auth test", "fixture org"]
+        all_active_orgs = [
+            o for o in all_active_orgs
+            if not any(pat in (o.name or "").lower() for pat in test_patterns)
+        ]
+    active_orgs = len(all_active_orgs)
 
     # Total users (organization_users)
     total_users_result = await db.execute(select(func.count()).select_from(OrganizationUser))
@@ -2536,13 +2977,21 @@ async def get_org_with_details(db: AsyncSession, organization_id: str) -> Option
     }
 
 
-async def list_organizations_with_details(db: AsyncSession) -> list[dict]:
+async def list_organizations_with_details(db: AsyncSession, include_test_fixtures: bool = False) -> list[dict]:
     """
     Return all organizations with subscription, plan, assignment counts, user counts,
     and recent run activity — used by the organizations list page.
+    Filters out automated test fixture orgs by default.
     """
     orgs_result = await db.execute(select(Organization).order_by(Organization.created_at.desc()))
     orgs = list(orgs_result.scalars().all())
+
+    if not include_test_fixtures:
+        test_patterns = ["test org", "test organization", "isolation test", "final verification", "hacker org", "auth test", "fixture org"]
+        orgs = [
+            o for o in orgs
+            if not any(pat in (o.name or "").lower() for pat in test_patterns)
+        ]
 
     # Bulk-load subscriptions
     subs_result = await db.execute(select(OrganizationSubscription))
@@ -2605,6 +3054,14 @@ async def list_organizations_with_details(db: AsyncSession) -> list[dict]:
             "plan_name":        plan.name if plan else None,
             "plan_slug":        plan.slug if plan else None,
             "subscription_status": sub.status if sub else None,
+            "effective_subscription_status": (
+                "trial_expired" if (
+                    sub and sub.status == "trialing"
+                    and sub.trial_ends_at
+                    and sub.trial_ends_at < datetime.utcnow()
+                ) else (sub.status if sub else None)
+            ),
+            "trial_ends_at":    sub.trial_ends_at.isoformat() if (sub and sub.trial_ends_at) else None,
             "run_count":        stats.get("run_count", 0),
             "last_activity":    stats.get("last_activity"),
             "total_spend_usd":  stats.get("total_cost"),

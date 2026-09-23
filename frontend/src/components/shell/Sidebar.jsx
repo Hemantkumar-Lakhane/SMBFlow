@@ -54,6 +54,7 @@ const adminNav = [
   {
     title: 'Workflows',
     items: [
+      { label: 'Workflow Builder',    to: '/workflows/builder',            icon: Workflow },
       { label: 'Workflow Catalog',    to: '/admin/workflows/catalog',     icon: Layers },
       { label: 'Workflow Assignments',to: '/admin/workflows/assignments', icon: GitBranch },
       { label: 'Workflow Runs',       to: '/admin/runs',                  icon: Zap },

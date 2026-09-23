@@ -136,6 +136,25 @@ def main():
     else:
         print("⚠️  Some seeders failed. Check errors above.\n")
 
+    # Run workflow scope seed (DB-level) if no specific industry filter
+    if not args.industry:
+        print("\n[WORKFLOW SCOPE SEED]")
+        print("  Applying scope/industry to workflow_catalog in DB…")
+        try:
+            import asyncio as _asyncio
+            scope_seed = seed_dir / "workflow_scope_seed.py"
+            if scope_seed.exists():
+                import importlib.util as _ilu
+                spec = _ilu.spec_from_file_location("workflow_scope_seed", scope_seed)
+                mod = _ilu.module_from_spec(spec)
+                spec.loader.exec_module(mod)
+                _asyncio.run(mod.seed_workflow_scope(dry_run=False))
+                print("  ✓ Workflow scope seed complete")
+            else:
+                print("  ✗ workflow_scope_seed.py not found")
+        except Exception as e:
+            print(f"  ⚠ Workflow scope seed failed (non-fatal): {e}")
+
 
 if __name__ == "__main__":
     main()
