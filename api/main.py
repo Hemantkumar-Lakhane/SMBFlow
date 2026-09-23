@@ -160,11 +160,13 @@ async def lifespan(app: FastAPI):
     # Sync workflow catalog from DAG files (idempotent — only inserts missing entries)
     try:
         from core.workflow_catalog_sync import sync_workflow_catalog, sync_plan_entitlements_for_new_workflows
+        from db.seed.plans_seed import seed_plans_and_catalog
         _catalog_session = await get_raw_session()
         async with _catalog_session:
+            await seed_plans_and_catalog(_catalog_session)
             sync_result = await sync_workflow_catalog(_catalog_session)
             await sync_plan_entitlements_for_new_workflows(_catalog_session)
-            log.info("Workflow catalog sync complete", **sync_result)
+            log.info("Workflow catalog and plans seed complete", **sync_result)
     except Exception as _sync_err:
         log.warning("Workflow catalog sync failed (non-fatal)", error=str(_sync_err))
 

@@ -994,6 +994,14 @@ async def list_plans(
     include_archived: bool = Query(False),
 ):
     plans = await crud.list_billing_plans(db, include_archived=include_archived)
+    if not plans:
+        try:
+            from db.seed.plans_seed import seed_plans_and_catalog
+            await seed_plans_and_catalog(db)
+            plans = await crud.list_billing_plans(db, include_archived=include_archived)
+        except Exception as _seed_err:
+            log.warning("Auto-seed plans failed", error=str(_seed_err))
+
     result = []
     for p in plans:
         d = crud.billing_plan_to_dict(p)
