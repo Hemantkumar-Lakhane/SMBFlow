@@ -53,6 +53,7 @@ export default function WorkflowsPage() {
   const [instances,   setInstances]   = useState([])
   const [search,      setSearch]      = useState('')
   const [statusFilter,setStatusFilter] = useState('All statuses')
+  const [categoryFilter,setCategoryFilter] = useState('All categories')
   const [activeTab,   setActiveTab]   = useState('workflows') // 'workflows' | 'runs'
   const [loading,     setLoading]     = useState(true)
   const [modalOpen,   setModalOpen]   = useState(false)
@@ -62,11 +63,13 @@ export default function WorkflowsPage() {
 
   const load = useCallback(async () => {
     try {
-      const [dags, runs] = await Promise.all([
-        api.get('/config/workflows').catch(() => []),
-        api.get('/workflows').catch(() => []),
+      const [catalog, runs] = await Promise.all([
+        // /api/v1/catalog/assigned is assignment-enforced: admins get full catalog,
+        // org users get only their assigned + entitled workflows
+        api.get('/catalog/assigned').catch(() => []),
+        api.get('/api/v1/workflow-instances').catch(() => []),
       ])
-      setWorkflows(Array.isArray(dags) ? dags : [])
+      setWorkflows(Array.isArray(catalog) ? catalog : [])
       setInstances(Array.isArray(runs) ? runs : [])
     } finally { setLoading(false) }
   }, [api])
@@ -87,6 +90,7 @@ export default function WorkflowsPage() {
       successRate,
       lastRun,
       totalCost,
+      category: wf.category || (wf.name === 'finance_operations' ? 'finance' : wf.name === 'medical_journey_operations' ? 'healthcare' : isEmail ? 'productivity' : 'marketing'),
       displayStatus: wf.status || 'active',
       triggerType: wf.trigger_type || (isEmail ? 'New Email' : 'Manual'),
       source: wf.source || (isEmail ? 'Synthetic Inbox' : 'Direct'),
@@ -97,9 +101,14 @@ export default function WorkflowsPage() {
   const filteredWorkflows = enriched.filter(w => {
     const norm = (str) => (str || '').toLowerCase().replace(/[\s_]+/g, '')
     const normSearch = norm(search)
-    const matchSearch = !search || norm(w.name).includes(normSearch) || norm(w.display_name).includes(normSearch)
+    const matchSearch = !search ||
+      norm(w.name).includes(normSearch) ||
+      norm(w.display_name).includes(normSearch) ||
+      norm(w.category).includes(normSearch) ||
+      norm(w.description).includes(normSearch)
     const matchStatus = statusFilter === 'All statuses' || w.displayStatus === statusFilter
-    return matchSearch && matchStatus
+    const matchCategory = categoryFilter === 'All categories' || (w.category || '').toLowerCase() === categoryFilter.toLowerCase()
+    return matchSearch && matchStatus && matchCategory
   })
 
   const filteredRuns = instances.filter(r => {
@@ -252,13 +261,24 @@ export default function WorkflowsPage() {
           />
         </div>
         {activeTab === 'workflows' && (
-          <select
-            value={statusFilter}
-            onChange={e => setStatusFilter(e.target.value)}
-            className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            {STATUS_OPTS.map(s => <option key={s}>{s}</option>)}
-          </select>
+          <>
+            <select
+              value={categoryFilter}
+              onChange={e => setCategoryFilter(e.target.value)}
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 capitalize"
+            >
+              {['All categories', 'finance', 'healthcare', 'marketing', 'sales', 'operations', 'productivity', 'compliance', 'general'].map(c => (
+                <option key={c} value={c}>{c === 'All categories' ? 'All categories' : c.charAt(0).toUpperCase() + c.slice(1)}</option>
+              ))}
+            </select>
+            <select
+              value={statusFilter}
+              onChange={e => setStatusFilter(e.target.value)}
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {STATUS_OPTS.map(s => <option key={s}>{s}</option>)}
+            </select>
+          </>
         )}
         <button
           onClick={load}
@@ -275,7 +295,7 @@ export default function WorkflowsPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/50">
-                {['Workflow','Status','Trigger','Source','Runs / Success','Last Run','Cost','Actions'].map(h => (
+                {['Workflow','Category','Status','Trigger','Source','Runs / Success','Last Run','Cost','Actions'].map(h => (
                   <th key={h} className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                     {h}
                   </th>
@@ -284,10 +304,10 @@ export default function WorkflowsPage() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={8} className="px-5 py-8 text-center text-sm text-gray-400">Loading workflows…</td></tr>
+                <tr><td colSpan={9} className="px-5 py-8 text-center text-sm text-gray-400">Loading workflows…</td></tr>
               ) : filteredWorkflows.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-5 py-16 text-center">
+                  <td colSpan={9} className="px-5 py-16 text-center">
                     <div className="flex flex-col items-center gap-2">
                       <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center">
                         <Plus className="w-5 h-5 text-gray-400" />
@@ -324,6 +344,11 @@ export default function WorkflowsPage() {
                         {getDisplayName(wf.name, wf.display_name)}
                       </p>
                       <p className="text-xs text-gray-400 mt-0.5 font-mono">{wf.name}</p>
+                    </td>
+                    <td className="px-5 py-4">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-orange-100 text-orange-700">
+                        {wf.category || 'general'}
+                      </span>
                     </td>
                     <td className="px-5 py-4">
                       <StatusBadge status={wf.displayStatus} />

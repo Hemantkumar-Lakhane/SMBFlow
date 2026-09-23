@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { WSProvider }    from './contexts/WSContext'
 import { ThemeProvider } from './contexts/ThemeContext'
 import { AppShell }      from './components/shell/AppShell'
+import LandingPage        from './pages/LandingPage'
 import LoginPage          from './pages/LoginPage'
 import SignupPage         from './pages/SignupPage'
 import AuthCallbackPage   from './pages/AuthCallbackPage'
@@ -93,7 +94,7 @@ function FullScreenLoader() {
 function HomeRedirect() {
   const { user, token, loading } = useAuth()
   if (loading) return <FullScreenLoader />
-  if (!token || !user) return <Navigate to="/auth" replace />
+  if (!token || !user) return <LandingPage />
   if (user.requires_onboarding) return <Navigate to="/auth/signup" replace />
   const isAdmin = user.role === 'super_admin' || user.role === 'platform_admin'
   return <Navigate to={isAdmin ? '/admin' : '/dashboard'} replace />
@@ -120,7 +121,8 @@ function Wrap({ adminOnly = false, children }) {
 function AppRoutes() {
   return (
     <Routes>
-      {/* ── Auth ─────────────────────────────────────────────────────────── */}
+      {/* ── Public Landing Page & Auth ────────────────────────────────────── */}
+      <Route path="/landing"              element={<LandingPage />} />
       <Route path="/auth"                 element={<LoginPage />} />
       <Route path="/auth/signup"          element={<SignupPage />} />
       <Route path="/auth/callback"        element={<AuthCallbackPage />} />

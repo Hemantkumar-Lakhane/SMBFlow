@@ -177,6 +177,11 @@ class WorkflowCatalog(Base):
     supported_modules     = Column(JSONB, nullable=False, default=list)
     metadata_             = Column("metadata", JSONB, nullable=False, default=dict)
     active                = Column(Boolean, nullable=False, default=True)
+    # ── Industry applicability (Migration 004) ────────────────────────────────
+    # scope:    'GLOBAL'   — available to all orgs subject to plan + assignment
+    #           'INDUSTRY' — only available when org.industry == workflow.industry
+    scope                 = Column(String(20),  nullable=False, default="GLOBAL")
+    industry              = Column(String(100), nullable=True)   # NULL for GLOBAL scope
     created_at            = Column(DateTime, default=datetime.utcnow)
     updated_at            = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

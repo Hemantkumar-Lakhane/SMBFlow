@@ -1,35 +1,49 @@
-// AdminWorkflowAssignments — Cross-org workflow assignment matrix
-// Shows which organizations have access to which workflows.
-// Platform Admin can assign/revoke directly from this view.
-// Data from:
+// AdminWorkflowAssignments — Cross-org workflow assignment manager
+//
+// Two views:
+//   1. Matrix view  — full grid, all orgs × all workflows (unchanged from before)
+//   2. Org view     — select one org, see only applicable workflows (GLOBAL + org's
+//                     industry), grouped by section.  This is the primary flow for
+//                     day-to-day assignment management.
+//
+// Industry applicability is determined by the backend
+// (GET /api/v1/admin/organizations/:orgId/workflows/applicable).
+// The frontend never hardcodes industry → workflow mappings.
+//
+// Data sources:
 //   GET /api/v1/admin/workflows/catalog
 //   GET /api/v1/admin/organizations
 //   GET /api/v1/admin/workflows/assignments
+//   GET /api/v1/admin/organizations/:orgId/workflows/applicable   ← NEW
 //   POST /api/v1/admin/organizations/:orgId/workflows/:workflowId/assign
 //   DELETE /api/v1/admin/organizations/:orgId/workflows/:workflowId/assign
+
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  GitBranch, RefreshCw, XCircle, Search, CheckCircle2,
+  RefreshCw, XCircle, Search, CheckCircle2, Globe,
   Plus, Minus, Building2, Layers, AlertCircle, ChevronRight,
+  LayoutGrid, List,
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { EmptyState } from '../../components/ui'
 
 // ── helpers ───────────────────────────────────────────────────────────────────
-function timeAgo(iso) {
-  if (!iso) return '—'
-  const diff = Date.now() - new Date(iso).getTime()
-  const m = Math.floor(diff / 60000)
-  if (m < 1) return 'just now'
-  if (m < 60) return `${m}m ago`
-  const h = Math.floor(m / 60)
-  if (h < 24) return `${h}h ago`
-  return `${Math.floor(h / 24)}d ago`
+const INDUSTRY_LABELS = {
+  saas:        'SaaS / Growth',
+  healthcare:  'Healthcare / Medical Tourism',
+  finance:     'Finance',
+  real_estate: 'Real Estate',
+  retail:      'Retail',
+  general:     'General',
 }
 
-// ── Assignment cell ───────────────────────────────────────────────────────────
-function AssignCell({ assigned, assignmentStatus, loading, onAssign, onRevoke }) {
+function industryLabel(ind) {
+  return INDUSTRY_LABELS[ind] || (ind ? ind.charAt(0).toUpperCase() + ind.slice(1) : 'Unknown')
+}
+
+// ── Assignment toggle cell ────────────────────────────────────────────────────
+function AssignCell({ assigned, loading, onAssign, onRevoke }) {
   if (loading) {
     return (
       <div className="flex items-center justify-center">
@@ -37,75 +51,250 @@ function AssignCell({ assigned, assignmentStatus, loading, onAssign, onRevoke })
       </div>
     )
   }
-
   if (assigned) {
     return (
-      <button
-        onClick={onRevoke}
-        title="Revoke access"
-        className="group flex items-center justify-center w-7 h-7 rounded-lg bg-emerald-50 border border-emerald-200 hover:bg-red-50 hover:border-red-200 transition-all"
-      >
+      <button onClick={onRevoke} title="Revoke access"
+        className="group flex items-center justify-center w-7 h-7 rounded-lg bg-emerald-50 border border-emerald-200 hover:bg-red-50 hover:border-red-200 transition-all">
         <CheckCircle2 size={14} className="text-emerald-500 group-hover:hidden" />
         <Minus size={13} className="text-red-500 hidden group-hover:block" />
       </button>
     )
   }
-
   return (
-    <button
-      onClick={onAssign}
-      title="Assign workflow"
-      className="flex items-center justify-center w-7 h-7 rounded-lg bg-slate-50 border border-slate-200 hover:bg-blue-50 hover:border-blue-200 transition-all"
-    >
+    <button onClick={onAssign} title="Assign workflow"
+      className="flex items-center justify-center w-7 h-7 rounded-lg bg-slate-50 border border-slate-200 hover:bg-blue-50 hover:border-blue-200 transition-all">
       <Plus size={13} className="text-slate-400 hover:text-blue-500" />
     </button>
   )
 }
 
-// ── Org row ───────────────────────────────────────────────────────────────────
-function OrgRow({ org, catalog, assignmentMap, onAssign, onRevoke, pendingCells, navigate }) {
-  const assignedCount = catalog.filter(wf => assignmentMap[`${org.id}:${wf.id}`]).length
+// ── Org-focused view ──────────────────────────────────────────────────────────
+// Shows applicable workflows for one org, grouped into GLOBAL and INDUSTRY sections.
+function OrgFocusView({ org, api, assignments, onAssign, onRevoke, pendingCells, onClose }) {
+  const [applicable, setApplicable] = useState(null)
+  const [loadingApplicable, setLoadingApplicable] = useState(true)
+  const [applicableError, setApplicableError] = useState(null)
+
+  useEffect(() => {
+    if (!org) return
+    setLoadingApplicable(true)
+    setApplicableError(null)
+    api.get(`/admin/organizations/${org.id}/workflows/applicable`)
+      .then(d => setApplicable(d?.workflows || []))
+      .catch(e => setApplicableError(e?.response?.data?.detail || e.message || 'Failed to load applicable workflows'))
+      .finally(() => setLoadingApplicable(false))
+  }, [org, api])
+
+  const assignmentSet = useMemo(() => {
+    const s = new Set()
+    assignments.forEach(a => {
+      if (a.organization_id === org?.id && a.status === 'active') s.add(a.workflow_id)
+    })
+    return s
+  }, [assignments, org])
+
+  const global_wfs   = useMemo(() => (applicable || []).filter(w => (w.scope || 'GLOBAL') === 'GLOBAL'), [applicable])
+  const industry_wfs = useMemo(() => (applicable || []).filter(w => w.scope === 'INDUSTRY'), [applicable])
+
+  if (!org) return null
+
+  function WorkflowRow({ wf }) {
+    const key = `${org.id}:${wf.id}`
+    const assigned = assignmentSet.has(wf.id)
+    const isLoading = pendingCells.has(key)
+    return (
+      <div className="flex items-center justify-between py-2.5 px-4 border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition-colors">
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium text-slate-900">{wf.name}</p>
+          <p className="text-xs text-slate-400 font-mono">{wf.key}</p>
+        </div>
+        <div className="flex items-center gap-2 ml-3">
+          {assigned && (
+            <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+              Assigned
+            </span>
+          )}
+          <AssignCell
+            assigned={assigned}
+            loading={isLoading}
+            onAssign={() => onAssign(org.id, wf.id, key)}
+            onRevoke={() => onRevoke(org.id, wf.id, key)}
+          />
+        </div>
+      </div>
+    )
+  }
+
+  function Section({ title, icon: Icon, workflows, accentClass }) {
+    if (workflows.length === 0) return null
+    return (
+      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+        <div className={`flex items-center gap-2 px-4 py-3 border-b border-slate-100 ${accentClass}`}>
+          <Icon size={14} />
+          <h3 className="text-xs font-semibold uppercase tracking-wide">{title}</h3>
+          <span className="ml-auto text-xs font-medium opacity-70">{workflows.length} workflow{workflows.length !== 1 ? 's' : ''}</span>
+        </div>
+        <div>
+          {workflows.map(wf => <WorkflowRow key={wf.id} wf={wf} />)}
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <tr className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
-      {/* Org info */}
-      <td className="px-4 py-3 sticky left-0 bg-white border-r border-slate-100 z-10 min-w-[200px]">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
-            <span className="text-blue-700 text-xs font-bold">{(org.name || '?')[0].toUpperCase()}</span>
+    <div className="flex flex-col gap-4">
+      {/* Org header */}
+      <div className="flex items-center justify-between bg-white border border-slate-200 rounded-xl px-5 py-4">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
+            <span className="text-blue-700 text-sm font-bold">{(org.name || '?')[0].toUpperCase()}</span>
           </div>
-          <div className="min-w-0">
-            <p className="text-xs font-semibold text-slate-900 truncate">{org.name}</p>
-            <p className="text-[11px] text-slate-400">
-              {org.plan_name || org.plan_slug || '—'} · {assignedCount}/{catalog.length}
+          <div>
+            <p className="text-sm font-bold text-slate-900">{org.name}</p>
+            <p className="text-xs text-slate-500">
+              Industry: <span className="font-medium text-slate-700">{industryLabel(org.industry)}</span>
+              {org.plan_name && <> · Plan: <span className="font-medium text-slate-700">{org.plan_name}</span></>}
             </p>
           </div>
-          <button
-            onClick={() => navigate(`/admin/organizations/${org.id}`)}
-            className="ml-auto p-1 text-slate-300 hover:text-blue-500 transition-colors shrink-0"
-          >
-            <ChevronRight size={12} />
-          </button>
         </div>
-      </td>
+        <button onClick={onClose}
+          className="text-xs text-slate-400 hover:text-slate-600 border border-slate-200 rounded-lg px-3 py-1.5 transition-colors">
+          ← All orgs
+        </button>
+      </div>
 
-      {/* Assignment cells — one per workflow */}
-      {catalog.map(wf => {
-        const key = `${org.id}:${wf.id}`
-        const assigned = !!assignmentMap[key]
-        const cellLoading = pendingCells.has(key)
-        return (
-          <td key={wf.id} className="px-2 py-3 text-center">
-            <AssignCell
-              assigned={assigned}
-              loading={cellLoading}
-              onAssign={() => onAssign(org.id, wf.id, key)}
-              onRevoke={() => onRevoke(org.id, wf.id, key)}
-            />
-          </td>
-        )
-      })}
-    </tr>
+      {/* Info note */}
+      <div className="flex items-start gap-2 px-4 py-3 bg-amber-50 border border-amber-100 rounded-xl text-xs text-amber-800">
+        <AlertCircle size={13} className="shrink-0 mt-0.5" />
+        <p>
+          Showing workflows applicable to <strong>{industryLabel(org.industry)}</strong> organizations.
+          Finance, Retail, and other industry workflows are hidden because they don't apply to this organization.
+          Plan entitlement is still required for a workflow to be executable.
+        </p>
+      </div>
+
+      {loadingApplicable ? (
+        <div className="flex items-center justify-center h-32 text-slate-400 text-sm">Loading applicable workflows…</div>
+      ) : applicableError ? (
+        <div className="flex items-center gap-2 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+          <XCircle size={14} />{applicableError}
+        </div>
+      ) : applicable?.length === 0 ? (
+        <div className="text-center py-10 text-slate-400 text-sm">No applicable workflows found for this organization's industry.</div>
+      ) : (
+        <>
+          <Section
+            title={`${industryLabel(org.industry)} Workflows`}
+            icon={Building2}
+            workflows={industry_wfs}
+            accentClass="bg-amber-50 text-amber-800"
+          />
+          <Section
+            title="Global Workflows"
+            icon={Globe}
+            workflows={global_wfs}
+            accentClass="bg-indigo-50 text-indigo-800"
+          />
+        </>
+      )}
+    </div>
+  )
+}
+
+// ── Matrix view ───────────────────────────────────────────────────────────────
+function MatrixView({ catalog, orgs, assignmentMap, catalogStats, filteredOrgs, pendingCells, onAssign, onRevoke, navigate }) {
+  return (
+    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="text-sm">
+          <thead>
+            <tr className="border-b border-slate-100">
+              <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide sticky left-0 bg-white border-r border-slate-100 min-w-[220px]">
+                Organization
+              </th>
+              {catalog.map((wf, i) => (
+                <th key={wf.id} className="px-2 py-3 text-center min-w-[90px] max-w-[90px]">
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-[10px] font-semibold text-slate-700 leading-tight break-words max-w-[80px] text-center" title={wf.name}>
+                      {wf.name.length > 14 ? wf.name.slice(0, 12) + '…' : wf.name}
+                    </span>
+                    <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-semibold ${(wf.scope || 'GLOBAL') === 'GLOBAL' ? 'bg-indigo-50 text-indigo-600' : 'bg-amber-50 text-amber-600'}`}>
+                      {(wf.scope || 'GLOBAL') === 'GLOBAL' ? 'Global' : wf.industry}
+                    </span>
+                    <span className="text-[10px] text-slate-400">{catalogStats[i]?.assignedCount}/{orgs.length}</span>
+                  </div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {filteredOrgs.length === 0 ? (
+              <tr>
+                <td colSpan={catalog.length + 1} className="px-5 py-12 text-center text-slate-400 text-sm">
+                  No organizations match your search
+                </td>
+              </tr>
+            ) : filteredOrgs.map(org => {
+              const assignedCount = catalog.filter(wf => assignmentMap[`${org.id}:${wf.id}`]).length
+              return (
+                <tr key={org.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
+                  <td className="px-4 py-3 sticky left-0 bg-white border-r border-slate-100 z-10 min-w-[220px]">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
+                        <span className="text-blue-700 text-xs font-bold">{(org.name || '?')[0].toUpperCase()}</span>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-slate-900 truncate">{org.name}</p>
+                        <p className="text-[10px] text-slate-400">
+                          {industryLabel(org.industry)} · {assignedCount}/{catalog.length}
+                        </p>
+                      </div>
+                      <button onClick={() => navigate(`/admin/organizations/${org.id}`)}
+                        className="ml-auto p-1 text-slate-300 hover:text-blue-500 transition-colors shrink-0">
+                        <ChevronRight size={12} />
+                      </button>
+                    </div>
+                  </td>
+                  {catalog.map(wf => {
+                    const key = `${org.id}:${wf.id}`
+                    return (
+                      <td key={wf.id} className="px-2 py-3 text-center">
+                        <AssignCell
+                          assigned={!!assignmentMap[key]}
+                          loading={pendingCells.has(key)}
+                          onAssign={() => onAssign(org.id, wf.id, key)}
+                          onRevoke={() => onRevoke(org.id, wf.id, key)}
+                        />
+                      </td>
+                    )
+                  })}
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+      <div className="border-t border-slate-100 px-5 py-3 flex items-center gap-6 text-xs text-slate-500 bg-slate-50/50">
+        <span className="flex items-center gap-1.5">
+          <span className="w-5 h-5 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center">
+            <CheckCircle2 size={11} className="text-emerald-500" />
+          </span>
+          Assigned (hover to revoke)
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-5 h-5 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center">
+            <Plus size={11} className="text-slate-400" />
+          </span>
+          Not assigned
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block w-3 h-3 rounded-full bg-indigo-200" /> Global
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block w-3 h-3 rounded-full bg-amber-200" /> Industry-specific
+        </span>
+      </div>
+    </div>
   )
 }
 
@@ -114,13 +303,15 @@ export default function AdminWorkflowAssignments() {
   const { api } = useAuth()
   const navigate = useNavigate()
 
-  const [catalog, setCatalog]       = useState([])  // workflow catalog entries
-  const [orgs, setOrgs]             = useState([])  // organizations
-  const [assignments, setAssignments] = useState([]) // all org-workflow assignments
-  const [loading, setLoading]       = useState(true)
-  const [error, setError]           = useState(null)
-  const [search, setSearch]         = useState('')
-  const [pendingCells, setPending]  = useState(new Set())  // org:wf keys being toggled
+  const [catalog,     setCatalog]     = useState([])
+  const [orgs,        setOrgs]        = useState([])
+  const [assignments, setAssignments] = useState([])
+  const [loading,     setLoading]     = useState(true)
+  const [error,       setError]       = useState(null)
+  const [search,      setSearch]      = useState('')
+  const [pendingCells,setPending]     = useState(new Set())
+  const [viewMode,    setViewMode]    = useState('org')    // 'org' | 'matrix'
+  const [selectedOrg, setSelectedOrg] = useState(null)
 
   const load = useCallback(async () => {
     setLoading(true); setError(null)
@@ -142,18 +333,14 @@ export default function AdminWorkflowAssignments() {
 
   useEffect(() => { load() }, [load])
 
-  // Build fast lookup: "orgId:workflowId" → assignment object
   const assignmentMap = useMemo(() => {
     const m = {}
     assignments.forEach(a => {
-      if (a.status === 'active') {
-        m[`${a.organization_id}:${a.workflow_id}`] = a
-      }
+      if (a.status === 'active') m[`${a.organization_id}:${a.workflow_id}`] = a
     })
     return m
   }, [assignments])
 
-  // Filtered orgs by search
   const filteredOrgs = useMemo(() => {
     if (!search) return orgs
     const q = search.toLowerCase()
@@ -164,19 +351,17 @@ export default function AdminWorkflowAssignments() {
     )
   }, [orgs, search])
 
-  // Column-level stats
-  const catalogStats = useMemo(() => {
-    return catalog.map(wf => ({
+  const catalogStats = useMemo(() =>
+    catalog.map(wf => ({
       id: wf.id,
       assignedCount: orgs.filter(o => assignmentMap[`${o.id}:${wf.id}`]).length,
-    }))
-  }, [catalog, orgs, assignmentMap])
+    })),
+  [catalog, orgs, assignmentMap])
 
   async function handleAssign(orgId, workflowId, key) {
     setPending(p => new Set(p).add(key))
     try {
       await api.post(`/admin/organizations/${orgId}/workflows/${workflowId}/assign`, {})
-      // Optimistic update
       setAssignments(prev => [
         ...prev.filter(a => !(a.organization_id === orgId && a.workflow_id === workflowId)),
         { organization_id: orgId, workflow_id: workflowId, status: 'active', assigned_at: new Date().toISOString() },
@@ -192,7 +377,6 @@ export default function AdminWorkflowAssignments() {
     setPending(p => new Set(p).add(key))
     try {
       await api.delete(`/admin/organizations/${orgId}/workflows/${workflowId}/assign`)
-      // Optimistic update
       setAssignments(prev => prev.filter(a => !(a.organization_id === orgId && a.workflow_id === workflowId)))
     } catch (e) {
       setError(`Failed to revoke: ${e?.response?.data?.detail || e.message}`)
@@ -211,21 +395,39 @@ export default function AdminWorkflowAssignments() {
         <div>
           <h1 className="text-xl font-bold text-slate-900">Workflow Assignments</h1>
           <p className="text-sm text-slate-500 mt-0.5">
-            {loading ? '…' : `${totalAssignments} active assignment${totalAssignments !== 1 ? 's' : ''} across ${orgs.length} organization${orgs.length !== 1 ? 's' : ''}`}
+            {loading ? '…' : `${totalAssignments} active assignment${totalAssignments !== 1 ? 's' : ''} · ${orgs.length} organization${orgs.length !== 1 ? 's' : ''}`}
           </p>
         </div>
-        <button onClick={load} disabled={loading}
-          className="p-2 rounded-lg text-slate-500 bg-white border border-slate-200 hover:bg-slate-50 transition-colors disabled:opacity-50">
-          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-        </button>
+        <div className="flex items-center gap-2">
+          {/* View toggle */}
+          <div className="flex items-center bg-white border border-slate-200 rounded-lg overflow-hidden">
+            <button
+              onClick={() => { setViewMode('org'); setSelectedOrg(null) }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-colors ${viewMode === 'org' ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-50'}`}
+            >
+              <List size={13} /> Org View
+            </button>
+            <button
+              onClick={() => setViewMode('matrix')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-colors ${viewMode === 'matrix' ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-50'}`}
+            >
+              <LayoutGrid size={13} /> Matrix
+            </button>
+          </div>
+          <button onClick={load} disabled={loading}
+            className="p-2 rounded-lg text-slate-500 bg-white border border-slate-200 hover:bg-slate-50 transition-colors disabled:opacity-50">
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+          </button>
+        </div>
       </div>
 
       {/* Info banner */}
       <div className="flex items-start gap-3 px-4 py-3 bg-blue-50 border border-blue-100 rounded-xl text-xs text-blue-700">
         <AlertCircle size={14} className="shrink-0 mt-0.5" />
         <p>
-          <span className="font-semibold">Backend enforced.</span> An organization can only execute a workflow when:
-          the org is active · the subscription is active · the plan entitles the workflow · AND an explicit assignment exists here.
+          <span className="font-semibold">Industry-aware + backend enforced.</span>{' '}
+          Org View shows only workflows applicable to each organization's industry.
+          Plan entitlement and this explicit assignment are both required for access.
         </p>
       </div>
 
@@ -236,102 +438,83 @@ export default function AdminWorkflowAssignments() {
         </div>
       )}
 
-      {/* Search */}
-      <div className="relative max-w-xs">
-        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-        <input
-          type="text" placeholder="Filter organizations…" value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="w-full pl-9 pr-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
-        />
-      </div>
-
       {loading ? (
         <div className="flex items-center justify-center h-48 text-slate-400 text-sm">Loading…</div>
       ) : catalog.length === 0 ? (
-        <EmptyState icon={Layers}
-          title="No workflows in catalog"
-          description="Add workflows to the catalog before assigning them to organizations."
+        <EmptyState icon={Layers} title="No workflows in catalog"
+          description="Add workflows to the catalog before assigning them."
           action={<button onClick={() => navigate('/admin/workflows/catalog')} className="text-sm text-blue-600 hover:underline font-medium">Go to Workflow Catalog →</button>}
         />
       ) : orgs.length === 0 ? (
-        <EmptyState icon={Building2}
-          title="No organizations"
+        <EmptyState icon={Building2} title="No organizations"
           description="Create organizations to start assigning workflows."
           action={<button onClick={() => navigate('/admin/organizations')} className="text-sm text-blue-600 hover:underline font-medium">Go to Organizations →</button>}
         />
+      ) : viewMode === 'matrix' ? (
+        <>
+          {/* Search bar for matrix */}
+          <div className="relative max-w-xs">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            <input type="text" placeholder="Filter organizations…" value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="w-full pl-9 pr-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" />
+          </div>
+          <MatrixView
+            catalog={catalog}
+            orgs={orgs}
+            assignmentMap={assignmentMap}
+            catalogStats={catalogStats}
+            filteredOrgs={filteredOrgs}
+            pendingCells={pendingCells}
+            onAssign={handleAssign}
+            onRevoke={handleRevoke}
+            navigate={navigate}
+          />
+        </>
+      ) : selectedOrg ? (
+        // Org-focused assignment view
+        <OrgFocusView
+          org={selectedOrg}
+          api={api}
+          assignments={assignments}
+          onAssign={handleAssign}
+          onRevoke={handleRevoke}
+          pendingCells={pendingCells}
+          onClose={() => setSelectedOrg(null)}
+        />
       ) : (
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-          {/* Scrollable matrix */}
-          <div className="overflow-x-auto">
-            <table className="text-sm">
-              <thead>
-                {/* Workflow names as column headers */}
-                <tr className="border-b border-slate-100">
-                  <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide sticky left-0 bg-white border-r border-slate-100 min-w-[200px]">
-                    Organization
-                  </th>
-                  {catalog.map((wf, i) => {
-                    const stat = catalogStats[i]
-                    return (
-                      <th key={wf.id} className="px-2 py-3 text-center min-w-[90px] max-w-[90px]">
-                        <div className="flex flex-col items-center gap-1">
-                          <span
-                            className="text-[11px] font-semibold text-slate-700 leading-tight text-center break-words max-w-[80px]"
-                            title={wf.name}
-                          >
-                            {wf.name.length > 16 ? wf.name.slice(0, 14) + '…' : wf.name}
-                          </span>
-                          <span className="text-[10px] text-slate-400">
-                            {stat?.assignedCount}/{orgs.length}
-                          </span>
-                        </div>
-                      </th>
-                    )
-                  })}
-                </tr>
-              </thead>
-              <tbody>
-                {filteredOrgs.length === 0 ? (
-                  <tr>
-                    <td colSpan={catalog.length + 1} className="px-5 py-12 text-center text-slate-400 text-sm">
-                      No organizations match your search
-                    </td>
-                  </tr>
-                ) : (
-                  filteredOrgs.map(org => (
-                    <OrgRow
-                      key={org.id}
-                      org={org}
-                      catalog={catalog}
-                      assignmentMap={assignmentMap}
-                      onAssign={handleAssign}
-                      onRevoke={handleRevoke}
-                      pendingCells={pendingCells}
-                      navigate={navigate}
-                    />
-                  ))
-                )}
-              </tbody>
-            </table>
+        // Org list — pick an org to manage
+        <>
+          <div className="relative max-w-xs">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            <input type="text" placeholder="Filter organizations…" value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="w-full pl-9 pr-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" />
           </div>
-
-          {/* Legend */}
-          <div className="border-t border-slate-100 px-5 py-3 flex items-center gap-6 text-xs text-slate-500 bg-slate-50/50">
-            <span className="flex items-center gap-1.5">
-              <span className="w-5 h-5 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center">
-                <CheckCircle2 size={11} className="text-emerald-500" />
-              </span>
-              Assigned (hover to revoke)
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-5 h-5 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center">
-                <Plus size={11} className="text-slate-400" />
-              </span>
-              Not assigned (click to assign)
-            </span>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+            {filteredOrgs.map(org => {
+              const orgAssigned = assignments.filter(a => a.organization_id === org.id && a.status === 'active').length
+              return (
+                <button key={org.id} onClick={() => setSelectedOrg(org)}
+                  className="bg-white border border-slate-200 hover:border-blue-300 hover:shadow-sm rounded-xl p-4 text-left flex items-center gap-3 transition-all group">
+                  <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
+                    <span className="text-blue-700 text-sm font-bold">{(org.name || '?')[0].toUpperCase()}</span>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-slate-900 truncate">{org.name}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      {industryLabel(org.industry)}
+                    </p>
+                    <p className="text-xs text-slate-400">
+                      {orgAssigned} workflow{orgAssigned !== 1 ? 's' : ''} assigned
+                    </p>
+                  </div>
+                  <ChevronRight size={15} className="text-slate-300 group-hover:text-blue-400 transition-colors shrink-0" />
+                </button>
+              )
+            })}
           </div>
-        </div>
+        </>
       )}
     </div>
   )

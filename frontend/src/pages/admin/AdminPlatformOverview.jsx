@@ -212,6 +212,45 @@ export default function AdminPlatformOverview() {
         </div>
       )}
 
+      {/* ── Trial expiry alerts ────────────────────────────────────────── */}
+      {!loading && (() => {
+        const expiring = orgs.filter(o => {
+          if (!o.trial_ends_at) return false
+          const days = Math.ceil((new Date(o.trial_ends_at) - Date.now()) / 86400000)
+          return o.effective_subscription_status === 'trial_expired' || (o.subscription_status === 'trialing' && days <= 3)
+        })
+        if (expiring.length === 0) return null
+        return (
+          <div className="flex items-start gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl">
+            <AlertTriangle size={15} className="text-amber-600 shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-amber-900">Trial attention required</p>
+              <div className="flex flex-wrap gap-2 mt-1">
+                {expiring.map(o => {
+                  const expired = o.effective_subscription_status === 'trial_expired'
+                  const days = Math.ceil((new Date(o.trial_ends_at) - Date.now()) / 86400000)
+                  return (
+                    <button
+                      key={o.id}
+                      onClick={() => navigate(`/admin/organizations/${o.id}`)}
+                      className="text-xs font-medium text-amber-700 hover:text-amber-900 underline decoration-dotted"
+                    >
+                      {o.name} ({expired ? 'expired' : `${days}d left`})
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+            <button
+              onClick={() => navigate('/admin/subscriptions')}
+              className="text-xs font-semibold text-amber-700 hover:text-amber-900 shrink-0"
+            >
+              Manage →
+            </button>
+          </div>
+        )
+      })()}
+
       {/* ── KPI grid ───────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <KpiCard label="Active Organizations" value={fmt(m.active_organizations, '0')}

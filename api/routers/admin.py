@@ -90,6 +90,8 @@ class OrgCreateRequest(BaseModel):
     industry:      str = "saas"
     plan_slug:     Optional[str] = "free"
     billing_cycle: Optional[str] = "monthly"
+    with_trial:    Optional[bool] = False     # start a 14-day trial
+    trial_days:    Optional[int]  = 14
     workflow_keys: Optional[list[str]] = Field(default_factory=list)
     owner_email:   Optional[str] = None
     owner_name:    Optional[str] = None
@@ -169,10 +171,11 @@ class SubscriptionCreateRequest(BaseModel):
 
 
 class SubscriptionUpdateRequest(BaseModel):
-    plan_id:       Optional[str] = None
-    status:        Optional[str] = None
-    billing_cycle: Optional[str] = None
-    notes:         Optional[str] = None
+    plan_id:        Optional[str] = None
+    status:         Optional[str] = None
+    billing_cycle:  Optional[str] = None
+    trial_ends_at:  Optional[str] = None   # ISO datetime string — for trial extension
+    notes:          Optional[str] = None
 
 
 class WorkflowAssignRequest(BaseModel):
@@ -189,6 +192,9 @@ class WorkflowCatalogCreateRequest(BaseModel):
     pricing_model:         str = "included"
     required_integrations: list[str] = Field(default_factory=list)
     supported_modules:     list[str] = Field(default_factory=list)
+    # ── Industry applicability (Migration 004) ────────────────────────────
+    scope:                 str = "GLOBAL"        # GLOBAL | INDUSTRY
+    industry:              Optional[str] = None  # required when scope=INDUSTRY
 
 
 class WorkflowCatalogUpdateRequest(BaseModel):
@@ -201,6 +207,9 @@ class WorkflowCatalogUpdateRequest(BaseModel):
     required_integrations: Optional[list[str]] = None
     supported_modules:     Optional[list[str]] = None
     active:                Optional[bool]      = None
+    # ── Industry applicability (Migration 004) ────────────────────────────
+    scope:                 Optional[str]       = None  # GLOBAL | INDUSTRY
+    industry:              Optional[str]       = None  # set/clear industry
 
 
 class PlatformSettingsUpdateRequest(BaseModel):
@@ -228,10 +237,11 @@ async def get_platform_overview(
 
 @router.get("/organizations")
 async def list_organizations(
+    include_test_fixtures: bool = Query(False),
     _: TokenData = Depends(_require_admin),
     db: AsyncSession = Depends(get_db),
 ):
-    return await crud.list_organizations_with_details(db)
+    return await crud.list_organizations_with_details(db, include_test_fixtures=include_test_fixtures)
 
 
 @router.post("/organizations", status_code=201)
@@ -274,18 +284,45 @@ async def create_organization(
         db.add(OrganizationSubscription(
             organization_id=org.id,
             plan_id=plan.id,
-            status="active",
+            status="trialing" if body.with_trial else "active",
             billing_cycle=body.billing_cycle or "monthly",
             current_period_start=datetime.utcnow(),
             current_period_end=datetime.utcnow() + timedelta(
                 days=365 if body.billing_cycle == "annual" else 30
+            ),
+            trial_ends_at=(
+                datetime.utcnow() + timedelta(days=body.trial_days or 14)
+                if body.with_trial else None
             ),
         ))
 
     await db.commit()
     await db.refresh(org)
 
-    # 4. Assign requested workflows
+    # 4. Auto-assign industry-appropriate workflows from the catalog.
+    #    This runs BEFORE the explicit workflow_keys loop so that explicit
+    #    overrides from the admin form simply confirm/extend the auto-set.
+    plan_slug_used = plan.slug if plan else (body.plan_slug or "free")
+    try:
+        auto_count = await crud.auto_assign_industry_workflows(
+            db,
+            organization_id=org_id,
+            industry=body.industry,
+            assigned_by=current_user.email,
+            plan_slug=plan_slug_used,
+        )
+        log.info(
+            "Admin org creation: auto-assigned industry workflows",
+            org_id=org_id,
+            industry=body.industry,
+            plan=plan_slug_used,
+            count=auto_count,
+        )
+    except Exception as _aa_err:
+        # Non-fatal — admin can assign manually from the Assignments page
+        log.warning("Auto-assign failed (non-fatal)", error=str(_aa_err), org_id=org_id)
+
+    # 5. Assign any explicitly requested workflows that weren't auto-included
     for wf_key in (body.workflow_keys or []):
         wf = await crud.get_workflow_catalog_by_key(db, wf_key)
         if wf:
@@ -712,8 +749,143 @@ async def check_workflow_access(
     _: TokenData = Depends(_require_admin),
     db: AsyncSession = Depends(get_db),
 ):
-    """Server-side authorization check — 5-step enforcement."""
+    """Server-side authorization check — enforces all 6 steps including industry applicability."""
     return await crud.check_org_workflow_access(db, org_id, workflow_key)
+
+
+@router.get("/organizations/{org_id}/workflows/applicable")
+async def get_applicable_workflows_for_org(
+    org_id: str,
+    _: TokenData = Depends(_require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Return workflows applicable to this organization's industry.
+    Used by the assignment UI to show only relevant workflows when an org is selected.
+    GLOBAL workflows are always included.  INDUSTRY workflows are included only
+    when they match the org's industry field.
+    Does NOT filter by plan entitlement or assignment — that's handled separately.
+    """
+    from db.models.core import WorkflowCatalog as _WCat
+    from sqlalchemy import or_ as _or
+
+    try:
+        oid = uuid.UUID(org_id)
+    except ValueError:
+        raise HTTPException(400, "Invalid org_id")
+
+    org_result = await db.execute(select(Organization).where(Organization.id == oid))
+    org = org_result.scalar_one_or_none()
+    if not org:
+        raise HTTPException(404, "Organization not found")
+
+    applicable = await crud.get_available_workflows_for_org(db, org_id)
+    return {
+        "organization_id":   org_id,
+        "organization_name": org.name,
+        "industry":          org.industry,
+        "workflows": [crud.workflow_catalog_to_dict(w) for w in applicable],
+    }
+
+
+@router.post("/organizations/{org_id}/workflows/auto-assign")
+async def trigger_auto_assign(
+    org_id: str,
+    current_user: TokenData = Depends(_require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Manually trigger auto-assignment of industry-appropriate workflows for an org.
+    Use this to fix existing orgs that were created before auto-assign was deployed.
+    """
+    try:
+        oid = uuid.UUID(org_id)
+    except ValueError:
+        raise HTTPException(400, "Invalid org_id")
+
+    org_result = await db.execute(select(Organization).where(Organization.id == oid))
+    org = org_result.scalar_one_or_none()
+    if not org:
+        raise HTTPException(404, "Organization not found")
+
+    # Get plan slug
+    sub = await crud.get_org_subscription(db, org_id)
+    plan_slug = "free"
+    if sub:
+        plan = await crud.get_billing_plan(db, str(sub.plan_id))
+        if plan:
+            plan_slug = plan.slug
+
+    count = await crud.auto_assign_industry_workflows(
+        db,
+        organization_id=org_id,
+        industry=org.industry or "saas",
+        assigned_by=current_user.email,
+        plan_slug=plan_slug,
+    )
+    await _audit(db, current_user, "workflows.auto_assigned", "organization", org_id, org_id,
+                 {"industry": org.industry, "count": count})
+    return {
+        "organization_id":   org_id,
+        "organization_name": org.name,
+        "industry":          org.industry,
+        "assigned_count":    count,
+        "message": f"Auto-assigned {count} workflows for {org.name} ({org.industry})",
+    }
+
+
+@router.post("/workflows/fix-all-orgs")
+async def fix_all_org_assignments(
+    current_user: TokenData = Depends(_require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Run auto-assign for ALL orgs that have zero workflow assignments.
+    One-time repair endpoint for orgs created before auto-assign was deployed.
+    """
+    from sqlalchemy import func as _func, not_, exists
+
+    # Find orgs with no active assignments
+    from db.models.core import OrganizationWorkflowAssignment as _OWA
+    orgs_result = await db.execute(select(Organization).where(Organization.active.is_(True)))
+    all_orgs = list(orgs_result.scalars().all())
+
+    # Check which have zero assignments
+    assign_count_result = await db.execute(
+        select(_OWA.organization_id, _func.count().label("cnt"))
+        .where(_OWA.status == "active")
+        .group_by(_OWA.organization_id)
+    )
+    has_assignments: set[str] = {str(r.organization_id) for r in assign_count_result.all()}
+
+    fixed = []
+    skipped = []
+    for org in all_orgs:
+        oid = str(org.id)
+        if oid in has_assignments:
+            skipped.append(org.name)
+            continue
+        sub = await crud.get_org_subscription(db, oid)
+        plan_slug = "free"
+        if sub:
+            plan = await crud.get_billing_plan(db, str(sub.plan_id))
+            if plan:
+                plan_slug = plan.slug
+        count = await crud.auto_assign_industry_workflows(
+            db, organization_id=oid,
+            industry=org.industry or "saas",
+            assigned_by=f"system:fix-all/{current_user.email}",
+            plan_slug=plan_slug,
+        )
+        fixed.append({"org": org.name, "industry": org.industry, "assigned": count})
+
+    await _audit(db, current_user, "workflows.fix_all_orgs", "platform", None, None,
+                 {"fixed": len(fixed), "skipped": len(skipped)})
+    return {
+        "fixed":   fixed,
+        "skipped": skipped,
+        "summary": f"Fixed {len(fixed)} orgs, skipped {len(skipped)} (already had assignments)",
+    }
 
 
 # ─────────────────────────────────────────────────────────────────────────────
