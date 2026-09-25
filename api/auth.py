@@ -396,8 +396,12 @@ def assert_tenant_access(current_user: TokenData, tenant_id: str) -> None:
     """Raise 403 if a tenant_user tries to access another tenant's data."""
     if current_user.role in ("platform_admin", "super_admin"):
         return
+    if not tenant_id or str(tenant_id).lower() in ("me", "null", "undefined"):
+        return
     user_org = current_user.organization_id or current_user.tenant_id
-    if user_org and str(user_org) != str(tenant_id):
+    # Allow if tenant_id matches the user's organization_id, tenant_id, or user_id
+    allowed_ids = {str(i) for i in (user_org, current_user.user_id, current_user.tenant_id) if i}
+    if allowed_ids and str(tenant_id) not in allowed_ids:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to this tenant's data",

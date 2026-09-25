@@ -2823,7 +2823,8 @@ async def get_dashboard(
     db: AsyncSession = Depends(get_db),
 ):
     assert_tenant_access(current_user, tenant_id)
-    return await crud.get_dashboard_data(db, tenant_id)
+    target_tenant = current_user.organization_id or current_user.tenant_id or tenant_id
+    return await crud.get_dashboard_data(db, str(target_tenant))
 
 
 # NOTE: /analytics/admin/fleet MUST be registered before /analytics/{tenant_id}
