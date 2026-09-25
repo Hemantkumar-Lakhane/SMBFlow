@@ -514,6 +514,8 @@ class ProvisionRequest(BaseModel):
     full_name: Optional[str] = None
     workspace_name: Optional[str] = None
     industry: Optional[str] = "saas"
+    website: Optional[str] = None
+    company_size: Optional[str] = None
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -546,7 +548,16 @@ async def signup(body: SignupRequest, db: AsyncSession = Depends(get_db)):
 
     tenant_id = None
     if body.tenant_name:
-        tenant = await crud.create_tenant(db, body.tenant_name, body.industry or "saas", {})
+        tenant = await crud.create_tenant(
+            db,
+            body.tenant_name,
+            body.industry or "saas",
+            {
+                "website": body.website,
+                "company_size": body.company_size,
+                "requires_onboarding": False,
+            },
+        )
         tenant_id = str(tenant.id)
 
     user = await crud.create_user(
@@ -565,6 +576,9 @@ async def signup(body: SignupRequest, db: AsyncSession = Depends(get_db)):
             "id": str(user.id), "email": user.email,
             "full_name": user.full_name, "role": "tenant_user",
             "tenant_id": tenant_id,
+            "website": body.website,
+            "company_size": body.company_size,
+            "requires_onboarding": False,
         },
     )
 
@@ -585,6 +599,17 @@ async def provision_user_workspace(
     )
     org_id = str(org.id) if org else (current_user.organization_id or current_user.tenant_id)
     org_name = org.name if org else body.workspace_name
+
+    if org:
+        cfg = dict(org.profile_config or {})
+        if body.website:
+            cfg["website"] = body.website
+        if body.company_size:
+            cfg["company_size"] = body.company_size
+        cfg["requires_onboarding"] = False
+        org.profile_config = cfg
+        await db.commit()
+        await db.refresh(org)
 
     # Auto-assign industry workflows on first provision.
     # Check whether the org already has assignments — if not, this is a fresh
@@ -627,6 +652,8 @@ async def provision_user_workspace(
         "organization_name": org_name,
         "tenant_name": org_name,
         "industry": org.industry if org else (body.industry or "saas"),
+        "website": (org.profile_config or {}).get("website") if org else body.website,
+        "company_size": (org.profile_config or {}).get("company_size") if org else body.company_size,
         "requires_onboarding": False,
     }
 
@@ -648,10 +675,17 @@ async def get_me(
 
     # Check if user requires workspace onboarding setup
     requires_onboarding = False
-    if org and org.name == "Pending Workspace Setup":
-        requires_onboarding = True
-    elif org and org.profile_config and org.profile_config.get("requires_onboarding"):
-        requires_onboarding = True
+    profile = org.profile_config or {} if org else {}
+
+    if role not in ("super_admin", "platform_admin"):
+        if not org or org.name == "Pending Workspace Setup":
+            requires_onboarding = True
+        elif profile.get("requires_onboarding") is True:
+            requires_onboarding = True
+        elif not org.name:
+            requires_onboarding = True
+        else:
+            requires_onboarding = False
 
     resolved_full_name = (
         (org_user.full_name if org_user and org_user.full_name and "@" not in org_user.full_name else None)
@@ -669,7 +703,46 @@ async def get_me(
         "organization_name": org_name,
         "tenant_name": org_name,
         "industry": org.industry if org else "saas",
+        "website": profile.get("website"),
+        "company_size": profile.get("company_size"),
         "requires_onboarding": requires_onboarding,
+    }
+
+
+class UserProfileUpdate(BaseModel):
+    full_name: Optional[str] = None
+    avatar_url: Optional[str] = None
+
+
+@app.put("/api/v1/auth/profile", tags=["Auth"])
+async def update_user_profile(
+    body: UserProfileUpdate,
+    current_user: TokenData = Depends(require_any_auth),
+    db: AsyncSession = Depends(get_db),
+):
+    org_user, org = await crud.ensure_user_organization_provisioned(
+        db,
+        user_id=current_user.user_id,
+        email=current_user.email,
+        full_name=body.full_name or current_user.full_name,
+    )
+    if org_user and body.full_name:
+        org_user.full_name = body.full_name
+        await db.commit()
+        await db.refresh(org_user)
+    
+    u = await crud.get_user_by_email(db, current_user.email)
+    if u and body.full_name:
+        u.full_name = body.full_name
+        await db.commit()
+
+    return {
+        "id": current_user.user_id,
+        "email": current_user.email,
+        "full_name": body.full_name or (org_user.full_name if org_user else current_user.full_name),
+        "avatar_url": body.avatar_url,
+        "role": org_user.role if org_user else current_user.role,
+        "organization_id": str(org.id) if org else current_user.organization_id,
     }
 
 
@@ -685,6 +758,8 @@ class OrgProfileUpdate(BaseModel):
     """Update organization name / industry / settings."""
     name: Optional[str] = None
     industry: Optional[str] = None
+    website: Optional[str] = None
+    company_size: Optional[str] = None
     config: Optional[dict] = None
 
 
@@ -711,6 +786,8 @@ async def get_my_organization(
         "id":               str(org.id),
         "name":             org.name,
         "industry":         org.industry,
+        "website":          profile.get("website"),
+        "company_size":     profile.get("company_size"),
         "enabled_modules":  org.enabled_modules or [],
         "active":           org.active,
         "created_at":       org.created_at.isoformat() if org.created_at else None,
@@ -765,12 +842,21 @@ async def update_my_organization_profile(
     )
     if not org:
         raise HTTPException(status_code=404, detail="Organization not found")
+    
+    merged_config = dict(org.profile_config or {})
+    if body.config:
+        merged_config.update(body.config)
+    if body.website is not None:
+        merged_config["website"] = body.website
+    if body.company_size is not None:
+        merged_config["company_size"] = body.company_size
+
     updated = await crud.update_organization_profile(
         db,
         str(org.id),
         name=body.name,
         industry=body.industry,
-        profile_config=body.config,
+        profile_config=merged_config,
     )
     await broadcast_event("org_profile_updated", {"org_id": str(org.id)})
     return {

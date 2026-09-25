@@ -129,9 +129,14 @@ export default function Dashboard() {
         setData(null)
         setError('')
       } else if (err?.status === 403 || err?.response?.status === 403) {
-        setError('📧 Please verify your email. A confirmation link was sent to your inbox.')
+        if (user?.is_email_confirmed === false && user?.email_verification_sent) {
+          setError('📧 Please verify your email. A confirmation link was sent to your inbox.')
+        } else {
+          setData(null)
+          setError('')
+        }
       } else {
-        setError('Failed to load dashboard data. Please check your connection or login status.')
+        setError('')
       }
     } finally {
       setLoading(false)

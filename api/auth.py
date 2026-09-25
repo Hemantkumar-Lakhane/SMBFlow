@@ -85,6 +85,8 @@ class SignupRequest(BaseModel):
     full_name: Optional[str] = None
     tenant_name: Optional[str] = None   # Creates tenant if provided
     industry: Optional[str] = "saas"
+    website: Optional[str] = None
+    company_size: Optional[str] = None
 
 
 class TokenResponse(BaseModel):

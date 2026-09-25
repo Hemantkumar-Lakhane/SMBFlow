@@ -6,9 +6,10 @@
 //   • live WebSocket connection status from the EXISTING WSContext
 // ─────────────────────────────────────────────────────────────────────────────
 import { Link, useLocation } from 'react-router-dom'
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, Sun, Moon } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useWebSocket } from '../../contexts/WSContext'
+import { useTheme } from '../../contexts/ThemeContext'
 
 const routeLabels = {
   dashboard:           'Home',
@@ -20,8 +21,8 @@ const routeLabels = {
   'ai-engine':         'AI Services',
   integrations:        'Integrations',
   settings:            'Settings',
-  general:             'General',
-  config:              'General',
+  general:             'Profile',
+  config:              'Profile',
   models:              'Model Catalog',
   budget:              'Budget & Billing',
   tools:               'Integrations',
@@ -57,6 +58,7 @@ export function TopHeader() {
   const location = useLocation()
   const { user, isAdmin } = useAuth()
   const { status } = useWebSocket()
+  const { theme, toggle, isDark } = useTheme()
 
   const parts = location.pathname.split('/').filter(Boolean)
   const crumbs = parts.map((part, i) => ({
@@ -73,19 +75,21 @@ export function TopHeader() {
     .slice(0, 2)
     .toUpperCase()
 
+  const avatarUrl = user?.avatar_url || localStorage.getItem(`avatar_${user?.id}`) || localStorage.getItem('smbflow_avatar')
+
   return (
-    <header className="h-14 shrink-0 flex items-center justify-between px-6 bg-white border-b border-slate-200">
+    <header className="h-14 shrink-0 flex items-center justify-between px-6 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 transition-colors">
       <nav className="flex items-center gap-1.5">
-        <Link to={home} className="text-sm text-slate-500 hover:text-slate-900 transition-colors">
+        <Link to={home} className="text-sm text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 transition-colors">
           SMBFlow
         </Link>
         {crumbs.map(crumb => (
           <span key={crumb.to} className="flex items-center gap-1.5">
-            <ChevronRight size={13} className="text-slate-300" />
+            <ChevronRight size={13} className="text-slate-300 dark:text-slate-600" />
             {crumb.isLast ? (
-              <span className="text-sm font-medium text-slate-900">{crumb.label}</span>
+              <span className="text-sm font-medium text-slate-900 dark:text-slate-100">{crumb.label}</span>
             ) : (
-              <Link to={crumb.to} className="text-sm text-slate-500 hover:text-slate-900 transition-colors">
+              <Link to={crumb.to} className="text-sm text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 transition-colors">
                 {crumb.label}
               </Link>
             )}
@@ -94,13 +98,30 @@ export function TopHeader() {
       </nav>
 
       <div className="flex items-center gap-3">
-        <WSDot status={status} />
-        <div
-          className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center"
-          title={user?.full_name || user?.email || ''}
+        {/* Global Persistent Theme Toggle */}
+        <button
+          type="button"
+          onClick={toggle}
+          className="w-8 h-8 rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
+          title={`Switch to ${isDark ? 'Light' : 'Dark'} Mode`}
         >
-          <span className="text-xs font-semibold text-white">{initials}</span>
-        </div>
+          {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
+        </button>
+
+        <WSDot status={status} />
+
+        {/* Clickable Profile Avatar */}
+        <Link
+          to="/settings/general"
+          className="w-8 h-8 rounded-full bg-blue-600 hover:ring-2 hover:ring-blue-400 overflow-hidden flex items-center justify-center shadow-xs transition-all cursor-pointer"
+          title={`View Profile (${user?.full_name || user?.email || 'User'})`}
+        >
+          {avatarUrl ? (
+            <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+          ) : (
+            <span className="text-xs font-semibold text-white">{initials}</span>
+          )}
+        </Link>
       </div>
     </header>
   )

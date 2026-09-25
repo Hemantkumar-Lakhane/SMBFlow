@@ -1,25 +1,37 @@
 // frontend/src/pages/SignupPage.jsx
 // ─────────────────────────────────────────────────────────────────────────────
-// Production-quality B2B SaaS Signup & Workspace Onboarding UX.
-//   • Supports direct Email/Password signup + Supabase Google OAuth.
-//   • Handles Google first-login onboarding (collecting Full Name, Workspace Name, Industry - NO password).
-//   • Server-controlled role authority (hardcoded org_user role for all new users).
+// Multi-Step B2B SaaS Workspace Onboarding Wizard
+// Supports:
+//   • Step 1: Company Website (with Next & optional Skip)
+//   • Step 2: Tell Us About Your Company (with Back, Next / Create my account, & Other custom tag)
+//   • Step 3: Administrator Credentials (with Back & Create my account for Email Signups)
 // ─────────────────────────────────────────────────────────────────────────────
 import { useState, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { Eye, EyeOff, AlertCircle, Loader2, Check } from 'lucide-react'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { Eye, EyeOff, AlertCircle, Loader2, ChevronDown } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { createApiClient } from '../api/client'
 import { createAuthService } from '../api/services/auth.service'
 
 const INDUSTRY_OPTIONS = [
   { label: 'SaaS / Technology', value: 'saas' },
-  { label: 'Healthcare / Medical Tourism', value: 'healthcare' },
-  { label: 'Professional Services', value: 'services' },
-  { label: 'E-commerce / Retail', value: 'ecommerce' },
-  { label: 'Financial Services', value: 'finance' },
-  { label: 'Marketing / Agency', value: 'marketing' },
-  { label: 'Other', value: 'other' },
+  { label: 'Healthcare & Life Sciences', value: 'healthcare' },
+  { label: 'E-commerce & Retail', value: 'ecommerce' },
+  { label: 'Financial Services & FinTech', value: 'finance' },
+  { label: 'Education & EdTech', value: 'education' },
+  { label: 'Marketing & Creative Agency', value: 'marketing' },
+  { label: 'Professional & Legal Services', value: 'services' },
+  { label: 'Manufacturing & Logistics', value: 'logistics' },
+  { label: 'Real Estate & Construction', value: 'realestate' },
+  { label: 'Other (Specify below)', value: 'other' },
+]
+
+const COMPANY_SIZE_OPTIONS = [
+  { label: '1-10 employees', value: '1-10' },
+  { label: '11-50 employees', value: '11-50' },
+  { label: '51-200 employees', value: '51-200' },
+  { label: '201-500 employees', value: '201-500' },
+  { label: '500+ employees', value: '500+' },
 ]
 
 function classifySignupError(err) {
@@ -33,12 +45,12 @@ function classifySignupError(err) {
   if (/network error/i.test(msg)) {
     return 'Unable to reach the server. Check your connection and try again.'
   }
-  return msg || 'Unable to create your workspace right now. Please try again.'
+  return msg || 'Unable to complete your onboarding right now. Please try again.'
 }
 
 function GoogleIcon() {
   return (
-    <svg className="w-4 h-4" viewBox="0 0 24 24" aria-hidden="true">
+    <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
       <path
         fill="#4285F4"
         d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"
@@ -59,12 +71,39 @@ function GoogleIcon() {
   )
 }
 
+function inferCompanyNameFromWebsite(url) {
+  if (!url) return ''
+  try {
+    let clean = url.replace(/^https?:\/\//i, '').replace(/^www\./i, '').split('/')[0]
+    let domain = clean.split('.')[0]
+    if (domain && domain.length > 1) {
+      return domain.charAt(0).toUpperCase() + domain.slice(1)
+    }
+  } catch (_) {}
+  return ''
+}
+
 export default function SignupPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { user, token, loading: authLoading, login, provisionWorkspace, supabase, clearSessionExpired } = useAuth()
 
   // Google first-login onboarding state detection
   const isGoogleOnboarding = Boolean(token && user && user.requires_onboarding)
+
+  // Steps: 1 (Website) -> 2 (Company Details) -> 3 (Credentials if email signup)
+  const [step, setStep] = useState(1)
+
+  const [form, setForm] = useState({
+    website: '',
+    workspace: '',
+    companySize: '11-50',
+    industry: 'saas',
+    customIndustry: '',
+    fullName: user?.full_name || '',
+    email: location.state?.email || user?.email || '',
+    password: '',
+  })
 
   useEffect(() => {
     if (!authLoading && token && user && !user.requires_onboarding) {
@@ -73,51 +112,143 @@ export default function SignupPage() {
     }
   }, [token, user, authLoading, navigate])
 
-  const [form, setForm] = useState({
-    fullName: user?.full_name || '',
-    workspace: '',
-    industry: 'saas',
-    email: '',
-    password: '',
-  })
-
   useEffect(() => {
     if (user?.full_name && !form.fullName) {
       setForm(f => ({ ...f, fullName: user.full_name }))
     }
-  }, [user?.full_name, form.fullName])
+    if (user?.email && !form.email) {
+      setForm(f => ({ ...f, email: user.email }))
+    }
+  }, [user, form.fullName, form.email])
 
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [error, setError] = useState('')
-  const [touched, setTouched] = useState({})
+  const [fieldErrors, setFieldErrors] = useState({})
 
   const set = (k) => (e) => {
     setForm(f => ({ ...f, [k]: e.target.value }))
     setError('')
+    setFieldErrors(fe => ({ ...fe, [k]: false }))
   }
 
-  const blur = (k) => () => setTouched(t => ({ ...t, [k]: true }))
+  const resolvedIndustry = form.industry === 'other'
+    ? (form.customIndustry.trim() || 'other')
+    : (form.industry || 'saas')
 
-  const nameValid = form.fullName.trim().length > 0
-  const workspaceValid = form.workspace.trim().length > 0
-  const industryValid = Boolean(form.industry)
-  const emailValid = isGoogleOnboarding || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)
-  const passwordValid = isGoogleOnboarding || form.password.length >= 6
+  // Step 1 -> Step 2
+  const handleStep1Next = (e) => {
+    if (e) e.preventDefault()
+    if (!form.website.trim()) {
+      setError('Please enter your company website.')
+      setFieldErrors({ website: true })
+      return
+    }
+    setError('')
+    setFieldErrors({})
+    if (!form.workspace.trim()) {
+      const inferred = inferCompanyNameFromWebsite(form.website)
+      if (inferred) {
+        setForm(f => ({ ...f, workspace: inferred }))
+      }
+    }
+    setStep(2)
+  }
 
-  const canSubmit =
-    nameValid &&
-    workspaceValid &&
-    industryValid &&
-    emailValid &&
-    passwordValid &&
-    !loading &&
-    !googleLoading
+  // Skip Step 1 (allow continuing directly to company details)
+  const handleSkipStep1 = () => {
+    setError('')
+    setFieldErrors({})
+    setStep(2)
+  }
 
+  // Step 2 Next or Create Account (if Google user)
+  const handleStep2Submit = async (e) => {
+    e.preventDefault()
+    const errs = {}
+    if (!form.workspace.trim()) errs.workspace = true
+    if (!form.companySize) errs.companySize = true
+    if (!form.industry) errs.industry = true
+    if (form.industry === 'other' && !form.customIndustry.trim()) errs.customIndustry = true
+
+    if (Object.keys(errs).length > 0) {
+      setFieldErrors(errs)
+      setError('Please fill in the required company details.')
+      return
+    }
+    setError('')
+    setFieldErrors({})
+
+    if (isGoogleOnboarding) {
+      setLoading(true)
+      try {
+        const payload = {
+          full_name: form.fullName.trim() || user.full_name || 'Admin',
+          workspace_name: form.workspace.trim(),
+          industry: resolvedIndustry,
+          website: form.website.trim() || null,
+          company_size: form.companySize || null,
+        }
+        await provisionWorkspace(payload)
+        navigate('/dashboard', { replace: true })
+      } catch (err) {
+        setError(classifySignupError(err))
+      } finally {
+        setLoading(false)
+      }
+    } else {
+      setStep(3)
+    }
+  }
+
+  // Step 3 (Email Signup) -> Complete Registration & open Dashboard
+  async function handleEmailSignupSubmit(e) {
+    e.preventDefault()
+    const errs = {}
+    if (!form.fullName.trim()) errs.fullName = true
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errs.email = true
+    if (form.password.length < 6) errs.password = true
+
+    if (Object.keys(errs).length > 0) {
+      setFieldErrors(errs)
+      setError('Please enter valid administrator credentials.')
+      return
+    }
+
+    setLoading(true)
+    setError('')
+    setFieldErrors({})
+
+    try {
+      const authApi = createAuthService(createApiClient(null))
+      const res = await authApi.signup({
+        email: form.email.trim(),
+        password: form.password,
+        full_name: form.fullName.trim(),
+        tenant_name: form.workspace.trim(),
+        industry: resolvedIndustry,
+        website: form.website.trim() || null,
+        company_size: form.companySize || null,
+      })
+
+      const { access_token, user: signedUpUser } = res
+      const bound = createAuthService(createApiClient(access_token))
+      const profile = await bound.me().catch(() => signedUpUser)
+
+      login(access_token, profile)
+      navigate('/dashboard', { replace: true })
+    } catch (err) {
+      setError(classifySignupError(err))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Google 1-Click OAuth
   async function handleGoogleSignup() {
     if (!supabase) {
-      setError('Supabase authentication client is not configured. Please check your setup.')
+      setError('Supabase authentication client is not configured.')
       return
     }
     setGoogleLoading(true)
@@ -137,346 +268,345 @@ export default function SignupPage() {
     }
   }
 
-  async function handleSubmit(e) {
-    e.preventDefault()
-    setTouched({ fullName: true, workspace: true, industry: true, email: true, password: true })
-    if (!canSubmit) return
-
-    setLoading(true)
-    setError('')
-
-    try {
-      if (isGoogleOnboarding) {
-        // Mode B: Google First-Login Onboarding Provisioning
-        await provisionWorkspace({
-          full_name: form.fullName.trim(),
-          workspace_name: form.workspace.trim(),
-          industry: form.industry,
-        })
-        navigate('/dashboard', { replace: true })
-        return
-      }
-
-      // Mode A: Email/Password Signup
-      if (supabase) {
-        const { data: authData, error: authErr } = await supabase.auth.signUp({
-          email: form.email.trim(),
-          password: form.password,
-          options: {
-            data: {
-              full_name: form.fullName.trim(),
-              workspace_name: form.workspace.trim(),
-              industry: form.industry,
-            },
-          },
-        })
-        if (authErr) throw authErr
-
-        if (authData.session) {
-          const bound = createAuthService(createApiClient(authData.session.access_token))
-          const profile = await bound.provision({
-            full_name: form.fullName.trim(),
-            workspace_name: form.workspace.trim(),
-            industry: form.industry,
-          }).catch(() => null)
-
-          login(authData.session.access_token, profile || authData.user)
-          navigate('/dashboard', { replace: true })
-          return
-        }
-      }
-
-      // Backend Signup Fallback if direct backend auth API is invoked
-      const auth = createAuthService(createApiClient(null))
-      const { access_token, user: resUser } = await auth.signup({
-        email: form.email.trim(),
-        password: form.password,
-        full_name: form.fullName.trim(),
-        tenant_name: form.workspace.trim(),
-        industry: form.industry,
-      })
-
-      const bound = createAuthService(createApiClient(access_token))
-      const profile = await bound.provision({
-        full_name: form.fullName.trim(),
-        workspace_name: form.workspace.trim(),
-        industry: form.industry,
-      }).catch(() => resUser)
-
-      login(access_token, profile)
-      navigate('/dashboard', { replace: true })
-    } catch (err) {
-      setError(classifySignupError(err))
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
-        <div className="flex items-center gap-2.5 mb-4">
-          <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center">
-            <span className="text-white font-bold text-sm">S</span>
-          </div>
-          <span className="text-xl font-semibold text-slate-900">SMBFlow</span>
-        </div>
-        <div className="flex items-center gap-2 text-slate-500 text-sm">
-          <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
-          <span>Verifying authentication...</span>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Header */}
-        <div className="flex items-center gap-2.5 justify-center mb-8">
-          <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center">
-            <span className="text-white font-bold text-sm">S</span>
-          </div>
-          <span className="text-xl font-semibold text-slate-900">SMBFlow</span>
+    <div className="min-h-screen bg-[#fafafa] flex flex-col items-center justify-center p-4 font-sans text-slate-800 antialiased selection:bg-blue-100 selection:text-blue-900">
+      
+      {/* ── Brand Indicator ──────────────────────────────────────────────── */}
+      <div className="mb-6 flex items-center gap-2.5">
+        <div className="w-8 h-8 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold text-sm shadow-sm">
+          S
         </div>
+        <span className="text-lg font-bold text-slate-900 tracking-tight">SMBFlow</span>
+      </div>
 
-        {/* Card */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
-          <h1 className="text-lg font-semibold text-slate-900 mb-1">Create your workspace</h1>
-          <p className="text-sm text-slate-500 mb-6">
-            Set up your SMBFlow workspace and start automating your business.
-          </p>
+      <div className="w-full max-w-md">
 
-          {/* Error Banner */}
-          {error && (
-            <div
-              role="alert"
-              className="flex items-start gap-2.5 bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-5"
-            >
-              <AlertCircle size={15} className="text-red-500 shrink-0 mt-0.5" />
-              <p className="text-sm text-red-700">{error}</p>
-            </div>
-          )}
+        {/* ── Global Error Notification ──────────────────────────────────── */}
+        {error && (
+          <div className="mb-5 p-3.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl text-xs flex items-start gap-2.5 shadow-sm">
+            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+            <div className="flex-1 font-medium">{error}</div>
+          </div>
+        )}
 
-          {/* Google Signup Button (only shown for unauthenticated users) */}
-          {!isGoogleOnboarding && (
-            <>
+        {/* ══════════════════════════════════════════════════════════════════
+            STEP 1: COMPANY WEBSITE
+            ══════════════════════════════════════════════════════════════════ */}
+        {step === 1 && (
+          <div className="flex flex-col items-center text-center">
+            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight mb-3">
+              Company website
+            </h1>
+            <p className="text-sm text-slate-500 mb-8 max-w-xs leading-relaxed">
+              We'll analyze your website to speed up your sign-up.
+            </p>
+
+            <form onSubmit={handleStep1Next} className="w-full space-y-4">
+              <div>
+                <input
+                  type="text"
+                  value={form.website}
+                  onChange={set('website')}
+                  placeholder="www.website.com"
+                  autoFocus
+                  required
+                  className={`w-full px-5 py-3.5 text-base rounded-2xl border ${
+                    fieldErrors.website ? 'border-rose-400 bg-rose-50/20 ring-2 ring-rose-100' : 'border-slate-300 focus:border-blue-600 focus:ring-4 focus:ring-blue-100'
+                  } transition-all text-slate-900 placeholder:text-slate-400 bg-white shadow-sm outline-none`}
+                />
+              </div>
+
               <button
-                type="button"
-                onClick={handleGoogleSignup}
-                disabled={googleLoading || loading}
-                aria-label="Continue with Google"
-                className="w-full py-2.5 px-4 bg-white border border-slate-200 rounded-lg text-slate-700 text-sm font-medium hover:bg-slate-50 hover:border-slate-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 mb-5 shadow-2xs"
+                type="submit"
+                className="w-full py-3.5 px-6 rounded-full bg-[#f1f3f5] hover:bg-slate-900 hover:text-white text-slate-700 font-semibold text-sm transition-all duration-200 cursor-pointer shadow-sm active:scale-[0.99]"
               >
-                {googleLoading ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin text-slate-500" />
-                    <span>Connecting to Google...</span>
-                  </>
-                ) : (
-                  <>
-                    <GoogleIcon />
-                    <span>Continue with Google</span>
-                  </>
-                )}
+                Next
               </button>
 
-              {/* Divider */}
-              <div className="relative flex items-center justify-center mb-5">
-                <div className="border-t border-slate-200 w-full" />
-                <span className="bg-white px-3 text-xs text-slate-400 font-medium uppercase tracking-wider absolute">
-                  or
-                </span>
+              <div className="text-center pt-1">
+                <button
+                  type="button"
+                  onClick={handleSkipStep1}
+                  className="text-xs text-slate-500 hover:text-slate-800 font-medium transition-colors cursor-pointer"
+                >
+                  Skip for now
+                </button>
               </div>
-            </>
-          )}
+            </form>
 
-          <form onSubmit={handleSubmit} noValidate className="space-y-4">
-            {/* 1. Full name */}
-            <div>
-              <label htmlFor="su-fullname" className="block text-xs font-medium text-slate-700 mb-1.5">
-                Full name
-              </label>
-              <input
-                id="su-fullname"
-                type="text"
-                value={form.fullName}
-                onChange={set('fullName')}
-                onBlur={blur('fullName')}
-                placeholder="Your name"
-                autoComplete="name"
-                autoFocus
-                aria-invalid={touched.fullName && !nameValid}
-                aria-describedby={touched.fullName && !nameValid ? 'su-fullname-error' : undefined}
-                className={`w-full px-3 py-2 text-sm border rounded-lg bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 transition-colors ${
-                  touched.fullName && !nameValid
-                    ? 'border-red-300 focus:ring-red-500/20 focus:border-red-400'
-                    : 'border-slate-200 focus:ring-blue-500/20 focus:border-blue-500'
-                }`}
-              />
-              {touched.fullName && !nameValid && (
-                <p id="su-fullname-error" className="mt-1 text-xs text-red-600">Full name is required.</p>
-              )}
-            </div>
-
-            {/* 2. Workspace name */}
-            <div>
-              <label htmlFor="su-workspace" className="block text-xs font-medium text-slate-700 mb-1">
-                Workspace name
-              </label>
-              <p className="text-xs text-slate-400 mb-1.5">Your company, team, or business name.</p>
-              <input
-                id="su-workspace"
-                type="text"
-                value={form.workspace}
-                onChange={set('workspace')}
-                onBlur={blur('workspace')}
-                placeholder="Acme Inc."
-                autoComplete="organization"
-                aria-invalid={touched.workspace && !workspaceValid}
-                aria-describedby={touched.workspace && !workspaceValid ? 'su-workspace-error' : undefined}
-                className={`w-full px-3 py-2 text-sm border rounded-lg bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 transition-colors ${
-                  touched.workspace && !workspaceValid
-                    ? 'border-red-300 focus:ring-red-500/20 focus:border-red-400'
-                    : 'border-slate-200 focus:ring-blue-500/20 focus:border-blue-500'
-                }`}
-              />
-              {touched.workspace && !workspaceValid && (
-                <p id="su-workspace-error" className="mt-1 text-xs text-red-600">Workspace name is required.</p>
-              )}
-            </div>
-
-            {/* 3. Industry */}
-            <div>
-              <label htmlFor="su-industry" className="block text-xs font-medium text-slate-700 mb-1">
-                Industry
-              </label>
-              <p className="text-xs text-slate-400 mb-1.5">
-                We'll use this to personalize your workspace and available workflows.
-              </p>
-              <select
-                id="su-industry"
-                value={form.industry}
-                onChange={set('industry')}
-                onBlur={blur('industry')}
-                aria-invalid={touched.industry && !industryValid}
-                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
-              >
-                {INDUSTRY_OPTIONS.map(opt => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Fields 4 & 5 (Work email & Password) only for Email Signup */}
             {!isGoogleOnboarding && (
-              <>
-                {/* 4. Work email */}
+              <div className="w-full mt-6 pt-6 border-t border-slate-200/80">
+                <button
+                  type="button"
+                  onClick={handleGoogleSignup}
+                  disabled={googleLoading}
+                  className="w-full py-3 px-4 rounded-full border border-slate-300 hover:bg-white hover:border-slate-400 bg-white text-slate-700 font-medium text-xs transition-all flex items-center justify-center gap-2.5 shadow-sm cursor-pointer"
+                >
+                  {googleLoading ? <Loader2 className="w-4 h-4 animate-spin text-blue-600" /> : <GoogleIcon />}
+                  <span>Continue with Google</span>
+                </button>
+
+                <p className="text-xs text-slate-500 mt-5">
+                  Already have an account?{' '}
+                  <Link to="/auth" className="text-slate-900 font-bold hover:underline">
+                    Sign in
+                  </Link>
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ══════════════════════════════════════════════════════════════════
+            STEP 2: TELL US ABOUT YOUR COMPANY
+            ══════════════════════════════════════════════════════════════════ */}
+        {step === 2 && (
+          <div>
+            <div className="text-center mb-6">
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-2">
+                Tell us about your company
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-500 max-w-sm mx-auto leading-relaxed">
+                Help us personalize your account and setup by providing a few details about where you work.
+              </p>
+            </div>
+
+            <div className="bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-7 shadow-sm">
+              <form onSubmit={handleStep2Submit} className="space-y-4">
+                
+                {/* Company Name */}
                 <div>
-                  <label htmlFor="su-email" className="block text-xs font-medium text-slate-700 mb-1.5">
-                    Work email
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Company name <span className="text-rose-500">*</span>
                   </label>
                   <input
-                    id="su-email"
+                    type="text"
+                    value={form.workspace}
+                    onChange={set('workspace')}
+                    placeholder="Company name"
+                    autoFocus
+                    required
+                    className={`w-full px-4 py-2.5 text-sm rounded-xl border ${
+                      fieldErrors.workspace ? 'border-rose-400 bg-rose-50/20 ring-2 ring-rose-100' : 'border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100'
+                    } transition-all text-slate-900 bg-white placeholder:text-slate-400 outline-none`}
+                  />
+                </div>
+
+                {/* Company Website */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Company website
+                  </label>
+                  <input
+                    type="text"
+                    value={form.website}
+                    onChange={set('website')}
+                    placeholder="https://yourcompany.com"
+                    className="w-full px-4 py-2.5 text-sm rounded-xl border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all text-slate-900 bg-white placeholder:text-slate-400 outline-none"
+                  />
+                </div>
+
+                {/* Company Size */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Company size <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={form.companySize}
+                      onChange={set('companySize')}
+                      required
+                      className={`w-full px-4 py-2.5 text-sm rounded-xl border ${
+                        fieldErrors.companySize ? 'border-rose-400 bg-rose-50/20 ring-2 ring-rose-100' : 'border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100'
+                      } transition-all text-slate-900 bg-white appearance-none pr-10 cursor-pointer outline-none`}
+                    >
+                      <option value="" disabled>Select</option>
+                      {COMPANY_SIZE_OPTIONS.map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="w-4 h-4 text-slate-500 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  </div>
+                </div>
+
+                {/* Industry Dropdown */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Industry <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={form.industry}
+                      onChange={set('industry')}
+                      required
+                      className={`w-full px-4 py-2.5 text-sm rounded-xl border ${
+                        fieldErrors.industry ? 'border-rose-400 bg-rose-50/20 ring-2 ring-rose-100' : 'border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100'
+                      } transition-all text-slate-900 bg-white appearance-none pr-10 cursor-pointer outline-none`}
+                    >
+                      <option value="" disabled>Select industry</option>
+                      {INDUSTRY_OPTIONS.map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="w-4 h-4 text-slate-500 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  </div>
+                </div>
+
+                {/* Custom 'Other' Industry Tag Field */}
+                {form.industry === 'other' && (
+                  <div className="pt-1 animate-in fade-in slide-in-from-top-1 duration-150">
+                    <label className="block text-xs font-semibold text-blue-700 mb-1.5">
+                      Specify Industry / Tag <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={form.customIndustry}
+                      onChange={set('customIndustry')}
+                      placeholder="e.g. EdTech, Biotech, Clean Energy, Legal Services..."
+                      autoFocus
+                      required
+                      className={`w-full px-4 py-2.5 text-sm rounded-xl border ${
+                        fieldErrors.customIndustry ? 'border-rose-400 bg-rose-50/20 ring-2 ring-rose-100' : 'border-blue-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100'
+                      } transition-all text-slate-900 bg-blue-50/20 placeholder:text-slate-400 outline-none`}
+                    />
+                  </div>
+                )}
+
+                <div className="pt-2 flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setStep(1)}
+                    className="py-3.5 px-6 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm transition-all cursor-pointer"
+                  >
+                    Back
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="flex-1 py-3.5 px-6 rounded-full bg-[#f1f3f5] hover:bg-slate-900 hover:text-white text-slate-700 font-semibold text-sm transition-all duration-200 cursor-pointer flex items-center justify-center gap-2 shadow-sm active:scale-[0.99]"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>{isGoogleOnboarding ? 'Completing setup...' : 'Saving...'}</span>
+                      </>
+                    ) : (
+                      <span>{isGoogleOnboarding ? 'Complete setup' : 'Next'}</span>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* ══════════════════════════════════════════════════════════════════
+            STEP 3: ADMINISTRATOR ACCOUNT (Direct Email Registration only)
+            ══════════════════════════════════════════════════════════════════ */}
+        {step === 3 && (
+          <div>
+            <div className="text-center mb-6">
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-2">
+                Administrator Account
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-500 max-w-sm mx-auto leading-relaxed">
+                Create your primary administrative login to manage {form.workspace || 'your organization'}.
+              </p>
+            </div>
+
+            <div className="bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-7 shadow-sm">
+              <form onSubmit={handleEmailSignupSubmit} className="space-y-4">
+                {/* Full Name */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Your full name <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={form.fullName}
+                    onChange={set('fullName')}
+                    placeholder="e.g. Alex Morgan"
+                    autoFocus
+                    required
+                    className={`w-full px-4 py-2.5 text-sm rounded-xl border ${
+                      fieldErrors.fullName ? 'border-rose-400 bg-rose-50/20 ring-2 ring-rose-100' : 'border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100'
+                    } transition-all text-slate-900 bg-white placeholder:text-slate-400 outline-none`}
+                  />
+                </div>
+
+                {/* Work Email */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Work email <span className="text-rose-500">*</span>
+                  </label>
+                  <input
                     type="email"
                     value={form.email}
                     onChange={set('email')}
-                    onBlur={blur('email')}
-                    placeholder="you@company.com"
-                    autoComplete="email"
-                    aria-invalid={touched.email && !emailValid}
-                    aria-describedby={touched.email && !emailValid ? 'su-email-error' : undefined}
-                    className={`w-full px-3 py-2 text-sm border rounded-lg bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 transition-colors ${
-                      touched.email && !emailValid
-                        ? 'border-red-300 focus:ring-red-500/20 focus:border-red-400'
-                        : 'border-slate-200 focus:ring-blue-500/20 focus:border-blue-500'
-                    }`}
+                    placeholder="alex@company.com"
+                    required
+                    className={`w-full px-4 py-2.5 text-sm rounded-xl border ${
+                      fieldErrors.email ? 'border-rose-400 bg-rose-50/20 ring-2 ring-rose-100' : 'border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100'
+                    } transition-all text-slate-900 bg-white placeholder:text-slate-400 outline-none`}
                   />
-                  {touched.email && !emailValid && (
-                    <p id="su-email-error" className="mt-1 text-xs text-red-600">Enter a valid email address.</p>
-                  )}
                 </div>
 
-                {/* 5. Password */}
+                {/* Password */}
                 <div>
-                  <label htmlFor="su-password" className="block text-xs font-medium text-slate-700 mb-1.5">
-                    Password
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Password <span className="text-rose-500">*</span>
                   </label>
                   <div className="relative">
                     <input
-                      id="su-password"
                       type={showPassword ? 'text' : 'password'}
                       value={form.password}
                       onChange={set('password')}
-                      onBlur={blur('password')}
-                      placeholder="Create a password"
-                      autoComplete="new-password"
-                      aria-invalid={touched.password && !passwordValid}
-                      aria-describedby="su-password-req"
-                      className={`w-full px-3 py-2 pr-10 text-sm border rounded-lg bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 transition-colors ${
-                        touched.password && !passwordValid
-                          ? 'border-red-300 focus:ring-red-500/20 focus:border-red-400'
-                          : 'border-slate-200 focus:ring-blue-500/20 focus:border-blue-500'
-                      }`}
+                      placeholder="At least 6 characters"
+                      required
+                      className={`w-full px-4 py-2.5 pr-10 text-sm rounded-xl border ${
+                        fieldErrors.password ? 'border-rose-400 bg-rose-50/20 ring-2 ring-rose-100' : 'border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100'
+                      } transition-all text-slate-900 bg-white placeholder:text-slate-400 outline-none`}
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(v => !v)}
-                      aria-label={showPassword ? 'Hide password' : 'Show password'}
-                      aria-pressed={showPassword}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
                     >
-                      {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
-                  <p id="su-password-req" className="mt-1.5 text-xs flex items-center gap-1.5">
-                    <Check size={12} className={passwordValid ? 'text-green-500' : 'text-slate-300'} />
-                    <span className={passwordValid ? 'text-slate-600' : 'text-slate-400'}>
-                      At least 6 characters
-                    </span>
-                  </p>
                 </div>
-              </>
-            )}
 
-            {/* Primary CTA */}
-            <button
-              type="submit"
-              disabled={!canSubmit}
-              className="w-full py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 mt-6"
-            >
-              {loading ? (
-                <>
-                  <Loader2 size={15} className="animate-spin" />
-                  <span>Creating workspace…</span>
-                </>
-              ) : (
-                <span>Create workspace</span>
-              )}
-            </button>
-          </form>
+                <div className="pt-2 flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setStep(2)}
+                    className="py-3.5 px-6 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm transition-all cursor-pointer"
+                  >
+                    Back
+                  </button>
 
-          {/* Legal / Trust Microcopy */}
-          <p className="text-center text-xs text-slate-400 mt-4 leading-relaxed">
-            By creating an account, you agree to SMBFlow's Terms and Privacy Policy.
-          </p>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="flex-1 py-3.5 px-6 rounded-full bg-slate-900 hover:bg-slate-800 text-white font-semibold text-sm transition-all duration-200 cursor-pointer flex items-center justify-center gap-2 shadow-sm active:scale-[0.99]"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Creating account...</span>
+                      </>
+                    ) : (
+                      <span>Create my account</span>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
-          {/* Sign-in Link */}
-          {!isGoogleOnboarding && (
-            <p className="text-center text-sm text-slate-500 mt-6 pt-4 border-t border-slate-100">
-              Already have an account?{' '}
-              <Link to="/auth" className="font-medium text-blue-600 hover:text-blue-700">
-                Sign in
-              </Link>
-            </p>
-          )}
-        </div>
-
-        <p className="text-center text-xs text-slate-400 mt-4">
-          SMBFlow — AI Workflow Orchestration for SMBs
-        </p>
       </div>
     </div>
   )

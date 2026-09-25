@@ -5,7 +5,7 @@ import {
   CreditCard, FileSearch, LayoutDashboard, Users,
   Activity, LogOut, Building2, GitBranch, FileText, Cpu,
   ShieldAlert, ReceiptText, BarChart3, Layers, Zap,
-  GitMerge, AlertTriangle,
+  GitMerge, AlertTriangle, User,
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 
@@ -29,7 +29,7 @@ const ownerNav = [
   {
     title: 'Settings',
     items: [
-      { label: 'General',          to: '/settings/general', icon: Settings },
+      { label: 'Profile',          to: '/settings/general', icon: User },
       { label: 'Budget & Billing', to: '/budget',           icon: CreditCard },
       { label: 'Evidence',         to: '/evidence',         icon: FileSearch },
     ],
@@ -121,6 +121,7 @@ export function Sidebar({ isAdmin = false, getBadge, onNavClick }) {
   const displayName = user?.full_name || user?.email || 'Account'
   const initials = displayName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
   const displayRole = isAdmin ? 'Platform Admin' : 'SMB Owner'
+  const avatarUrl = user?.avatar_url || (user?.id ? localStorage.getItem(`avatar_${user.id}`) : null) || localStorage.getItem('smbflow_avatar')
 
   return (
     <aside className="w-[220px] shrink-0 flex flex-col bg-white border-r border-slate-200 h-full">
@@ -178,20 +179,33 @@ export function Sidebar({ isAdmin = false, getBadge, onNavClick }) {
       </nav>
 
       {/* User + logout */}
-      <div className="border-t border-slate-100 px-3 py-3">
-        <div className="flex items-center gap-2.5 px-2 py-2 rounded-lg">
-          <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center shrink-0">
-            <span className="text-[10px] font-semibold text-white">{initials}</span>
+      <div className="border-t border-slate-100 dark:border-slate-800 px-3 py-3">
+        <div className="flex items-center gap-2 px-2 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+          <div
+            onClick={() => navigate('/settings/general')}
+            className="flex items-center gap-2.5 flex-1 min-w-0 cursor-pointer group"
+            title="Click to view and edit profile"
+          >
+            <div className="w-7 h-7 rounded-full bg-blue-600 overflow-hidden flex items-center justify-center shrink-0 group-hover:ring-2 group-hover:ring-blue-400 transition-all">
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-[10px] font-semibold text-white">{initials}</span>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                {displayName}
+              </p>
+              <p className="text-[10px] text-slate-400 truncate">{displayRole}</p>
+            </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-slate-900 truncate">{displayName}</p>
-            <p className="text-[10px] text-slate-400 truncate">{displayRole}</p>
-          </div>
+
           <button
             onClick={handleLogout}
             title="Sign out"
             aria-label="Sign out"
-            className="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-red-500 transition-colors rounded"
+            className="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-red-500 transition-colors rounded cursor-pointer"
           >
             <LogOut size={13} />
           </button>
