@@ -259,9 +259,11 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://localhost:5173",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:5173",
         "https://smb-flow.vercel.app",
     ],
-    allow_origin_regex=r"https://.*\.vercel\.app",
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1|.*\.vercel\.app)(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -1066,12 +1068,17 @@ async def startup_demo(background_tasks: BackgroundTasks, db: AsyncSession = Dep
 async def health_check(db: AsyncSession = Depends(get_db)):
     llm_providers = {}
     for provider, key_env in [
-        ("anthropic", "ANTHROPIC_API_KEY"), ("openai", "OPENAI_API_KEY"),
-        ("google", "GOOGLE_API_KEY"), ("groq", "GROQ_API_KEY"),
+        ("anthropic", "ANTHROPIC_API_KEY"),
+        ("openai", "OPENAI_API_KEY"),
+        ("google", "GOOGLE_API_KEY"),
+        ("google_ai", "GOOGLE_API_KEY"),
+        ("groq", "GROQ_API_KEY"),
+        ("pollinations", "POLLINATIONS_API_KEY"),
+        ("huggingface", "HUGGINGFACE_API_KEY"),
     ]:
-        key_val = os.getenv(key_env, "")
+        key_val = os.getenv(key_env, "") or (os.getenv("GEMINI_API_KEY", "") if "google" in provider else "")
         token_val = os.getenv(provider.upper() + "_AUTH_TOKEN", "")
-        if (key_val and len(key_val) > 8) or token_val:
+        if (key_val and len(key_val) > 8 and not key_val.startswith("YOUR_")) or token_val:
             llm_providers[provider] = {"status": "configured"}
         else:
             llm_providers[provider] = {"status": "not_configured"}

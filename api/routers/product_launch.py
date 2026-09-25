@@ -405,12 +405,12 @@ async def create_product_launch_campaign(
     )
     db.add(wf_instance)
 
-    # Build 2-3 CORE VISUAL ASSETS at campaign level
+    # Build 2-3 CORE VISUAL ASSETS at campaign level with high-fidelity studio prompts
     core_visuals = [
         {
             "visual_id": "vis-hero-1",
             "visual_role": "Product Hero",
-            "visual_prompt": f"Modern, sleek hero graphic featuring {product_name} with vibrant gradient backdrop, highlighting {brief.get('primaryBenefit', short_desc)}.",
+            "visual_prompt": f"Photorealistic studio commercial product showcase of {product_name}, modern minimalist aesthetic, sleek lighting, 8k resolution, premium industrial design, highlighting {brief.get('primaryBenefit', short_desc)}.",
             "aspect_ratio": "16:9",
             "status": "pending_generation",
             "generation_model": "gemini-3.1-flash-image",
@@ -420,7 +420,7 @@ async def create_product_launch_campaign(
         {
             "visual_id": "vis-workflow-1",
             "visual_role": "Product / Workflow / Feature",
-            "visual_prompt": f"Clean UI workflow graphic showing {product_name} in action, solving {brief.get('customerProblem', 'team coordination')} effortlessly.",
+            "visual_prompt": f"Clean modern tech interface visualization showing {product_name} workflow execution, crisp UI elements, sleek dark studio backdrop, high-end SaaS product photography.",
             "aspect_ratio": "16:9",
             "status": "pending_generation",
             "generation_model": "gemini-3.1-flash-image",
@@ -430,7 +430,7 @@ async def create_product_launch_campaign(
         {
             "visual_id": "vis-problem-1",
             "visual_role": "Customer Problem / Founder Context",
-            "visual_prompt": f"High-contrast editorial graphic illustrating the daily struggle before {product_name}: {brief.get('customerProblem', 'disorganized workflow and missed deadlines')}.",
+            "visual_prompt": f"Sophisticated architectural editorial photograph illustrating clarity and seamless execution: replacing chaos with {product_name}, cinematic atmospheric lighting, hyperrealistic.",
             "aspect_ratio": "16:9",
             "status": "pending_generation",
             "generation_model": "gemini-3.1-flash-image",
@@ -469,7 +469,8 @@ WRITING STYLE RULES (STRICT):
    - Email: Personal, direct, 1-on-1 tone.
    - Facebook/Instagram: Visual storytelling, relatable.
 5. NEVER invent fake testimonials, false stats, pricing claims, or guarantees not in the brief.
-6. Keep emojis minimal (0-2 per post). Do NOT stuff hashtags (2-3 relevant hashtags max).
+6. ZERO EMOJIS: Do NOT use ANY emojis anywhere in the captions, headings, or hashtags. Keep text 100% clean, professional, and authentic.
+7. Keep hashtags minimal (2-3 relevant hashtags max per post).
 
 CONTENT ROLES:
 Classify each post into one of these exact roles:
@@ -768,6 +769,11 @@ Return ONLY JSON array format matching this schema:
         "visuals": core_visuals,
         "posts": created_posts_payload,
         "strategy_summary": strategy_summary,
+        "model_used": str(m_used),
+        "tokens_in": int(t_in),
+        "tokens_out": int(t_out),
+        "cost_usd": float(c_usd),
+        "agent_runs": evidence_data.get("agent_runs", []),
     }
 
 
@@ -1158,6 +1164,144 @@ async def delete_campaign_visual(
         "visual_id": visual_id,
         "status": "deleted",
         "visuals": context["visuals"],
+    }
+
+
+class ScheduleCalendarRequest(BaseModel):
+    post_ids: Optional[List[str]] = None
+    reminder_minutes: Optional[int] = 30
+    calendar_id: Optional[str] = "primary"
+
+
+@router.post("/campaign/{instance_id}/schedule-to-calendar")
+async def schedule_campaign_to_google_calendar(
+    instance_id: str,
+    req: Optional[ScheduleCalendarRequest] = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(require_any_auth),
+):
+    """
+    Schedule campaign posts into Google Calendar.
+    - If Google Workspace / Calendar OAuth credentials exist in ToolConnection, creates real events on Google Calendar.
+    - Generates one-click direct Google Calendar web template URLs with prefilled title, caption, hashtags, and scheduled dates.
+    """
+    import urllib.parse
+    from integrations.key_vault import decrypt_credentials
+    from integrations.connectors import GoogleWorkspaceConnector
+
+    try:
+        inst_uuid = uuid.UUID(instance_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid instance ID format")
+
+    stmt = select(WorkflowInstance).where(WorkflowInstance.id == inst_uuid)
+    res = await db.execute(stmt)
+    inst = res.scalar_one_or_none()
+
+    if not inst:
+        raise HTTPException(status_code=404, detail="Campaign workflow instance not found")
+
+    context = inst.context or {}
+    posts = context.get("posts", [])
+    brief = context.get("brief", {})
+    product_name = brief.get("productName") or "Product Launch"
+    launch_date = brief.get("launchDate") or datetime.utcnow().strftime("%Y-%m-%d")
+
+    # Check for connected Google Calendar / Workspace in ToolConnection
+    org_id = inst.organization_id
+    stmt_tools = select(ToolConnection).where(
+        ToolConnection.organization_id == org_id,
+        ToolConnection.tool_name.in_(["google_workspace", "google_calendar"])
+    )
+    res_tools = await db.execute(stmt_tools)
+    g_conn = res_tools.scalars().first()
+
+    scheduled_results = []
+    events_created = []
+    auth_error_encountered = False
+
+    for idx, post in enumerate(posts):
+        platform = post.get("platform", "Social")
+        caption = post.get("caption", "")
+        hashtags = " ".join(post.get("hashtags", []))
+        asset_url = post.get("generated_asset_url") or "Asset Staged in SMBFlow"
+
+        # Format start/end ISO timestamp
+        date_str = post.get("scheduledDate") or launch_date
+        time_str = post.get("scheduledTime") or "9:00 AM"
+
+        # Construct Google Calendar Web Direct Link (with title, description, time)
+        summary = f"[SMBFlow] {platform} Post: {product_name}"
+        details = f"{caption}\n\nHashtags: {hashtags}\nVisual Asset Link: {asset_url}\n\n---\nScheduled via SMBFlow Campaign Automation"
+        
+        # Approximate RFC 5545 date format for Google Calendar Web: YYYYMMDDTHHMMSSZ
+        try:
+            clean_date = date_str.replace("-", "")
+            web_dates = f"{clean_date}T090000Z/{clean_date}T093000Z"
+        except Exception:
+            web_dates = f"{datetime.utcnow().strftime('%Y%m%d')}T090000Z/{datetime.utcnow().strftime('%Y%m%d')}T093000Z"
+
+        web_calendar_url = f"https://calendar.google.com/calendar/render?action=TEMPLATE&text={urllib.parse.quote(summary)}&details={urllib.parse.quote(details)}&dates={web_dates}"
+
+        event_entry = {
+            "post_id": post.get("id") or f"post-{idx+1}",
+            "platform": platform,
+            "summary": summary,
+            "scheduled_time": f"{date_str} • {time_str}",
+            "web_calendar_url": web_calendar_url,
+            "status_label": "Ready",
+            "status": "scheduled",
+        }
+
+        # If live Google Workspace OAuth credentials are present, execute real API call
+        if g_conn and g_conn.status == "connected" and g_conn.encrypted_credentials:
+            try:
+                creds = decrypt_credentials(g_conn.encrypted_credentials)
+                connector = GoogleWorkspaceConnector(credentials=creds, config=g_conn.config or {})
+                start_iso = f"{date_str}T09:00:00Z"
+                end_iso = f"{date_str}T09:30:00Z"
+                api_event = await connector.schedule_event(
+                    summary=summary,
+                    description=details,
+                    start_iso=start_iso,
+                    end_iso=end_iso,
+                )
+                event_entry["google_event_id"] = api_event.get("id")
+                event_entry["status"] = "synced_to_google_calendar"
+                await connector.close()
+            except Exception as cal_err:
+                auth_error_encountered = True
+                log.warning("Google Calendar API call failed, using web template", error=str(cal_err))
+
+        scheduled_results.append(event_entry)
+
+    # Save to workflow instance context
+    context["calendar_events"] = scheduled_results
+    inst.context = context
+
+    # Record AuditEvent
+    audit = AuditEvent(
+        id=uuid.uuid4(),
+        organization_id=inst.organization_id,
+        actor_id=current_user.email,
+        action="product_launch_calendar_scheduled",
+        entity_type="WorkflowInstance",
+        entity_id=str(inst_uuid),
+        metadata_={"events_count": len(scheduled_results), "product_name": product_name},
+        created_at=datetime.utcnow(),
+    )
+    db.add(audit)
+    await db.commit()
+
+    return {
+        "success": True,
+        "instance_id": str(inst_uuid),
+        "calendar_connected": bool(g_conn and g_conn.status == "connected"),
+        "calendar_auth_required": bool(auth_error_encountered or not (g_conn and g_conn.status == "connected")),
+        "auth_error_message": "Google Calendar permissions required. Click Connect Google Calendar to enable direct background sync, or use the 1-click calendar links." if auth_error_encountered or not (g_conn and g_conn.status == "connected") else None,
+        "events": scheduled_results,
+        "primary_calendar_url": "https://calendar.google.com/calendar/u/0/r",
+        "message": f"Successfully prepared {len(scheduled_results)} Google Calendar schedule items with reminders.",
     }
 
 

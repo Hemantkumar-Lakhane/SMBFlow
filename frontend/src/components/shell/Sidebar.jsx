@@ -3,13 +3,14 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import {
   Inbox, Workflow, Plug, CreditCard, FileSearch, LayoutDashboard, Users,
   Activity, LogOut, Building2, GitBranch, FileText, Cpu,
-  ReceiptText, Layers, Zap, User, Cloud, Box, ChevronRight, Plus, Search, Terminal
+  ReceiptText, Layers, Zap, User, Cloud, Box, ChevronRight, Plus, Search,
+  Terminal, AlertTriangle, DollarSign, Receipt, Compass, Settings, ShieldCheck
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 
 // ── Primary Operations ────────────────────────────────────────────────────────
 const ownerPrimaryNav = [
-  { label: 'AI Assistant',  to: '/copilot',     icon: Terminal, badge: 'preview' },
+  { label: 'AI Assistant',  to: '/copilot',     icon: Terminal },
   { label: 'Dashboard',     to: '/dashboard',   icon: LayoutDashboard },
   { label: 'Action Center', to: '/escalations', icon: Inbox, badge: 'actions' },
   { label: 'Workflows',     to: '/workflows',   icon: Workflow },
@@ -27,37 +28,47 @@ const ownerSecondaryNav = [
 // ── Platform Admin navigation ─────────────────────────────────────────────────
 const adminNav = [
   {
-    title: 'Overview',
+    title: 'Platform Hub',
     items: [
-      { label: 'AI Assistant',      to: '/copilot', icon: Terminal, badge: 'preview' },
-      { label: 'Platform Overview', to: '/admin', icon: LayoutDashboard },
+      { label: 'Platform Overview',   to: '/admin',         icon: LayoutDashboard },
+      { label: 'Operations Copilot',  to: '/admin/copilot', icon: Terminal },
+      { label: 'System Health & Ops', to: '/admin/health',  icon: Activity },
     ],
   },
   {
-    title: 'Customers',
+    title: 'Customers & Tenancy',
     items: [
-      { label: 'Organizations', to: '/admin/organizations', icon: Building2 },
-      { label: 'Users',         to: '/admin/users',         icon: Users },
+      { label: 'Organizations',     to: '/admin/organizations', icon: Building2 },
+      { label: 'User Directory',    to: '/admin/users',         icon: Users },
+      { label: 'Security Audit Log',to: '/admin/audit',         icon: FileSearch },
+      { label: 'Error Exceptions',  to: '/admin/exceptions',    icon: AlertTriangle },
     ],
   },
   {
-    title: 'Workflows',
+    title: 'Multi-Agent Workflows',
     items: [
-      { label: 'Workflow Builder',    to: '/workflows/builder',            icon: Workflow },
-      { label: 'Workflow Catalog',    to: '/admin/workflows/catalog',     icon: Layers },
-      { label: 'Workflow Assignments',to: '/admin/workflows/assignments', icon: GitBranch },
-      { label: 'Workflow Runs',       to: '/admin/runs',                  icon: Zap },
+      { label: 'Workflow DAG Builder', to: '/workflows/builder',            icon: Workflow },
+      { label: 'Workflow Catalog',     to: '/admin/workflows/catalog',     icon: Layers },
+      { label: 'Workflow Assignments', to: '/admin/workflows/assignments', icon: GitBranch },
+      { label: 'Execution Runs',        to: '/admin/runs',                  icon: Zap },
     ],
   },
   {
-    title: 'Billing & Platform',
+    title: 'Billing & Quotas',
     items: [
-      { label: 'Plans & Pricing', to: '/admin/plans',         icon: CreditCard },
-      { label: 'Subscriptions',   to: '/admin/subscriptions', icon: ReceiptText },
-      { label: 'AI Providers',    to: '/admin/providers',     icon: Plug },
-      { label: 'Models',          to: '/admin/models',        icon: Cpu },
-      { label: 'System Health',   to: '/admin/health',        icon: Activity },
-      { label: 'Profile Settings',to: '/settings/general',    icon: User, hasArrow: true },
+      { label: 'Plans & Pricing',      to: '/admin/plans',         icon: CreditCard },
+      { label: 'Subscriptions',        to: '/admin/subscriptions', icon: ReceiptText },
+      { label: 'Usage & Cost Meter',   to: '/admin/usage',         icon: DollarSign },
+      { label: 'Customer Invoices',    to: '/admin/invoices',      icon: Receipt },
+    ],
+  },
+  {
+    title: 'AI Fleet & Infrastructure',
+    items: [
+      { label: 'AI Providers',        to: '/admin/providers', icon: Plug },
+      { label: 'Model Catalog',       to: '/admin/models',    icon: Cpu },
+      { label: 'Dynamic LLM Routing', to: '/admin/routing',   icon: Compass },
+      { label: 'Platform Settings',   to: '/admin/settings',  icon: Settings },
     ],
   },
 ]
@@ -92,7 +103,7 @@ export function Sidebar({ isAdmin = false, getBadge, onNavClick }) {
       {/* ── Brand / Logo Header ────────────────────────────────────────────── */}
       <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-100 dark:border-[#233048]">
         <div
-          onClick={() => navigate(isAdmin ? '/admin' : '/copilot')}
+          onClick={() => navigate(isAdmin ? '/admin/copilot' : '/copilot')}
           className="flex items-center gap-2.5 cursor-pointer group"
         >
           {/* Clean enterprise logo mark */}
@@ -204,8 +215,8 @@ export function Sidebar({ isAdmin = false, getBadge, onNavClick }) {
                     )}
 
                     {count > 0 && (
-                      <span className="min-w-[18px] h-[18px] flex items-center justify-center px-1 bg-red-500 text-white text-[10px] rounded-full font-bold">
-                        {count > 99 ? '99+' : count}
+                      <span className="min-w-[18px] h-[18px] flex items-center justify-center px-1.5 bg-blue-600 text-white text-[10px] rounded-full font-bold">
+                        {count}
                       </span>
                     )}
                   </NavLink>

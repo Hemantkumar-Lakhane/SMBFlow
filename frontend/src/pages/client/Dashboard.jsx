@@ -51,8 +51,8 @@ function KpiCard({ title, icon, value, sub, chart, highlight }) {
   )
 }
 
-// ── Timeline Item Component ───────────────────────────────────────────────────
-function TimelineItem({ run, isLast }) {
+// ── Timeline Item Component (Clickable Direct Navigation) ────────────────────
+function TimelineItem({ run, isLast, onNavigate }) {
   const isCompleted = run.status === 'completed' || run.status === 'WorkflowStatus.COMPLETED'
   const isRunning   = run.status === 'running'
   const isEscalated = run.status === 'escalated' || run.status === 'pending' || run.status === 'pending_a2a'
@@ -76,17 +76,43 @@ function TimelineItem({ run, isLast }) {
     badge = <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-[#182234] px-2 py-0.5 rounded-full">{run.status}</span>
   }
 
+  function handleClick() {
+    const rawKey = (run.workflow_name || run.name || '').toLowerCase()
+    if (rawKey.includes('launch') || rawKey.includes('product')) {
+      onNavigate('/workflows/product_launch')
+    } else if (rawKey.includes('email') || rawKey.includes('gmail') || rawKey.includes('inbox') || rawKey.includes('summariz')) {
+      onNavigate('/workflows/email_summarizer')
+    } else if (rawKey.includes('invoice') || rawKey.includes('bill')) {
+      onNavigate('/workflows/invoice_processing')
+    } else if (rawKey.includes('churn') || rawKey.includes('finance')) {
+      onNavigate('/workflows/finance_operations')
+    } else {
+      onNavigate('/workflows')
+    }
+  }
+
   return (
-    <div className="relative flex gap-3.5">
-      {!isLast && <div className="absolute left-[7px] top-6 bottom-0 w-px bg-slate-200 dark:bg-[#233048]" />}
+    <div
+      onClick={handleClick}
+      className="relative flex gap-3.5 group cursor-pointer -mx-2 px-2 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-[#182234] transition-all"
+    >
+      {!isLast && <div className="absolute left-[15px] top-7 bottom-0 w-px bg-slate-200 dark:bg-[#233048]" />}
       <div className="w-4 h-4 mt-0.5 shrink-0 bg-white dark:bg-[#121826] z-10">{icon}</div>
-      <div className="flex-1 pb-5">
-        <div className="flex items-start justify-between gap-3 mb-0.5">
-          <p className="text-xs font-bold text-slate-900 dark:text-slate-100">{run.name || run.workflow_name}</p>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between gap-3 mb-0.5">
+          <p className="text-xs font-bold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate">
+            {run.name || run.workflow_name}
+          </p>
           {badge}
         </div>
-        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{run.description || run.workflow_name}</p>
-        <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 font-mono">{timeAgo(run.timestamp || run.started_at)}</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{run.description || run.workflow_name}</p>
+        <div className="flex items-center justify-between mt-1">
+          <p className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">{timeAgo(run.timestamp || run.started_at)}</p>
+          <span className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
+            <span>Open Pipeline</span>
+            <ArrowRight size={10} />
+          </span>
+        </div>
       </div>
     </div>
   )
@@ -287,7 +313,7 @@ export default function Dashboard() {
             ) : (
               <div className="pt-2">
                 {activity.map((run, i) => (
-                  <TimelineItem key={run.id || i} run={run} isLast={i === activity.length - 1} />
+                  <TimelineItem key={run.id || i} run={run} isLast={i === activity.length - 1} onNavigate={navigate} />
                 ))}
               </div>
             )}

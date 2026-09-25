@@ -1,5 +1,4 @@
 // AdminInvoices — Platform Invoice Ledger
-// Data from: GET /api/v1/admin/invoices
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import {
   FileText, RefreshCw, Search, XCircle, ExternalLink,
@@ -10,19 +9,19 @@ import { useNavigate } from 'react-router-dom'
 import { EmptyState } from '../../components/ui'
 
 const STATUS_META = {
-  draft:           { label: 'Draft',          cls: 'bg-slate-100 text-slate-500',    icon: Clock       },
-  open:            { label: 'Open',           cls: 'bg-blue-100 text-blue-700',      icon: AlertCircle },
-  paid:            { label: 'Paid',           cls: 'bg-emerald-100 text-emerald-700',icon: CheckCircle2},
-  void:            { label: 'Void',           cls: 'bg-slate-100 text-slate-400',    icon: Ban         },
-  uncollectible:   { label: 'Uncollectible',  cls: 'bg-red-100 text-red-700',        icon: XCircle     },
+  draft:           { label: 'Draft',          cls: 'bg-slate-500/10 text-slate-500 dark:text-slate-400 border border-slate-500/20',    icon: Clock       },
+  open:            { label: 'Open',           cls: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20',      icon: AlertCircle },
+  paid:            { label: 'Paid',           cls: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20',icon: CheckCircle2},
+  void:            { label: 'Void',           cls: 'bg-slate-500/10 text-slate-400 border border-slate-500/20',    icon: Ban         },
+  uncollectible:   { label: 'Uncollectible',  cls: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20',        icon: XCircle     },
 }
 
 function StatusBadge({ status }) {
-  const m = STATUS_META[status] || { label: status, cls: 'bg-slate-100 text-slate-500', icon: AlertCircle }
+  const m = STATUS_META[status] || { label: status, cls: 'bg-slate-500/10 text-slate-500 dark:text-slate-400 border border-slate-500/20', icon: AlertCircle }
   const Icon = m.icon
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold ${m.cls}`}>
-      <Icon size={10} />{m.label}
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${m.cls}`}>
+      <Icon size={11} />{m.label}
     </span>
   )
 }
@@ -78,40 +77,43 @@ export default function AdminInvoices() {
   }), [invoices])
 
   return (
-    <div className="flex flex-col gap-5 p-6 min-h-full bg-slate-50">
+    <div className="flex flex-col gap-6 p-6 min-h-full bg-slate-50 dark:bg-[#0b0f17] text-slate-900 dark:text-slate-100 transition-colors">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">Invoices</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
+          <h1 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <FileText className="text-blue-500" size={22} />
+            Invoices
+          </h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
             {loading ? '…' : `${invoices.length} invoice${invoices.length !== 1 ? 's' : ''}`}
           </p>
         </div>
         <button onClick={load} disabled={loading}
-          className="p-2 rounded-lg text-slate-500 bg-white border border-slate-200 hover:bg-slate-50 transition-colors disabled:opacity-50">
+          className="p-2 rounded-xl text-slate-500 dark:text-slate-400 bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] hover:bg-slate-50 dark:hover:bg-[#162030] transition-colors disabled:opacity-50">
           <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
         </button>
       </div>
 
       {/* Summary cards */}
       {!loading && !error && (
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
-            { label: 'Open AR',     value: fmtUSD(totals.open),      sub: `${totals.openCount} invoice${totals.openCount !== 1 ? 's' : ''}`, cls: 'text-blue-600' },
-            { label: 'Collected',   value: fmtUSD(totals.paid),       sub: `${invoices.filter(i => i.status === 'paid').length} paid`,       cls: 'text-emerald-600' },
-            { label: 'Total',       value: invoices.length.toString(), sub: 'all time',                                                         cls: 'text-slate-700' },
+            { label: 'Open AR',     value: fmtUSD(totals.open),      sub: `${totals.openCount} invoice${totals.openCount !== 1 ? 's' : ''}`, cls: 'text-blue-600 dark:text-blue-400' },
+            { label: 'Collected',   value: fmtUSD(totals.paid),       sub: `${invoices.filter(i => i.status === 'paid').length} paid`,       cls: 'text-emerald-600 dark:text-emerald-400' },
+            { label: 'Total Invoiced', value: invoices.length.toString(), sub: 'All-time platform ledger',                                           cls: 'text-slate-800 dark:text-slate-200' },
           ].map(c => (
-            <div key={c.label} className="bg-white border border-slate-200 rounded-xl p-4">
-              <p className={`text-xl font-bold ${c.cls}`}>{c.value}</p>
-              <p className="text-xs text-slate-500 mt-0.5">{c.label}</p>
-              <p className="text-[11px] text-slate-400">{c.sub}</p>
+            <div key={c.label} className="bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-2xl p-5 shadow-2xs">
+              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">{c.label}</p>
+              <p className={`text-2xl font-bold ${c.cls}`}>{c.value}</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 font-medium">{c.sub}</p>
             </div>
           ))}
         </div>
       )}
 
       {error && (
-        <div className="flex items-center gap-2 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+        <div className="flex items-center gap-2 px-4 py-3 bg-red-500/10 border border-red-500/20 rounded-xl text-sm text-red-600 dark:text-red-400">
           <XCircle size={15} className="shrink-0" />{error}
         </div>
       )}
@@ -122,10 +124,10 @@ export default function AdminInvoices() {
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
           <input type="text" placeholder="Search by organization or invoice #…" value={search}
             onChange={e => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" />
+            className="w-full pl-9 pr-3 py-2 text-sm bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] text-slate-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 placeholder-slate-400" />
         </div>
         <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-          className="px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none">
+          className="px-3 py-2 text-sm bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] text-slate-900 dark:text-white rounded-xl focus:outline-none">
           <option value="all">All statuses</option>
           {Object.entries(STATUS_META).map(([v, m]) => (
             <option key={v} value={v}>{m.label}</option>
@@ -135,44 +137,46 @@ export default function AdminInvoices() {
 
       {/* Table */}
       {loading ? (
-        <div className="flex items-center justify-center h-48 text-slate-400 text-sm">Loading…</div>
+        <div className="flex items-center justify-center h-48 text-slate-400 text-sm">Loading invoices…</div>
       ) : filtered.length === 0 ? (
         <EmptyState icon={FileText} title="No invoices found"
           description={search || filterStatus !== 'all' ? 'Try a different filter.' : 'Invoices will appear here once billing periods close.'} />
       ) : (
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/60">
-                {['Invoice #', 'Organization', 'Status', 'Subtotal', 'Tax', 'Total', 'Due Date', 'Paid At'].map(h => (
-                  <th key={h} className="px-5 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filtered.map(inv => (
-                <tr key={inv.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-5 py-3.5">
-                    <span className="font-mono text-xs text-slate-700">{inv.invoice_number || inv.id?.slice(0, 8)}</span>
-                  </td>
-                  <td className="px-5 py-3.5">
-                    <button
-                      onClick={() => navigate(`/admin/organizations/${inv.organization_id}`)}
-                      className="text-sm font-semibold text-blue-600 hover:underline text-left"
-                    >
-                      {inv.organization_name || 'Unknown'}
-                    </button>
-                  </td>
-                  <td className="px-5 py-3.5"><StatusBadge status={inv.status} /></td>
-                  <td className="px-5 py-3.5 text-xs text-slate-600 font-mono">{fmtUSD(inv.subtotal_usd)}</td>
-                  <td className="px-5 py-3.5 text-xs text-slate-500 font-mono">{fmtUSD(inv.tax_usd)}</td>
-                  <td className="px-5 py-3.5 text-sm font-semibold text-slate-800 font-mono">{fmtUSD(inv.total_usd)}</td>
-                  <td className="px-5 py-3.5 text-xs text-slate-500">{fmt(inv.due_date)}</td>
-                  <td className="px-5 py-3.5 text-xs text-slate-500">{fmt(inv.paid_at)}</td>
+        <div className="bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-2xl overflow-hidden shadow-2xs">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-100 dark:border-[#1e2a3f] bg-slate-50/70 dark:bg-[#162030]/60">
+                  {['Invoice #', 'Organization', 'Status', 'Subtotal', 'Tax', 'Total', 'Due Date', 'Paid At'].map(h => (
+                    <th key={h} className="px-5 py-3 text-left text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-[#1a2336]">
+                {filtered.map(inv => (
+                  <tr key={inv.id} className="hover:bg-slate-50/60 dark:hover:bg-[#162030]/50 transition-colors">
+                    <td className="px-5 py-3.5">
+                      <span className="font-mono text-xs font-semibold text-slate-700 dark:text-slate-300">{inv.invoice_number || inv.id?.slice(0, 8)}</span>
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <button
+                        onClick={() => navigate(`/admin/organizations/${inv.organization_id}`)}
+                        className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline text-left"
+                      >
+                        {inv.organization_name || 'Unknown'}
+                      </button>
+                    </td>
+                    <td className="px-5 py-3.5"><StatusBadge status={inv.status} /></td>
+                    <td className="px-5 py-3.5 text-xs text-slate-600 dark:text-slate-400 font-mono">{fmtUSD(inv.subtotal_usd)}</td>
+                    <td className="px-5 py-3.5 text-xs text-slate-500 dark:text-slate-400 font-mono">{fmtUSD(inv.tax_usd)}</td>
+                    <td className="px-5 py-3.5 text-sm font-bold text-slate-900 dark:text-white font-mono">{fmtUSD(inv.total_usd)}</td>
+                    <td className="px-5 py-3.5 text-xs text-slate-500 dark:text-slate-400">{fmt(inv.due_date)}</td>
+                    <td className="px-5 py-3.5 text-xs text-slate-500 dark:text-slate-400">{fmt(inv.paid_at)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

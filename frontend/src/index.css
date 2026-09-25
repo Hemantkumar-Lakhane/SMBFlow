@@ -113,6 +113,16 @@
    UTILITY LAYER
    ============================================= */
 @layer utilities {
+  /* Dot Grid Canvas Background */
+  .bg-dot-pattern {
+    background-image: radial-gradient(rgba(148, 163, 184, 0.28) 1.2px, transparent 1.2px);
+    background-size: 24px 24px;
+  }
+  .dark .bg-dot-pattern {
+    background-image: radial-gradient(rgba(255, 255, 255, 0.12) 1.2px, transparent 1.2px);
+    background-size: 24px 24px;
+  }
+
   /* Glass morphism */
   .glass {
     background: rgba(var(--bg-elevated), 0.72);
@@ -182,9 +192,15 @@
   }
 
   /* Dot grid pattern overlay */
+  .bg-dot-pattern,
   .bg-dot-grid {
-    background-image: radial-gradient(circle, rgba(var(--c-primary),0.08) 1px, transparent 1px);
-    background-size: 24px 24px;
+    background-image: radial-gradient(rgba(148, 163, 184, 0.22) 1.25px, transparent 1.25px);
+    background-size: 20px 20px;
+  }
+  .dark .bg-dot-pattern,
+  .dark .bg-dot-grid {
+    background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1.25px, transparent 1.25px);
+    background-size: 20px 20px;
   }
 
   /* Line grid pattern */

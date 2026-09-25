@@ -16,6 +16,7 @@ import { Spinner }        from './components/ui'
 
 // ── Platform Admin pages ───────────────────────────────────────────────────────
 import AdminPlatformOverview    from './pages/admin/AdminPlatformOverview'
+import AdminAssistant           from './pages/admin/AdminAssistant'
 // CUSTOMERS
 import AdminOrganizations       from './pages/admin/AdminOrganizations'
 import AdminOrgDetail           from './pages/admin/AdminOrgDetail'
@@ -45,6 +46,7 @@ import ConnectionsPage     from './pages/setup/ConnectionsPage'
 import CasesPage           from './pages/medical/CasesPage'
 import EmailSummarizerPage from './pages/client/EmailSummarizerPage'
 import ProductLaunchPage   from './pages/client/ProductLaunchPage'
+import UniversalWorkflowRunner from './pages/client/UniversalWorkflowRunner'
 import Dashboard           from './pages/client/Dashboard'
 import CopilotPage         from './pages/client/CopilotPage'
 import EscalationsPage     from './pages/client/EscalationsPage'
@@ -98,7 +100,7 @@ function HomeRedirect() {
   if (!token || !user) return <LandingPage />
   if (user.requires_onboarding) return <Navigate to="/auth/signup" replace />
   const isAdmin = user.role === 'super_admin' || user.role === 'platform_admin'
-  return <Navigate to={isAdmin ? '/admin' : '/copilot'} replace />
+  return <Navigate to={isAdmin ? '/admin/copilot' : '/copilot'} replace />
 }
 
 function ProtectedRoute({ children, adminOnly = false }) {
@@ -132,7 +134,8 @@ function AppRoutes() {
       <Route path="/" element={<HomeRedirect />} />
 
       {/* ── Platform Admin — OVERVIEW ─────────────────────────────────────── */}
-      <Route path="/admin" element={<Wrap adminOnly><AdminPlatformOverview /></Wrap>} />
+      <Route path="/admin"         element={<Wrap adminOnly><AdminPlatformOverview /></Wrap>} />
+      <Route path="/admin/copilot" element={<Wrap adminOnly><AdminAssistant /></Wrap>} />
 
       {/* ── Platform Admin — CUSTOMERS ───────────────────────────────────── */}
       <Route path="/admin/organizations"        element={<Wrap adminOnly><AdminOrganizations /></Wrap>} />
@@ -170,12 +173,22 @@ function AppRoutes() {
       <Route path="/workflows"    element={<Wrap><WorkflowsPage /></Wrap>} />
       <Route path="/medical/cases" element={<Wrap><CasesPage /></Wrap>} />
 
-      {/* Workflow run pages */}
-      <Route path="/workflows/email_summarizer"      element={<Wrap><EmailSummarizerPage /></Wrap>} />
-      <Route path="/email-summarizer"                element={<Wrap><EmailSummarizerPage /></Wrap>} />
-      <Route path="/workflows/product_launch"        element={<Wrap><ProductLaunchPage /></Wrap>} />
-      <Route path="/workflows/product_launch_sprint" element={<Wrap><ProductLaunchPage /></Wrap>} />
-      <Route path="/product-launch"                  element={<Wrap><ProductLaunchPage /></Wrap>} />
+      {/* Dynamic & Universal Workflow Active Canvas Runners */}
+      <Route path="/workflows/product_launch"            element={<Wrap><UniversalWorkflowRunner /></Wrap>} />
+      <Route path="/workflows/product_launch_sprint"     element={<Wrap><UniversalWorkflowRunner /></Wrap>} />
+      <Route path="/workflows/invoice_processing"        element={<Wrap><UniversalWorkflowRunner /></Wrap>} />
+      <Route path="/workflows/invoice_extractor"         element={<Wrap><UniversalWorkflowRunner /></Wrap>} />
+      <Route path="/workflows/lead_scoring"              element={<Wrap><UniversalWorkflowRunner /></Wrap>} />
+      <Route path="/workflows/lead_enrichment_crm"       element={<Wrap><UniversalWorkflowRunner /></Wrap>} />
+      <Route path="/workflows/finance_operations"        element={<Wrap><UniversalWorkflowRunner /></Wrap>} />
+      <Route path="/workflows/telegram_customer_agent"   element={<Wrap><UniversalWorkflowRunner /></Wrap>} />
+      <Route path="/workflows/devops_alert_triage"       element={<Wrap><UniversalWorkflowRunner /></Wrap>} />
+      <Route path="/workflows/medical_journey_operations" element={<Wrap><UniversalWorkflowRunner /></Wrap>} />
+      <Route path="/workflows/email_summarizer"          element={<Wrap><UniversalWorkflowRunner /></Wrap>} />
+      <Route path="/workflows/run/:runId"                element={<Wrap><UniversalWorkflowRunner /></Wrap>} />
+      <Route path="/workflows/run"                       element={<Wrap><UniversalWorkflowRunner /></Wrap>} />
+      <Route path="/product-launch"                      element={<Wrap><UniversalWorkflowRunner /></Wrap>} />
+      <Route path="/email-summarizer"                    element={<Wrap><UniversalWorkflowRunner /></Wrap>} />
 
       {/* ── SMB Owner — Configuration ────────────────────────────────────── */}
       <Route path="/workflow-library"      element={<Wrap><WorkflowLibrary /></Wrap>} />
@@ -193,7 +206,7 @@ function AppRoutes() {
 
       {/* ── Admin-accessible technical tools ─────────────────────────────── */}
       <Route path="/workflows/builder" element={<Wrap adminOnly><WorkflowBuilder /></Wrap>} />
-      <Route path="/workflows/:runId"  element={<Wrap><WorkflowDetail /></Wrap>} />
+      <Route path="/workflows/:runId"  element={<Wrap><UniversalWorkflowRunner /></Wrap>} />
       <Route path="/models"            element={<Wrap adminOnly><ModelSettings /></Wrap>} />
       <Route path="/tools"             element={<Wrap adminOnly><ToolsPage /></Wrap>} />
       <Route path="/prompts"           element={<Wrap adminOnly><PromptStudio /></Wrap>} />

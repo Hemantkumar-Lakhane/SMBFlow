@@ -1,6 +1,6 @@
 [
   {
-    "id": "ffdeeafd-e3bf-4b32-a3e9-4dfc7ddaa76c",
+    "id": "da7a5f96-62f3-4104-bbc1-837540777bb4",
     "company": "SwiftSuite",
     "contact": "Alex Williams",
     "value": 75000,
@@ -15,7 +15,7 @@
     "_stalled": true
   },
   {
-    "id": "fb14494f-b004-48b7-9f98-1d466e2e5e74",
+    "id": "28e6e19c-dc67-43ed-97be-58bfce265514",
     "company": "CoreAnalytics",
     "contact": "Jordan Davis",
     "value": 75000,
@@ -30,7 +30,7 @@
     "_stalled": true
   },
   {
-    "id": "90bd5ffb-d52a-4918-a34a-180a744d2b68",
+    "id": "0ff482dd-2ed1-4689-8990-e7a777d46284",
     "company": "BoldOps",
     "contact": "Sam Brown",
     "value": 25000,
@@ -45,7 +45,7 @@
     "_stalled": false
   },
   {
-    "id": "959e858a-7d9f-4162-bdde-717df7e43a54",
+    "id": "2b91ecdf-c29e-4090-8bbe-d6cfc6e1f7f6",
     "company": "BrightAnalytics",
     "contact": "Taylor Williams",
     "value": 25000,
@@ -60,7 +60,7 @@
     "_stalled": false
   },
   {
-    "id": "66ee5aa0-e2f3-4583-8f2d-e1aea21f3122",
+    "id": "cf16dd7d-a580-49a9-ab0b-8da8deb4cba8",
     "company": "NexusSuite",
     "contact": "Alex Williams",
     "value": 5000,
@@ -75,7 +75,7 @@
     "_stalled": false
   },
   {
-    "id": "bd850765-212a-45ef-b1fb-e602fc0a1a1e",
+    "id": "718a95d5-af12-41a6-bb51-7e4cda43f737",
     "company": "VoltAnalytics",
     "contact": "Jordan Brown",
     "value": 100000,
@@ -90,7 +90,7 @@
     "_stalled": false
   },
   {
-    "id": "1948ffa6-e5e1-4a1e-9d73-17a4bde7e595",
+    "id": "3e3172fd-974d-4917-a7aa-204b3506051b",
     "company": "SwiftLabs",
     "contact": "Sam Williams",
     "value": 25000,
@@ -105,7 +105,7 @@
     "_stalled": false
   },
   {
-    "id": "39baaf8d-1ba9-4a73-8839-75dead09e8ad",
+    "id": "20ccedaa-4087-480b-b68a-08cd715f5fcd",
     "company": "BrightLabs",
     "contact": "Taylor Davis",
     "value": 50000,
@@ -120,7 +120,7 @@
     "_stalled": false
   },
   {
-    "id": "e21d5115-e520-499f-9dad-bee8f4334129",
+    "id": "2cfa0d0c-a096-49e3-b056-93a5b3c4d316",
     "company": "NovaLabs",
     "contact": "Alex Davis",
     "value": 100000,
@@ -135,7 +135,7 @@
     "_stalled": false
   },
   {
-    "id": "13512837-7493-4d94-a165-33ffa1e434dc",
+    "id": "55a1a49d-cf7e-43b8-b409-ecd84ff5b21c",
     "company": "FluxTech",
     "contact": "Jordan Brown",
     "value": 10000,
@@ -150,7 +150,7 @@
     "_stalled": true
   },
   {
-    "id": "2dd44423-2c02-4651-ae65-03017bffaaae",
+    "id": "01c115c7-e470-45cb-aebb-99ae9f202419",
     "company": "FluxOps",
     "contact": "Sam Davis",
     "value": 100000,
@@ -165,7 +165,7 @@
     "_stalled": false
   },
   {
-    "id": "5098b404-1f04-4b5a-b3fa-fee840fe5367",
+    "id": "4543c71f-23c9-41ca-aee7-d785f3e7fa84",
     "company": "PeakHQ",
     "contact": "Taylor Williams",
     "value": 25000,
@@ -180,7 +180,7 @@
     "_stalled": false
   },
   {
-    "id": "22f4798e-cbfa-4f95-bf70-56ef2a89ca62",
+    "id": "80046263-937f-4a27-940d-4531efcd96b9",
     "company": "ApexWorks",
     "contact": "Alex Williams",
     "value": 50000,
@@ -195,7 +195,7 @@
     "_stalled": false
   },
   {
-    "id": "41237ce3-601f-426d-8f8c-4260d84d75f7",
+    "id": "7e769b32-3381-4708-adbc-2e712471b02e",
     "company": "WaveWorks",
     "contact": "Jordan Brown",
     "value": 10000,
@@ -210,7 +210,7 @@
     "_stalled": false
   },
   {
-    "id": "79ea0297-095b-44ac-92c3-505f244cbdf9",
+    "id": "d10591e7-6a36-4535-84b8-d1c3a18f890a",
     "company": "NovaTech",
     "contact": "Sam Williams",
     "value": 150000,
@@ -225,7 +225,7 @@
     "_stalled": false
   },
   {
-    "id": "e28cd161-01a6-4182-9677-5b0120a543ea",
+    "id": "26f6301a-d01f-47db-b810-b27666f46448",
     "company": "MeshHQ",
     "contact": "Taylor Williams",
     "value": 75000,
@@ -240,7 +240,7 @@
     "_stalled": false
   },
   {
-    "id": "f5711887-70cb-4d98-a210-9dcfdb0158ec",
+    "id": "ddf23c6c-2475-45bd-9bdb-4e256d529959",
     "company": "CoreIO",
     "contact": "Alex Brown",
     "value": 75000,
@@ -255,7 +255,7 @@
     "_stalled": false
   },
   {
-    "id": "9fab8a1f-29df-438b-b930-f5c69add2866",
+    "id": "b980bcfe-7f4f-4fb9-b7ba-43195800a236",
     "company": "SpanConnect",
     "contact": "Jordan Davis",
     "value": 5000,
@@ -270,7 +270,7 @@
     "_stalled": true
   },
   {
-    "id": "413bae8b-2f2e-443b-a04e-d44d00d70684",
+    "id": "bbed9ead-bf44-4268-8833-c309a7e1f530",
     "company": "WaveIO",
     "contact": "Sam Williams",
     "value": 10000,
@@ -285,7 +285,7 @@
     "_stalled": true
   },
   {
-    "id": "a1e851f1-84be-4089-83ec-83197f31d27f",
+    "id": "0fd7d16d-cf1e-4425-9a28-5fd3d8e49d7a",
     "company": "SpanIO",
     "contact": "Taylor Davis",
     "value": 5000,
@@ -300,7 +300,7 @@
     "_stalled": false
   },
   {
-    "id": "844be7d7-65e1-4123-b5d9-25da14ea15d6",
+    "id": "01f775c0-1ad2-4e03-9052-42fb44af774a",
     "company": "NovaCloud",
     "contact": "Alex Davis",
     "value": 10000,
@@ -315,7 +315,7 @@
     "_stalled": true
   },
   {
-    "id": "8bb5878e-1926-4c8e-8752-e64cebbf7f99",
+    "id": "eca9fc1c-84d2-4271-b449-bcf89d5b5468",
     "company": "GridHQ",
     "contact": "Jordan Brown",
     "value": 25000,
@@ -330,7 +330,7 @@
     "_stalled": false
   },
   {
-    "id": "ee65c573-f131-491a-8b05-55a0ebd25032",
+    "id": "e06eafe4-bd28-4f62-a057-ab7874bcb2a1",
     "company": "PeakIO",
     "contact": "Sam Brown",
     "value": 25000,
@@ -345,7 +345,7 @@
     "_stalled": true
   },
   {
-    "id": "45eb3e24-112b-4164-bca7-4b951a575058",
+    "id": "cdfd13b7-b2cc-4433-8b86-dc2e23c84558",
     "company": "PrismLabs",
     "contact": "Taylor Williams",
     "value": 5000,
@@ -360,7 +360,7 @@
     "_stalled": false
   },
   {
-    "id": "e9cce0dc-6773-4a76-b087-913f6569f439",
+    "id": "7ccba614-c32c-48de-9d0d-18307b8a9066",
     "company": "CoreHQ",
     "contact": "Alex Brown",
     "value": 75000,
@@ -375,7 +375,7 @@
     "_stalled": true
   },
   {
-    "id": "8a98d5fc-4491-40fc-85d5-b81c7bc2f762",
+    "id": "72d7abf7-43f1-4cc8-b207-d64892997189",
     "company": "CoreSystems",
     "contact": "Jordan Brown",
     "value": 5000,
@@ -390,7 +390,7 @@
     "_stalled": false
   },
   {
-    "id": "7754ba55-05ca-41a4-858b-57bd7514f603",
+    "id": "65a65987-8bbd-423d-b223-1c7622cec417",
     "company": "SpanConnect",
     "contact": "Sam Davis",
     "value": 100000,
@@ -405,7 +405,7 @@
     "_stalled": true
   },
   {
-    "id": "e2254534-b036-472e-9c00-2381b6dd0629",
+    "id": "7ed60905-62e9-4702-8df2-5da2ef978891",
     "company": "PrismSuite",
     "contact": "Taylor Williams",
     "value": 5000,
@@ -420,7 +420,7 @@
     "_stalled": false
   },
   {
-    "id": "90ea636c-7ed0-4e98-ac3a-6cd213000884",
+    "id": "d21a7af7-d387-4883-a2c6-ed9625f82bcd",
     "company": "VoltIO",
     "contact": "Alex Williams",
     "value": 50000,
@@ -435,7 +435,7 @@
     "_stalled": false
   },
   {
-    "id": "f9510a12-956d-407b-9312-59cbc934d5c7",
+    "id": "f21ce23a-0050-4dcc-85c5-d0fbec3c3e6b",
     "company": "SwiftSolutions",
     "contact": "Jordan Davis",
     "value": 75000,
@@ -450,7 +450,7 @@
     "_stalled": true
   },
   {
-    "id": "1f0185c9-e6cf-4e91-9f8f-d915699fa4da",
+    "id": "77a1000f-65bf-4385-b971-156e80b00fd6",
     "company": "BrightLabs",
     "contact": "Sam Brown",
     "value": 10000,
@@ -465,7 +465,7 @@
     "_stalled": false
   },
   {
-    "id": "4f0c98e5-92e0-46de-b845-b2b85617e065",
+    "id": "4f30ebfc-a960-4d0d-9986-b253c6b277a0",
     "company": "VoltSuite",
     "contact": "Taylor Davis",
     "value": 25000,
@@ -480,7 +480,7 @@
     "_stalled": false
   },
   {
-    "id": "601b72bf-c3d6-4602-995a-4b91a92e005e",
+    "id": "0de2c1bf-17cf-4d88-8108-a9f839691156",
     "company": "GridPlatform",
     "contact": "Alex Williams",
     "value": 5000,
@@ -495,7 +495,7 @@
     "_stalled": true
   },
   {
-    "id": "563652c5-efe5-4329-a63b-1980cbec41fa",
+    "id": "7340a1fe-d655-4d4c-ab30-57a10f8e86aa",
     "company": "PeakSystems",
     "contact": "Jordan Williams",
     "value": 100000,
@@ -510,7 +510,7 @@
     "_stalled": false
   },
   {
-    "id": "58ef040d-2397-4c50-8081-896499fef56b",
+    "id": "77c10891-e320-44b6-b463-6b04042754a9",
     "company": "VoltHQ",
     "contact": "Sam Williams",
     "value": 10000,
@@ -525,7 +525,7 @@
     "_stalled": false
   },
   {
-    "id": "e8535e85-e905-418d-a684-18698190a4cf",
+    "id": "b8cca235-6bc9-423c-8116-34927a9be0da",
     "company": "SwiftPlatform",
     "contact": "Taylor Williams",
     "value": 150000,
@@ -540,7 +540,7 @@
     "_stalled": false
   },
   {
-    "id": "20b948a0-b108-4e8d-b1b0-363b55a48a8d",
+    "id": "cdf6c42e-a166-4d7f-a617-b3a94452f0b7",
     "company": "ApexAnalytics",
     "contact": "Alex Brown",
     "value": 5000,
@@ -555,7 +555,7 @@
     "_stalled": true
   },
   {
-    "id": "7a66265d-3fcd-44a2-9671-0f6d00aa17a9",
+    "id": "f9a10f4f-06dd-467c-b75b-6e9283e7123d",
     "company": "SwiftSuite",
     "contact": "Jordan Williams",
     "value": 150000,
@@ -570,7 +570,7 @@
     "_stalled": true
   },
   {
-    "id": "a4341ae2-ff2a-446e-a9c9-ef3aa4d387aa",
+    "id": "a7336c7c-e53a-461c-b048-9692bcede66c",
     "company": "GridLabs",
     "contact": "Sam Brown",
     "value": 10000,
@@ -585,7 +585,7 @@
     "_stalled": false
   },
   {
-    "id": "3ad4e4e9-0073-416d-b561-e8128a4eeaae",
+    "id": "d271280e-5453-4d94-a27d-148e2f8c48bb",
     "company": "SpanWorks",
     "contact": "Taylor Davis",
     "value": 75000,
@@ -600,7 +600,7 @@
     "_stalled": false
   },
   {
-    "id": "d2c3ab8e-1921-44b4-be0f-e538e3e1a375",
+    "id": "eb4dd83d-1801-406b-b955-969a030b9732",
     "company": "VoltDesk",
     "contact": "Alex Davis",
     "value": 5000,
@@ -615,7 +615,7 @@
     "_stalled": true
   },
   {
-    "id": "16e07ec8-7ec0-4099-9dd6-f4f4f9131872",
+    "id": "d9696e48-8d0c-4aa6-a906-28bf8c4c09c5",
     "company": "SwiftHQ",
     "contact": "Jordan Davis",
     "value": 5000,
@@ -630,7 +630,7 @@
     "_stalled": false
   },
   {
-    "id": "ee3fbde0-946c-493b-8843-b52e9b671c34",
+    "id": "d360a898-b7a1-4fc3-8d6d-c799965d01b1",
     "company": "GridIO",
     "contact": "Sam Williams",
     "value": 25000,
@@ -645,7 +645,7 @@
     "_stalled": false
   },
   {
-    "id": "48352d93-af24-492c-8746-ce1fc7225f13",
+    "id": "f6fa6f4b-a36b-4d76-8b40-aeb8b1d17642",
     "company": "NovaCloud",
     "contact": "Taylor Brown",
     "value": 100000,
@@ -660,7 +660,7 @@
     "_stalled": false
   },
   {
-    "id": "2b4a8936-5f4e-45a3-b5b2-b3491f923322",
+    "id": "e03fe5cc-50f5-4a2e-b255-0c7f2fda457d",
     "company": "ClearDesk",
     "contact": "Alex Brown",
     "value": 150000,
@@ -675,7 +675,7 @@
     "_stalled": false
   },
   {
-    "id": "30370bf4-635a-49fc-baa0-d11427f271a2",
+    "id": "91087763-048b-43cd-aa25-b4c0e96ed44c",
     "company": "FluxSystems",
     "contact": "Jordan Williams",
     "value": 25000,
@@ -690,7 +690,7 @@
     "_stalled": true
   },
   {
-    "id": "a34865bd-8465-4dcb-b2f2-10431a6cd5b7",
+    "id": "0dbb6828-f7ae-4c67-bc49-c384af54c462",
     "company": "NexusOps",
     "contact": "Sam Williams",
     "value": 50000,
@@ -705,7 +705,7 @@
     "_stalled": false
   },
   {
-    "id": "62f98d80-5715-4c68-a88a-871243693a1a",
+    "id": "e1a20a67-f03e-4254-b59e-98bd360c4729",
     "company": "BoldCloud",
     "contact": "Taylor Davis",
     "value": 75000,
@@ -720,7 +720,7 @@
     "_stalled": false
   },
   {
-    "id": "d673490a-3672-4161-9d19-e30ef2f3c376",
+    "id": "edd2970c-e820-46c8-b42d-30564a0acdf1",
     "company": "NexusTech",
     "contact": "Alex Williams",
     "value": 25000,
@@ -735,7 +735,7 @@
     "_stalled": false
   },
   {
-    "id": "f09de37e-6690-406f-9f7f-879bf2ef8765",
+    "id": "6f2cdcce-5b15-477b-b0c9-d884b5e7e8f6",
     "company": "ClearSolutions",
     "contact": "Jordan Williams",
     "value": 10000,
@@ -750,7 +750,7 @@
     "_stalled": false
   },
   {
-    "id": "8ada5ff1-4f67-42b1-905e-c10b45cf34b5",
+    "id": "89777085-e601-45a3-a593-3671a1404207",
     "company": "NexusIO",
     "contact": "Sam Davis",
     "value": 25000,
@@ -765,7 +765,7 @@
     "_stalled": false
   },
   {
-    "id": "f0839716-31d0-4b67-a53f-d1eae36259b0",
+    "id": "bfec9fb0-d719-48fe-8001-43796f76836f",
     "company": "FluxIO",
     "contact": "Taylor Brown",
     "value": 25000,
@@ -780,7 +780,7 @@
     "_stalled": true
   },
   {
-    "id": "50e28d7f-27f3-4859-9391-c3702622495d",
+    "id": "2956d3fb-adff-4505-8801-bfca940a1ca2",
     "company": "WaveSuite",
     "contact": "Alex Davis",
     "value": 10000,
@@ -795,7 +795,7 @@
     "_stalled": true
   },
   {
-    "id": "5c61ee65-98dc-4022-982d-ef39babe56d4",
+    "id": "1d613e6c-b213-4819-9590-0320b13ac76a",
     "company": "NexusPlatform",
     "contact": "Jordan Williams",
     "value": 50000,
@@ -810,7 +810,7 @@
     "_stalled": false
   },
   {
-    "id": "2f2369ef-1a2f-4f46-bdf4-cd753d22ab68",
+    "id": "e6b5b0bd-e46b-46ca-ac7a-0ab126bb91ba",
     "company": "SwiftSystems",
     "contact": "Sam Brown",
     "value": 10000,
@@ -825,7 +825,7 @@
     "_stalled": false
   },
   {
-    "id": "1ee7bac3-5b7c-4855-b9fc-3c1a350aa81a",
+    "id": "87aed61c-7c83-4af9-8100-8092afce60fd",
     "company": "WaveWorks",
     "contact": "Taylor Davis",
     "value": 10000,
@@ -840,7 +840,7 @@
     "_stalled": false
   },
   {
-    "id": "5cb0440a-c148-4d7a-a23c-2f71035339f2",
+    "id": "a031601f-6ade-4aef-a585-a417855a9cad",
     "company": "VoltAnalytics",
     "contact": "Alex Brown",
     "value": 150000,
@@ -855,7 +855,7 @@
     "_stalled": true
   },
   {
-    "id": "98f28fc6-2bc9-42e2-828e-885a72d5fc65",
+    "id": "d356fc26-dd94-439d-b9ae-c6200345c9f7",
     "company": "ClearCloud",
     "contact": "Jordan Williams",
     "value": 10000,
@@ -870,7 +870,7 @@
     "_stalled": false
   },
   {
-    "id": "1c57c859-afa4-4077-8705-0bddccca3cad",
+    "id": "a6d15e78-1b9e-477c-ab57-ee157c037b60",
     "company": "SpanHub",
     "contact": "Sam Brown",
     "value": 25000,
@@ -885,7 +885,7 @@
     "_stalled": false
   },
   {
-    "id": "a8feb467-9a1d-49f7-9b21-72fbe2c1dfaf",
+    "id": "163cfeb2-a703-4bc2-be54-13df248ec083",
     "company": "VoltSolutions",
     "contact": "Taylor Brown",
     "value": 25000,
@@ -900,7 +900,7 @@
     "_stalled": true
   },
   {
-    "id": "1440df52-0c72-4519-92ab-b96467c69aa1",
+    "id": "3e935e98-7cd8-44d3-9f64-1f896b79e733",
     "company": "MeshLabs",
     "contact": "Alex Brown",
     "value": 150000,
@@ -915,7 +915,7 @@
     "_stalled": false
   },
   {
-    "id": "859841e1-2101-4078-bef7-775ee64eb38c",
+    "id": "ebbd833b-645e-41db-bc3b-07c8dee5791e",
     "company": "GridLabs",
     "contact": "Jordan Davis",
     "value": 50000,
@@ -930,7 +930,7 @@
     "_stalled": false
   },
   {
-    "id": "e5bf0fcc-f2ba-42db-9697-830f4cab637f",
+    "id": "858a8c56-0794-4c69-bd9a-b5ef795e71b6",
     "company": "SpanDesk",
     "contact": "Sam Williams",
     "value": 75000,
@@ -945,7 +945,7 @@
     "_stalled": false
   },
   {
-    "id": "913bc78f-3f96-4093-922b-41a7874e409d",
+    "id": "aaaa9bed-1a9a-41b1-bc1b-c0f6a9e86483",
     "company": "ApexTech",
     "contact": "Taylor Williams",
     "value": 150000,
@@ -960,7 +960,7 @@
     "_stalled": false
   },
   {
-    "id": "22082de9-2a66-4726-8902-d1c4035461e7",
+    "id": "b451437e-6b4c-4be4-8d3d-4bfb42eb0c9d",
     "company": "FluxHQ",
     "contact": "Alex Brown",
     "value": 75000,
@@ -975,7 +975,7 @@
     "_stalled": false
   },
   {
-    "id": "22e84dd5-c1fe-4746-a074-d91da0b0a518",
+    "id": "c56bcb0e-15ae-4ddd-9735-43248a4003d1",
     "company": "NexusPlatform",
     "contact": "Jordan Davis",
     "value": 25000,
@@ -990,7 +990,7 @@
     "_stalled": false
   },
   {
-    "id": "a161e6c3-d949-4614-af04-c4fb1af1b876",
+    "id": "34ce9496-210f-4a8f-9103-5c8c37fdfa0a",
     "company": "NovaTech",
     "contact": "Sam Davis",
     "value": 150000,
@@ -1005,7 +1005,7 @@
     "_stalled": true
   },
   {
-    "id": "1ad2931b-06bd-43c1-994d-4d58f2567e03",
+    "id": "1bd07fde-2fe2-457c-bee2-ff4c7819039e",
     "company": "ApexIO",
     "contact": "Taylor Williams",
     "value": 100000,
@@ -1020,7 +1020,7 @@
     "_stalled": false
   },
   {
-    "id": "891889df-19f7-4e88-ab3c-222a43e06a53",
+    "id": "59bee000-f921-4e8c-b917-be22a19962ce",
     "company": "FluxCloud",
     "contact": "Alex Brown",
     "value": 150000,
@@ -1035,7 +1035,7 @@
     "_stalled": false
   },
   {
-    "id": "2ca60c27-dee6-4070-84ac-95a9d51ea701",
+    "id": "2f2b6118-dbd9-4257-a957-ef780010b691",
     "company": "VoltPlatform",
     "contact": "Jordan Williams",
     "value": 5000,
@@ -1050,7 +1050,7 @@
     "_stalled": false
   },
   {
-    "id": "c2ac9e08-54b0-46e8-b0ac-baac76c2899c",
+    "id": "aa3dfa22-940e-44fc-8338-48387976c00d",
     "company": "NexusSystems",
     "contact": "Sam Brown",
     "value": 25000,
@@ -1065,7 +1065,7 @@
     "_stalled": true
   },
   {
-    "id": "4f670358-6158-4708-b9a5-7a89a257b1be",
+    "id": "262f3cad-c715-4b1d-95ad-72a3cf41dd41",
     "company": "CoreHub",
     "contact": "Taylor Williams",
     "value": 150000,
@@ -1080,7 +1080,7 @@
     "_stalled": true
   },
   {
-    "id": "f7aad858-2d8b-4211-a44a-7394c493d446",
+    "id": "3b1f12c2-b09b-4319-b826-d9e625be0e3c",
     "company": "MeshLabs",
     "contact": "Alex Brown",
     "value": 50000,
@@ -1095,7 +1095,7 @@
     "_stalled": false
   },
   {
-    "id": "1b075513-7324-44e6-a9e0-a96abe3cb47d",
+    "id": "873964ae-83af-4f2d-bd27-0fb40f274d51",
     "company": "CoreConnect",
     "contact": "Jordan Davis",
     "value": 100000,
@@ -1110,7 +1110,7 @@
     "_stalled": false
   },
   {
-    "id": "df1f8364-8efe-484d-8be8-9a35f1dee92b",
+    "id": "cfb5a64f-76ef-440e-aa3f-7fdd851aae62",
     "company": "NexusTech",
     "contact": "Sam Davis",
     "value": 25000,
@@ -1125,7 +1125,7 @@
     "_stalled": true
   },
   {
-    "id": "337d1462-4508-4299-80e2-258275fa32d8",
+    "id": "e7028576-31e3-4a6c-9b69-ab030eb6cd1a",
     "company": "WaveSuite",
     "contact": "Taylor Brown",
     "value": 25000,
@@ -1140,7 +1140,7 @@
     "_stalled": true
   },
   {
-    "id": "d3b9485b-f2d4-4a69-aa2e-c7830a2a7669",
+    "id": "faf85c98-7bf2-4ba1-8183-705045419a41",
     "company": "BrightIO",
     "contact": "Alex Williams",
     "value": 75000,
@@ -1155,7 +1155,7 @@
     "_stalled": false
   },
   {
-    "id": "5743dc4e-8c12-4175-8bec-530a149d5f4d",
+    "id": "605e7956-6ccd-4d79-a290-0b54c707f70f",
     "company": "GridCloud",
     "contact": "Jordan Davis",
     "value": 50000,
@@ -1170,7 +1170,7 @@
     "_stalled": true
   },
   {
-    "id": "fd201643-bd4c-43f4-b115-496e870c520b",
+    "id": "7e511e38-dbc9-4288-a776-280423438fbb",
     "company": "NovaSolutions",
     "contact": "Sam Brown",
     "value": 25000,
@@ -1185,7 +1185,7 @@
     "_stalled": false
   },
   {
-    "id": "baa538f3-3beb-4482-a458-67213729a112",
+    "id": "57389daa-ad2e-4c72-81ce-914a391e88a5",
     "company": "WaveCloud",
     "contact": "Taylor Brown",
     "value": 50000,

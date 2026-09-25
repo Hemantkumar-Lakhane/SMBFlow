@@ -24,8 +24,8 @@ function timeAgo(iso) {
 
 function StatusBadge({ active }) {
   return active
-    ? <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-[11px] font-semibold"><CheckCircle2 size={10} />Active</span>
-    : <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-[11px] font-semibold"><XCircle size={10} />Suspended</span>
+    ? <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-full text-[11px] font-semibold"><CheckCircle2 size={11} />Active</span>
+    : <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 rounded-full text-[11px] font-semibold"><XCircle size={11} />Suspended</span>
 }
 
 // ── Overview tab ──────────────────────────────────────────────────────────────
@@ -40,22 +40,22 @@ function OverviewTab({ detail }) {
         { label: 'Total Spend',   value: m.total_cost_usd !== null && m.total_cost_usd !== undefined ? `$${Number(m.total_cost_usd).toFixed(2)}` : 'Unavailable' },
         { label: 'Active Since',  value: detail?.created_at ? new Date(detail.created_at).toLocaleDateString() : '—' },
       ].map(item => (
-        <div key={item.label} className="bg-slate-50 rounded-xl p-4 border border-slate-100">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">{item.label}</p>
-          <p className="text-xl font-bold text-slate-900">{item.value}</p>
+        <div key={item.label} className="bg-slate-50 dark:bg-[#162030] rounded-2xl p-4 border border-slate-200 dark:border-[#2a3850]">
+          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">{item.label}</p>
+          <p className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">{item.value}</p>
         </div>
       ))}
       {sub && (
-        <div className="col-span-2 md:col-span-4 bg-blue-50 border border-blue-100 rounded-xl p-4">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Subscription</p>
+        <div className="col-span-2 md:col-span-4 bg-blue-500/10 border border-blue-500/20 rounded-2xl p-4">
+          <p className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wide mb-2">Active Subscription</p>
           <div className="flex items-center gap-4 flex-wrap text-sm">
-            <span className="font-semibold text-slate-800">{sub.plan_name || sub.plan_slug || '—'}</span>
+            <span className="font-bold text-slate-900 dark:text-white">{sub.plan_name || sub.plan_slug || '—'}</span>
             <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${
-              sub.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'
+              sub.status === 'active' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' : 'bg-slate-500/10 text-slate-500 dark:text-slate-400'
             }`}>{sub.status}</span>
-            <span className="text-slate-500">{sub.billing_cycle}</span>
+            <span className="text-slate-500 dark:text-slate-400 capitalize">{sub.billing_cycle}</span>
             {sub.current_period_end && (
-              <span className="text-slate-500">Renews {new Date(sub.current_period_end).toLocaleDateString()}</span>
+              <span className="text-slate-500 dark:text-slate-400 font-medium">Renews {new Date(sub.current_period_end).toLocaleDateString()}</span>
             )}
           </div>
         </div>
@@ -95,56 +95,58 @@ function UsersTab({ users, orgId, api, onRefresh }) {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-slate-500">{users.length} user{users.length !== 1 ? 's' : ''}</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">{users.length} member{users.length !== 1 ? 's' : ''}</p>
         <Button size="sm" variant="secondary" icon={<Plus size={13} />} onClick={() => setShowInvite(true)}>
           Invite User
         </Button>
       </div>
 
       {showInvite && (
-        <form onSubmit={handleInvite} className="flex items-end gap-3 p-4 bg-blue-50 border border-blue-100 rounded-xl">
-          <Input label="Email" type="email" required value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} className="flex-1" />
-          <Input label="Name (optional)" value={inviteName} onChange={e => setInviteName(e.target.value)} className="flex-1" />
+        <form onSubmit={handleInvite} className="flex items-end gap-3 p-4 bg-blue-500/10 border border-blue-500/20 rounded-2xl flex-wrap">
+          <Input label="Email" type="email" required value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} className="flex-1 min-w-[200px]" />
+          <Input label="Name (optional)" value={inviteName} onChange={e => setInviteName(e.target.value)} className="flex-1 min-w-[200px]" />
           <div className="flex gap-2 pb-0.5">
-            <Button size="sm" variant="primary" loading={inviteLoading} type="submit">Invite</Button>
+            <Button size="sm" variant="primary" loading={inviteLoading} type="submit">Send Invite</Button>
             <Button size="sm" variant="secondary" type="button" onClick={() => setShowInvite(false)}>Cancel</Button>
           </div>
-          {inviteError && <p className="text-xs text-red-600 col-span-full">{inviteError}</p>}
+          {inviteError && <p className="text-xs text-rose-500 w-full mt-1">{inviteError}</p>}
         </form>
       )}
 
       {users.length === 0 ? (
         <EmptyState icon={Users} title="No users" description="Invite the first user to this organization." />
       ) : (
-        <table className="w-full text-sm border border-slate-100 rounded-xl overflow-hidden">
-          <thead>
-            <tr className="bg-slate-50 border-b border-slate-100">
-              {['User', 'Role', 'Joined'].map(h => (
-                <th key={h} className="px-4 py-2.5 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {users.map(u => (
-              <tr key={u.id} className="hover:bg-slate-50">
-                <td className="px-4 py-3">
-                  <p className="font-medium text-slate-900">{u.full_name || u.email}</p>
-                  <p className="text-xs text-slate-400">{u.full_name ? u.email : ''}</p>
-                </td>
-                <td className="px-4 py-3">
-                  <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${
-                    u.role === 'platform_admin' ? 'bg-orange-100 text-orange-700' : 'bg-slate-100 text-slate-600'
-                  }`}>
-                    {u.role}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-xs text-slate-400">
-                  {u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'}
-                </td>
+        <div className="border border-slate-200 dark:border-[#233048] rounded-2xl overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-slate-50/70 dark:bg-[#162030]/60 border-b border-slate-100 dark:border-[#1e2a3f]">
+                {['User', 'Role', 'Joined'].map(h => (
+                  <th key={h} className="px-5 py-3 text-left text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{h}</th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-[#1a2336]">
+              {users.map(u => (
+                <tr key={u.id} className="hover:bg-slate-50/60 dark:hover:bg-[#162030]/50 transition-colors">
+                  <td className="px-5 py-3.5">
+                    <p className="font-semibold text-slate-900 dark:text-white">{u.full_name || u.email}</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500">{u.full_name ? u.email : ''}</p>
+                  </td>
+                  <td className="px-5 py-3.5">
+                    <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${
+                      u.role === 'platform_admin' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20' : 'bg-slate-500/10 text-slate-600 dark:text-slate-300 border border-slate-500/20'
+                    }`}>
+                      {u.role}
+                    </span>
+                  </td>
+                  <td className="px-5 py-3.5 text-xs text-slate-400 dark:text-slate-500">
+                    {u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   )
@@ -181,7 +183,7 @@ function WorkflowsTab({ assignments, catalog, orgId, api, onRefresh }) {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-slate-500">{assignments.length} workflow{assignments.length !== 1 ? 's' : ''} assigned</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">{assignments.length} workflow{assignments.length !== 1 ? 's' : ''} assigned</p>
         {unassigned.length > 0 && (
           <Button size="sm" variant="secondary" icon={<Plus size={13} />} onClick={() => setShowAssign(true)}>
             Assign Workflow
@@ -190,7 +192,7 @@ function WorkflowsTab({ assignments, catalog, orgId, api, onRefresh }) {
       </div>
 
       {showAssign && (
-        <div className="flex items-end gap-3 p-4 bg-blue-50 border border-blue-100 rounded-xl">
+        <div className="flex items-end gap-3 p-4 bg-blue-500/10 border border-blue-500/20 rounded-2xl">
           <Select
             label="Workflow"
             value={selectedWf}
@@ -208,14 +210,14 @@ function WorkflowsTab({ assignments, catalog, orgId, api, onRefresh }) {
       {assignments.length === 0 ? (
         <EmptyState icon={Workflow} title="No workflows assigned" description="Assign workflows from the catalog to give this org access." />
       ) : (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2.5">
           {assignments.map(a => (
-            <div key={a.id} className="flex items-center justify-between px-4 py-3 bg-white border border-slate-200 rounded-xl">
+            <div key={a.id} className="flex items-center justify-between px-5 py-3.5 bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-2xl shadow-2xs">
               <div className="flex items-center gap-3">
-                <div className={`w-2 h-2 rounded-full ${a.status === 'active' ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+                <div className={`w-2.5 h-2.5 rounded-full ${a.status === 'active' ? 'bg-emerald-500' : 'bg-slate-400'}`} />
                 <div>
-                  <p className="text-sm font-medium text-slate-900">{a.workflow_name || a.workflow_key}</p>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white">{a.workflow_name || a.workflow_key}</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 font-mono mt-0.5">
                     {a.workflow_key} · Assigned {timeAgo(a.assigned_at)}
                     {a.assigned_by && ` by ${a.assigned_by}`}
                   </p>
@@ -224,9 +226,9 @@ function WorkflowsTab({ assignments, catalog, orgId, api, onRefresh }) {
               <button
                 onClick={() => remove(a.workflow_id)}
                 disabled={removing === a.workflow_id}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-40"
+                className="p-1.5 rounded-xl text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 transition-colors disabled:opacity-40"
               >
-                <Trash2 size={13} />
+                <Trash2 size={15} />
               </button>
             </div>
           ))}
@@ -253,36 +255,36 @@ function UsageTab({ orgId, api }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
           { label: 'Total Cost (30d)',   value: usage.total_cost_usd !== null && usage.total_cost_usd !== undefined ? `$${Number(usage.total_cost_usd).toFixed(4)}` : 'Unavailable' },
           { label: 'Reported Events',    value: usage.reported_events ?? 0 },
           { label: 'Unreported Events',  value: usage.unreported_events ?? 0 },
         ].map(item => (
-          <div key={item.label} className="bg-slate-50 border border-slate-100 rounded-xl p-4">
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">{item.label}</p>
-            <p className="text-xl font-bold text-slate-900">{item.value}</p>
+          <div key={item.label} className="bg-slate-50 dark:bg-[#162030] border border-slate-200 dark:border-[#2a3850] rounded-2xl p-4">
+            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">{item.label}</p>
+            <p className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">{item.value}</p>
           </div>
         ))}
       </div>
       {usage.breakdown?.length > 0 && (
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+        <div className="bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-2xl overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-100">
+              <tr className="border-b border-slate-100 dark:border-[#1e2a3f] bg-slate-50/70 dark:bg-[#162030]/60">
                 {['Type', 'Workflow', 'Events', 'Tokens In', 'Tokens Out'].map(h => (
-                  <th key={h} className="px-4 py-2.5 text-left text-[11px] font-semibold text-slate-500 uppercase">{h}</th>
+                  <th key={h} className="px-5 py-3 text-left text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 dark:divide-[#1a2336]">
               {usage.breakdown.map((row, i) => (
-                <tr key={i} className="hover:bg-slate-50">
-                  <td className="px-4 py-3 font-mono text-xs text-slate-700">{row.usage_type}</td>
-                  <td className="px-4 py-3 text-xs text-slate-500">{row.workflow_key || '—'}</td>
-                  <td className="px-4 py-3 text-slate-700">{row.event_count}</td>
-                  <td className="px-4 py-3 text-slate-500 font-mono text-xs">{row.tokens_in?.toLocaleString() || 0}</td>
-                  <td className="px-4 py-3 text-slate-500 font-mono text-xs">{row.tokens_out?.toLocaleString() || 0}</td>
+                <tr key={i} className="hover:bg-slate-50/60 dark:hover:bg-[#162030]/50 transition-colors">
+                  <td className="px-5 py-3 font-mono text-xs text-slate-700 dark:text-slate-300">{row.usage_type}</td>
+                  <td className="px-5 py-3 text-xs text-slate-500 dark:text-slate-400">{row.workflow_key || '—'}</td>
+                  <td className="px-5 py-3 text-slate-800 dark:text-slate-200 font-semibold">{row.event_count}</td>
+                  <td className="px-5 py-3 text-slate-500 dark:text-slate-400 font-mono text-xs">{row.tokens_in?.toLocaleString() || 0}</td>
+                  <td className="px-5 py-3 text-slate-500 dark:text-slate-400 font-mono text-xs">{row.tokens_out?.toLocaleString() || 0}</td>
                 </tr>
               ))}
             </tbody>
@@ -308,17 +310,17 @@ function ActivityTab({ orgId, api }) {
   if (loading) return <div className="py-12 text-center text-slate-400 text-sm">Loading audit events…</div>
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-1.5">
       {events.length === 0
         ? <EmptyState icon={Activity} title="No audit events" description="Activity for this organization will appear here." />
         : events.map(e => (
-          <div key={e.id} className="flex items-start gap-3 px-4 py-3 hover:bg-slate-50 rounded-lg">
-            <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-2 shrink-0" />
+          <div key={e.id} className="flex items-start gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-[#162030]/50 rounded-xl transition-colors">
+            <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 shrink-0" />
             <div className="min-w-0 flex-1">
-              <span className="text-sm text-slate-700 font-medium">{e.action}</span>
-              {e.actor_id && <span className="text-xs text-slate-400 ml-2">by {e.actor_id}</span>}
+              <span className="text-sm text-slate-800 dark:text-slate-200 font-semibold">{e.action}</span>
+              {e.actor_id && <span className="text-xs text-slate-400 dark:text-slate-500 ml-2">by {e.actor_id}</span>}
             </div>
-            <span className="text-xs text-slate-400 shrink-0">{timeAgo(e.created_at)}</span>
+            <span className="text-xs text-slate-400 dark:text-slate-500 shrink-0">{timeAgo(e.created_at)}</span>
           </div>
         ))}
     </div>
@@ -344,86 +346,88 @@ function BillingTab({ orgId, api }) {
   if (loading) return <div className="py-12 text-center text-slate-400 text-sm">Loading billing…</div>
 
   const STATUS_CLS = {
-    active:   'bg-emerald-100 text-emerald-700',
-    trialing: 'bg-blue-100 text-blue-700',
-    past_due: 'bg-red-100 text-red-700',
-    cancelled:'bg-slate-100 text-slate-500',
-    paused:   'bg-yellow-100 text-yellow-700',
+    active:   'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20',
+    trialing: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20',
+    past_due: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20',
+    cancelled:'bg-slate-500/10 text-slate-500 dark:text-slate-400 border border-slate-500/20',
+    paused:   'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20',
   }
   const INV_CLS = {
-    paid:  'bg-emerald-100 text-emerald-700',
-    open:  'bg-blue-100 text-blue-700',
-    draft: 'bg-slate-100 text-slate-500',
-    void:  'bg-slate-100 text-slate-400',
-    uncollectible: 'bg-red-100 text-red-700',
+    paid:  'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20',
+    open:  'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20',
+    draft: 'bg-slate-500/10 text-slate-500 dark:text-slate-400 border border-slate-500/20',
+    void:  'bg-slate-500/10 text-slate-400 border border-slate-500/20',
+    uncollectible: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20',
   }
 
   return (
     <div className="flex flex-col gap-5">
       {/* Subscription */}
       {!sub ? (
-        <div className="flex items-start gap-2 px-4 py-3 bg-yellow-50 border border-yellow-100 rounded-xl text-sm text-yellow-700">
-          <AlertCircle size={15} className="shrink-0 mt-0.5" />
-          No subscription found for this organization.
+        <div className="flex items-start gap-2.5 px-4 py-3 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-sm text-amber-700 dark:text-amber-300">
+          <AlertCircle size={16} className="shrink-0 mt-0.5" />
+          No subscription record found for this organization.
         </div>
       ) : (
-        <div className="bg-slate-50 border border-slate-100 rounded-xl p-5">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Subscription</p>
+        <div className="bg-slate-50 dark:bg-[#162030] border border-slate-200 dark:border-[#2a3850] rounded-2xl p-5 shadow-2xs">
+          <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Subscription Details</p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
               { label: 'Plan',    value: sub.plan_name || sub.plan_slug || '—' },
-              { label: 'Status',  value: <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${STATUS_CLS[sub.status] || 'bg-slate-100 text-slate-500'}`}>{sub.status}</span> },
+              { label: 'Status',  value: <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${STATUS_CLS[sub.status] || 'bg-slate-500/10 text-slate-500'}`}>{sub.status}</span> },
               { label: 'Cycle',   value: sub.billing_cycle || '—' },
               { label: 'Period Ends', value: sub.current_period_end ? new Date(sub.current_period_end).toLocaleDateString() : '—' },
             ].map(item => (
               <div key={item.label}>
-                <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1">{item.label}</p>
-                <p className="text-sm font-semibold text-slate-900">{item.value}</p>
+                <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">{item.label}</p>
+                <p className="text-sm font-bold text-slate-900 dark:text-white capitalize">{item.value}</p>
               </div>
             ))}
           </div>
           {sub.trial_ends_at && (
-            <p className="text-xs text-blue-600 mt-3">Trial ends {new Date(sub.trial_ends_at).toLocaleDateString()}</p>
+            <p className="text-xs text-blue-500 mt-3 font-medium">Trial ends {new Date(sub.trial_ends_at).toLocaleDateString()}</p>
           )}
           {sub.cancel_reason && (
-            <p className="text-xs text-red-600 mt-2">Cancel reason: {sub.cancel_reason}</p>
+            <p className="text-xs text-rose-500 mt-2">Cancel reason: {sub.cancel_reason}</p>
           )}
         </div>
       )}
 
       {/* Invoices */}
       <div>
-        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
-          Invoices <span className="text-slate-400 font-normal normal-case">({invoices.length})</span>
+        <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">
+          Invoices <span className="text-slate-400 dark:text-slate-500 font-normal normal-case">({invoices.length})</span>
         </p>
         {invoices.length === 0 ? (
           <EmptyState icon={ReceiptText} title="No invoices" description="Invoices appear when a billing period closes." />
         ) : (
-          <table className="w-full text-sm border border-slate-100 rounded-xl overflow-hidden">
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-100">
-                {['Invoice #', 'Status', 'Subtotal', 'Total', 'Due', 'Paid'].map(h => (
-                  <th key={h} className="px-4 py-2.5 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {invoices.map(inv => (
-                <tr key={inv.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-3 font-mono text-xs text-slate-700">{inv.invoice_number || inv.id?.slice(0,8)}</td>
-                  <td className="px-4 py-3">
-                    <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${INV_CLS[inv.status] || 'bg-slate-100 text-slate-500'}`}>
-                      {inv.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-xs font-mono text-slate-600">${Number(inv.subtotal_usd || 0).toFixed(2)}</td>
-                  <td className="px-4 py-3 text-sm font-semibold text-slate-900 font-mono">${Number(inv.total_usd || 0).toFixed(2)}</td>
-                  <td className="px-4 py-3 text-xs text-slate-400">{inv.due_date ? new Date(inv.due_date).toLocaleDateString() : '—'}</td>
-                  <td className="px-4 py-3 text-xs text-slate-400">{inv.paid_at ? new Date(inv.paid_at).toLocaleDateString() : '—'}</td>
+          <div className="border border-slate-200 dark:border-[#233048] rounded-2xl overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-slate-50/70 dark:bg-[#162030]/60 border-b border-slate-100 dark:border-[#1e2a3f]">
+                  {['Invoice #', 'Status', 'Subtotal', 'Total', 'Due', 'Paid'].map(h => (
+                    <th key={h} className="px-5 py-3 text-left text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-[#1a2336]">
+                {invoices.map(inv => (
+                  <tr key={inv.id} className="hover:bg-slate-50/60 dark:hover:bg-[#162030]/50 transition-colors">
+                    <td className="px-5 py-3 font-mono text-xs text-slate-700 dark:text-slate-300 font-semibold">{inv.invoice_number || inv.id?.slice(0,8)}</td>
+                    <td className="px-5 py-3">
+                      <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${INV_CLS[inv.status] || 'bg-slate-500/10 text-slate-500'}`}>
+                        {inv.status}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3 text-xs font-mono text-slate-500 dark:text-slate-400">${Number(inv.subtotal_usd || 0).toFixed(2)}</td>
+                    <td className="px-5 py-3 text-sm font-bold text-slate-900 dark:text-white font-mono">${Number(inv.total_usd || 0).toFixed(2)}</td>
+                    <td className="px-5 py-3 text-xs text-slate-400 dark:text-slate-500">{inv.due_date ? new Date(inv.due_date).toLocaleDateString() : '—'}</td>
+                    <td className="px-5 py-3 text-xs text-slate-400 dark:text-slate-500">{inv.paid_at ? new Date(inv.paid_at).toLocaleDateString() : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>
@@ -436,8 +440,6 @@ function ConnectionsTab({ orgId, api }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // The connections endpoint is tenant-scoped; admin reads by passing org as tenant context.
-    // Best available is to query the connections with tenant_id header or use org-level read.
     api.get(`/connections?organization_id=${orgId}`)
       .then(d => setConnections(Array.isArray(d) ? d : []))
       .catch(() => setConnections([]))
@@ -445,39 +447,39 @@ function ConnectionsTab({ orgId, api }) {
   }, [orgId, api])
 
   const STATUS_META = {
-    connected:     { cls: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500' },
-    not_connected: { cls: 'bg-slate-100 text-slate-500',     dot: 'bg-slate-300'   },
-    error:         { cls: 'bg-red-100 text-red-700',         dot: 'bg-red-500'     },
+    connected:     { cls: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20', dot: 'bg-emerald-500' },
+    not_connected: { cls: 'bg-slate-500/10 text-slate-500 dark:text-slate-400 border border-slate-500/20',     dot: 'bg-slate-400'   },
+    error:         { cls: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20',         dot: 'bg-rose-500'     },
   }
 
   if (loading) return <div className="py-12 text-center text-slate-400 text-sm">Loading connections…</div>
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-sm text-slate-500">{connections.length} tool connection{connections.length !== 1 ? 's' : ''}</p>
+      <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">{connections.length} tool integration{connections.length !== 1 ? 's' : ''}</p>
       {connections.length === 0 ? (
         <EmptyState icon={Plug} title="No tool connections"
           description="This organization has not connected any external tools yet." />
       ) : (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2.5">
           {connections.map(conn => {
             const meta = STATUS_META[conn.status] || STATUS_META.not_connected
             return (
-              <div key={conn.id} className="flex items-center justify-between px-4 py-3 bg-white border border-slate-200 rounded-xl">
+              <div key={conn.id} className="flex items-center justify-between px-5 py-3.5 bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-2xl shadow-2xs">
                 <div className="flex items-center gap-3">
-                  <div className={`w-2 h-2 rounded-full ${meta.dot}`} />
+                  <div className={`w-2.5 h-2.5 rounded-full ${meta.dot}`} />
                   <div>
-                    <p className="text-sm font-medium text-slate-900">{conn.display_name || conn.tool_name}</p>
-                    <p className="text-xs text-slate-400 font-mono">{conn.tool_name}</p>
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white">{conn.display_name || conn.tool_name}</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 font-mono">{conn.tool_name}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
                   {conn.last_tested_at && (
-                    <span className="text-xs text-slate-400">
+                    <span className="text-xs text-slate-400 dark:text-slate-500">
                       Last tested {timeAgo(conn.last_tested_at)}
                     </span>
                   )}
-                  <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${meta.cls}`}>
+                  <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${meta.cls}`}>
                     {conn.status?.replace(/_/g, ' ')}
                   </span>
                 </div>
@@ -546,7 +548,7 @@ export default function AdminOrgDetail() {
   if (loading && !detail) {
     return (
       <div className="flex items-center justify-center h-64 text-slate-400 text-sm">
-        Loading organization…
+        Loading organization details…
       </div>
     )
   }
@@ -554,7 +556,7 @@ export default function AdminOrgDetail() {
   if (error) {
     return (
       <div className="p-6">
-        <div className="flex items-center gap-2 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+        <div className="flex items-center gap-2 px-4 py-3 bg-red-500/10 border border-red-500/20 rounded-2xl text-sm text-red-600 dark:text-red-400">
           <XCircle size={15} /> {error}
         </div>
       </div>
@@ -562,32 +564,32 @@ export default function AdminOrgDetail() {
   }
 
   return (
-    <div className="flex flex-col gap-5 p-6 min-h-full bg-slate-50">
+    <div className="flex flex-col gap-6 p-6 min-h-full bg-slate-50 dark:bg-[#0b0f17] text-slate-900 dark:text-slate-100 transition-colors">
       {/* Back + header */}
-      <div className="flex items-start gap-4">
+      <div className="flex items-start gap-4 flex-wrap">
         <button
           onClick={() => navigate('/admin/organizations')}
-          className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-white border border-transparent hover:border-slate-200 transition-all mt-0.5"
+          className="p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] hover:bg-slate-50 dark:hover:bg-[#162030] transition-colors mt-0.5"
         >
           <ArrowLeft size={16} />
         </button>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-xl font-bold text-slate-900">{detail?.name}</h1>
+            <h1 className="text-xl font-bold text-slate-900 dark:text-white">{detail?.name}</h1>
             <StatusBadge active={detail?.active} />
             {detail?.plan && (
-              <span className="text-xs font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full">
+              <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2.5 py-0.5 rounded-full">
                 {detail.plan.name}
               </span>
             )}
           </div>
-          <p className="text-sm text-slate-500 mt-0.5 capitalize">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5 capitalize">
             {detail?.industry} · {detail?.user_count ?? 0} users · Created {detail?.created_at ? new Date(detail.created_at).toLocaleDateString() : '—'}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={load} disabled={loading}
-            className="p-2 rounded-lg text-slate-400 hover:text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 transition-colors">
+            className="p-2 rounded-xl text-slate-500 dark:text-slate-400 bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] hover:bg-slate-50 dark:hover:bg-[#162030] transition-colors disabled:opacity-50">
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           </button>
           <Button
@@ -597,7 +599,7 @@ export default function AdminOrgDetail() {
             icon={detail?.active ? <PowerOff size={13} /> : <Power size={13} />}
             onClick={toggleActive}
           >
-            {detail?.active ? 'Suspend' : 'Activate'}
+            {detail?.active ? 'Suspend Org' : 'Activate Org'}
           </Button>
         </div>
       </div>
@@ -606,7 +608,7 @@ export default function AdminOrgDetail() {
       <TabGroup tabs={TABS} value={tab} onChange={setTab} />
 
       {/* Tab content */}
-      <div className="bg-white border border-slate-200 rounded-xl p-5">
+      <div className="bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-2xl p-6 shadow-2xs">
         {tab === 'overview'     && <OverviewTab detail={detail} />}
         {tab === 'users'        && <UsersTab users={detail?.users || []} orgId={orgId} api={api} onRefresh={load} />}
         {tab === 'workflows'    && <WorkflowsTab assignments={detail?.workflow_assignments || []} catalog={catalog} orgId={orgId} api={api} onRefresh={load} />}

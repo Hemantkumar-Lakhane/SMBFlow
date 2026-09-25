@@ -70,7 +70,7 @@ export default function LoginPage() {
       }
       const from = location.state?.from?.pathname
       const isAdmin = user.role === 'super_admin' || user.role === 'platform_admin'
-      navigate(from || (isAdmin ? '/admin' : '/dashboard'), { replace: true })
+      navigate(from || (isAdmin ? '/admin/copilot' : '/dashboard'), { replace: true })
     }
   }, [token, user, authLoading, navigate, location.state])
 
@@ -96,7 +96,7 @@ export default function LoginPage() {
   const canSubmit = emailValid && passwordValid && !loading && !googleLoading
 
   const roleHome = (role) =>
-    role === 'super_admin' || role === 'platform_admin' ? '/admin' : '/dashboard'
+    role === 'super_admin' || role === 'platform_admin' ? '/admin/copilot' : '/dashboard'
 
   async function handleGoogleLogin() {
     if (!supabase) {

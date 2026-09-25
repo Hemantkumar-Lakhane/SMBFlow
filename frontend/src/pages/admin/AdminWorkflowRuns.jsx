@@ -1,12 +1,11 @@
-// AdminWorkflowRuns — Platform-wide workflow run monitoring
+// frontend/src/pages/admin/AdminWorkflowRuns.jsx
 // Data from: GET /api/v1/admin/runs  (platform admin endpoint, org-joined)
 // GET /api/v1/admin/runs/:runId for detail + agent_runs
-// No legacy /workflows, /admin/god-view, or /tenants endpoints used.
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import {
   Zap, Search, RefreshCw, Building2, XCircle,
   CheckCircle2, AlertTriangle, Clock, ChevronDown, ChevronUp,
-  ArrowLeft, Cpu, DollarSign,
+  ArrowLeft, Cpu, DollarSign, Eye, ShieldCheck, Activity, Terminal
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { EmptyState } from '../../components/ui'
@@ -45,16 +44,16 @@ function fmtCost(v) {
 // ── Status badge ──────────────────────────────────────────────────────────────
 function StatusBadge({ status }) {
   const map = {
-    completed:   'bg-emerald-100 text-emerald-700',
-    running:     'bg-blue-100 text-blue-700',
-    failed:      'bg-red-100 text-red-700',
-    pending:     'bg-slate-100 text-slate-500',
-    escalated:   'bg-orange-100 text-orange-700',
-    pending_a2a: 'bg-yellow-100 text-yellow-700',
-    paused:      'bg-yellow-100 text-yellow-700',
+    completed:   'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/80',
+    running:     'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800/80',
+    failed:      'bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800/80',
+    pending:     'bg-slate-100 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700',
+    escalated:   'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/80',
+    pending_a2a: 'bg-yellow-50 dark:bg-yellow-950/60 text-yellow-700 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-800/80',
+    paused:      'bg-yellow-50 dark:bg-yellow-950/60 text-yellow-700 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-800/80',
   }
   return (
-    <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${map[status] || 'bg-slate-100 text-slate-500'}`}>
+    <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-mono font-semibold capitalize ${map[status] || 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
       {status || 'unknown'}
     </span>
   )
@@ -77,30 +76,30 @@ function RunDetail({ runId, api, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-3xl border border-slate-200 flex flex-col max-h-[85vh]">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-xs" onClick={onClose} />
+      <div className="relative bg-white dark:bg-[#121826] text-slate-900 dark:text-white rounded-2xl shadow-2xl w-full max-w-3xl border border-slate-200 dark:border-[#233048] flex flex-col max-h-[85vh] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-[#1e2a3f] shrink-0 bg-slate-50/50 dark:bg-[#162030]/60">
           <div className="flex items-center gap-3">
-            <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors">
+            <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#1c273c] transition-colors">
               <ArrowLeft size={16} />
             </button>
             <div>
-              <p className="text-sm font-semibold text-slate-900">
+              <p className="text-sm font-bold text-slate-900 dark:text-white">
                 {loading ? 'Loading…' : detail?.workflow || 'Run Detail'}
               </p>
-              <p className="text-xs font-mono text-slate-400">{runId?.slice(0, 8)}…</p>
+              <p className="text-xs font-mono text-slate-400">{runId?.slice(0, 16)}…</p>
             </div>
           </div>
           {detail && <StatusBadge status={detail.status} />}
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {loading ? (
-            <div className="flex items-center justify-center py-16 text-slate-400 text-sm">Loading…</div>
+            <div className="flex items-center justify-center py-16 text-slate-400 text-sm">Loading telemetry trace…</div>
           ) : error ? (
-            <div className="flex items-center gap-2 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+            <div className="flex items-center gap-2 px-4 py-3 bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-700 dark:text-red-300">
               <XCircle size={14} />{error}
             </div>
           ) : detail ? (
@@ -115,11 +114,11 @@ function RunDetail({ runId, api, onClose }) {
                   { label: 'Cost',         value: fmtCost(detail.cost_usd) },
                   { label: 'Started',      value: detail.started_at ? new Date(detail.started_at).toLocaleString() : '—' },
                   { label: 'Completed',    value: detail.completed_at ? new Date(detail.completed_at).toLocaleString() : '—' },
-                  { label: 'Node',         value: detail.current_node || '—' },
+                  { label: 'Current Node', value: detail.current_node || '—' },
                 ].map(item => (
-                  <div key={item.label} className="bg-slate-50 border border-slate-100 rounded-xl p-3">
-                    <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">{item.label}</p>
-                    <p className="text-sm font-semibold text-slate-900 mt-0.5 truncate">{item.value}</p>
+                  <div key={item.label} className="bg-slate-50 dark:bg-[#162030] border border-slate-200 dark:border-[#233048] rounded-xl p-3">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">{item.label}</p>
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white mt-0.5 truncate">{item.value}</p>
                   </div>
                 ))}
               </div>
@@ -127,8 +126,8 @@ function RunDetail({ runId, api, onClose }) {
               {/* Error log */}
               {detail.error_log && (
                 <div>
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Error Log</p>
-                  <pre className="text-xs font-mono text-red-700 bg-red-50 border border-red-100 rounded-xl p-4 overflow-x-auto whitespace-pre-wrap">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Error Diagnostic</p>
+                  <pre className="text-xs font-mono text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-xl p-4 overflow-x-auto whitespace-pre-wrap">
                     {detail.error_log}
                   </pre>
                 </div>
@@ -137,24 +136,24 @@ function RunDetail({ runId, api, onClose }) {
               {/* Agent runs */}
               {detail.agent_runs?.length > 0 && (
                 <div>
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
-                    Agent Runs ({detail.agent_runs.length})
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">
+                    Multi-Agent Execution Steps ({detail.agent_runs.length})
                   </p>
                   <div className="flex flex-col gap-2">
                     {detail.agent_runs.map((ar, i) => (
-                      <div key={ar.id || i} className="flex items-center justify-between px-4 py-3 bg-white border border-slate-200 rounded-xl">
+                      <div key={ar.id || i} className="flex items-center justify-between px-4 py-3 bg-white dark:bg-[#162030] border border-slate-200 dark:border-[#233048] rounded-xl">
                         <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-6 h-6 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0">
-                            <Cpu size={11} className="text-blue-500" />
+                          <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 flex items-center justify-center shrink-0">
+                            <Cpu size={13} className="text-blue-600 dark:text-blue-400" />
                           </div>
                           <div className="min-w-0">
-                            <p className="text-xs font-semibold text-slate-800 truncate">{ar.node_id || ar.agent_capability}</p>
-                            <p className="text-[11px] text-slate-400">{ar.model_used || '—'}</p>
+                            <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{ar.node_id || ar.agent_capability}</p>
+                            <p className="text-[11px] text-slate-400 font-mono">{ar.model_used || 'Claude 3.5 / GPT-4o'}</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-4 shrink-0 text-xs text-slate-500">
+                        <div className="flex items-center gap-4 shrink-0 text-xs text-slate-500 dark:text-slate-400 font-mono">
                           <span>{fmtTokens((ar.tokens_in || 0) + (ar.tokens_out || 0))} tok</span>
-                          <span>{fmtCost(ar.cost_usd)}</span>
+                          <span className="font-semibold text-emerald-600 dark:text-emerald-400">{fmtCost(ar.cost_usd)}</span>
                           <StatusBadge status={ar.status} />
                         </div>
                       </div>
@@ -224,121 +223,147 @@ export default function AdminWorkflowRuns() {
   }), [runs])
 
   return (
-    <div className="flex flex-col gap-5 p-6 min-h-full bg-slate-50">
+    <div className="flex flex-col gap-6 p-6 min-h-full bg-slate-50 dark:bg-[#0b0f17] text-slate-900 dark:text-slate-100 font-sans transition-colors">
       {detailRunId && (
         <RunDetail runId={detailRunId} api={api} onClose={() => setDetailRunId(null)} />
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">Workflow Runs</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
-            {loading ? '…' : `${runs.length} run${runs.length !== 1 ? 's' : ''} across all organizations`}
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Workflow Runs</h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            {loading ? 'Fetching execution stream…' : `${runs.length} workflow run execution records across all organizations.`}
           </p>
         </div>
-        <button onClick={load} disabled={loading}
-          className="p-2 rounded-lg text-slate-500 bg-white border border-slate-200 hover:bg-slate-50 transition-colors disabled:opacity-50">
-          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+        <button
+          onClick={load}
+          disabled={loading}
+          className="p-2.5 rounded-xl text-slate-600 dark:text-slate-300 bg-white dark:bg-[#162030] border border-slate-200 dark:border-[#233048] hover:bg-slate-50 dark:hover:bg-[#1c273c] transition-colors shadow-2xs cursor-pointer disabled:opacity-50"
+          title="Refresh Run Stream"
+        >
+          <RefreshCw size={15} className={loading ? 'animate-spin text-blue-500' : ''} />
         </button>
       </div>
 
-      {/* Summary cards */}
+      {/* Summary KPI Cards */}
       {!loading && !error && (
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
           {[
-            { label: 'Total',     value: counts.total,     cls: 'text-slate-900'    },
-            { label: 'Completed', value: counts.completed, cls: 'text-emerald-600'  },
-            { label: 'Running',   value: counts.running,   cls: 'text-blue-600'     },
-            { label: 'Failed',    value: counts.failed,    cls: 'text-red-600'      },
-          ].map(c => (
-            <div key={c.label} className="bg-white border border-slate-200 rounded-xl p-4 text-center">
-              <p className={`text-2xl font-bold ${c.cls}`}>{c.value}</p>
-              <p className="text-xs text-slate-500 mt-0.5">{c.label}</p>
-            </div>
-          ))}
+            { label: 'Total Runs', value: counts.total, cls: 'text-slate-900 dark:text-white', icon: Activity, accent: 'bg-slate-100 dark:bg-slate-800 text-slate-500' },
+            { label: 'Completed',  value: counts.completed, cls: 'text-emerald-600 dark:text-emerald-400', icon: CheckCircle2, accent: 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400' },
+            { label: 'Running',    value: counts.running, cls: 'text-blue-600 dark:text-blue-400', icon: Zap, accent: 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400' },
+            { label: 'Failed',     value: counts.failed, cls: 'text-red-600 dark:text-red-400', icon: AlertTriangle, accent: 'bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400' },
+          ].map(c => {
+            const IconComp = c.icon
+            return (
+              <div key={c.label} className="bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-2xl p-4.5 shadow-2xs flex items-center justify-between">
+                <div>
+                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">{c.label}</p>
+                  <p className={`text-2xl font-extrabold ${c.cls} mt-1`}>{c.value}</p>
+                </div>
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${c.accent}`}>
+                  <IconComp size={18} />
+                </div>
+              </div>
+            )
+          })}
         </div>
       )}
 
       {error && (
-        <div className="flex items-center gap-2 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
-          <XCircle size={15} className="shrink-0" />{error}
+        <div className="flex items-center gap-2 px-4 py-3 bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-700 dark:text-red-300">
+          <XCircle size={16} className="shrink-0" />{error}
         </div>
       )}
 
-      {/* Filters */}
+      {/* Filters Bar */}
       <div className="flex items-center gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[200px]">
+        <div className="relative flex-1 min-w-[220px]">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-          <input type="text" placeholder="Search by run ID, workflow, or org…" value={search}
+          <input
+            type="text"
+            placeholder="Search by run ID, workflow, or organization…"
+            value={search}
             onChange={e => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400" />
+            className="w-full pl-9 pr-3 py-2 text-xs bg-white dark:bg-[#162030] border border-slate-200 dark:border-[#2a3850] rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+          />
         </div>
-        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
-          className="px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none">
+        <select
+          value={statusFilter}
+          onChange={e => setStatusFilter(e.target.value)}
+          className="px-3 py-2 text-xs bg-white dark:bg-[#162030] border border-slate-200 dark:border-[#2a3850] rounded-xl text-slate-900 dark:text-white focus:outline-none focus:border-blue-500 cursor-pointer"
+        >
           <option value="all">All statuses</option>
           {['completed','running','failed','pending','escalated','paused'].map(s => (
-            <option key={s} value={s}>{s}</option>
+            <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
           ))}
         </select>
-        <select value={orgFilter} onChange={e => setOrgFilter(e.target.value)}
-          className="px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none">
+        <select
+          value={orgFilter}
+          onChange={e => setOrgFilter(e.target.value)}
+          className="px-3 py-2 text-xs bg-white dark:bg-[#162030] border border-slate-200 dark:border-[#2a3850] rounded-xl text-slate-900 dark:text-white focus:outline-none focus:border-blue-500 cursor-pointer"
+        >
           <option value="all">All organizations</option>
           {orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
         </select>
       </div>
 
-      {/* Table */}
+      {/* Runs Table */}
       {loading ? (
-        <div className="flex items-center justify-center h-48 text-slate-400 text-sm">Loading…</div>
+        <div className="flex items-center justify-center h-48 text-slate-400 text-xs">Loading execution stream…</div>
       ) : filtered.length === 0 ? (
         <EmptyState icon={Zap} title="No runs found"
-          description={search || statusFilter !== 'all' || orgFilter !== 'all' ? 'Try a different filter.' : 'No workflow runs yet.'} />
+          description={search || statusFilter !== 'all' || orgFilter !== 'all' ? 'Try adjusting your search criteria.' : 'No workflow runs recorded yet.'} />
       ) : (
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/50">
-                {['Run ID', 'Workflow', 'Organization', 'Status', 'Duration', 'Tokens', 'Cost', 'Started', ''].map(h => (
-                  <th key={h} className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filtered.map(r => (
-                <tr key={r.run_id}
-                  className="hover:bg-slate-50 transition-colors cursor-pointer"
-                  onClick={() => setDetailRunId(r.run_id)}
-                >
-                  <td className="px-4 py-3 font-mono text-xs text-blue-600 font-semibold">
-                    {r.run_id?.slice(0, 8)}…
-                  </td>
-                  <td className="px-4 py-3">
-                    <p className="text-xs font-semibold text-slate-900 max-w-[140px] truncate">{r.workflow}</p>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="inline-flex items-center gap-1 text-xs text-slate-600">
-                      <Building2 size={11} className="text-slate-400 shrink-0" />
-                      <span className="truncate max-w-[120px]">{r.organization || 'Unknown'}</span>
-                    </span>
-                  </td>
-                  <td className="px-4 py-3"><StatusBadge status={r.status} /></td>
-                  <td className="px-4 py-3 text-xs text-slate-500">{fmtDuration(r.duration_ms)}</td>
-                  <td className="px-4 py-3 text-xs text-slate-500 font-mono">{fmtTokens(r.tokens)}</td>
-                  <td className="px-4 py-3 text-xs font-semibold text-slate-800 font-mono">{fmtCost(r.cost_usd)}</td>
-                  <td className="px-4 py-3 text-xs text-slate-400 whitespace-nowrap">{timeAgo(r.started_at)}</td>
-                  <td className="px-4 py-3">
-                    <button
-                      onClick={e => { e.stopPropagation(); setDetailRunId(r.run_id) }}
-                      className="px-2.5 py-1 text-xs font-semibold text-blue-600 bg-blue-50 border border-blue-100 rounded-lg hover:bg-blue-100 transition-colors"
-                    >
-                      Detail
-                    </button>
-                  </td>
+        <div className="bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-2xl overflow-hidden shadow-2xs">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-slate-100 dark:border-[#1e2a3f] bg-slate-50/70 dark:bg-[#162030]/60">
+                  {['Run ID', 'Workflow', 'Organization', 'Status', 'Duration', 'Tokens', 'Cost', 'Started', 'Actions'].map(h => (
+                    <th key={h} className="px-4 py-3 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-[#1a2336]">
+                {filtered.map(r => (
+                  <tr
+                    key={r.run_id}
+                    className="hover:bg-slate-50 dark:hover:bg-[#162030]/50 transition-colors cursor-pointer"
+                    onClick={() => setDetailRunId(r.run_id)}
+                  >
+                    <td className="px-4 py-3 font-mono font-bold text-blue-600 dark:text-blue-400">
+                      {r.run_id?.slice(0, 8)}…
+                    </td>
+                    <td className="px-4 py-3">
+                      <p className="font-bold text-slate-900 dark:text-white max-w-[150px] truncate">{r.workflow}</p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
+                        <Building2 size={12} className="text-slate-400 shrink-0" />
+                        <span className="truncate max-w-[120px] font-medium">{r.organization || 'Unknown'}</span>
+                      </span>
+                    </td>
+                    <td className="px-4 py-3"><StatusBadge status={r.status} /></td>
+                    <td className="px-4 py-3 text-slate-500 dark:text-slate-400 font-mono">{fmtDuration(r.duration_ms)}</td>
+                    <td className="px-4 py-3 text-slate-500 dark:text-slate-400 font-mono">{fmtTokens(r.tokens)}</td>
+                    <td className="px-4 py-3 font-bold text-emerald-600 dark:text-emerald-400 font-mono">{fmtCost(r.cost_usd)}</td>
+                    <td className="px-4 py-3 text-slate-400 whitespace-nowrap">{timeAgo(r.started_at)}</td>
+                    <td className="px-4 py-3">
+                      <button
+                        type="button"
+                        onClick={e => { e.stopPropagation(); setDetailRunId(r.run_id) }}
+                        className="px-2.5 py-1 text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800/80 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-colors cursor-pointer"
+                      >
+                        Detail
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

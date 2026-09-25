@@ -1,11 +1,11 @@
-// AdminPlatformOverview — Real SaaS control-plane dashboard
-// All data from /api/v1/admin/* — no fabricated values.
+// frontend/src/pages/admin/AdminPlatformOverview.jsx
+// Real SaaS control-plane dashboard with full dark-mode design system
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Building2, Users, Zap, AlertTriangle, DollarSign, RefreshCw,
   TrendingUp, Activity, ArrowRight, CheckCircle2, XCircle,
-  BarChart3, Cpu, Shield, Clock,
+  BarChart3, Cpu, Shield, Clock, ArrowUpRight
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 
@@ -39,28 +39,30 @@ function timeAgo(iso) {
 // ── KPI card ──────────────────────────────────────────────────────────────────
 function KpiCard({ label, value, icon: Icon, sub, accent = 'blue', loading, onClick }) {
   const accents = {
-    blue:   'bg-blue-50   text-blue-600',
-    green:  'bg-emerald-50 text-emerald-600',
-    purple: 'bg-purple-50 text-purple-600',
-    orange: 'bg-orange-50 text-orange-600',
-    red:    'bg-red-50    text-red-600',
-    slate:  'bg-slate-100 text-slate-500',
+    blue:   'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800/80',
+    green:  'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/80',
+    purple: 'bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-800/80',
+    orange: 'bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/80',
+    red:    'bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/80',
+    slate:  'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700',
   }
   return (
     <div
       onClick={onClick}
-      className={`bg-white border border-slate-200 rounded-xl p-5 flex items-start justify-between gap-4 ${onClick ? 'cursor-pointer hover:border-blue-200 hover:bg-blue-50/20 transition-all' : ''}`}
+      className={`bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-2xl p-5 flex items-start justify-between gap-4 shadow-2xs transition-all ${
+        onClick ? 'cursor-pointer hover:border-blue-300 dark:hover:border-blue-500/50 hover:shadow-sm' : ''
+      }`}
     >
       <div className="min-w-0">
-        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{label}</p>
-        <p className={`text-2xl font-bold text-slate-900 ${loading ? 'opacity-30 animate-pulse' : ''}`}>
+        <p className="text-[11px] font-bold text-slate-400 dark:text-slate-400 uppercase tracking-wider mb-1">{label}</p>
+        <p className={`text-2xl font-extrabold text-slate-900 dark:text-white ${loading ? 'opacity-30 animate-pulse' : ''}`}>
           {loading ? '…' : value}
         </p>
-        {sub && <p className="text-xs text-slate-400 mt-0.5">{sub}</p>}
+        {sub && <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{sub}</p>}
       </div>
       {Icon && (
         <div className={`p-2.5 rounded-xl shrink-0 ${accents[accent]}`}>
-          <Icon size={18} strokeWidth={1.8} />
+          <Icon size={18} strokeWidth={2} />
         </div>
       )}
     </div>
@@ -70,14 +72,14 @@ function KpiCard({ label, value, icon: Icon, sub, accent = 'blue', loading, onCl
 // ── Status badge ──────────────────────────────────────────────────────────────
 function RunBadge({ status }) {
   const map = {
-    completed: 'bg-emerald-100 text-emerald-700',
-    running:   'bg-blue-100 text-blue-700',
-    failed:    'bg-red-100 text-red-700',
-    pending:   'bg-slate-100 text-slate-500',
-    paused:    'bg-yellow-100 text-yellow-700',
+    completed: 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/80',
+    running:   'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800/80',
+    failed:    'bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800/80',
+    pending:   'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700',
+    paused:    'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/80',
   }
   return (
-    <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${map[status?.toLowerCase()] || 'bg-slate-100 text-slate-500'}`}>
+    <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-mono font-semibold capitalize ${map[status?.toLowerCase()] || 'bg-slate-100 text-slate-500'}`}>
       {status || 'unknown'}
     </span>
   )
@@ -86,30 +88,17 @@ function RunBadge({ status }) {
 // ── Section header ────────────────────────────────────────────────────────────
 function SectionHeader({ title, action, actionTo, navigate }) {
   return (
-    <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100">
-      <h2 className="text-sm font-semibold text-slate-900">{title}</h2>
+    <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 dark:border-[#1e2a3f] bg-slate-50/50 dark:bg-[#162030]/60">
+      <h2 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">{title}</h2>
       {action && (
         <button
           onClick={() => navigate(actionTo)}
-          className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium"
+          className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:text-blue-500 font-semibold cursor-pointer"
         >
-          {action} <ArrowRight size={11} />
+          {action} <ArrowRight size={12} />
         </button>
       )}
     </div>
-  )
-}
-
-function EmptyRow({ cols, icon: Icon, msg }) {
-  return (
-    <tr>
-      <td colSpan={cols} className="px-5 py-12 text-center">
-        <div className="flex flex-col items-center gap-2 text-slate-400">
-          <Icon size={28} strokeWidth={1.4} />
-          <p className="text-sm">{msg}</p>
-        </div>
-      </td>
-    </tr>
   )
 }
 
@@ -118,14 +107,14 @@ export default function AdminPlatformOverview() {
   const { api } = useAuth()
   const navigate = useNavigate()
 
-  const [overview, setOverview]   = useState(null)
-  const [usage, setUsage]         = useState(null)
-  const [runs, setRuns]           = useState([])
+  const [overview, setOverview]     = useState(null)
+  const [usage, setUsage]           = useState(null)
+  const [runs, setRuns]             = useState([])
   const [exceptions, setExceptions] = useState(null)
-  const [orgs, setOrgs]           = useState([])
-  const [loading, setLoading]     = useState(true)
+  const [orgs, setOrgs]             = useState([])
+  const [loading, setLoading]       = useState(true)
   const [lastRefresh, setLastRefresh] = useState(null)
-  const [error, setError]         = useState(null)
+  const [error, setError]           = useState(null)
 
   const load = useCallback(async () => {
     setLoading(true); setError(null)
@@ -153,7 +142,7 @@ export default function AdminPlatformOverview() {
 
   const m = overview?.metrics || {}
 
-  // Derive workflow activity from runs (group by workflow name)
+  // Derive workflow activity from runs
   const wfMap = {}
   runs.forEach(r => {
     if (!wfMap[r.workflow]) wfMap[r.workflow] = { workflow: r.workflow, runs: 0, failed: 0, last_run: null, orgs: new Set() }
@@ -163,56 +152,43 @@ export default function AdminPlatformOverview() {
       wfMap[r.workflow].last_run = r.started_at
     if (r.organization) wfMap[r.workflow].orgs.add(r.organization)
   })
-  const wfActivity = Object.values(wfMap).slice(0, 8)
+  const wfActivity = Object.values(wfMap).slice(0, 6)
 
-  // Org activity — recent orgs with runs
+  // Org activity
   const orgActivity = orgs
     .filter(o => o.run_count > 0 || o.last_activity)
     .sort((a, b) => (b.last_activity || '') > (a.last_activity || '') ? 1 : -1)
-    .slice(0, 8)
-
-  // Exceptions
-  const failures  = exceptions?.workflow_failures   || []
-  const policy    = exceptions?.policy_escalations  || []
-  const excTotal  = failures.length + policy.length
-
-  // Usage snapshot
-  const usageSummary = {
-    tokens_in:  (usage?.breakdown || []).reduce((s, r) => s + (r.tokens_in  || 0), 0),
-    tokens_out: (usage?.breakdown || []).reduce((s, r) => s + (r.tokens_out || 0), 0),
-    wf_runs:    (usage?.breakdown || []).filter(r => r.usage_type === 'workflow_run').reduce((s, r) => s + (r.event_count || 0), 0),
-    img_gens:   (usage?.breakdown || []).filter(r => r.usage_type === 'image_gen').reduce((s, r) => s + (r.event_count || 0), 0),
-    cost_usd:   usage?.total_cost_usd,
-  }
+    .slice(0, 6)
 
   return (
-    <div className="flex flex-col gap-6 p-6 min-h-full bg-slate-50">
+    <div className="flex flex-col gap-6 p-6 min-h-full bg-slate-50 dark:bg-[#0b0f17] text-slate-900 dark:text-slate-100 font-sans transition-colors">
 
       {/* ── Header ─────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">Platform Overview</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
-            SMBFlow control plane
-            {lastRefresh && <span className="ml-2 text-slate-400">· {timeAgo(lastRefresh.toISOString())}</span>}
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Platform Control Center</h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            SMBFlow multi-tenant orchestrator telemetry
+            {lastRefresh && <span className="ml-2 text-slate-400">· Refreshed {timeAgo(lastRefresh.toISOString())}</span>}
           </p>
         </div>
         <button
-          onClick={load} disabled={loading}
-          className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50"
+          onClick={load}
+          disabled={loading}
+          className="flex items-center gap-2 px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-[#162030] border border-slate-200 dark:border-[#233048] rounded-xl hover:bg-slate-50 dark:hover:bg-[#1c273c] transition-colors shadow-2xs cursor-pointer disabled:opacity-50"
         >
-          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-          Refresh
+          <RefreshCw size={14} className={loading ? 'animate-spin text-blue-500' : ''} />
+          <span>Refresh Metrics</span>
         </button>
       </div>
 
       {error && (
-        <div className="flex items-center gap-3 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+        <div className="flex items-center gap-3 px-4 py-3 bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 rounded-xl text-xs text-red-700 dark:text-red-300">
           <XCircle size={15} className="shrink-0" />{error}
         </div>
       )}
 
-      {/* ── Trial expiry alerts ────────────────────────────────────────── */}
+      {/* ── Trial Expiry Alerts ────────────────────────────────────────── */}
       {!loading && (() => {
         const expiring = orgs.filter(o => {
           if (!o.trial_ends_at) return false
@@ -221,10 +197,10 @@ export default function AdminPlatformOverview() {
         })
         if (expiring.length === 0) return null
         return (
-          <div className="flex items-start gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl">
-            <AlertTriangle size={15} className="text-amber-600 shrink-0 mt-0.5" />
+          <div className="flex items-start gap-3 px-4 py-3.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-2xl text-amber-900 dark:text-amber-200 text-xs">
+            <AlertTriangle size={16} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-amber-900">Trial attention required</p>
+              <p className="font-bold">Subscription Action Required</p>
               <div className="flex flex-wrap gap-2 mt-1">
                 {expiring.map(o => {
                   const expired = o.effective_subscription_status === 'trial_expired'
@@ -233,7 +209,7 @@ export default function AdminPlatformOverview() {
                     <button
                       key={o.id}
                       onClick={() => navigate(`/admin/organizations/${o.id}`)}
-                      className="text-xs font-medium text-amber-700 hover:text-amber-900 underline decoration-dotted"
+                      className="font-medium text-amber-700 dark:text-amber-300 hover:underline cursor-pointer"
                     >
                       {o.name} ({expired ? 'expired' : `${days}d left`})
                     </button>
@@ -243,7 +219,7 @@ export default function AdminPlatformOverview() {
             </div>
             <button
               onClick={() => navigate('/admin/subscriptions')}
-              className="text-xs font-semibold text-amber-700 hover:text-amber-900 shrink-0"
+              className="font-bold text-amber-700 dark:text-amber-300 hover:text-amber-900 cursor-pointer"
             >
               Manage →
             </button>
@@ -251,237 +227,108 @@ export default function AdminPlatformOverview() {
         )
       })()}
 
-      {/* ── KPI grid ───────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {/* ── KPI Grid ───────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
         <KpiCard label="Active Organizations" value={fmt(m.active_organizations, '0')}
           icon={Building2} accent="blue" loading={loading}
-          sub="orgs on platform" onClick={() => navigate('/admin/organizations')} />
+          sub="registered client workspaces" onClick={() => navigate('/admin/organizations')} />
         <KpiCard label="Active Users" value={fmt(m.active_users, '0')}
           icon={Users} accent="purple" loading={loading}
-          sub={`${fmt(m.total_users, '0')} total`} onClick={() => navigate('/admin/users')} />
+          sub={`${fmt(m.total_users, '0')} total accounts`} onClick={() => navigate('/admin/users')} />
         <KpiCard label="Enabled Workflows" value={fmt(m.enabled_workflows, '0')}
           icon={TrendingUp} accent="green" loading={loading}
-          sub="active assignments" onClick={() => navigate('/admin/workflows/assignments')} />
+          sub="active DAG assignments" onClick={() => navigate('/admin/workflows/assignments')} />
         <KpiCard label="Runs Today" value={fmt(m.runs_today, '0')}
           icon={Zap} accent="slate" loading={loading}
-          sub={`${fmt(m.total_runs, '0')} all time`} onClick={() => navigate('/admin/runs')} />
+          sub={`${fmt(m.total_runs, '0')} all-time executions`} onClick={() => navigate('/admin/runs')} />
         <KpiCard label="Pending Exceptions" value={fmt(m.pending_exceptions, '0')}
           icon={AlertTriangle} accent={m.pending_exceptions > 0 ? 'red' : 'slate'} loading={loading}
-          sub="requiring attention" onClick={() => navigate('/admin/exceptions')} />
-        <KpiCard label="AI Spend (month)" value={loading ? '…' : fmtCost(m.ai_spend_month_usd)}
+          sub="requiring SME review" onClick={() => navigate('/admin/exceptions')} />
+        <KpiCard label="AI Spend (Month)" value={loading ? '…' : fmtCost(m.ai_spend_month_usd)}
           icon={DollarSign} accent="orange" loading={loading}
-          sub="platform-wide LLM cost" onClick={() => navigate('/admin/usage')} />
+          sub="platform LLM usage" onClick={() => navigate('/admin/usage')} />
         <KpiCard label="Active Subscriptions" value={fmt(m.active_subscriptions, '0')}
           icon={BarChart3} accent="green" loading={loading}
-          sub="paying / trial orgs" onClick={() => navigate('/admin/subscriptions')} />
-        <KpiCard label="Platform Health"
+          sub="paying & trialing orgs" onClick={() => navigate('/admin/subscriptions')} />
+        <KpiCard label="Platform Engine"
           value={loading ? '…' : 'Operational'}
           icon={Activity} accent="green" loading={loading}
-          sub="view health →" onClick={() => navigate('/admin/health')} />
+          sub="all connectors live →" onClick={() => navigate('/admin/health')} />
       </div>
 
-      {/* ── Row 1: Org Activity + Workflow Activity ─────────────────────── */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-
-        {/* Organization Activity */}
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-          <SectionHeader title="Organization Activity" action="All orgs" actionTo="/admin/organizations" navigate={navigate} />
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/50">
-                {['Organization', 'Plan', 'Runs', 'Last Activity', 'Status'].map(h => (
-                  <th key={h} className="px-4 py-2.5 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {loading ? (
-                <EmptyRow cols={5} icon={Building2} msg="Loading…" />
-              ) : orgActivity.length === 0 ? (
-                <EmptyRow cols={5} icon={Building2} msg="No organization activity yet" />
-              ) : orgActivity.map(org => (
-                <tr key={org.id}
-                  className="hover:bg-slate-50 cursor-pointer transition-colors"
-                  onClick={() => navigate(`/admin/organizations/${org.id}`)}
-                >
-                  <td className="px-4 py-3">
-                    <p className="font-medium text-slate-900 text-xs">{org.name}</p>
-                    <p className="text-[11px] text-slate-400 capitalize">{org.industry}</p>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700">
-                      {org.plan_name || org.plan_slug || '—'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-xs text-slate-600">{org.run_count ?? 0}</td>
-                  <td className="px-4 py-3 text-xs text-slate-400">{timeAgo(org.last_activity)}</td>
-                  <td className="px-4 py-3">
-                    <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
-                      org.active ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
-                    }`}>
-                      {org.active ? 'Active' : 'Suspended'}
-                    </span>
-                  </td>
+      {/* ── Two-Column Operational Activity Tables ─────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        
+        {/* Recent Workflow Executions */}
+        <div className="bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-2xl overflow-hidden shadow-2xs flex flex-col">
+          <SectionHeader title="Recent Workflow Runs" action="View All Runs" actionTo="/admin/runs" navigate={navigate} />
+          <div className="p-0 overflow-x-auto flex-1">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-slate-100 dark:border-[#1e2a3f] text-slate-400 text-[10px] uppercase font-bold tracking-wider">
+                  <th className="px-4 py-2.5">Workflow</th>
+                  <th className="px-4 py-2.5">Organization</th>
+                  <th className="px-4 py-2.5">Status</th>
+                  <th className="px-4 py-2.5">Time</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Workflow Activity */}
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-          <SectionHeader title="Workflow Activity" action="All runs" actionTo="/admin/runs" navigate={navigate} />
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/50">
-                {['Workflow', 'Runs', 'Failed', 'Orgs', 'Last Run'].map(h => (
-                  <th key={h} className="px-4 py-2.5 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {loading ? (
-                <EmptyRow cols={5} icon={Zap} msg="Loading…" />
-              ) : wfActivity.length === 0 ? (
-                <EmptyRow cols={5} icon={Zap} msg="No workflow runs yet" />
-              ) : wfActivity.map(wf => (
-                <tr key={wf.workflow} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-4 py-3">
-                    <p className="font-medium text-slate-900 text-xs">{wf.workflow}</p>
-                  </td>
-                  <td className="px-4 py-3 text-xs text-slate-600">{wf.runs}</td>
-                  <td className="px-4 py-3">
-                    {wf.failed > 0
-                      ? <span className="text-[11px] font-semibold text-red-600">{wf.failed}</span>
-                      : <span className="text-[11px] text-slate-400">0</span>}
-                  </td>
-                  <td className="px-4 py-3 text-xs text-slate-500">{wf.orgs.size}</td>
-                  <td className="px-4 py-3 text-xs text-slate-400">{timeAgo(wf.last_run)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* ── Row 2: Usage/Billing Snapshot + Exceptions ──────────────────── */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-
-        {/* Usage / Billing Snapshot */}
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-          <SectionHeader title="Usage &amp; Billing Snapshot (30d)" action="Full report" actionTo="/admin/usage" navigate={navigate} />
-          <div className="p-5 grid grid-cols-2 gap-4">
-            {[
-              { label: 'Workflow Runs',     value: fmt(usageSummary.wf_runs, '0'),               icon: Zap,     accent: 'bg-blue-50   text-blue-600'   },
-              { label: 'AI Tokens',         value: fmtTokens(usageSummary.tokens_in + usageSummary.tokens_out), icon: Cpu, accent: 'bg-purple-50 text-purple-600' },
-              { label: 'Image Generations', value: fmt(usageSummary.img_gens, '0'),               icon: TrendingUp, accent: 'bg-orange-50 text-orange-600' },
-              { label: 'Platform Cost',     value: fmtCost(usageSummary.cost_usd),                icon: DollarSign, accent: 'bg-emerald-50 text-emerald-600' },
-            ].map(item => (
-              <div key={item.label} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
-                <div className={`p-2 rounded-lg shrink-0 ${item.accent}`}>
-                  <item.icon size={14} strokeWidth={1.8} />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs text-slate-500 font-medium">{item.label}</p>
-                  <p className={`text-base font-bold text-slate-900 ${loading ? 'opacity-30' : ''}`}>{loading ? '…' : item.value}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-          {usage?.breakdown && usage.breakdown.length > 0 && (
-            <div className="border-t border-slate-100 overflow-hidden">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="border-b border-slate-100 bg-slate-50/50">
-                    {['Type', 'Workflow', 'Events', 'Tokens In', 'Tokens Out'].map(h => (
-                      <th key={h} className="px-4 py-2 text-left text-[10px] font-semibold text-slate-500 uppercase tracking-wide">{h}</th>
-                    ))}
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-[#1a2336]">
+                {runs.slice(0, 6).map(r => (
+                  <tr key={r.run_id} onClick={() => navigate('/admin/runs')} className="hover:bg-slate-50 dark:hover:bg-[#162030]/50 transition-colors cursor-pointer">
+                    <td className="px-4 py-3 font-bold text-slate-900 dark:text-white max-w-[140px] truncate">{r.workflow}</td>
+                    <td className="px-4 py-3 text-slate-500 dark:text-slate-400 truncate max-w-[120px]">{r.organization || '—'}</td>
+                    <td className="px-4 py-3"><RunBadge status={r.status} /></td>
+                    <td className="px-4 py-3 text-slate-400 text-[11px] whitespace-nowrap">{timeAgo(r.started_at)}</td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {usage.breakdown.slice(0, 6).map((row, i) => (
-                    <tr key={i} className="hover:bg-slate-50">
-                      <td className="px-4 py-2 font-mono text-slate-600">{row.usage_type}</td>
-                      <td className="px-4 py-2 text-slate-500">{row.workflow_key || '—'}</td>
-                      <td className="px-4 py-2 text-slate-700">{row.event_count}</td>
-                      <td className="px-4 py-2 text-slate-500 font-mono">{fmtTokens(row.tokens_in)}</td>
-                      <td className="px-4 py-2 text-slate-500 font-mono">{fmtTokens(row.tokens_out)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-          {(!usage?.breakdown || usage.breakdown.length === 0) && !loading && (
-            <div className="border-t border-slate-100 py-8 text-center text-slate-400 text-xs">
-              No usage events recorded in the last 30 days
-            </div>
-          )}
+                ))}
+                {runs.length === 0 && !loading && (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-8 text-center text-slate-400 text-xs">No recent workflow runs recorded.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        {/* Exceptions */}
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-          <SectionHeader
-            title={`Exceptions ${excTotal > 0 ? `(${excTotal})` : ''}`}
-            action="View all"
-            actionTo="/admin/exceptions"
-            navigate={navigate}
-          />
-          {loading ? (
-            <div className="flex items-center justify-center py-12 text-slate-400 text-sm">Loading…</div>
-          ) : excTotal === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 gap-2 text-slate-400">
-              <CheckCircle2 size={28} strokeWidth={1.4} />
-              <p className="text-sm">No platform exceptions</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-slate-100 max-h-72 overflow-y-auto">
-              {failures.slice(0, 5).map(item => (
-                <div key={item.id}
-                  className="flex items-start gap-3 px-4 py-3 hover:bg-slate-50 cursor-pointer transition-colors"
-                  onClick={() => navigate(`/admin/exceptions`)}
-                >
-                  <div className="w-6 h-6 rounded-lg bg-red-50 border border-red-100 flex items-center justify-center shrink-0 mt-0.5">
-                    <XCircle size={12} className="text-red-500" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-semibold text-slate-900">{item.workflow}</p>
-                    <p className="text-[11px] text-slate-500">{item.organization} · {timeAgo(item.started_at)}</p>
-                    {item.error && (
-                      <p className="text-[11px] text-red-600 font-mono mt-0.5 truncate">{item.error}</p>
-                    )}
-                  </div>
-                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700 shrink-0">error</span>
-                </div>
-              ))}
-              {policy.slice(0, 5).map(item => (
-                <div key={item.id}
-                  className="flex items-start gap-3 px-4 py-3 hover:bg-slate-50 cursor-pointer transition-colors"
-                  onClick={() => navigate(`/admin/exceptions`)}
-                >
-                  <div className="w-6 h-6 rounded-lg bg-yellow-50 border border-yellow-100 flex items-center justify-center shrink-0 mt-0.5">
-                    <Shield size={12} className="text-yellow-500" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-semibold text-slate-900">{item.review_type?.replace(/_/g, ' ')}</p>
-                    <p className="text-[11px] text-slate-500 truncate">{item.reason}</p>
-                    <p className="text-[11px] text-slate-400">{timeAgo(item.created_at)}</p>
-                  </div>
-                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 shrink-0">policy</span>
-                </div>
-              ))}
-              {excTotal > 10 && (
-                <div className="px-4 py-3 text-center">
-                  <button onClick={() => navigate('/admin/exceptions')}
-                    className="text-xs text-blue-600 hover:underline font-medium">
-                    View all {excTotal} exceptions →
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
+        {/* Organization Workspaces */}
+        <div className="bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-2xl overflow-hidden shadow-2xs flex flex-col">
+          <SectionHeader title="Organization Workspaces" action="View All Orgs" actionTo="/admin/organizations" navigate={navigate} />
+          <div className="p-0 overflow-x-auto flex-1">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-slate-100 dark:border-[#1e2a3f] text-slate-400 text-[10px] uppercase font-bold tracking-wider">
+                  <th className="px-4 py-2.5">Organization</th>
+                  <th className="px-4 py-2.5">Plan</th>
+                  <th className="px-4 py-2.5">Runs</th>
+                  <th className="px-4 py-2.5">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-[#1a2336]">
+                {orgActivity.slice(0, 6).map(o => (
+                  <tr key={o.id} onClick={() => navigate(`/admin/organizations/${o.id}`)} className="hover:bg-slate-50 dark:hover:bg-[#162030]/50 transition-colors cursor-pointer">
+                    <td className="px-4 py-3 font-bold text-slate-900 dark:text-white max-w-[140px] truncate">{o.name}</td>
+                    <td className="px-4 py-3 text-slate-500 dark:text-slate-400 font-mono text-[11px] uppercase">{o.plan || 'Starter'}</td>
+                    <td className="px-4 py-3 font-bold text-slate-700 dark:text-slate-300 font-mono">{o.run_count || 0}</td>
+                    <td className="px-4 py-3">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                        {o.subscription_status || 'Active'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+                {orgActivity.length === 0 && !loading && (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-8 text-center text-slate-400 text-xs">No active organizations found.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
+
       </div>
+
     </div>
   )
 }

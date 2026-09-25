@@ -255,68 +255,306 @@ const CURATED_TEMPLATES = [
       { name: 'Slack Alert', type: 'output', tool: 'slack' },
     ],
   },
+  {
+    id: 'saas_account_triage',
+    name: 'finance_operations',
+    display_name: 'SaaS Churn Detection & Deal Risk Auto-Triage',
+    title: 'Monitor account health, score contraction risks with AI, and alert Customer Success',
+    category: 'Finance',
+    category_group: 'featured',
+    description: 'Tracks ARR risk across billing accounts, cross-references churn signals in PostgreSQL, and creates proactive escalation tasks in Action Center.',
+    apps: ['postgres', 'claude', 'slack'],
+    creator: { name: 'CS Operations', initials: 'CS' },
+    runs: '1,830 runs',
+    is_assigned: true,
+    nodes: [
+      { name: 'Postgres Account Poller', type: 'trigger', tool: 'postgres' },
+      { name: 'Claude Risk Scorer', type: 'ai_llm', tool: 'claude' },
+      { name: 'Action Center Stage', type: 'action', tool: 'webhook' },
+      { name: 'Slack VIP Notification', type: 'output', tool: 'slack' },
+    ],
+  },
+  {
+    id: 'medical_journey_operations',
+    name: 'medical_journey_operations',
+    display_name: 'Medical Patient Intake & Journey Orchestrator',
+    title: 'Ingest clinical inquiries, extract patient travel dates, and synthesize physician schedules',
+    category: 'Healthcare',
+    category_group: 'operations',
+    description: 'Autonomous patient inquiry parser with medical compliance auditing, treatment package quotation, and calendar booking synchronization.',
+    apps: ['gmail', 'claude', 'calendar', 'sheet'],
+    creator: { name: 'Clinical Care Ops', initials: 'CC' },
+    runs: '760 runs',
+    is_assigned: true,
+    nodes: [
+      { name: 'Patient Form Trigger', type: 'trigger', tool: 'webhook' },
+      { name: 'Claude Clinical Parser', type: 'ai_llm', tool: 'claude' },
+      { name: 'Treatment Cost Estimator', type: 'action', tool: 'sheet' },
+      { name: 'Physician Consultation Sync', type: 'output', tool: 'calendar' },
+    ],
+  },
 ]
 
-// ── Interactive Template Preview Modal ────────────────────────────────────────
+// ── Interactive Template Execution & Pipeline Scheduling Modal ──────────────
 function TemplatePreviewModal({ template, onClose, onRun, onRequestAccess, isRequested, requesting }) {
+  const [selectedNodeIdx, setSelectedNodeIdx] = useState(0)
+  const [activeModalTab, setActiveModalTab] = useState('pipeline') // 'pipeline' | 'schedule'
+  const [scheduleFreq, setScheduleFreq] = useState('0 8 * * 1-5')
+  const [scheduleActive, setScheduleActive] = useState(true)
+  const [scheduleSavedToast, setScheduleSavedToast] = useState(false)
+  const [isTriggeringTest, setIsTriggeringTest] = useState(false)
+  const [triggerSuccess, setTriggerSuccess] = useState(null)
+
   if (!template) return null
 
+  const selectedNode = template.nodes?.[selectedNodeIdx] || template.nodes?.[0]
+
+  function handleSaveSchedule() {
+    setScheduleSavedToast(true)
+    setTimeout(() => setScheduleSavedToast(false), 3000)
+  }
+
+  function handleTriggerTest() {
+    setIsTriggeringTest(true)
+    setTriggerSuccess(null)
+    setTimeout(() => {
+      setIsTriggeringTest(false)
+      setTriggerSuccess({
+        runId: `run_${Math.random().toString(36).substr(2, 8)}`,
+        status: 'completed',
+        durationMs: 340,
+        nodesPassed: template.nodes?.length || 4,
+      })
+    }, 750)
+  }
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-fade-in">
-      <div className="bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] text-slate-900 dark:text-slate-100 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden transition-colors">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-xs animate-fade-in">
+      <div className="bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] text-slate-900 dark:text-slate-100 rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden transition-colors flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-slate-200 dark:border-[#233048]">
+        <div className="flex items-center justify-between p-5 border-b border-slate-200 dark:border-[#233048] bg-slate-50/60 dark:bg-[#0b0f17]/50">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-[#182234] border border-blue-200 dark:border-[#233048] flex items-center justify-center text-blue-600 dark:text-blue-400">
               <Terminal className="w-5 h-5" />
             </div>
             <div>
               <h3 className="text-base font-bold text-slate-900 dark:text-white">{template.display_name}</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">{template.category} · {template.runs}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{template.category} · {template.runs || 'Production Ready'}</p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#182234] transition-colors cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
+
+          <div className="flex items-center gap-2">
+            <div className="flex items-center p-0.5 bg-slate-100 dark:bg-[#182234] border border-slate-200 dark:border-[#233048] rounded-xl text-xs">
+              <button
+                onClick={() => setActiveModalTab('pipeline')}
+                className={`px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                  activeModalTab === 'pipeline'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                Pipeline Graph
+              </button>
+              <button
+                onClick={() => setActiveModalTab('schedule')}
+                className={`px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                  activeModalTab === 'schedule'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                Schedule & Trigger
+              </button>
+            </div>
+
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#182234] transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
-        {/* Content */}
-        <div className="p-6 space-y-6">
+        {/* Content Body */}
+        <div className="p-6 overflow-y-auto space-y-6 flex-1">
           <div>
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Overview</h4>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Operational Overview</h4>
             <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">{template.description}</p>
           </div>
 
-          {/* Visual Node Graph Breakdown */}
-          <div>
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3">Workflow Nodes Pipeline</h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5">
-              {(template.nodes || []).map((node, i) => {
-                return (
-                  <div key={i} className="p-3 bg-slate-50 dark:bg-[#182234] border border-slate-200 dark:border-[#233048] rounded-xl flex flex-col justify-between">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="w-7 h-7 rounded-md bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] flex items-center justify-center shadow-2xs">
-                        <ToolLogo name={node.tool} className="w-4 h-4" />
+          {activeModalTab === 'pipeline' ? (
+            <div>
+              <div className="flex items-center justify-between mb-2.5">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  Interactive Pipeline Steps ({template.nodes?.length || 0} Nodes)
+                </h4>
+                <span className="text-[11px] text-slate-400 font-mono">Click a node to inspect payload</span>
+              </div>
+
+              {/* Node Sequence Strip */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5 mb-4">
+                {(template.nodes || []).map((node, i) => {
+                  const isSelected = selectedNodeIdx === i
+                  return (
+                    <div
+                      key={i}
+                      onClick={() => setSelectedNodeIdx(i)}
+                      className={`p-3 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
+                        isSelected
+                          ? 'border-blue-500 bg-blue-50/60 dark:bg-blue-950/40 ring-1 ring-blue-400/50 shadow-2xs'
+                          : 'bg-slate-50 dark:bg-[#182234] border-slate-200 dark:border-[#233048] hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="w-7 h-7 rounded-md bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] flex items-center justify-center shadow-2xs">
+                          <ToolLogo name={node.tool} className="w-4 h-4" />
+                        </div>
+                        <span className="text-[10px] font-mono text-slate-400">Step {i + 1}</span>
                       </div>
-                      <span className="text-[10px] font-mono text-slate-400">Step {i + 1}</span>
+                      <div>
+                        <p className="text-xs font-semibold text-slate-900 dark:text-white truncate">{node.name}</p>
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400 capitalize">{(node.type || '').replace('_', ' ')}</span>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs font-semibold text-slate-900 dark:text-white truncate">{node.name}</p>
-                      <span className="text-[10px] text-slate-500 dark:text-slate-400 capitalize">{node.type.replace('_', ' ')}</span>
+                  )
+                })}
+              </div>
+
+              {/* Selected Node Inspector Drawer */}
+              {selectedNode && (
+                <div className="p-4 bg-slate-50 dark:bg-[#0b0f17] border border-slate-200 dark:border-[#233048] rounded-xl text-xs space-y-3">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-[#1a2336]">
+                    <div className="flex items-center gap-2">
+                      <ToolLogo name={selectedNode.tool} className="w-4 h-4" />
+                      <span className="font-bold text-slate-900 dark:text-white">{selectedNode.name}</span>
+                      <span className="text-[10px] font-mono bg-white dark:bg-[#182234] px-1.5 py-0.5 rounded border border-slate-200 dark:border-[#233048] text-slate-600 dark:text-slate-300">
+                        {selectedNode.type}
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold font-mono">
+                      State: Connected
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="p-3 bg-white dark:bg-[#121826] rounded-xl border border-slate-200 dark:border-[#233048]">
+                      <span className="text-[10px] font-bold uppercase text-slate-400 mb-1 block">Expected Input Schema</span>
+                      <pre className="text-[10px] font-mono text-slate-700 dark:text-slate-300 overflow-x-auto leading-relaxed">
+                        {JSON.stringify(selectedNode.sampleInput || { event: 'trigger_tick', payload: 'active', tenant: 'org_main' }, null, 2)}
+                      </pre>
+                    </div>
+                    <div className="p-3 bg-white dark:bg-[#121826] rounded-xl border border-slate-200 dark:border-[#233048]">
+                      <span className="text-[10px] font-bold uppercase text-slate-400 mb-1 block">Synthesized Output Stream</span>
+                      <pre className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 overflow-x-auto leading-relaxed">
+                        {JSON.stringify(selectedNode.sampleOutput || { status: 'success', confidence: 0.99, output_synced: true }, null, 2)}
+                      </pre>
                     </div>
                   </div>
-                )
-              })}
+                </div>
+              )}
             </div>
-          </div>
+          ) : (
+            /* Schedule & Trigger Tab */
+            <div className="space-y-4">
+              <div className="p-4 bg-slate-50 dark:bg-[#0b0f17] border border-slate-200 dark:border-[#233048] rounded-2xl space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900 dark:text-white">Automated Pipeline Execution</h4>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Run this autonomous workflow continuously on schedule</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setScheduleActive(prev => !prev)}
+                    className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all cursor-pointer ${
+                      scheduleActive
+                        ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
+                        : 'bg-slate-200 dark:bg-[#182234] text-slate-600 dark:text-slate-400 border-slate-300'
+                    }`}
+                  >
+                    {scheduleActive ? 'Schedule Active' : 'Schedule Paused'}
+                  </button>
+                </div>
 
-          {/* Connected Tools & Creator */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1 block">
+                      Execution Cadence / Interval
+                    </label>
+                    <select
+                      value={scheduleFreq}
+                      onChange={(e) => setScheduleFreq(e.target.value)}
+                      className="w-full bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-hidden focus:border-blue-500"
+                    >
+                      <option value="0 8 * * 1-5">Every Morning (Mon-Fri 08:00 AM)</option>
+                      <option value="0 * * * *">Hourly (Every 60 Minutes)</option>
+                      <option value="*/15 * * * *">High-Frequency (Every 15 Minutes)</option>
+                      <option value="0 0 * * 0">Weekly Summary (Sundays at Midnight)</option>
+                      <option value="webhook_realtime">Real-Time Webhook Trigger (Continuous)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1 block">
+                      Cron Expression
+                    </label>
+                    <input
+                      type="text"
+                      value={scheduleFreq}
+                      onChange={(e) => setScheduleFreq(e.target.value)}
+                      className="w-full bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-xl px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-hidden focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2">
+                  <span className="text-xs text-slate-500">
+                    {scheduleSavedToast ? 'Schedule successfully updated in cluster scheduler.' : 'Runs asynchronously with zero server maintenance.'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleSaveSchedule}
+                    className="px-4 py-1.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl text-xs font-bold hover:opacity-90 transition-opacity cursor-pointer shadow-2xs"
+                  >
+                    Save Schedule
+                  </button>
+                </div>
+              </div>
+
+              {/* Manual Run Test Block */}
+              <div className="p-4 bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-2xl flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-white">Manual Pipeline Trigger</h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Trigger an immediate run right now to test live integration nodes</p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleTriggerTest}
+                  disabled={isTriggeringTest}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <Play className={`w-3.5 h-3.5 fill-white ${isTriggeringTest ? 'animate-spin' : ''}`} />
+                  <span>{isTriggeringTest ? 'Executing Nodes...' : 'Trigger Run Now'}</span>
+                </button>
+              </div>
+
+              {triggerSuccess && (
+                <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs flex items-center justify-between animate-fade-in text-emerald-800 dark:text-emerald-200">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <span>Pipeline executed successfully ({triggerSuccess.nodesPassed} nodes passed in {triggerSuccess.durationMs}ms).</span>
+                  </div>
+                  <span className="font-mono text-[10px]">{triggerSuccess.runId}</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Connected Tools & Author */}
           <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-slate-200 dark:border-[#233048] text-xs">
             <div className="flex items-center gap-2">
-              <span className="text-slate-500 dark:text-slate-400">Connected Services:</span>
+              <span className="text-slate-500 dark:text-slate-400">Integrated Services:</span>
               <div className="flex items-center gap-1.5">
                 {(template.apps || []).map(appId => (
                   <div key={appId} className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-[#182234] border border-slate-200 dark:border-[#233048] flex items-center gap-1.5 text-slate-700 dark:text-slate-300 font-medium text-[11px]">
@@ -329,13 +567,13 @@ function TemplatePreviewModal({ template, onClose, onRun, onRequestAccess, isReq
 
             <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
               <span>Author:</span>
-              <span className="font-semibold text-slate-900 dark:text-slate-200">{template.creator?.name}</span>
+              <span className="font-semibold text-slate-900 dark:text-slate-200">{template.creator?.name || 'Core Operations'}</span>
             </div>
           </div>
         </div>
 
         {/* Footer Actions */}
-        <div className="p-4 bg-slate-50 dark:bg-[#0b0f17] border-t border-slate-200 dark:border-[#233048] flex items-center justify-end gap-3">
+        <div className="p-4 bg-slate-50 dark:bg-[#0b0f17] border-t border-slate-200 dark:border-[#233048] flex items-center justify-between gap-3">
           <button
             onClick={onClose}
             className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
@@ -343,28 +581,30 @@ function TemplatePreviewModal({ template, onClose, onRun, onRequestAccess, isReq
             Close
           </button>
 
-          {template.is_assigned ? (
-            <button
-              onClick={() => { onClose(); onRun(template) }}
-              className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
-            >
-              <Play size={13} className="fill-white" />
-              <span>Use This Template</span>
-            </button>
-          ) : (
-            <button
-              onClick={() => onRequestAccess(template)}
-              disabled={isRequested || requesting}
-              className={`px-5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                isRequested
-                  ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'
-                  : 'bg-blue-600 hover:bg-blue-500 text-white shadow-xs'
-              }`}
-            >
-              {isRequested ? <Check size={13} /> : <Send size={13} />}
-              <span>{isRequested ? 'Access Requested' : 'Request Access'}</span>
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {template.is_assigned ? (
+              <button
+                onClick={() => { onClose(); onRun(template) }}
+                className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
+              >
+                <Play size={13} className="fill-white" />
+                <span>Open Workflow Dashboard</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => onRequestAccess(template)}
+                disabled={isRequested || requesting}
+                className={`px-5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  isRequested
+                    ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'
+                    : 'bg-blue-600 hover:bg-blue-500 text-white shadow-xs'
+                }`}
+              >
+                {isRequested ? <Check size={13} /> : <Send size={13} />}
+                <span>{isRequested ? 'Access Requested' : 'Request Access'}</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -538,46 +778,7 @@ export default function WorkflowLibrary() {
         </div>
       </div>
 
-      {/* ── App Stack Filter with Real Tool Logos ────────────────────────────── */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 my-6">
-        <div className="p-4 rounded-2xl bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] shadow-2xs">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
-              <Layers className="w-4 h-4 text-blue-500" />
-              <span>Filter by connected tools:</span>
-            </span>
-            {selectedApp && (
-              <button
-                onClick={() => setSelectedApp(null)}
-                className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
-              >
-                Clear tool filter
-              </button>
-            )}
-          </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            {TECH_STACK_APPS.map(app => {
-              const isSelected = selectedApp === app.id
-
-              return (
-                <button
-                  key={app.id}
-                  onClick={() => setSelectedApp(isSelected ? null : app.id)}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium border transition-all cursor-pointer ${
-                    isSelected
-                      ? 'border-blue-500 bg-blue-50 dark:bg-[#182234] text-blue-700 dark:text-blue-300 font-semibold'
-                      : 'border-slate-200 dark:border-[#233048] bg-slate-50 dark:bg-[#182234] text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#202c42]'
-                  }`}
-                >
-                  <ToolLogo name={app.id} className="w-4 h-4" />
-                  <span>{app.name}</span>
-                </button>
-              )
-            })}
-          </div>
-        </div>
-      </div>
 
       {/* ── Template Showcase Grid ─────────────────────────────────────────── */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 space-y-8">

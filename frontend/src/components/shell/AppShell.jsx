@@ -73,7 +73,7 @@ export function AppShell({ children }) {
       <Sidebar isAdmin={isAdmin} getBadge={getBadge} />
       <div className="flex flex-col flex-1 min-w-0">
         <TopHeader />
-        <main className="flex-1 overflow-y-auto bg-slate-50 dark:bg-[#0b0f17] transition-colors">{children}</main>
+        <main className="flex-1 overflow-y-auto bg-slate-50 dark:bg-[#0b0f17] bg-dot-pattern transition-colors">{children}</main>
       </div>
     </div>
   )

@@ -15,9 +15,22 @@ export async function apiCall(path, options = {}, token = null) {
   const headers = { 'Content-Type': 'application/json' }
   if (token) headers['Authorization'] = `Bearer ${token}`
 
+  // Normalize path to prevent double /api/v1 prefixes
+  let cleanPath = path || ''
+  if (cleanPath.startsWith('/api/v1/')) {
+    cleanPath = cleanPath.slice(7)
+  } else if (cleanPath.startsWith('api/v1/')) {
+    cleanPath = cleanPath.slice(6)
+  } else if (cleanPath === '/api/v1' || cleanPath === 'api/v1') {
+    cleanPath = ''
+  }
+  if (!cleanPath.startsWith('/')) {
+    cleanPath = `/${cleanPath}`
+  }
+
   let res
   try {
-    res = await fetch(`${API_BASE}${path}`, { headers, ...options })
+    res = await fetch(`${API_BASE}${cleanPath}`, { headers, ...options })
   } catch (networkErr) {
     throw new Error(`Network error: cannot reach API. Is the server running?`)
   }

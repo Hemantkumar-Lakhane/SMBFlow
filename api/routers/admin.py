@@ -1731,21 +1731,21 @@ async def get_platform_health(
 async def get_providers(_: TokenData = Depends(_require_admin)):
     import os
     configs = [
-        {"id": "anthropic",  "name": "Anthropic",         "key_env": "ANTHROPIC_API_KEY",
+        {"id": "anthropic",   "name": "Anthropic",         "key_env": "ANTHROPIC_API_KEY",
          "models": ["claude-opus-4-5", "claude-3-5-haiku-20241022"],     "capabilities": ["text", "reasoning", "code"]},
-        {"id": "openai",     "name": "OpenAI",             "key_env": "OPENAI_API_KEY",
+        {"id": "openai",      "name": "OpenAI",             "key_env": "OPENAI_API_KEY",
          "models": ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo"],             "capabilities": ["text", "vision", "embeddings"]},
-        {"id": "google_ai",  "name": "Google AI (Gemini)", "key_env": "GOOGLE_API_KEY",
+        {"id": "google_ai",   "name": "Google AI (Gemini)", "key_env": "GOOGLE_API_KEY",
          "models": ["gemini-1.5-pro-latest", "gemini-1.5-flash-latest"], "capabilities": ["text", "vision", "multimodal"]},
-        {"id": "groq",       "name": "Groq",               "key_env": "GROQ_API_KEY",
+        {"id": "groq",        "name": "Groq",               "key_env": "GROQ_API_KEY",
          "models": ["llama-3.3-70b-versatile", "mixtral-8x7b-32768"],    "capabilities": ["text", "fast_inference"]},
-        {"id": "pollinations","name": "Pollinations AI",   "key_env": "",
+        {"id": "pollinations","name": "Pollinations AI",   "key_env": "POLLINATIONS_API_KEY",
          "models": ["flux", "turbo"],                                     "capabilities": ["image_generation"]},
     ]
     result = []
     for p in configs:
-        val  = os.getenv(p["key_env"], "") if p["key_env"] else "N/A"
-        ok   = (not p["key_env"]) or bool(val and not val.startswith("YOUR_") and len(val) > 10)
+        val = os.getenv(p["key_env"], "") or (os.getenv("GEMINI_API_KEY", "") if p["id"] == "google_ai" else "")
+        ok = bool(val and not val.startswith("YOUR_") and len(val) > 8)
         result.append({
             "id":           p["id"],
             "name":         p["name"],
