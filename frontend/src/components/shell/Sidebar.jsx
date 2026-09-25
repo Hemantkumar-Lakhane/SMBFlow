@@ -88,22 +88,22 @@ export function Sidebar({ isAdmin = false, getBadge, onNavClick }) {
   const avatarUrl = user?.avatar_url || (user?.id ? localStorage.getItem(`avatar_${user.id}`) : null) || localStorage.getItem('smbflow_avatar')
 
   return (
-    <aside className="w-[230px] shrink-0 flex flex-col bg-white dark:bg-[#111318] border-r border-slate-200 dark:border-[#272b35] h-full select-none transition-colors">
+    <aside className="w-[230px] shrink-0 flex flex-col bg-white dark:bg-[#0b0f17] border-r border-slate-200 dark:border-[#233048] h-full select-none transition-colors">
       {/* ── Brand / Logo Header ────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-100 dark:border-[#272b35]">
+      <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-100 dark:border-[#233048]">
         <div
           onClick={() => navigate(isAdmin ? '/admin' : '/copilot')}
           className="flex items-center gap-2.5 cursor-pointer group"
         >
-          {/* n8n style workflow node icon */}
-          <div className="w-7 h-7 rounded-lg bg-[#ea580c] flex items-center justify-center text-white shadow-xs">
+          {/* Clean enterprise logo mark */}
+          <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-xs">
             <Zap className="w-4 h-4 fill-white" />
           </div>
-          <span className="text-sm font-bold tracking-tight text-slate-900 dark:text-white group-hover:text-orange-500 transition-colors">
+          <span className="text-sm font-bold tracking-tight text-slate-900 dark:text-white group-hover:text-blue-500 transition-colors">
             SMBFlow
           </span>
           {isAdmin && (
-            <span className="text-[9px] font-bold uppercase bg-orange-100 dark:bg-orange-950/80 text-orange-700 dark:text-orange-400 px-1.5 py-0.5 rounded border border-orange-200 dark:border-orange-800">
+            <span className="text-[9px] font-bold uppercase bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-400 px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-800">
               Admin
             </span>
           )}
@@ -113,14 +113,14 @@ export function Sidebar({ isAdmin = false, getBadge, onNavClick }) {
         <div className="flex items-center gap-1 text-slate-400 dark:text-slate-500">
           <button
             onClick={() => navigate('/workflows')}
-            className="w-6 h-6 rounded hover:bg-slate-100 dark:hover:bg-[#1e2129] flex items-center justify-center hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer"
+            className="w-6 h-6 rounded hover:bg-slate-100 dark:hover:bg-[#182234] flex items-center justify-center hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer"
             title="Create Workflow"
           >
             <Plus className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={() => navigate('/workflow-library')}
-            className="w-6 h-6 rounded hover:bg-slate-100 dark:hover:bg-[#1e2129] flex items-center justify-center hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer"
+            className="w-6 h-6 rounded hover:bg-slate-100 dark:hover:bg-[#182234] flex items-center justify-center hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer"
             title="Search Templates"
           >
             <Search className="w-3.5 h-3.5" />
@@ -148,8 +148,8 @@ export function Sidebar({ isAdmin = false, getBadge, onNavClick }) {
                         className={({ isActive }) =>
                           `flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium transition-all ${
                             isActive
-                              ? 'bg-orange-500/10 dark:bg-[#1e2129] text-orange-600 dark:text-orange-400 font-semibold border border-orange-500/20 dark:border-[#272b35]'
-                              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100/70 dark:hover:bg-[#1e2129]/60 hover:text-slate-900 dark:hover:text-slate-200'
+                              ? 'bg-blue-50 dark:bg-[#182234] text-blue-600 dark:text-blue-400 font-semibold border border-blue-200 dark:border-[#233048]'
+                              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100/70 dark:hover:bg-[#182234]/60 hover:text-slate-900 dark:hover:text-slate-200'
                           }`
                         }
                       >
@@ -187,8 +187,8 @@ export function Sidebar({ isAdmin = false, getBadge, onNavClick }) {
                     className={({ isActive }) =>
                       `flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium transition-all ${
                         isActive
-                          ? 'bg-orange-500/10 dark:bg-[#1e2129] text-orange-600 dark:text-orange-400 font-semibold border border-orange-500/20 dark:border-[#272b35]'
-                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100/70 dark:hover:bg-[#1e2129]/60 hover:text-slate-900 dark:hover:text-slate-200'
+                          ? 'bg-blue-50 dark:bg-[#182234] text-blue-600 dark:text-blue-400 font-semibold border border-blue-200 dark:border-[#233048]'
+                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100/70 dark:hover:bg-[#182234]/60 hover:text-slate-900 dark:hover:text-slate-200'
                       }`
                     }
                   >
@@ -214,11 +214,11 @@ export function Sidebar({ isAdmin = false, getBadge, onNavClick }) {
             </div>
 
             {/* Bottom Secondary Group */}
-            <div className="pt-3 border-t border-slate-100 dark:border-[#272b35] space-y-1">
+            <div className="pt-3 border-t border-slate-100 dark:border-[#233048] space-y-1">
               {isAdmin && (
                 <NavLink
                   to="/admin"
-                  className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100/70 dark:hover:bg-[#1e2129]/60 hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
+                  className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100/70 dark:hover:bg-[#182234]/60 hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
                 >
                   <Cloud size={15} className="shrink-0 text-blue-500" />
                   <span>Admin Panel</span>
@@ -233,8 +233,8 @@ export function Sidebar({ isAdmin = false, getBadge, onNavClick }) {
                   className={({ isActive }) =>
                     `flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium transition-all ${
                       isActive
-                        ? 'bg-orange-500/10 dark:bg-[#1e2129] text-orange-600 dark:text-orange-400 font-semibold border border-orange-500/20 dark:border-[#272b35]'
-                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100/70 dark:hover:bg-[#1e2129]/60 hover:text-slate-900 dark:hover:text-slate-200'
+                        ? 'bg-blue-50 dark:bg-[#182234] text-blue-600 dark:text-blue-400 font-semibold border border-blue-200 dark:border-[#233048]'
+                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100/70 dark:hover:bg-[#182234]/60 hover:text-slate-900 dark:hover:text-slate-200'
                     }`
                   }
                 >
@@ -251,14 +251,14 @@ export function Sidebar({ isAdmin = false, getBadge, onNavClick }) {
       </nav>
 
       {/* ── User Profile Bottom Card ─────────────────────────────────────────── */}
-      <div className="border-t border-slate-100 dark:border-[#272b35] p-2.5">
-        <div className="flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1e2129] transition-colors">
+      <div className="border-t border-slate-100 dark:border-[#233048] p-2.5">
+        <div className="flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#182234] transition-colors">
           <div
             onClick={() => navigate('/settings/general')}
             className="flex items-center gap-2.5 flex-1 min-w-0 cursor-pointer group"
             title="Click to view and edit profile"
           >
-            <div className="w-7 h-7 rounded-full bg-slate-700 overflow-hidden flex items-center justify-center shrink-0 group-hover:ring-2 group-hover:ring-orange-400 transition-all">
+            <div className="w-7 h-7 rounded-full bg-blue-600 overflow-hidden flex items-center justify-center shrink-0 group-hover:ring-2 group-hover:ring-blue-400 transition-all">
               {avatarUrl ? (
                 <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
@@ -266,7 +266,7 @@ export function Sidebar({ isAdmin = false, getBadge, onNavClick }) {
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-slate-900 dark:text-slate-200 truncate group-hover:text-orange-400 transition-colors">
+              <p className="text-xs font-semibold text-slate-900 dark:text-slate-200 truncate group-hover:text-blue-400 transition-colors">
                 {displayName}
               </p>
               <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate">{displayRole}</p>
@@ -286,4 +286,3 @@ export function Sidebar({ isAdmin = false, getBadge, onNavClick }) {
     </aside>
   )
 }
-

@@ -1,10 +1,10 @@
 // frontend/src/pages/client/Dashboard.jsx
 // ─────────────────────────────────────────────────────────────────────────────
-// Clean, professional operations dashboard matching n8n UI theme:
-//   • Dual-theme design (light slate & dark n8n obsidian #111318 / #16181f / #272b35)
+// Clean, professional enterprise operations dashboard:
+//   • Dual-theme design (light slate & dark enterprise obsidian #0b0f17 / #121826 / #233048)
 //   • Shows only necessary operational metrics (Active Runs, Approvals, Completed, Workflows, Savings)
 //   • Clean Recent Activity timeline & Workflow Health tracking
-//   • Zero purple, zero gratuitous emojis, crisp typography
+//   • Zero purple, zero saffron, zero gratuitous emojis, crisp typography
 // ─────────────────────────────────────────────────────────────────────────────
 
 import React, { useState, useEffect, useCallback } from 'react'
@@ -26,13 +26,13 @@ function KpiCard({ title, icon, value, sub, chart, highlight }) {
   return (
     <div className={`p-4 rounded-xl border transition-all relative overflow-hidden flex flex-col justify-between ${
       highlight
-        ? 'bg-orange-50/60 dark:bg-[#1e2129] border-orange-200 dark:border-[#272b35]'
-        : 'bg-white dark:bg-[#16181f] border-slate-200 dark:border-[#272b35] shadow-2xs'
+        ? 'bg-blue-50/60 dark:bg-[#182234] border-blue-200 dark:border-[#233048]'
+        : 'bg-white dark:bg-[#121826] border-slate-200 dark:border-[#233048] shadow-2xs'
     }`}>
       <div>
         <div className="flex items-center justify-between mb-2">
           <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{title}</p>
-          <div className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-[#1e2129] text-slate-600 dark:text-slate-300 flex items-center justify-center">
+          <div className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-[#182234] text-slate-600 dark:text-slate-300 flex items-center justify-center">
             {icon}
           </div>
         </div>
@@ -63,8 +63,8 @@ function TimelineItem({ run, isLast }) {
     icon  = <CheckCircle2 className="w-4 h-4 text-emerald-500" />
     badge = <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 rounded-full">Completed</span>
   } else if (isRunning) {
-    icon  = <div className="w-4 h-4 rounded-full border-2 border-orange-500 border-t-transparent animate-spin" />
-    badge = <span className="text-[10px] font-semibold text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/60 border border-orange-200 dark:border-orange-800 px-2 py-0.5 rounded-full">Running</span>
+    icon  = <div className="w-4 h-4 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
+    badge = <span className="text-[10px] font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 px-2 py-0.5 rounded-full">Running</span>
   } else if (isEscalated) {
     icon  = <AlertTriangle className="w-4 h-4 text-amber-500" />
     badge = <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 px-2 py-0.5 rounded-full">Pending Approval</span>
@@ -73,13 +73,13 @@ function TimelineItem({ run, isLast }) {
     badge = <span className="text-[10px] font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 px-2 py-0.5 rounded-full">Failed</span>
   } else {
     icon  = <Play className="w-3.5 h-3.5 text-slate-400" />
-    badge = <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-[#1e2129] px-2 py-0.5 rounded-full">{run.status}</span>
+    badge = <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-[#182234] px-2 py-0.5 rounded-full">{run.status}</span>
   }
 
   return (
     <div className="relative flex gap-3.5">
-      {!isLast && <div className="absolute left-[7px] top-6 bottom-0 w-px bg-slate-200 dark:bg-[#272b35]" />}
-      <div className="w-4 h-4 mt-0.5 shrink-0 bg-white dark:bg-[#16181f] z-10">{icon}</div>
+      {!isLast && <div className="absolute left-[7px] top-6 bottom-0 w-px bg-slate-200 dark:bg-[#233048]" />}
+      <div className="w-4 h-4 mt-0.5 shrink-0 bg-white dark:bg-[#121826] z-10">{icon}</div>
       <div className="flex-1 pb-5">
         <div className="flex items-start justify-between gap-3 mb-0.5">
           <p className="text-xs font-bold text-slate-900 dark:text-slate-100">{run.name || run.workflow_name}</p>
@@ -97,11 +97,11 @@ function ProgressRow({ name, pct, color, runs, onOpen }) {
   return (
     <div
       onClick={onOpen}
-      className={onOpen ? 'cursor-pointer group -mx-2 px-2 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#1e2129] transition-colors' : undefined}
+      className={onOpen ? 'cursor-pointer group -mx-2 px-2 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#182234] transition-colors' : undefined}
       title={onOpen ? `Open ${name}` : undefined}
     >
       <div className="flex items-center justify-between gap-2 mb-1.5">
-        <p className={`text-xs font-semibold text-slate-900 dark:text-slate-200 truncate ${onOpen ? 'group-hover:text-orange-500 transition-colors' : ''}`}>
+        <p className={`text-xs font-semibold text-slate-900 dark:text-slate-200 truncate ${onOpen ? 'group-hover:text-blue-500 transition-colors' : ''}`}>
           {name}
         </p>
         {runs != null && (
@@ -111,7 +111,7 @@ function ProgressRow({ name, pct, color, runs, onOpen }) {
         )}
       </div>
       <div className="flex items-center gap-3">
-        <div className="flex-1 h-1.5 bg-slate-100 dark:bg-[#1e2129] rounded-full overflow-hidden">
+        <div className="flex-1 h-1.5 bg-slate-100 dark:bg-[#182234] rounded-full overflow-hidden">
           <div className={`h-full rounded-full transition-all duration-500 ${color}`} style={{ width: `${pct}%` }} />
         </div>
         <span className="text-xs font-mono font-bold text-slate-900 dark:text-slate-200 w-8 text-right">{pct}%</span>
@@ -190,7 +190,7 @@ export default function Dashboard() {
   const avgCost = data?.cost_overview?.avg_cost_per_run || 0
 
   return (
-    <div className="p-6 bg-slate-50 dark:bg-[#111318] min-h-full text-slate-900 dark:text-slate-100 transition-colors">
+    <div className="p-6 bg-slate-50 dark:bg-[#0b0f17] min-h-full text-slate-900 dark:text-slate-100 transition-colors">
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
@@ -201,7 +201,7 @@ export default function Dashboard() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => navigate('/copilot')}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#ea580c] hover:bg-[#c2410c] text-white rounded-lg text-xs font-semibold shadow-xs transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold shadow-xs transition-all cursor-pointer"
           >
             <Terminal size={13} />
             <span>AI Assistant</span>
@@ -209,9 +209,9 @@ export default function Dashboard() {
 
           <button
             onClick={() => navigate('/workflows')}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-white dark:bg-[#16181f] border border-slate-200 dark:border-[#272b35] text-slate-700 dark:text-slate-300 rounded-lg text-xs font-semibold shadow-2xs hover:bg-slate-100 dark:hover:bg-[#1e2129] transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] text-slate-700 dark:text-slate-300 rounded-lg text-xs font-semibold shadow-2xs hover:bg-slate-100 dark:hover:bg-[#182234] transition-colors cursor-pointer"
           >
-            <Play size={12} className="text-orange-500" />
+            <Play size={12} className="text-blue-500" />
             <span>Workflows</span>
           </button>
         </div>
@@ -262,12 +262,12 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         {/* Recent Activity */}
         <div className="lg:col-span-7">
-          <div className="bg-white dark:bg-[#16181f] border border-slate-200 dark:border-[#272b35] rounded-xl shadow-2xs p-5 h-full transition-colors">
+          <div className="bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-xl shadow-2xs p-5 h-full transition-colors">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-bold text-slate-900 dark:text-white">Recent Activity</h2>
               <button
                 onClick={() => navigate('/workflows')}
-                className="text-xs font-semibold text-orange-600 dark:text-orange-400 hover:underline flex items-center gap-1 cursor-pointer"
+                className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 cursor-pointer"
               >
                 <span>View all</span>
                 <ArrowUpRight size={13} />
@@ -297,12 +297,12 @@ export default function Dashboard() {
         {/* Right Column */}
         <div className="lg:col-span-5 flex flex-col gap-4">
           {/* Workflow Performance */}
-          <div className="bg-white dark:bg-[#16181f] border border-slate-200 dark:border-[#272b35] rounded-xl shadow-2xs p-5 transition-colors">
+          <div className="bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-xl shadow-2xs p-5 transition-colors">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-bold text-slate-900 dark:text-white">Workflow Performance</h2>
               <button
                 onClick={() => navigate('/workflows')}
-                className="text-xs font-semibold text-orange-600 dark:text-orange-400 hover:underline flex items-center gap-1 cursor-pointer"
+                className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 cursor-pointer"
               >
                 <span>View all</span>
                 <ArrowUpRight size={13} />
@@ -317,13 +317,13 @@ export default function Dashboard() {
             ) : (
               <div className="space-y-3">
                 {performance.slice(0, 4).map((p, i) => {
-                  const colors = ['bg-emerald-500', 'bg-blue-500', 'bg-amber-500', 'bg-orange-500']
+                  const colors = ['bg-emerald-500', 'bg-blue-500', 'bg-amber-500', 'bg-sky-500']
                   return (
                     <ProgressRow
                       key={p.name}
                       name={p.name}
                       pct={p.success_rate || 0}
-                      color={colors[i] || 'bg-orange-500'}
+                      color={colors[i] || 'bg-blue-500'}
                       runs={p.runs}
                       onOpen={() => navigate('/workflows')}
                     />
@@ -334,12 +334,12 @@ export default function Dashboard() {
           </div>
 
           {/* Cost Overview */}
-          <div className="bg-white dark:bg-[#16181f] border border-slate-200 dark:border-[#272b35] rounded-xl shadow-2xs p-5 transition-colors">
+          <div className="bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-xl shadow-2xs p-5 transition-colors">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-sm font-bold text-slate-900 dark:text-white">Cost Overview</h2>
               <button
                 onClick={() => navigate('/budget')}
-                className="text-xs font-semibold text-orange-600 dark:text-orange-400 hover:underline cursor-pointer"
+                className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
               >
                 Avg / run
               </button>
@@ -357,15 +357,15 @@ export default function Dashboard() {
             </div>
 
             {chartData.length > 0 && (
-              <div className="h-16 border border-slate-100 dark:border-[#272b35] rounded-lg overflow-hidden">
+              <div className="h-16 border border-slate-100 dark:border-[#233048] rounded-lg overflow-hidden">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartData}>
                     <Tooltip
-                      contentStyle={{ background: '#16181f', border: '1px solid #272b35', borderRadius: 6, fontSize: 11, color: '#fff' }}
+                      contentStyle={{ background: '#121826', border: '1px solid #233048', borderRadius: 6, fontSize: 11, color: '#fff' }}
                       formatter={v => [fmtCost(v), 'Cost']}
                       labelFormatter={() => ''}
                     />
-                    <Line type="monotone" dataKey="cost" stroke="#ea580c" strokeWidth={1.5} dot={false} isAnimationActive={false} />
+                    <Line type="monotone" dataKey="cost" stroke="#3b82f6" strokeWidth={1.5} dot={false} isAnimationActive={false} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
