@@ -128,8 +128,10 @@ export default function Dashboard() {
       if (err?.status === 404 || err?.response?.status === 404) {
         setData(null)
         setError('')
+      } else if (err?.status === 403 || err?.response?.status === 403) {
+        setError('📧 Please verify your email. A confirmation link was sent to your inbox.')
       } else {
-        setError('Failed to load dashboard data')
+        setError('Failed to load dashboard data. Please check your connection or login status.')
       }
     } finally {
       setLoading(false)
@@ -183,8 +185,12 @@ export default function Dashboard() {
       </div>
 
       {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
-          {error}
+        <div className={`mb-4 p-4 rounded-xl text-sm flex items-center gap-3 border ${
+          error.includes('📧')
+            ? 'bg-amber-50 border-amber-200 text-amber-900 shadow-sm'
+            : 'bg-red-50 border-red-200 text-red-700'
+        }`}>
+          <span className="font-medium">{error}</span>
         </div>
       )}
 

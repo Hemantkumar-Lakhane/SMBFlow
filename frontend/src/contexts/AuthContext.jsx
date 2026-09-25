@@ -82,6 +82,7 @@ export function AuthProvider({ children }) {
         industry: profile?.industry || 'saas',
         requires_onboarding: profile?.requires_onboarding ?? false,
         enabled_modules: [profile?.industry || 'saas'],
+        is_email_confirmed: Boolean(session.user.email_confirmed_at || session.user.confirmed_at),
       }
       setUser(u)
       try { localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(u)) } catch (_) {}
@@ -93,6 +94,7 @@ export function AuthProvider({ children }) {
         organization_id: session.user.user_metadata?.organization_id || null,
         requires_onboarding: false,
         enabled_modules: ['saas'],
+        is_email_confirmed: Boolean(session.user.email_confirmed_at || session.user.confirmed_at),
       }
       setUser(u)
     } finally {
