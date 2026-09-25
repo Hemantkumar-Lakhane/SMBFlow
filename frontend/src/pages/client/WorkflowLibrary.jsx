@@ -1,43 +1,145 @@
 // frontend/src/pages/client/WorkflowLibrary.jsx
 // ─────────────────────────────────────────────────────────────────────────────
-// World-class n8n-styled Workflow Template Library & Directory
+// Clean, Modern Enterprise Workflow Template Directory
 // Features:
-//   • Ambient radial glow hero with unified search & category selector
-//   • "What's in your stack?" interactive app ecosystem filter
-//   • Category-grouped template showcases (Featured, AI & LLMs, Sales & CRM, DevOps & IT)
-//   • Rich n8n-style cards with connected app icons, badges, & creator avatars
-//   • Interactive SVG Visual Node Pipeline Preview Modal
-//   • 1-Click "Use Template / Run Now" execution & access request pipeline
-//   • FAQs & Testimonial showcase with full Light & Dark mode support
+//   • Full persistent Light & Dark mode support
+//   • Official tool logos loaded directly from /assets/tools/
+//   • Filter by tech stack and business category
+//   • Clean, professional cards without rainbow gradients or vibe-coded sparkles
+//   • Interactive Node Inspection & 1-Click execution modal
 // ─────────────────────────────────────────────────────────────────────────────
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  BookOpen, ArrowRight, Play, Mail, Zap, Search, RefreshCw,
-  Layers, AlertTriangle, Globe, Building2, CheckCircle2, Lock, Send,
-  Sparkles, Cpu, Database, MessageSquare, Calendar, Share2,
+  BookOpen, ArrowRight, Play, Search,
+  Layers, CheckCircle2, Lock, Send,
+  Cpu, Database, Calendar, Share2,
   ChevronDown, ChevronUp, Check, Shield, FileText, ArrowUpRight,
-  Filter, HelpCircle, User, Star, ExternalLink, X
+  Filter, HelpCircle, X, Terminal, Server
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
-import { getDisplayName } from '../../utils/workflowDisplayNames'
 import RunWorkflowModal from '../../components/workflow/RunWorkflowModal'
+
+// ── Tool Logo with Image Asset Support & Clean Vector Fallback ────────────────
+function ToolLogo({ name, className = 'w-4 h-4' }) {
+  const [imgSrc, setImgSrc] = useState(() => {
+    if (!name) return null
+    if (name === 'sheets' || name === 'sheet') return '/assets/tools/sheet.png'
+    return `/assets/tools/${name}.png`
+  })
+  const [useFallback, setUseFallback] = useState(false)
+
+  const svgFallbacks = {
+    gmail: (
+      <svg className={className} viewBox="0 0 24 24" fill="none">
+        <path d="M22 6C22 4.9 21.1 4 20 4H4C2.9 4 2 4.9 2 6V18C2 19.1 2.9 20 4 20H20C21.1 20 22 19.1 22 18V6Z" fill="#EA4335" fillOpacity="0.15" />
+        <path d="M20 4H4C2.9 4 2 4.9 2 6L12 13L22 6C22 4.9 21.1 4 20 4Z" fill="#EA4335" />
+        <path d="M2 18V6L12 13L22 6V18C22 19.1 21.1 20 20 20H4C2.9 20 2 19.1 2 18Z" stroke="#EA4335" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+    sheets: (
+      <svg className={className} viewBox="0 0 24 24" fill="none">
+        <rect x="3" y="3" width="18" height="18" rx="3" fill="#0F9D58" fillOpacity="0.2" stroke="#0F9D58" strokeWidth="1.5" />
+        <path d="M7 8H17M7 12H17M7 16H17M12 8V16" stroke="#0F9D58" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+    ),
+    sheet: (
+      <svg className={className} viewBox="0 0 24 24" fill="none">
+        <rect x="3" y="3" width="18" height="18" rx="3" fill="#0F9D58" fillOpacity="0.2" stroke="#0F9D58" strokeWidth="1.5" />
+        <path d="M7 8H17M7 12H17M7 16H17M12 8V16" stroke="#0F9D58" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+    ),
+    calendar: (
+      <svg className={className} viewBox="0 0 24 24" fill="none">
+        <rect x="3" y="4" width="18" height="17" rx="3" fill="#4285F4" fillOpacity="0.2" stroke="#4285F4" strokeWidth="1.5" />
+        <path d="M16 2V6M8 2V6M3 9H21" stroke="#4285F4" strokeWidth="1.5" strokeLinecap="round" />
+        <circle cx="12" cy="14" r="1.5" fill="#4285F4" />
+      </svg>
+    ),
+    claude: (
+      <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+        <path d="M13.5 3L11.5 8L15 11.5L9.5 13L8 21L11.5 15.5L16 17L14.5 11L19.5 9.5L13.5 3Z" fill="#D97706" />
+      </svg>
+    ),
+    openai: (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2a10 10 0 0 1 10 10 10 10 0 0 1-10 10A10 10 0 0 1 2 12 10 10 0 0 1 12 2z" fill="#10B981" fillOpacity="0.15" />
+        <path d="M12 6v12M6 12h12M7.75 7.75l8.5 8.5M7.75 16.25l8.5-8.5" />
+      </svg>
+    ),
+    slack: (
+      <svg className={className} viewBox="0 0 24 24" fill="none">
+        <rect x="3" y="3" width="18" height="18" rx="4" fill="#EC4899" fillOpacity="0.15" stroke="#EC4899" strokeWidth="1.5" />
+        <path d="M8 12H16M12 8V16" stroke="#EC4899" strokeWidth="2" strokeLinecap="round" />
+      </svg>
+    ),
+    telegram: (
+      <svg className={className} viewBox="0 0 24 24" fill="none">
+        <path d="M21.5 3.5L2 11.5L8.5 14.5L18 6.5L11 16.5L17.5 20.5L21.5 3.5Z" fill="#229ED9" fillOpacity="0.2" stroke="#229ED9" strokeWidth="1.5" strokeLinejoin="round" />
+      </svg>
+    ),
+    hubspot: (
+      <svg className={className} viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="5" fill="#FF7A59" fillOpacity="0.2" stroke="#FF7A59" strokeWidth="1.5" />
+        <path d="M12 3V7M12 17V21M3 12H7M17 12H21" stroke="#FF7A59" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+    ),
+    postgres: (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="#336791" strokeWidth="1.5">
+        <ellipse cx="12" cy="5" rx="9" ry="3" fill="#336791" fillOpacity="0.2" />
+        <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
+        <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+      </svg>
+    ),
+    webhook: (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="#3B82F6" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="6" cy="12" r="3" fill="#3B82F6" fillOpacity="0.2" />
+        <circle cx="18" cy="6" r="3" fill="#3B82F6" fillOpacity="0.2" />
+        <circle cx="18" cy="18" r="3" fill="#3B82F6" fillOpacity="0.2" />
+        <path d="M9 12H12M12 12L15 6M12 12L15 18" />
+      </svg>
+    ),
+  }
+
+  function handleError() {
+    if (imgSrc === '/assets/tools/sheets.png') {
+      setImgSrc('/assets/tools/sheet.png')
+    } else if (imgSrc === '/assets/tools/sheet.png') {
+      setImgSrc('/assets/tools/sheets.png')
+    } else {
+      setUseFallback(true)
+    }
+  }
+
+  if (!useFallback && imgSrc) {
+    return (
+      <img
+        src={imgSrc}
+        alt={name}
+        className={`${className} object-contain`}
+        onError={handleError}
+      />
+    )
+  }
+
+  return svgFallbacks[name] || <Terminal className={className} />
+}
 
 // ── App Ecosystem Registry ───────────────────────────────────────────────────
 const TECH_STACK_APPS = [
-  { id: 'openai', name: 'OpenAI', icon: Cpu, color: '#10B981', bg: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' },
-  { id: 'claude', name: 'Claude', icon: Sparkles, color: '#D97706', bg: 'bg-amber-500/10 text-amber-400 border-amber-500/30' },
-  { id: 'gmail', name: 'Gmail', icon: Mail, color: '#EA4335', bg: 'bg-red-500/10 text-red-400 border-red-500/30' },
-  { id: 'slack', name: 'Slack', icon: MessageSquare, color: '#EC4899', bg: 'bg-pink-500/10 text-pink-400 border-pink-500/30' },
-  { id: 'hubspot', name: 'HubSpot', icon: Database, color: '#FF7A59', bg: 'bg-orange-500/10 text-orange-400 border-orange-500/30' },
-  { id: 'sheets', name: 'Google Sheets', icon: FileText, color: '#0F9D58', bg: 'bg-green-500/10 text-green-400 border-green-500/30' },
-  { id: 'calendar', name: 'Google Calendar', icon: Calendar, color: '#4285F4', bg: 'bg-blue-500/10 text-blue-400 border-blue-500/30' },
-  { id: 'telegram', name: 'Telegram', icon: Send, color: '#229ED9', bg: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30' },
-  { id: 'postgres', name: 'PostgreSQL', icon: Database, color: '#336791', bg: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30' },
+  { id: 'openai', name: 'OpenAI' },
+  { id: 'claude', name: 'Claude' },
+  { id: 'gmail', name: 'Gmail' },
+  { id: 'slack', name: 'Slack' },
+  { id: 'hubspot', name: 'HubSpot' },
+  { id: 'sheet', name: 'Google Sheets' },
+  { id: 'calendar', name: 'Google Calendar' },
+  { id: 'telegram', name: 'Telegram' },
+  { id: 'postgres', name: 'PostgreSQL' },
 ]
 
-// ── Curated Template Catalog with n8n Node Breakdown ─────────────────────────
+// ── Curated Template Catalog ──────────────────────────────────────────────────
 const CURATED_TEMPLATES = [
   {
     id: 'email_summarizer',
@@ -48,33 +150,33 @@ const CURATED_TEMPLATES = [
     category_group: 'featured',
     description: 'Autonomous inbox pipeline that fetches unread emails, summarizes threads, scores urgency, and stages replies in Action Center.',
     apps: ['gmail', 'claude', 'slack'],
-    creator: { name: 'SMBFlow Core', avatar: '🤖', verified: true },
+    creator: { name: 'Core Automation', initials: 'CA' },
     runs: '1,420 runs',
     is_assigned: true,
     nodes: [
-      { name: 'Gmail Trigger', type: 'trigger', icon: Mail, color: '#EA4335' },
-      { name: 'Claude 3.5 Sonnet', type: 'ai_llm', icon: Sparkles, color: '#D97706' },
-      { name: 'Action Center HITL', type: 'action', icon: Shield, color: '#F59E0B' },
-      { name: 'Slack VIP Alert', type: 'output', icon: MessageSquare, color: '#EC4899' },
+      { name: 'Gmail Trigger', type: 'trigger', tool: 'gmail' },
+      { name: 'Claude 3.5 Sonnet', type: 'ai_llm', tool: 'claude' },
+      { name: 'Action Center Review', type: 'action', tool: 'webhook' },
+      { name: 'Slack Notification', type: 'output', tool: 'slack' },
     ],
   },
   {
     id: 'product_launch',
     name: 'product_launch_sprint',
     display_name: 'Product Launch Sprint Campaign',
-    title: 'Extract brief documents, generate multi-platform copy, and create AI visuals',
+    title: 'Extract brief documents, generate multi-platform copy, and create campaign visuals',
     category: 'Marketing',
     category_group: 'featured',
     description: 'Generates tailored LinkedIn, Twitter, and Newsletter copy, triggers ImageRouter for campaign assets, and prepares scheduled posts.',
-    apps: ['claude', 'openai', 'sheets'],
-    creator: { name: 'Growth Ops', avatar: '🚀', verified: true },
+    apps: ['claude', 'openai', 'sheet'],
+    creator: { name: 'Growth Ops', initials: 'GO' },
     runs: '980 runs',
     is_assigned: true,
     nodes: [
-      { name: 'Document Brief Upload', type: 'trigger', icon: FileText, color: '#8B5CF6' },
-      { name: 'Multi-Channel Copy Agent', type: 'ai_llm', icon: Cpu, color: '#D97706' },
-      { name: 'ImageRouter Generator', type: 'ai_llm', icon: Sparkles, color: '#EC4899' },
-      { name: 'Buffer / Social Queue', type: 'output', icon: Share2, color: '#3B82F6' },
+      { name: 'Document Brief Upload', type: 'trigger', tool: 'webhook' },
+      { name: 'Multi-Channel Copy Agent', type: 'ai_llm', tool: 'claude' },
+      { name: 'ImageRouter Generator', type: 'ai_llm', tool: 'openai' },
+      { name: 'Social Queue Dispatch', type: 'output', tool: 'sheet' },
     ],
   },
   {
@@ -85,15 +187,15 @@ const CURATED_TEMPLATES = [
     category: 'Finance',
     category_group: 'featured',
     description: 'Automated invoice workflow with LLM data extraction, discrepancy checks against purchase orders, and calendar due date reminders.',
-    apps: ['gmail', 'claude', 'sheets', 'calendar'],
-    creator: { name: 'Finance Lead', avatar: '💼', verified: true },
+    apps: ['gmail', 'claude', 'sheet', 'calendar'],
+    creator: { name: 'Finance Ops', initials: 'FO' },
     runs: '2,310 runs',
     is_assigned: true,
     nodes: [
-      { name: 'Invoice Received', type: 'trigger', icon: Mail, color: '#EA4335' },
-      { name: 'Claude Data Extractor', type: 'ai_llm', icon: Sparkles, color: '#D97706' },
-      { name: 'Sheets Discrepancy Check', type: 'action', icon: FileText, color: '#0F9D58' },
-      { name: 'Google Calendar Event', type: 'output', icon: Calendar, color: '#4285F4' },
+      { name: 'Invoice Received', type: 'trigger', tool: 'gmail' },
+      { name: 'Claude Data Extractor', type: 'ai_llm', tool: 'claude' },
+      { name: 'Sheets Discrepancy Check', type: 'action', tool: 'sheet' },
+      { name: 'Google Calendar Event', type: 'output', tool: 'calendar' },
     ],
   },
   {
@@ -105,14 +207,14 @@ const CURATED_TEMPLATES = [
     category_group: 'sales',
     description: 'Enriches inbound leads with firmographic data, predicts conversion probability, updates CRM, and notifies account executives.',
     apps: ['openai', 'hubspot', 'slack'],
-    creator: { name: 'RevOps Team', avatar: '🎯', verified: true },
+    creator: { name: 'Revenue Ops', initials: 'RO' },
     runs: '3,890 runs',
     is_assigned: false,
     nodes: [
-      { name: 'Webhook Lead Submit', type: 'trigger', icon: Zap, color: '#8B5CF6' },
-      { name: 'Intent Scoring Agent', type: 'ai_llm', icon: Cpu, color: '#10B981' },
-      { name: 'HubSpot Contact Sync', type: 'action', icon: Database, color: '#FF7A59' },
-      { name: 'Slack VIP Channel', type: 'output', icon: MessageSquare, color: '#EC4899' },
+      { name: 'Webhook Lead Submit', type: 'trigger', tool: 'webhook' },
+      { name: 'Intent Scoring Agent', type: 'ai_llm', tool: 'openai' },
+      { name: 'HubSpot Contact Sync', type: 'action', tool: 'hubspot' },
+      { name: 'Slack VIP Channel', type: 'output', tool: 'slack' },
     ],
   },
   {
@@ -124,14 +226,14 @@ const CURATED_TEMPLATES = [
     category_group: 'ai_agents',
     description: 'Real-time Telegram bot connected to PostgreSQL pgvector embeddings with intelligent human-in-the-loop escalation.',
     apps: ['telegram', 'postgres', 'openai'],
-    creator: { name: 'Support Bot', avatar: '🤖', verified: true },
+    creator: { name: 'Support Ops', initials: 'SO' },
     runs: '1,150 runs',
     is_assigned: false,
     nodes: [
-      { name: 'Telegram Message', type: 'trigger', icon: Send, color: '#229ED9' },
-      { name: 'Vector DB Semantic Search', type: 'action', icon: Database, color: '#336791' },
-      { name: 'LLM Response Synthesizer', type: 'ai_llm', icon: Cpu, color: '#10B981' },
-      { name: 'Action Center Escalation', type: 'output', icon: Shield, color: '#EF4444' },
+      { name: 'Telegram Message', type: 'trigger', tool: 'telegram' },
+      { name: 'Vector DB Search', type: 'action', tool: 'postgres' },
+      { name: 'Response Synthesizer', type: 'ai_llm', tool: 'openai' },
+      { name: 'Action Center Escalation', type: 'output', tool: 'webhook' },
     ],
   },
   {
@@ -143,14 +245,14 @@ const CURATED_TEMPLATES = [
     category_group: 'devops',
     description: 'Detects high-frequency exceptions, aggregates stack traces, queries documentation, and opens structured tickets for engineers.',
     apps: ['slack', 'claude', 'postgres'],
-    creator: { name: 'DevOps Guild', avatar: '⚡', verified: true },
+    creator: { name: 'DevOps Guild', initials: 'DG' },
     runs: '4,520 runs',
     is_assigned: false,
     nodes: [
-      { name: 'Sentry Webhook', type: 'trigger', icon: Zap, color: '#EF4444' },
-      { name: 'Claude Root Cause Agent', type: 'ai_llm', icon: Sparkles, color: '#D97706' },
-      { name: 'PostgreSQL Audit Log', type: 'action', icon: Database, color: '#336791' },
-      { name: 'Slack PagerDuty Alert', type: 'output', icon: MessageSquare, color: '#EC4899' },
+      { name: 'Sentry Webhook', type: 'trigger', tool: 'webhook' },
+      { name: 'Root Cause Agent', type: 'ai_llm', tool: 'claude' },
+      { name: 'Audit Log Storage', type: 'action', tool: 'postgres' },
+      { name: 'Slack Alert', type: 'output', tool: 'slack' },
     ],
   },
 ]
@@ -160,22 +262,22 @@ function TemplatePreviewModal({ template, onClose, onRun, onRequestAccess, isReq
   if (!template) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
-      <div className="bg-[#12161f] border border-slate-800 text-slate-100 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-fade-in">
+      <div className="bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] text-slate-900 dark:text-slate-100 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden transition-colors">
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-slate-800">
+        <div className="flex items-center justify-between p-5 border-b border-slate-200 dark:border-[#233048]">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-purple-600/20 border border-purple-500/40 text-purple-400 flex items-center justify-center">
-              <Sparkles className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-[#182234] border border-blue-200 dark:border-[#233048] flex items-center justify-center text-blue-600 dark:text-blue-400">
+              <Terminal className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white">{template.display_name}</h3>
-              <p className="text-xs text-slate-400">{template.category} · {template.runs || 'Production Ready'}</p>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">{template.display_name}</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{template.category} · {template.runs}</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#182234] transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -184,27 +286,26 @@ function TemplatePreviewModal({ template, onClose, onRun, onRequestAccess, isReq
         {/* Content */}
         <div className="p-6 space-y-6">
           <div>
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Overview</h4>
-            <p className="text-sm text-slate-300 leading-relaxed">{template.description}</p>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Overview</h4>
+            <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">{template.description}</p>
           </div>
 
           {/* Visual Node Graph Breakdown */}
           <div>
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Workflow Execution Pipeline</h4>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3">Workflow Nodes Pipeline</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5">
               {(template.nodes || []).map((node, i) => {
-                const IconC = node.icon || Zap
                 return (
-                  <div key={i} className="p-3 bg-[#161b22] border border-slate-800 rounded-xl flex flex-col justify-between">
+                  <div key={i} className="p-3 bg-slate-50 dark:bg-[#182234] border border-slate-200 dark:border-[#233048] rounded-xl flex flex-col justify-between">
                     <div className="flex items-center justify-between mb-2">
-                      <div className="w-6 h-6 rounded-md flex items-center justify-center text-white" style={{ backgroundColor: node.color }}>
-                        <IconC size={13} />
+                      <div className="w-7 h-7 rounded-md bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] flex items-center justify-center shadow-2xs">
+                        <ToolLogo name={node.tool} className="w-4 h-4" />
                       </div>
-                      <span className="text-[10px] uppercase font-mono text-slate-400">Step {i + 1}</span>
+                      <span className="text-[10px] font-mono text-slate-400">Step {i + 1}</span>
                     </div>
                     <div>
-                      <p className="text-xs font-semibold text-white truncate">{node.name}</p>
-                      <span className="text-[10px] text-slate-400 capitalize">{node.type.replace('_', ' ')}</span>
+                      <p className="text-xs font-semibold text-slate-900 dark:text-white truncate">{node.name}</p>
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400 capitalize">{node.type.replace('_', ' ')}</span>
                     </div>
                   </div>
                 )
@@ -213,37 +314,31 @@ function TemplatePreviewModal({ template, onClose, onRun, onRequestAccess, isReq
           </div>
 
           {/* Connected Tools & Creator */}
-          <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-slate-800 text-xs">
+          <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-slate-200 dark:border-[#233048] text-xs">
             <div className="flex items-center gap-2">
-              <span className="text-slate-400">Integrated Services:</span>
+              <span className="text-slate-500 dark:text-slate-400">Connected Services:</span>
               <div className="flex items-center gap-1.5">
-                {(template.apps || []).map(appId => {
-                  const app = TECH_STACK_APPS.find(a => a.id === appId)
-                  if (!app) return null
-                  const AppIcon = app.icon
-                  return (
-                    <span key={appId} className="px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 flex items-center gap-1 font-mono text-[11px]">
-                      <AppIcon size={11} style={{ color: app.color }} /> {app.name}
-                    </span>
-                  )
-                })}
+                {(template.apps || []).map(appId => (
+                  <div key={appId} className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-[#182234] border border-slate-200 dark:border-[#233048] flex items-center gap-1.5 text-slate-700 dark:text-slate-300 font-medium text-[11px]">
+                    <ToolLogo name={appId} className="w-3.5 h-3.5" />
+                    <span className="capitalize">{appId}</span>
+                  </div>
+                ))}
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <span className="text-slate-400">Author:</span>
-              <span className="font-semibold text-purple-300 flex items-center gap-1">
-                {template.creator?.avatar} {template.creator?.name}
-              </span>
+            <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+              <span>Author:</span>
+              <span className="font-semibold text-slate-900 dark:text-slate-200">{template.creator?.name}</span>
             </div>
           </div>
         </div>
 
         {/* Footer Actions */}
-        <div className="p-4 bg-slate-950/80 border-t border-slate-800 flex items-center justify-end gap-3">
+        <div className="p-4 bg-slate-50 dark:bg-[#0b0f17] border-t border-slate-200 dark:border-[#233048] flex items-center justify-end gap-3">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+            className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
           >
             Close
           </button>
@@ -251,7 +346,7 @@ function TemplatePreviewModal({ template, onClose, onRun, onRequestAccess, isReq
           {template.is_assigned ? (
             <button
               onClick={() => { onClose(); onRun(template) }}
-              className="px-5 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-purple-600/20 flex items-center gap-1.5 transition-all cursor-pointer"
+              className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
             >
               <Play size={13} className="fill-white" />
               <span>Use This Template</span>
@@ -262,38 +357,16 @@ function TemplatePreviewModal({ template, onClose, onRun, onRequestAccess, isReq
               disabled={isRequested || requesting}
               className={`px-5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                 isRequested
-                  ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
-                  : 'bg-purple-600 hover:bg-purple-500 text-white shadow-lg'
+                  ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'
+                  : 'bg-blue-600 hover:bg-blue-500 text-white shadow-xs'
               }`}
             >
               {isRequested ? <Check size={13} /> : <Send size={13} />}
-              <span>{isRequested ? 'Access Requested' : 'Request Template Access'}</span>
+              <span>{isRequested ? 'Access Requested' : 'Request Access'}</span>
             </button>
           )}
         </div>
       </div>
-    </div>
-  )
-}
-
-// ── FAQ Accordion Item ────────────────────────────────────────────────────────
-function FaqItem({ question, answer }) {
-  const [open, setOpen] = useState(false)
-
-  return (
-    <div className="border border-slate-800/80 rounded-xl bg-[#12161f] overflow-hidden transition-all">
-      <button
-        onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between p-4 text-left text-sm font-semibold text-slate-200 hover:text-white transition-colors cursor-pointer"
-      >
-        <span>{question}</span>
-        {open ? <ChevronUp className="w-4 h-4 text-purple-400" /> : <ChevronDown className="w-4 h-4 text-slate-500" />}
-      </button>
-      {open && (
-        <div className="p-4 pt-0 text-xs text-slate-400 leading-relaxed border-t border-slate-800/40">
-          {answer}
-        </div>
-      )}
     </div>
   )
 }
@@ -318,16 +391,13 @@ export default function WorkflowLibrary() {
   // Filter templates
   const filteredTemplates = useMemo(() => {
     return CURATED_TEMPLATES.filter(tpl => {
-      // Category filter
       if (selectedCategory !== 'All') {
         if (selectedCategory === 'Featured' && tpl.category_group !== 'featured') return false
         if (selectedCategory !== 'Featured' && tpl.category !== selectedCategory) return false
       }
 
-      // App filter
       if (selectedApp && !tpl.apps.includes(selectedApp)) return false
 
-      // Search keyword filter
       if (search.trim()) {
         const q = search.toLowerCase()
         const matchTitle = tpl.title.toLowerCase().includes(q)
@@ -364,7 +434,7 @@ export default function WorkflowLibrary() {
         workflow_name: tpl.display_name,
       })
       setRequestedMap(prev => ({ ...prev, [tpl.id]: true }))
-      setRequestToast(`Access request for "${tpl.display_name}" sent to workspace admin!`)
+      setRequestToast(`Access request for "${tpl.display_name}" sent!`)
       setTimeout(() => setRequestToast(''), 4000)
     } catch {
       setRequestedMap(prev => ({ ...prev, [tpl.id]: true }))
@@ -376,14 +446,11 @@ export default function WorkflowLibrary() {
   }
 
   return (
-    <div className="min-h-full bg-[#08090d] text-slate-100 pb-16 font-sans relative">
-      {/* Background Ambient Radial Glow */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[450px] bg-gradient-to-b from-purple-900/20 via-blue-900/10 to-transparent blur-3xl pointer-events-none" />
-
-      {/* ── Toast Notification ─────────────────────────────────────────────── */}
+    <div className="min-h-full bg-slate-50 dark:bg-[#0b0f17] text-slate-900 dark:text-slate-100 pb-16 font-sans relative transition-colors">
+      {/* Toast Notification */}
       {requestToast && (
-        <div className="fixed top-5 right-5 z-50 p-4 bg-purple-950 border border-purple-800 text-purple-200 rounded-xl text-xs font-semibold shadow-2xl flex items-center gap-2 animate-fade-in">
-          <CheckCircle2 size={16} className="text-purple-400 shrink-0" />
+        <div className="fixed top-5 right-5 z-50 p-4 bg-slate-900 dark:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-2xl flex items-center gap-2 animate-fade-in border border-slate-700">
+          <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
           <span>{requestToast}</span>
         </div>
       )}
@@ -410,28 +477,20 @@ export default function WorkflowLibrary() {
       />
 
       {/* ── Hero Section ───────────────────────────────────────────────────── */}
-      <div className="relative pt-12 pb-8 px-4 text-center max-w-4xl mx-auto">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-purple-900/40 border border-purple-500/40 text-purple-300 text-xs font-semibold mb-4 shadow-sm">
-          <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-          <span>Workflow Automation Directory</span>
-        </div>
-
-        <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tight leading-tight">
-          Top 1,300+ Automated <br />
-          <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-amber-300 bg-clip-text text-transparent">
-            Workflow Templates
-          </span>
+      <div className="relative pt-10 pb-6 px-4 text-center max-w-4xl mx-auto">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-900 dark:text-white tracking-tight leading-tight">
+          Workflow Templates Directory
         </h1>
 
-        <p className="mt-3 text-sm md:text-base text-slate-400 max-w-2xl mx-auto">
-          Pre-built, multi-agent automated pipelines ready to deploy into your workspace in one click.
+        <p className="mt-2 text-xs md:text-sm text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">
+          Pre-built, autonomous operations pipelines ready to execute in your workspace.
         </p>
 
-        {/* ── Unified Search Bar ────────────────────────────────────────────── */}
-        <div className="mt-8 max-w-2xl mx-auto">
-          <div className="flex items-center bg-[#12161f] border-2 border-slate-800 hover:border-purple-500/70 focus-within:border-purple-500 rounded-2xl p-2 shadow-2xl transition-all">
+        {/* Unified Search Bar */}
+        <div className="mt-6 max-w-2xl mx-auto">
+          <div className="flex items-center bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] focus-within:border-blue-500 rounded-2xl p-2 shadow-xs transition-all">
             <div className="flex items-center gap-2 pl-2 text-slate-400">
-              <Search className="w-5 h-5 text-purple-400" />
+              <Search className="w-4 h-4 text-blue-500" />
             </div>
 
             <input
@@ -439,13 +498,13 @@ export default function WorkflowLibrary() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search workflows by app, prompt, or task (e.g. invoices, leads, social)..."
-              className="flex-1 bg-transparent px-3 py-1.5 text-sm text-white placeholder-slate-500 focus:outline-hidden"
+              className="flex-1 bg-transparent px-3 py-1.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-hidden"
             />
 
             {search && (
               <button
                 onClick={() => setSearch('')}
-                className="p-1 text-slate-400 hover:text-white"
+                className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-white"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -453,23 +512,23 @@ export default function WorkflowLibrary() {
 
             <button
               onClick={() => navigate('/copilot')}
-              className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer shrink-0 hidden sm:flex items-center gap-1"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold transition-all shadow-xs cursor-pointer shrink-0 hidden sm:flex items-center gap-1.5"
             >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Ask AI Copilot</span>
+              <Terminal className="w-3.5 h-3.5" />
+              <span>AI Assistant</span>
             </button>
           </div>
 
-          {/* Quick Category Chips */}
-          <div className="flex flex-wrap items-center justify-center gap-1.5 mt-4">
+          {/* Clean Category Chips */}
+          <div className="flex flex-wrap items-center justify-center gap-1.5 mt-3.5">
             {categories.map((cat) => (
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
-                className={`px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-all cursor-pointer ${
                   selectedCategory === cat
-                    ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
-                    : 'bg-[#12161f] text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800/80'
+                    ? 'bg-blue-600 text-white font-semibold shadow-xs'
+                    : 'bg-white dark:bg-[#121826] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-[#233048]'
                 }`}
               >
                 {cat}
@@ -479,20 +538,20 @@ export default function WorkflowLibrary() {
         </div>
       </div>
 
-      {/* ── "What's in your stack?" Interactive App Filter ───────────────────── */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 my-8">
-        <div className="p-4 rounded-2xl bg-[#10131b] border border-slate-800/80 shadow-lg">
+      {/* ── App Stack Filter with Real Tool Logos ────────────────────────────── */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 my-6">
+        <div className="p-4 rounded-2xl bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] shadow-2xs">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-              <Layers className="w-4 h-4 text-purple-400" />
-              <span>Need inspiration? Filter by your tech stack:</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
+              <Layers className="w-4 h-4 text-blue-500" />
+              <span>Filter by connected tools:</span>
             </span>
             {selectedApp && (
               <button
                 onClick={() => setSelectedApp(null)}
-                className="text-[11px] text-purple-400 hover:underline flex items-center gap-1 cursor-pointer"
+                className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
               >
-                Clear app filter
+                Clear tool filter
               </button>
             )}
           </div>
@@ -500,19 +559,18 @@ export default function WorkflowLibrary() {
           <div className="flex flex-wrap items-center gap-2">
             {TECH_STACK_APPS.map(app => {
               const isSelected = selectedApp === app.id
-              const AppIcon = app.icon
 
               return (
                 <button
                   key={app.id}
                   onClick={() => setSelectedApp(isSelected ? null : app.id)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium border transition-all cursor-pointer ${
                     isSelected
-                      ? app.bg
-                      : 'border-slate-800 bg-[#161b22] text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                      ? 'border-blue-500 bg-blue-50 dark:bg-[#182234] text-blue-700 dark:text-blue-300 font-semibold'
+                      : 'border-slate-200 dark:border-[#233048] bg-slate-50 dark:bg-[#182234] text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#202c42]'
                   }`}
                 >
-                  <AppIcon size={13} style={{ color: app.color }} />
+                  <ToolLogo name={app.id} className="w-4 h-4" />
                   <span>{app.name}</span>
                 </button>
               )
@@ -522,32 +580,31 @@ export default function WorkflowLibrary() {
       </div>
 
       {/* ── Template Showcase Grid ─────────────────────────────────────────── */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 space-y-10">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 space-y-8">
         <div>
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-purple-400" />
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <span>{selectedCategory === 'All' ? 'Featured Operations Templates' : `${selectedCategory} Templates`}</span>
               <span className="text-xs text-slate-500 font-mono">({filteredTemplates.length})</span>
             </h2>
 
             <button
               onClick={() => navigate('/workflows')}
-              className="text-xs text-purple-400 hover:text-purple-300 font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+              className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-semibold flex items-center gap-1 transition-colors cursor-pointer"
             >
-              <span>View my active workflows</span>
+              <span>View my workflows</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
 
           {filteredTemplates.length === 0 ? (
-            <div className="p-12 text-center bg-[#12161f] border border-slate-800 rounded-2xl">
-              <BookOpen className="w-10 h-10 text-slate-600 mx-auto mb-3" />
-              <p className="text-sm font-semibold text-slate-300">No matching templates found</p>
-              <p className="text-xs text-slate-500 mt-1">Try resetting your search or selecting a different app filter.</p>
+            <div className="p-12 text-center bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-2xl">
+              <BookOpen className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">No matching templates found</p>
+              <p className="text-xs text-slate-500 mt-1">Try resetting your search or selecting a different tool filter.</p>
               <button
                 onClick={() => { setSearch(''); setSelectedCategory('All'); setSelectedApp(null) }}
-                className="mt-4 px-4 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-semibold transition-colors cursor-pointer"
+                className="mt-3 px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold transition-colors cursor-pointer"
               >
                 Reset Filters
               </button>
@@ -555,66 +612,54 @@ export default function WorkflowLibrary() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredTemplates.map((tpl) => {
-                const isRequested = requestedMap[tpl.id]
-                const isRequesting = requestingId === tpl.id
-
                 return (
                   <div
                     key={tpl.id}
                     onClick={() => setPreviewTemplate(tpl)}
-                    className="p-5 bg-[#12161f] hover:bg-[#161b26] border border-slate-800/80 hover:border-purple-500/60 rounded-2xl transition-all cursor-pointer group flex flex-col justify-between shadow-xl relative overflow-hidden"
+                    className="p-5 bg-white dark:bg-[#121826] hover:bg-slate-50 dark:hover:bg-[#182234] border border-slate-200 dark:border-[#233048] hover:border-blue-400 dark:hover:border-blue-500 rounded-2xl transition-all cursor-pointer group flex flex-col justify-between shadow-2xs relative overflow-hidden"
                   >
-                    {/* Top Meta */}
                     <div>
                       <div className="flex items-start justify-between gap-2 mb-3">
-                        <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-purple-950/60 text-purple-300 border border-purple-800/60 font-mono">
+                        <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 dark:bg-[#182234] text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-[#233048] font-mono">
                           {tpl.category}
                         </span>
 
                         {tpl.is_assigned ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-950/80 text-emerald-300 border border-emerald-800/80">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/80">
                             <CheckCircle2 size={10} /> Active
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-950/80 text-amber-300 border border-amber-800/80">
-                            <Lock size={10} /> Available
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                            Ready
                           </span>
                         )}
                       </div>
 
-                      <h3 className="text-sm font-bold text-white group-hover:text-purple-300 transition-colors line-clamp-2 mb-2 leading-snug">
+                      <h3 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2 mb-2 leading-snug">
                         {tpl.title}
                       </h3>
 
-                      <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed mb-4">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed mb-4">
                         {tpl.description}
                       </p>
                     </div>
 
-                    {/* Bottom App Badges & Actions */}
-                    <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between">
-                      {/* Integrated App Badges */}
-                      <div className="flex items-center -space-x-1">
-                        {(tpl.apps || []).map(appId => {
-                          const app = TECH_STACK_APPS.find(a => a.id === appId)
-                          if (!app) return null
-                          const AppIcon = app.icon
-                          return (
-                            <div
-                              key={appId}
-                              className="w-6 h-6 rounded-full bg-[#1e2433] border-2 border-[#12161f] flex items-center justify-center text-white"
-                              title={app.name}
-                            >
-                              <AppIcon size={12} style={{ color: app.color }} />
-                            </div>
-                          )
-                        })}
+                    {/* Bottom Connected Tool Logos */}
+                    <div className="pt-3 border-t border-slate-100 dark:border-[#233048] flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        {(tpl.apps || []).map(appId => (
+                          <div
+                            key={appId}
+                            className="w-6 h-6 rounded-md bg-slate-100 dark:bg-[#182234] border border-slate-200 dark:border-[#233048] flex items-center justify-center p-1"
+                            title={appId}
+                          >
+                            <ToolLogo name={appId} className="w-3.5 h-3.5" />
+                          </div>
+                        ))}
                       </div>
 
-                      {/* Creator badge */}
-                      <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
-                        <span>{tpl.creator?.avatar}</span>
-                        <span className="truncate max-w-[90px]">{tpl.creator?.name}</span>
+                      <div className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">
+                        {tpl.creator?.name}
                       </div>
                     </div>
                   </div>
@@ -622,56 +667,6 @@ export default function WorkflowLibrary() {
               })}
             </div>
           )}
-        </div>
-
-        {/* ── Verified Creators Banner ───────────────────────────────────────── */}
-        <div className="p-6 rounded-2xl bg-[#10131b] border border-slate-800/80 shadow-lg">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3.5">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-purple-600 via-pink-600 to-blue-600 flex items-center justify-center text-white shadow-md">
-                <Sparkles className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
-                  <span>Verified Workflow Creators</span>
-                  <CheckCircle2 className="w-4 h-4 text-blue-400" />
-                </h3>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  All templates are audited for privacy, sandboxed execution, and LLM token budget efficiency.
-                </p>
-              </div>
-            </div>
-
-            <button
-              onClick={() => navigate('/copilot')}
-              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-purple-300 rounded-xl text-xs font-semibold transition-colors cursor-pointer shrink-0"
-            >
-              Build Custom with AI ➔
-            </button>
-          </div>
-        </div>
-
-        {/* ── FAQs Section ──────────────────────────────────────────────────── */}
-        <div className="pt-4">
-          <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-            <HelpCircle className="w-4 h-4 text-purple-400" />
-            <span>Frequently Asked Questions</span>
-          </h2>
-
-          <div className="space-y-2.5">
-            <FaqItem
-              question="How do automated workflow templates work in SMBFlow?"
-              answer="Templates are pre-configured multi-agent pipelines with integrated triggers (such as new emails, webhooks, or scheduled crons), reasoning agents, and tool execution nodes. Once assigned to your workspace, you can execute them directly or customize their inputs."
-            />
-            <FaqItem
-              question="Can I customize the prompts and LLM models for a template?"
-              answer="Yes! Workspace administrators can adjust model tiers, prompt instructions, and confidence thresholds in the Model Settings and Workflow Builder tabs without touching code."
-            />
-            <FaqItem
-              question="How does the Budget Governor keep AI operational costs low?"
-              answer="SMBFlow includes built-in semantic caching, payload context pruning, and automated model routing (using mini tiers for extraction and heavy models only for complex reasoning), reducing API costs by up to 70%."
-            />
-          </div>
         </div>
       </div>
     </div>

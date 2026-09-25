@@ -131,6 +131,7 @@ function ToolLogo({ name, className = 'w-4 h-4' }) {
 }
 
 // ── Workflow Templates ────────────────────────────────────────────────────────
+// ── Workflow Templates with Rich Inspection Properties ────────────────────────
 const TEMPLATES = [
   {
     id: 'invoices',
@@ -139,12 +140,164 @@ const TEMPLATES = [
     prompt:
       'Every morning, scan Gmail for new invoices, use Claude to extract details and cross-check them against purchase orders in Google Sheets, flag any discrepancies for review, and add all payment due dates to Google Calendar automatically.',
     nodes: [
-      { id: '1', title: 'INVOICE RECEIVED', subtitle: 'Trigger: 08:00 AM Daily', brand: 'Gmail', tool: 'gmail', color: '#EA4335', x: 40, y: 110 },
-      { id: '2', title: 'Fetch attachment', subtitle: 'Gmail API', brand: 'Gmail', tool: 'gmail', color: '#EA4335', x: 230, y: 110 },
-      { id: '3', title: 'Extract invoice data', subtitle: 'Claude 3.5 Sonnet', brand: 'Claude', tool: 'claude', color: '#D97706', x: 420, y: 110 },
-      { id: '4', title: 'Check discrepancy', subtitle: 'Switch Node', brand: 'Switch', tool: 'webhook', color: '#10B981', x: 610, y: 110 },
-      { id: '5', title: 'Flag Invoice', subtitle: 'Google Sheets', brand: 'Sheets', tool: 'sheets', color: '#0F9D58', x: 800, y: 50 },
-      { id: '6', title: 'Add to Calendar', subtitle: 'Google Calendar', brand: 'Calendar', tool: 'calendar', color: '#4285F4', x: 800, y: 170 },
+      {
+        id: '1',
+        title: 'INVOICE RECEIVED',
+        subtitle: 'Trigger: 08:00 AM Daily',
+        brand: 'Gmail',
+        tool: 'gmail',
+        color: '#EA4335',
+        type: 'Trigger (Cron & Polling)',
+        x: 40,
+        y: 110,
+        config: {
+          schedule: '0 8 * * 1-5 (Mon-Fri 08:00 AM)',
+          query: 'from:invoices@* has:attachment filename:pdf',
+          batchSize: 25,
+          autoAcknowledge: true,
+        },
+        sampleInput: {
+          event: 'cron_tick',
+          timestamp: '2026-09-25T08:00:00Z',
+          mailbox: 'accounts@company.com',
+        },
+        sampleOutput: {
+          messageId: 'msg_9847291a',
+          sender: 'billing@vendor-saas.io',
+          subject: 'Monthly Cloud Infrastructure Invoice #INV-2026-891',
+          hasAttachment: true,
+          attachmentCount: 1,
+        },
+      },
+      {
+        id: '2',
+        title: 'Fetch attachment',
+        subtitle: 'Gmail API',
+        brand: 'Gmail',
+        tool: 'gmail',
+        color: '#EA4335',
+        type: 'Integration Action',
+        x: 230,
+        y: 110,
+        config: {
+          format: 'binary/pdf',
+          extractTextOCR: true,
+          saveToVault: true,
+        },
+        sampleInput: {
+          messageId: 'msg_9847291a',
+          attachmentId: 'att_014298fa',
+        },
+        sampleOutput: {
+          fileName: 'Invoice_INV_2026_891.pdf',
+          fileSizeKB: 245,
+          contentType: 'application/pdf',
+          ocrConfidence: 0.994,
+        },
+      },
+      {
+        id: '3',
+        title: 'Extract invoice data',
+        subtitle: 'Claude 3.5 Sonnet',
+        brand: 'Claude',
+        tool: 'claude',
+        color: '#D97706',
+        type: 'AI LLM Agent',
+        x: 420,
+        y: 110,
+        config: {
+          model: 'claude-3-5-sonnet-20241022',
+          temperature: 0.1,
+          jsonSchema: '{ vendor: string, amount: number, po_number: string, due_date: string }',
+        },
+        sampleInput: {
+          rawText: 'INVOICE INV-2026-891\nVendor: Cloud Infra Ltd\nTotal: $1,450.00\nPO: PO-8921\nDue: 2026-10-15',
+        },
+        sampleOutput: {
+          vendor: 'Cloud Infra Ltd',
+          amount: 1450.0,
+          currency: 'USD',
+          poNumber: 'PO-8921',
+          dueDate: '2026-10-15',
+          confidence: 0.98,
+        },
+      },
+      {
+        id: '4',
+        title: 'Check discrepancy',
+        subtitle: 'Switch Node',
+        brand: 'Switch',
+        tool: 'webhook',
+        color: '#10B981',
+        type: 'Conditional Router',
+        x: 610,
+        y: 110,
+        config: {
+          expression: 'invoice.amount == sheets.po_amount && invoice.vendor == sheets.vendor',
+          trueRoute: 'Add to Calendar',
+          falseRoute: 'Flag Invoice',
+        },
+        sampleInput: {
+          invoiceAmount: 1450.0,
+          expectedPoAmount: 1450.0,
+          vendorMatch: true,
+        },
+        sampleOutput: {
+          decision: 'Approved',
+          matchedRow: 42,
+          varianceUsd: 0.0,
+        },
+      },
+      {
+        id: '5',
+        title: 'Flag Invoice',
+        subtitle: 'Google Sheets',
+        brand: 'Sheets',
+        tool: 'sheets',
+        color: '#0F9D58',
+        type: 'Exception Handler',
+        x: 800,
+        y: 50,
+        config: {
+          spreadsheetId: '1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms',
+          sheetName: 'Discrepancies_Review',
+          statusColumn: 'FLAGGED_VARIANCE',
+        },
+        sampleInput: {
+          status: 'PENDING_HUMAN_REVIEW',
+          variance: 150.0,
+        },
+        sampleOutput: {
+          rowUpdated: 114,
+          escalationCreated: true,
+        },
+      },
+      {
+        id: '6',
+        title: 'Add to Calendar',
+        subtitle: 'Google Calendar',
+        brand: 'Calendar',
+        tool: 'calendar',
+        color: '#4285F4',
+        type: 'Destination Sync',
+        x: 800,
+        y: 170,
+        config: {
+          calendarId: 'primary',
+          eventTitle: 'Pay Invoice #INV-2026-891 ($1,450.00)',
+          reminderDaysBefore: 2,
+        },
+        sampleInput: {
+          summary: 'Pay Invoice #INV-2026-891',
+          date: '2026-10-15',
+          attendees: ['finance@company.com'],
+        },
+        sampleOutput: {
+          calendarEventId: 'cal_event_81726a',
+          eventLink: 'https://calendar.google.com/event?id=cal_event_81726a',
+          status: 'confirmed',
+        },
+      },
     ],
     edges: [
       { from: '1', to: '2' },
@@ -161,12 +314,90 @@ const TEMPLATES = [
     prompt:
       'When a new lead submits our website contact form, enrich company data with Clearbit, score conversion intent with GPT-4o, automatically update HubSpot CRM, and alert our sales team in Slack if the score is above 80.',
     nodes: [
-      { id: '1', title: 'Lead Form Submit', subtitle: 'Webhook Trigger', brand: 'Webhook', tool: 'webhook', color: '#3B82F6', x: 40, y: 110 },
-      { id: '2', title: 'Company Intelligence', subtitle: 'Enrich data', brand: 'Clearbit', tool: 'postgres', color: '#3B82F6', x: 230, y: 110 },
-      { id: '3', title: 'Intent Scoring', subtitle: 'GPT-4o Mini', brand: 'OpenAI', tool: 'openai', color: '#10B981', x: 420, y: 110 },
-      { id: '4', title: 'Score Filter', subtitle: 'Score > 80?', brand: 'Filter', tool: 'webhook', color: '#F59E0B', x: 610, y: 110 },
-      { id: '5', title: 'Update CRM Contact', subtitle: 'HubSpot', brand: 'HubSpot', tool: 'hubspot', color: '#FF7A59', x: 800, y: 50 },
-      { id: '6', title: 'Sales VIP Alert', subtitle: 'Slack Channel', brand: 'Slack', tool: 'slack', color: '#EC4899', x: 800, y: 170 },
+      {
+        id: '1',
+        title: 'Lead Form Submit',
+        subtitle: 'Webhook Trigger',
+        brand: 'Webhook',
+        tool: 'webhook',
+        color: '#3B82F6',
+        type: 'Inbound Webhook',
+        x: 40,
+        y: 110,
+        config: { path: '/v1/leads/inbound', method: 'POST', authHeader: 'Bearer x-opsgrid-key' },
+        sampleInput: { email: 'sarah.j@acme-corp.com', name: 'Sarah Jenkins', employees: '250+' },
+        sampleOutput: { status: 'received', leadId: 'lead_781290' },
+      },
+      {
+        id: '2',
+        title: 'Company Intelligence',
+        subtitle: 'Enrich data',
+        brand: 'Clearbit',
+        tool: 'postgres',
+        color: '#3B82F6',
+        type: 'Data Enrichment',
+        x: 230,
+        y: 110,
+        config: { endpoint: 'api.clearbit.com/v2/companies/find', matchConfidence: 0.95 },
+        sampleInput: { domain: 'acme-corp.com' },
+        sampleOutput: { industry: 'Enterprise SaaS', funding: '$45M Series B', techStack: ['AWS', 'Stripe'] },
+      },
+      {
+        id: '3',
+        title: 'Intent Scoring',
+        subtitle: 'GPT-4o Mini',
+        brand: 'OpenAI',
+        tool: 'openai',
+        color: '#10B981',
+        type: 'AI LLM Agent',
+        x: 420,
+        y: 110,
+        config: { model: 'gpt-4o-mini', temperature: 0.2, rubric: 'B2B SMB suitability 0-100' },
+        sampleInput: { companyProfile: 'Enterprise SaaS 250+ employees', userRole: 'VP of Ops' },
+        sampleOutput: { intentScore: 92, tier: 'Tier-1 High Intent', reason: 'Decision maker with active budget' },
+      },
+      {
+        id: '4',
+        title: 'Score Filter',
+        subtitle: 'Score > 80?',
+        brand: 'Filter',
+        tool: 'webhook',
+        color: '#F59E0B',
+        type: 'Routing Rule',
+        x: 610,
+        y: 110,
+        config: { condition: 'lead.intentScore >= 80', fallback: 'Nurture Campaign' },
+        sampleInput: { intentScore: 92 },
+        sampleOutput: { passed: true, route: 'VIP Escalation' },
+      },
+      {
+        id: '5',
+        title: 'Update CRM Contact',
+        subtitle: 'HubSpot',
+        brand: 'HubSpot',
+        tool: 'hubspot',
+        color: '#FF7A59',
+        type: 'CRM Mutation',
+        x: 800,
+        y: 50,
+        config: { objectType: 'contacts', updateLifecycleStage: 'salesqualifiedlead' },
+        sampleInput: { email: 'sarah.j@acme-corp.com', score: 92 },
+        sampleOutput: { contactId: 'hs_902184', status: 'updated' },
+      },
+      {
+        id: '6',
+        title: 'Sales VIP Alert',
+        subtitle: 'Slack Channel',
+        brand: 'Slack',
+        tool: 'slack',
+        color: '#EC4899',
+        type: 'Real-time Alert',
+        x: 800,
+        y: 170,
+        config: { channel: '#sales-tier1-leads', mentions: ['@account-execs'], includeOneClickBook: true },
+        sampleInput: { lead: 'Sarah Jenkins (VP Ops - Acme)', score: 92 },
+        sampleOutput: { messageTs: '1727271920.001900', delivered: true },
+      },
     ],
     edges: [
       { from: '1', to: '2' },
@@ -183,12 +414,90 @@ const TEMPLATES = [
     prompt:
       'Extract new article drafts from our CMS, use Claude to generate tailored promotional posts for LinkedIn and Twitter/X, create custom banner graphics with ImageRouter, and stage them for human review in Action Center.',
     nodes: [
-      { id: '1', title: 'New Article Draft', subtitle: 'CMS Webhook', brand: 'CMS', tool: 'webhook', color: '#6366F1', x: 40, y: 110 },
-      { id: '2', title: 'Multi-Channel Copy', subtitle: 'Claude 3.5 Sonnet', brand: 'Claude', tool: 'claude', color: '#D97706', x: 230, y: 110 },
-      { id: '3', title: 'Visual Generator', subtitle: 'ImageRouter AI', brand: 'ImageRouter', tool: 'openai', color: '#3B82F6', x: 420, y: 110 },
-      { id: '4', title: 'Action Center HITL', subtitle: 'Human Approval', brand: 'SMBFlow', tool: 'webhook', color: '#F59E0B', x: 610, y: 110 },
-      { id: '5', title: 'LinkedIn Post', subtitle: 'Buffer / API', brand: 'LinkedIn', tool: 'slack', color: '#0077B5', x: 800, y: 50 },
-      { id: '6', title: 'Twitter/X Post', subtitle: 'X API v2', brand: 'Twitter', tool: 'telegram', color: '#64748B', x: 800, y: 170 },
+      {
+        id: '1',
+        title: 'New Article Draft',
+        subtitle: 'CMS Webhook',
+        brand: 'CMS',
+        tool: 'webhook',
+        color: '#6366F1',
+        type: 'Webhook Trigger',
+        x: 40,
+        y: 110,
+        config: { event: 'article.published_draft', source: 'Ghost / Sanity CMS' },
+        sampleInput: { slug: 'automating-smb-ops-in-2026', title: 'How AI Streamlines SMB Workflows' },
+        sampleOutput: { words: 1200, author: 'Alex Chen', ready: true },
+      },
+      {
+        id: '2',
+        title: 'Multi-Channel Copy',
+        subtitle: 'Claude 3.5 Sonnet',
+        brand: 'Claude',
+        tool: 'claude',
+        color: '#D97706',
+        type: 'AI LLM Agent',
+        x: 230,
+        y: 110,
+        config: { model: 'claude-3-5-sonnet-20241022', channels: ['linkedin', 'twitter'] },
+        sampleInput: { articleText: 'Full 1,200 word draft text...' },
+        sampleOutput: { linkedinPost: 'Excited to share our insights...', twitterThread: ['1/4 SMB ops is broken...'] },
+      },
+      {
+        id: '3',
+        title: 'Visual Generator',
+        subtitle: 'ImageRouter AI',
+        brand: 'ImageRouter',
+        tool: 'openai',
+        color: '#3B82F6',
+        type: 'Generative AI',
+        x: 420,
+        y: 110,
+        config: { aspect: '16:9', style: 'clean corporate tech infographic' },
+        sampleInput: { prompt: 'Minimalist workflow orchestration dashboard illustration' },
+        sampleOutput: { imageUrl: 'https://cdn.smbflow.io/assets/banner_9812.png', width: 1200, height: 675 },
+      },
+      {
+        id: '4',
+        title: 'Action Center HITL',
+        subtitle: 'Human Approval',
+        brand: 'SMBFlow',
+        tool: 'webhook',
+        color: '#F59E0B',
+        type: 'Human-in-the-Loop',
+        x: 610,
+        y: 110,
+        config: { queue: 'marketing_review', timeoutHours: 24, autoApproveFallback: false },
+        sampleInput: { copyReviewId: 'rev_89128', pendingAssignee: 'marketing_lead' },
+        sampleOutput: { decision: 'approved', signedBy: 'Marketing Lead' },
+      },
+      {
+        id: '5',
+        title: 'LinkedIn Post',
+        subtitle: 'Buffer / API',
+        brand: 'LinkedIn',
+        tool: 'slack',
+        color: '#0077B5',
+        type: 'Social Publishing',
+        x: 800,
+        y: 50,
+        config: { network: 'linkedin_organization', scheduleFor: '2026-09-26T14:00:00Z' },
+        sampleInput: { content: 'Approved copy & graphic' },
+        sampleOutput: { queuePosition: 1, scheduledTime: 'Tomorrow 2:00 PM' },
+      },
+      {
+        id: '6',
+        title: 'Twitter/X Post',
+        subtitle: 'X API v2',
+        brand: 'Twitter',
+        tool: 'telegram',
+        color: '#64748B',
+        type: 'Social Publishing',
+        x: 800,
+        y: 170,
+        config: { network: 'twitter_x_v2', threadMode: true },
+        sampleInput: { tweetsCount: 3 },
+        sampleOutput: { scheduledId: 'tweet_sched_8912', status: 'queued' },
+      },
     ],
     edges: [
       { from: '1', to: '2' },
@@ -205,12 +514,90 @@ const TEMPLATES = [
     prompt:
       'Listen for incoming customer queries on Telegram, search our company knowledge base in PostgreSQL vector embeddings, generate accurate support answers with Gemini, and escalate any refund tickets directly to human operators.',
     nodes: [
-      { id: '1', title: 'New Message', subtitle: 'Telegram Bot API', brand: 'Telegram', tool: 'telegram', color: '#229ED9', x: 40, y: 110 },
-      { id: '2', title: 'Vector Search', subtitle: 'PGVector KB', brand: 'PostgreSQL', tool: 'postgres', color: '#336791', x: 230, y: 110 },
-      { id: '3', title: 'Draft Solution', subtitle: 'Gemini 1.5 Pro', brand: 'Gemini', tool: 'openai', color: '#4285F4', x: 420, y: 110 },
-      { id: '4', title: 'Intent Classifier', subtitle: 'Refund Check', brand: 'Classifier', tool: 'webhook', color: '#10B981', x: 610, y: 110 },
-      { id: '5', title: 'Instant Reply', subtitle: 'Send to Customer', brand: 'Telegram', tool: 'telegram', color: '#229ED9', x: 800, y: 50 },
-      { id: '6', title: 'Human Escalation', subtitle: 'Action Center', brand: 'SMBFlow', tool: 'webhook', color: '#EF4444', x: 800, y: 170 },
+      {
+        id: '1',
+        title: 'New Message',
+        subtitle: 'Telegram Bot API',
+        brand: 'Telegram',
+        tool: 'telegram',
+        color: '#229ED9',
+        type: 'Bot Webhook Trigger',
+        x: 40,
+        y: 110,
+        config: { botTokenConfig: 'vault://telegram_token', polling: 'webhook_realtime' },
+        sampleInput: { chatId: 98129038, text: 'Hi, I need assistance with my last order refund' },
+        sampleOutput: { sender: '@customer_user', messageId: 4410 },
+      },
+      {
+        id: '2',
+        title: 'Vector Search',
+        subtitle: 'PGVector KB',
+        brand: 'PostgreSQL',
+        tool: 'postgres',
+        color: '#336791',
+        type: 'Vector Embedding Retrieval',
+        x: 230,
+        y: 110,
+        config: { embeddingModel: 'text-embedding-3-small', similarityThreshold: 0.82, topK: 3 },
+        sampleInput: { query: 'refund policy order terms' },
+        sampleOutput: { matchedChunks: 3, topScore: 0.91, docTitle: 'Refund_Policy_2026.pdf' },
+      },
+      {
+        id: '3',
+        title: 'Draft Solution',
+        subtitle: 'Gemini 1.5 Pro',
+        brand: 'Gemini',
+        tool: 'openai',
+        color: '#4285F4',
+        type: 'AI LLM Agent',
+        x: 420,
+        y: 110,
+        config: { model: 'gemini-1.5-pro', tone: 'helpful, professional', maxTokens: 400 },
+        sampleInput: { context: 'Refund policy chunk...', userQuestion: 'I need assistance...' },
+        sampleOutput: { answer: 'I understand you are requesting a refund. I am transferring your request to our support specialist...' },
+      },
+      {
+        id: '4',
+        title: 'Intent Classifier',
+        subtitle: 'Refund Check',
+        brand: 'Classifier',
+        tool: 'webhook',
+        color: '#10B981',
+        type: 'Intent Classifier',
+        x: 610,
+        y: 110,
+        config: { classes: ['General_Inquiry', 'Refund_Escalation', 'Technical_Bug'] },
+        sampleInput: { intent: 'Refund_Escalation', confidence: 0.96 },
+        sampleOutput: { route: 'Human Escalation' },
+      },
+      {
+        id: '5',
+        title: 'Instant Reply',
+        subtitle: 'Send to Customer',
+        brand: 'Telegram',
+        tool: 'telegram',
+        color: '#229ED9',
+        type: 'Outgoing Message',
+        x: 800,
+        y: 50,
+        config: { parseMode: 'MarkdownV2', replyToMessage: true },
+        sampleInput: { chatId: 98129038, text: 'Your refund case has been transferred to an agent...' },
+        sampleOutput: { messageSent: true, telegramMsgId: 4411 },
+      },
+      {
+        id: '6',
+        title: 'Human Escalation',
+        subtitle: 'Action Center',
+        brand: 'SMBFlow',
+        tool: 'webhook',
+        color: '#EF4444',
+        type: 'HITL Escalation',
+        x: 800,
+        y: 170,
+        config: { priority: 'P1_HIGH', targetTeam: 'Customer Success Leads', notifyEmail: true },
+        sampleInput: { customerId: 'cust_8912', reason: 'Refund request on order #ORD-980' },
+        sampleOutput: { escalationTicket: 'ESC-2026-092', status: 'Pending Review' },
+      },
     ],
     edges: [
       { from: '1', to: '2' },
@@ -226,9 +613,43 @@ const TEMPLATES = [
 function CanvasPreview({ template }) {
   const nodeWidth = 150
   const nodeHeight = 56
+  const [selectedNode, setSelectedNode] = useState(template.nodes[0] || null)
+  const [zoom, setZoom] = useState(1)
+  const [isTestingStep, setIsTestingStep] = useState(false)
+  const [testResult, setTestResult] = useState(null)
+  const [copiedPayload, setCopiedPayload] = useState(null)
+  const containerRef = useRef(null)
+
+  // Reset selected node when template changes
+  useEffect(() => {
+    if (template?.nodes?.length > 0) {
+      setSelectedNode(template.nodes[0])
+      setTestResult(null)
+    }
+  }, [template])
+
+  function handleCopy(label, data) {
+    navigator.clipboard.writeText(JSON.stringify(data, null, 2))
+    setCopiedPayload(label)
+    setTimeout(() => setCopiedPayload(null), 2000)
+  }
+
+  function handleTestStep() {
+    if (!selectedNode || isTestingStep) return
+    setIsTestingStep(true)
+    setTestResult(null)
+    setTimeout(() => {
+      setIsTestingStep(false)
+      setTestResult({
+        status: 'success',
+        durationMs: Math.floor(Math.random() * 80) + 35,
+        timestamp: new Date().toLocaleTimeString(),
+      })
+    }, 600)
+  }
 
   return (
-    <div className="w-full max-w-4xl mx-auto mt-6 bg-white dark:bg-[#121826] rounded-2xl border border-slate-200 dark:border-[#233048] shadow-md overflow-hidden relative transition-all">
+    <div className="w-full max-w-4xl mx-auto mt-6 bg-white dark:bg-[#121826] rounded-2xl border border-slate-200 dark:border-[#233048] shadow-md overflow-hidden relative transition-all flex flex-col">
       {/* Canvas Top Bar */}
       <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-200 dark:border-[#233048] bg-slate-50 dark:bg-[#0b0f17]/90 z-10 relative">
         <div className="flex items-center gap-2">
@@ -240,144 +661,329 @@ function CanvasPreview({ template }) {
             Pipeline Preview: <span className="text-blue-600 dark:text-blue-400 font-semibold">{template.label}</span>
           </span>
         </div>
-        <div className="flex items-center gap-1.5 text-[10px] text-slate-500 dark:text-slate-400 font-mono">
-          <span className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-[#182234] border border-slate-300 dark:border-[#233048] text-slate-700 dark:text-slate-300">Auto-routed</span>
-          <span className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-[#182234] border border-slate-300 dark:border-[#233048] text-slate-700 dark:text-slate-300">Autonomous</span>
+
+        {/* Zoom & Scroll controls */}
+        <div className="flex items-center gap-2 text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+          <div className="hidden sm:flex items-center bg-slate-100 dark:bg-[#182234] border border-slate-300 dark:border-[#233048] rounded-lg p-0.5">
+            <button
+              onClick={() => setZoom(z => Math.max(0.7, Number((z - 0.1).toFixed(1))))}
+              className="px-2 py-0.5 hover:bg-white dark:hover:bg-[#202c42] rounded text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
+              title="Zoom out"
+            >
+              -
+            </button>
+            <span className="px-1.5 text-[9.5px] text-slate-600 dark:text-slate-300 select-none">
+              {Math.round(zoom * 100)}%
+            </span>
+            <button
+              onClick={() => setZoom(z => Math.min(1.4, Number((z + 0.1).toFixed(1))))}
+              className="px-2 py-0.5 hover:bg-white dark:hover:bg-[#202c42] rounded text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
+              title="Zoom in"
+            >
+              +
+            </button>
+            <button
+              onClick={() => setZoom(1)}
+              className="px-1.5 py-0.5 hover:bg-white dark:hover:bg-[#202c42] rounded text-[9px] text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+              title="Reset Zoom"
+            >
+              Reset
+            </button>
+          </div>
+
+          <span className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-[#182234] border border-slate-300 dark:border-[#233048] text-slate-700 dark:text-slate-300">
+            Interactive Canvas
+          </span>
         </div>
       </div>
 
-      {/* SVG Canvas Graph */}
-      <div className="p-4 sm:p-6 overflow-x-auto min-h-[250px] flex items-center justify-center relative">
-        <svg className="w-[960px] h-[230px] overflow-visible">
-          {/* Edge Connectors */}
-          {template.edges.map((edge, idx) => {
-            const fromNode = template.nodes.find(n => n.id === edge.from)
-            const toNode = template.nodes.find(n => n.id === edge.to)
-            if (!fromNode || !toNode) return null
+      {/* SVG Canvas Graph with Smooth Scrolling & Panning */}
+      <div
+        ref={containerRef}
+        className="p-4 sm:p-6 overflow-x-auto overflow-y-auto max-h-[300px] flex items-center justify-start sm:justify-center relative bg-slate-50/50 dark:bg-[#0b0f17]/40 scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-700 select-none cursor-grab active:cursor-grabbing"
+      >
+        <div
+          style={{ transform: `scale(${zoom})`, transformOrigin: 'top center', transition: 'transform 0.15s ease-out' }}
+          className="shrink-0"
+        >
+          <svg className="w-[980px] h-[240px] overflow-visible">
+            {/* Edge Connectors */}
+            {template.edges.map((edge, idx) => {
+              const fromNode = template.nodes.find(n => n.id === edge.from)
+              const toNode = template.nodes.find(n => n.id === edge.to)
+              if (!fromNode || !toNode) return null
 
-            const startX = fromNode.x + nodeWidth
-            const startY = fromNode.y + nodeHeight / 2
-            const endX = toNode.x
-            const endY = toNode.y + nodeHeight / 2
-            const midX = (startX + endX) / 2
+              const startX = fromNode.x + nodeWidth
+              const startY = fromNode.y + nodeHeight / 2
+              const endX = toNode.x
+              const endY = toNode.y + nodeHeight / 2
+              const midX = (startX + endX) / 2
 
-            const pathData = `M ${startX} ${startY} C ${midX} ${startY}, ${midX} ${endY}, ${endX} ${endY}`
+              const pathData = `M ${startX} ${startY} C ${midX} ${startY}, ${midX} ${endY}, ${endX} ${endY}`
 
-            return (
-              <g key={idx}>
-                {/* Glow Line */}
-                <path
-                  d={pathData}
-                  fill="none"
-                  stroke="#3b82f6"
-                  strokeWidth="3"
-                  strokeOpacity="0.2"
-                />
-                {/* Main Connector Line */}
-                <path
-                  d={pathData}
-                  fill="none"
-                  stroke="#64748b"
-                  strokeWidth="2"
-                  strokeDasharray="4 2"
-                />
-                {/* Flow Pulse */}
-                <circle r="3" fill="#3b82f6">
-                  <animateMotion
-                    path={pathData}
-                    dur="2.5s"
-                    repeatCount="indefinite"
+              return (
+                <g key={idx}>
+                  {/* Glow Line */}
+                  <path
+                    d={pathData}
+                    fill="none"
+                    stroke="#3b82f6"
+                    strokeWidth="3"
+                    strokeOpacity="0.2"
                   />
-                </circle>
-                {/* Edge Label */}
-                {edge.label && (
-                  <text
-                    x={midX}
-                    y={(startY + endY) / 2 - 6}
-                    fill="#64748b"
-                    fontSize="9"
-                    fontFamily="monospace"
-                    textAnchor="middle"
-                  >
-                    {edge.label}
-                  </text>
-                )}
-              </g>
-            )
-          })}
-
-          {/* Nodes */}
-          {template.nodes.map((node) => {
-            return (
-              <g
-                key={node.id}
-                transform={`translate(${node.x}, ${node.y})`}
-                className="cursor-pointer group"
-              >
-                {/* Node Box */}
-                <rect
-                  width={nodeWidth}
-                  height={nodeHeight}
-                  rx="10"
-                  fill="currentColor"
-                  className="text-white dark:text-[#182030] fill-current stroke-slate-300 dark:stroke-[#2b374c] group-hover:stroke-blue-500 transition-all shadow-xs"
-                  strokeWidth="1.5"
-                />
-
-                {/* Left Colored Accent Bar */}
-                <rect
-                  x="0"
-                  y="0"
-                  width="4"
-                  height={nodeHeight}
-                  rx="2"
-                  fill={node.color}
-                />
-
-                {/* Icon Container */}
-                <g transform="translate(10, 14)">
-                  <rect
-                    width="26"
-                    height="26"
-                    rx="6"
-                    fill={node.color}
-                    fillOpacity="0.15"
+                  {/* Main Connector Line */}
+                  <path
+                    d={pathData}
+                    fill="none"
+                    stroke="#64748b"
+                    strokeWidth="2"
+                    strokeDasharray="4 2"
                   />
-                  <foreignObject width="26" height="26">
-                    <div className="w-full h-full flex items-center justify-center">
-                      <ToolLogo name={node.tool} className="w-4 h-4" />
-                    </div>
-                  </foreignObject>
+                  {/* Flow Pulse */}
+                  <circle r="3" fill="#3b82f6">
+                    <animateMotion
+                      path={pathData}
+                      dur="2.5s"
+                      repeatCount="indefinite"
+                    />
+                  </circle>
+                  {/* Edge Label */}
+                  {edge.label && (
+                    <text
+                      x={midX}
+                      y={(startY + endY) / 2 - 6}
+                      fill="#64748b"
+                      fontSize="9"
+                      fontFamily="monospace"
+                      textAnchor="middle"
+                    >
+                      {edge.label}
+                    </text>
+                  )}
                 </g>
+              )
+            })}
 
-                {/* Text Content */}
-                <text
-                  x="42"
-                  y="24"
-                  className="fill-slate-900 dark:fill-slate-100"
-                  fontSize="11"
-                  fontWeight="600"
-                  fontFamily="system-ui, -apple-system, sans-serif"
-                >
-                  {node.title.length > 14 ? node.title.slice(0, 13) + '…' : node.title}
-                </text>
-                <text
-                  x="42"
-                  y="39"
-                  className="fill-slate-500 dark:fill-slate-400"
-                  fontSize="9.5"
-                  fontFamily="system-ui, -apple-system, sans-serif"
-                >
-                  {node.subtitle.length > 16 ? node.subtitle.slice(0, 15) + '…' : node.subtitle}
-                </text>
+            {/* Interactive Clickable Nodes */}
+            {template.nodes.map((node, nIdx) => {
+              const isSelected = selectedNode?.id === node.id
 
-                {/* Status Check Badge */}
-                <circle cx={nodeWidth - 10} cy="12" r="4" fill="#10b981" />
-              </g>
-            )
-          })}
-        </svg>
+              return (
+                <g
+                  key={node.id}
+                  transform={`translate(${node.x}, ${node.y})`}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setSelectedNode(node)
+                  }}
+                  className="cursor-pointer group"
+                >
+                  {/* Active Selected Halo */}
+                  {isSelected && (
+                    <rect
+                      x="-4"
+                      y="-4"
+                      width={nodeWidth + 8}
+                      height={nodeHeight + 8}
+                      rx="14"
+                      fill="none"
+                      stroke="#3b82f6"
+                      strokeWidth="2.5"
+                      strokeDasharray="4 2"
+                      className="animate-pulse"
+                    />
+                  )}
+
+                  {/* Node Box */}
+                  <rect
+                    width={nodeWidth}
+                    height={nodeHeight}
+                    rx="10"
+                    fill="currentColor"
+                    className={`text-white dark:text-[#182030] fill-current transition-all shadow-xs ${
+                      isSelected
+                        ? 'stroke-blue-500 shadow-md'
+                        : 'stroke-slate-300 dark:stroke-[#2b374c] group-hover:stroke-blue-400'
+                    }`}
+                    strokeWidth={isSelected ? '2' : '1.5'}
+                  />
+
+                  {/* Left Colored Accent Bar */}
+                  <rect
+                    x="0"
+                    y="0"
+                    width="4"
+                    height={nodeHeight}
+                    rx="2"
+                    fill={node.color}
+                  />
+
+                  {/* Icon Container */}
+                  <g transform="translate(10, 14)">
+                    <rect
+                      width="26"
+                      height="26"
+                      rx="6"
+                      fill={node.color}
+                      fillOpacity="0.15"
+                    />
+                    <foreignObject width="26" height="26">
+                      <div className="w-full h-full flex items-center justify-center pointer-events-none">
+                        <ToolLogo name={node.tool} className="w-4 h-4" />
+                      </div>
+                    </foreignObject>
+                  </g>
+
+                  {/* Text Content */}
+                  <text
+                    x="42"
+                    y="24"
+                    className="fill-slate-900 dark:fill-slate-100 select-none"
+                    fontSize="11"
+                    fontWeight="600"
+                    fontFamily="system-ui, -apple-system, sans-serif"
+                  >
+                    {node.title.length > 14 ? node.title.slice(0, 13) + '…' : node.title}
+                  </text>
+                  <text
+                    x="42"
+                    y="39"
+                    className="fill-slate-500 dark:fill-slate-400 select-none"
+                    fontSize="9.5"
+                    fontFamily="system-ui, -apple-system, sans-serif"
+                  >
+                    {node.subtitle.length > 16 ? node.subtitle.slice(0, 15) + '…' : node.subtitle}
+                  </text>
+
+                  {/* Status Check Badge */}
+                  <circle cx={nodeWidth - 10} cy="12" r="4" fill="#10b981" />
+                </g>
+              )
+            })}
+          </svg>
+        </div>
       </div>
+
+      {/* ── Interactive Node Inspection Panel (Displays When Node is Clicked) ── */}
+      {selectedNode && (
+        <div className="border-t border-slate-200 dark:border-[#233048] bg-slate-50 dark:bg-[#0b0f17] p-4 transition-all">
+          <div className="flex flex-wrap items-center justify-between gap-3 pb-3 mb-3 border-b border-slate-200 dark:border-[#233048]">
+            <div className="flex items-center gap-2.5">
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center p-1.5 shadow-2xs"
+                style={{ backgroundColor: `${selectedNode.color}20`, border: `1px solid ${selectedNode.color}50` }}
+              >
+                <ToolLogo name={selectedNode.tool} className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h4 className="text-xs font-bold text-slate-900 dark:text-white">{selectedNode.title}</h4>
+                  <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-slate-200 dark:bg-[#182234] text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-[#233048]">
+                    {selectedNode.type}
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                  {selectedNode.subtitle} · Connected Brand: <span className="font-semibold text-slate-700 dark:text-slate-300">{selectedNode.brand}</span>
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleTestStep}
+                disabled={isTestingStep}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold shadow-xs transition-all cursor-pointer disabled:opacity-50"
+              >
+                <Play size={12} className={isTestingStep ? 'animate-spin' : 'fill-white'} />
+                <span>{isTestingStep ? 'Executing step...' : 'Test Step'}</span>
+              </button>
+
+              <button
+                onClick={() => setSelectedNode(null)}
+                className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+                title="Close inspector"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+
+          {/* Test Execution Result Banner */}
+          {testResult && (
+            <div className="mb-3 p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-200 text-xs flex items-center justify-between animate-fade-in">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={14} className="text-emerald-600 dark:text-emerald-400" />
+                <span>Node test executed successfully in <strong>{testResult.durationMs}ms</strong> at {testResult.timestamp}</span>
+              </div>
+              <span className="text-[10px] font-mono uppercase tracking-wider bg-emerald-100 dark:bg-emerald-900 px-2 py-0.5 rounded">
+                HTTP 200 OK
+              </span>
+            </div>
+          )}
+
+          {/* Configuration & Payload Data Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+            {/* 1. Step Parameters */}
+            <div className="p-3 bg-white dark:bg-[#121826] rounded-xl border border-slate-200 dark:border-[#233048]">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  Node Configuration
+                </span>
+                <Sliders className="w-3.5 h-3.5 text-slate-400" />
+              </div>
+              <div className="space-y-1.5 font-mono text-[10.5px]">
+                {selectedNode.config &&
+                  Object.entries(selectedNode.config).map(([k, v]) => (
+                    <div key={k} className="flex items-start justify-between gap-2 border-b border-slate-100 dark:border-[#1a2336] pb-1 last:border-0 last:pb-0">
+                      <span className="text-slate-500 dark:text-slate-400 truncate">{k}:</span>
+                      <span className="text-slate-900 dark:text-slate-200 font-semibold truncate text-right max-w-[130px]">
+                        {typeof v === 'boolean' ? (v ? 'true' : 'false') : String(v)}
+                      </span>
+                    </div>
+                  ))}
+              </div>
+            </div>
+
+            {/* 2. Mock Input Payload */}
+            <div className="p-3 bg-white dark:bg-[#121826] rounded-xl border border-slate-200 dark:border-[#233048]">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  Input Stream
+                </span>
+                <button
+                  onClick={() => handleCopy('input', selectedNode.sampleInput)}
+                  className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+                  title="Copy Input JSON"
+                >
+                  {copiedPayload === 'input' ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
+                </button>
+              </div>
+              <pre className="text-[10px] font-mono text-slate-700 dark:text-slate-300 max-h-24 overflow-x-auto overflow-y-auto leading-tight bg-slate-50 dark:bg-[#0b0f17] p-2 rounded border border-slate-100 dark:border-[#1a2336]">
+                {JSON.stringify(selectedNode.sampleInput, null, 2)}
+              </pre>
+            </div>
+
+            {/* 3. Output Stream */}
+            <div className="p-3 bg-white dark:bg-[#121826] rounded-xl border border-slate-200 dark:border-[#233048]">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  Output Result
+                </span>
+                <button
+                  onClick={() => handleCopy('output', selectedNode.sampleOutput)}
+                  className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+                  title="Copy Output JSON"
+                >
+                  {copiedPayload === 'output' ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
+                </button>
+              </div>
+              <pre className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 max-h-24 overflow-x-auto overflow-y-auto leading-tight bg-slate-50 dark:bg-[#0b0f17] p-2 rounded border border-slate-100 dark:border-[#1a2336]">
+                {JSON.stringify(selectedNode.sampleOutput, null, 2)}
+              </pre>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
