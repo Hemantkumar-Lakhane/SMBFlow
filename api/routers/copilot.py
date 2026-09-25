@@ -160,7 +160,6 @@ async def copilot_chat(
     is_metrics_intent = any(k in user_msg_lower for k in ["metric", "kpi", "spend", "cost", "performance", "health", "runs", "stats"])
 
     if is_email_intent:
-        # Node: Email Summarizer Service Node
         fetch_node = ExecutionNode(
             id=str(uuid.uuid4())[:8],
             name="Email Summarizer Connector",
@@ -175,9 +174,9 @@ async def copilot_chat(
 
         ai_node = ExecutionNode(
             id=str(uuid.uuid4())[:8],
-            name="LLM Intelligence & Action Extraction",
+            name="Intelligence & Extraction",
             type="ai_llm",
-            icon="Sparkles",
+            icon="Cpu",
             status="success",
             duration_ms=310,
             input_data={"model": "gpt-4o-mini", "task": "email_triage"},
@@ -186,22 +185,20 @@ async def copilot_chat(
         execution_nodes.append(ai_node)
 
         reply_text = (
-            "### 📬 Email Intelligence Overview\n\n"
-            "I scanned your connected inbox and summarized incoming communications:\n\n"
-            "- **2 High-Priority Customer Queries**: Urgent onboarding question regarding API rate limits and an inquiry on custom invoice scheduling.\n"
-            "- **1 Renewal Alert**: Workspace subscription approaching scheduled threshold.\n"
-            "- **3 Action Drafts Generated**: Draft replies are pre-staged in your workflow pipeline.\n\n"
-            "Would you like me to open the **Email Summarizer** workflow to review full thread transcripts or execute batch replies?"
+            "### Email Summary\n\n"
+            "- Scanned 12 incoming messages across connected mailboxes.\n"
+            "- 2 high-priority queries identified: onboarding rate limits inquiry and billing schedule request.\n"
+            "- 3 draft responses staged for review in Action Center.\n\n"
+            "Use the button below to open Email Summarizer or review thread details."
         )
         action_cta = ActionCTA(label="Open Email Summarizer", to="/workflows/email_summarizer", icon="Workflow", variant="primary")
         suggested_followups = [
-            "Trigger Email Summarizer workflow now",
-            "Show high-priority unread senders",
-            "Generate draft response to API rate limits query",
+            "Trigger Email Summarizer workflow",
+            "Show high-priority senders",
+            "Review staged email drafts",
         ]
 
     elif is_escalation_intent:
-        # Node: Action Center HITL Queue Filter
         queue_node = ExecutionNode(
             id=str(uuid.uuid4())[:8],
             name="Action Center Query Node",
@@ -216,23 +213,21 @@ async def copilot_chat(
 
         if pending_approvals > 0:
             reply_text = (
-                f"### ⚠️ Action Center Status\n\n"
-                f"You currently have **{pending_approvals} item(s) awaiting human approval** in the Action Center.\n\n"
-                f"- **Human-in-the-Loop Safeguard**: Automated actions exceeding confidence thresholds require your review before dispatch.\n"
-                f"- **Action Required**: Review quote approvals, draft dispatches, or budget adjustments."
+                f"### Action Center\n\n"
+                f"You have {pending_approvals} item(s) awaiting review in Action Center.\n\n"
+                f"- Tasks requiring attention: quote comparisons, email dispatches, and budget threshold checks."
             )
             action_cta = ActionCTA(label="Review Escalations", to="/escalations", icon="Inbox", variant="primary")
         else:
             reply_text = (
-                "### ✅ Action Center is All Clear\n\n"
-                "There are currently **no pending escalations** or items requiring manual approval in your organization. All automated tasks are operating smoothly."
+                "### Action Center\n\n"
+                "All items are processed. There are currently no pending approvals or escalations."
             )
             action_cta = ActionCTA(label="View Action Center", to="/escalations", icon="Inbox", variant="secondary")
 
         suggested_followups = [
             "View recent completed approvals",
-            "What triggers an escalation to human review?",
-            "Audit workflow security thresholds",
+            "Check threshold configuration",
         ]
 
     elif is_launch_intent:
@@ -249,24 +244,22 @@ async def copilot_chat(
         execution_nodes.append(launch_node)
 
         reply_text = (
-            "### 🚀 Product Launch Sprint\n\n"
-            "The **Product Launch Sprint** workflow creates structured multi-channel marketing campaigns, visual prompts, and automated schedule queues in minutes:\n\n"
-            "1. **Brief Extraction**: Automatically parse product documents & website URLs.\n"
-            "2. **Multi-Platform Copy**: High-converting posts for LinkedIn, Twitter/X, and Newsletter.\n"
-            "3. **AI Visual Asset Generation**: Generates high-res campaign graphics.\n"
-            "4. **Action Center Approval**: Review copy and visual previews before publishing."
+            "### Product Launch Sprint\n\n"
+            "The Product Launch workflow generates multi-channel marketing campaigns from your brief documents:\n\n"
+            "- Multi-platform copy generation (LinkedIn, Twitter/X, Newsletter)\n"
+            "- Visual asset creation via ImageRouter\n"
+            "- Scheduled dispatch staging via Action Center"
         )
         action_cta = ActionCTA(label="Launch Product Sprint", to="/workflows/product_launch", icon="Zap", variant="primary")
         suggested_followups = [
-            "Draft a new product launch campaign",
-            "Generate LinkedIn launch announcement",
+            "Draft a new launch campaign",
             "Review visual assets in pipeline",
         ]
 
     elif is_metrics_intent:
         stats_node = ExecutionNode(
             id=str(uuid.uuid4())[:8],
-            name="Tenant Analytics & Spend Aggregator",
+            name="Analytics & Spend Aggregator",
             type="transform",
             icon="BarChart3",
             status="success",
@@ -281,27 +274,24 @@ async def copilot_chat(
         execution_nodes.append(stats_node)
 
         reply_text = (
-            "### 📊 Real-Time Operational Health\n\n"
-            f"- **Active Workflow Runs**: {active_runs} running\n"
-            f"- **Pending Action Approvals**: {pending_approvals} items\n"
-            f"- **Recent Workflow History**: {len(recent_runs)} recorded executions\n"
-            "- **LLM Budget Governor**: Active (caching enabled, zero cost overrun detected)\n\n"
-            "Your workspace workflows are running normally within assigned quotas."
+            "### System Metrics\n\n"
+            f"- Active workflow runs: {active_runs}\n"
+            f"- Pending approvals: {pending_approvals}\n"
+            f"- Recent workflow runs: {len(recent_runs)}\n"
+            "- LLM Budget Governor: Active with semantic caching enabled"
         )
         action_cta = ActionCTA(label="View Full Dashboard", to="/dashboard", icon="LayoutDashboard", variant="primary")
         suggested_followups = [
             "Show workflow success rate breakdown",
-            "How much spend did caching save this month?",
-            "List active workflow runs",
+            "List recent workflow runs",
         ]
 
     else:
-        # Generic query -> attempt LLMRouter completion with system prompt
         system_prompt = (
-            f"You are SMBFlow AI Copilot, an intelligent operations assistant for small and medium businesses. "
+            f"You are the SMBFlow AI Assistant. "
             f"The user's organization has {active_runs} active runs and {pending_approvals} pending approvals. "
-            f"Provide concise, actionable answers formatted in clean markdown. "
-            f"Highlight workflow automation opportunities (Email Summarizer, Product Launch, Action Center)."
+            f"Provide concise, direct answers with zero emojis. Format in clean markdown with bullet points. "
+            f"Focus on workflow operations, data extraction, and automation execution."
         )
 
         llm_messages = [
@@ -319,13 +309,12 @@ async def copilot_chat(
             )
             reply_text = raw_resp
         except Exception as e:
-            log.info("LLMRouter call fallback", err=str(e))
+            log.info("LLMRouter fallback", err=str(e))
             reply_text = (
-                f"Hello! I am your **SMBFlow AI Copilot**. I can help you automate operational workflows, "
-                f"summarize incoming customer emails, track pending approvals, and inspect workflow execution metrics.\n\n"
-                f"- **Active Runs**: {active_runs}\n"
-                f"- **Pending Approvals**: {pending_approvals}\n\n"
-                f"How can I assist your business operations today?"
+                f"### System Status\n\n"
+                f"- Active Runs: {active_runs}\n"
+                f"- Pending Approvals: {pending_approvals}\n\n"
+                f"How can I assist your workflow automation?"
             )
 
         ai_exec_node = ExecutionNode(
@@ -341,7 +330,7 @@ async def copilot_chat(
         execution_nodes.append(ai_exec_node)
 
         suggested_followups = [
-            "Summarize my recent customer emails",
+            "Summarize recent customer emails",
             "Check pending approvals in Action Center",
             "Start a Product Launch Sprint campaign",
         ]
