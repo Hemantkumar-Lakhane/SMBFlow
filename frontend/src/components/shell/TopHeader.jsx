@@ -12,7 +12,8 @@ import { useWebSocket } from '../../contexts/WSContext'
 import { useTheme } from '../../contexts/ThemeContext'
 
 const routeLabels = {
-  dashboard:           'Home',
+  dashboard:           'Dashboard',
+  copilot:             'AI Assistant',
   escalations:         'Action Center',
   workflows:           'Workflows',
   'workflow-library':  'Workflow Library',
@@ -47,9 +48,9 @@ function WSDot({ status }) {
   const color =
     status === 'connected' ? 'bg-green-500' : status === 'error' ? 'bg-red-500' : 'bg-slate-300'
   return (
-    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-slate-200 bg-slate-50">
+    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80">
       <span className={`w-1.5 h-1.5 rounded-full ${color} ${status === 'connected' ? 'animate-pulse' : ''}`} />
-      <span className="text-[11px] font-medium text-slate-500 capitalize hidden sm:inline">{status}</span>
+      <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 capitalize hidden sm:inline">{status}</span>
     </div>
   )
 }

@@ -46,6 +46,7 @@ import CasesPage           from './pages/medical/CasesPage'
 import EmailSummarizerPage from './pages/client/EmailSummarizerPage'
 import ProductLaunchPage   from './pages/client/ProductLaunchPage'
 import Dashboard           from './pages/client/Dashboard'
+import CopilotPage         from './pages/client/CopilotPage'
 import EscalationsPage     from './pages/client/EscalationsPage'
 import WorkflowsPage       from './pages/client/WorkflowsPage'
 import WorkflowLibrary     from './pages/client/WorkflowLibrary'
@@ -97,7 +98,7 @@ function HomeRedirect() {
   if (!token || !user) return <LandingPage />
   if (user.requires_onboarding) return <Navigate to="/auth/signup" replace />
   const isAdmin = user.role === 'super_admin' || user.role === 'platform_admin'
-  return <Navigate to={isAdmin ? '/admin' : '/dashboard'} replace />
+  return <Navigate to={isAdmin ? '/admin' : '/copilot'} replace />
 }
 
 function ProtectedRoute({ children, adminOnly = false }) {
@@ -164,6 +165,7 @@ function AppRoutes() {
 
       {/* ── SMB Owner — Operations ───────────────────────────────────────── */}
       <Route path="/dashboard"    element={<Wrap><Dashboard /></Wrap>} />
+      <Route path="/copilot"      element={<Wrap><CopilotPage /></Wrap>} />
       <Route path="/escalations"  element={<Wrap><EscalationsPage /></Wrap>} />
       <Route path="/workflows"    element={<Wrap><WorkflowsPage /></Wrap>} />
       <Route path="/medical/cases" element={<Wrap><CasesPage /></Wrap>} />
