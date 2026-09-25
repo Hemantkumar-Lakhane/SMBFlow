@@ -54,6 +54,14 @@ export default function LoginPage() {
   const location = useLocation()
   const { user, token, loading: authLoading, login, sessionExpired, clearSessionExpired, supabase } = useAuth()
 
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [touched, setTouched] = useState({ email: false, password: false })
+
   useEffect(() => {
     if (!authLoading && token && user) {
       if (user.requires_onboarding) {
@@ -82,16 +90,6 @@ export default function LoginPage() {
       </div>
     )
   }
-
-
-
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [googleLoading, setGoogleLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [touched, setTouched] = useState({ email: false, password: false })
 
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
   const passwordValid = password.length >= 6
