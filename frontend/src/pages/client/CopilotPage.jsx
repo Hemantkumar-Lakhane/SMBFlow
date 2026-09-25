@@ -26,9 +26,14 @@ import { useAuth } from '../../contexts/AuthContext'
 
 // ── Tool Logo with Image Asset Support & Vector Fallback ──────────────────────
 function ToolLogo({ name, className = 'w-4 h-4' }) {
-  const [imgError, setImgError] = useState(false)
+  const [imgSrc, setImgSrc] = useState(() => {
+    if (!name) return null
+    if (name === 'sheets' || name === 'sheet') return '/assets/tools/sheet.png'
+    return `/assets/tools/${name}.png`
+  })
+  const [useFallback, setUseFallback] = useState(false)
 
-  // Clean fallback SVG icons if the image in /assets/tools/ is not yet added
+  // Clean fallback SVG icons if image fails to load
   const svgFallbacks = {
     gmail: (
       <svg className={className} viewBox="0 0 24 24" fill="none">
@@ -38,6 +43,12 @@ function ToolLogo({ name, className = 'w-4 h-4' }) {
       </svg>
     ),
     sheets: (
+      <svg className={className} viewBox="0 0 24 24" fill="none">
+        <rect x="3" y="3" width="18" height="18" rx="3" fill="#0F9D58" fillOpacity="0.2" stroke="#0F9D58" strokeWidth="1.5" />
+        <path d="M7 8H17M7 12H17M7 16H17M12 8V16" stroke="#0F9D58" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+    ),
+    sheet: (
       <svg className={className} viewBox="0 0 24 24" fill="none">
         <rect x="3" y="3" width="18" height="18" rx="3" fill="#0F9D58" fillOpacity="0.2" stroke="#0F9D58" strokeWidth="1.5" />
         <path d="M7 8H17M7 12H17M7 16H17M12 8V16" stroke="#0F9D58" strokeWidth="1.5" strokeLinecap="round" />
@@ -95,13 +106,23 @@ function ToolLogo({ name, className = 'w-4 h-4' }) {
     ),
   }
 
-  if (!imgError && name) {
+  function handleError() {
+    if (imgSrc === '/assets/tools/sheets.png') {
+      setImgSrc('/assets/tools/sheet.png')
+    } else if (imgSrc === '/assets/tools/sheet.png') {
+      setImgSrc('/assets/tools/sheets.png')
+    } else {
+      setUseFallback(true)
+    }
+  }
+
+  if (!useFallback && imgSrc) {
     return (
       <img
-        src={`/assets/tools/${name}.png`}
+        src={imgSrc}
         alt={name}
         className={`${className} object-contain`}
-        onError={() => setImgError(true)}
+        onError={handleError}
       />
     )
   }
