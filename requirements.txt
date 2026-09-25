@@ -24,7 +24,8 @@ pydantic-settings
 python-multipart
 
 # --- Database ---
-sqlalchemy
+sqlalchemy[asyncio]
+greenlet
 asyncpg
 alembic
 aiosqlite
