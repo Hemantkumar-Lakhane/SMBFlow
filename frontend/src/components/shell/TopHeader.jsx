@@ -79,7 +79,7 @@ export function TopHeader() {
   const avatarUrl = user?.avatar_url || localStorage.getItem(`avatar_${user?.id}`) || localStorage.getItem('smbflow_avatar')
 
   return (
-    <header className="h-14 shrink-0 flex items-center justify-between px-6 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 transition-colors">
+    <header className="h-14 shrink-0 flex items-center justify-between px-6 bg-white dark:bg-[#0b0f17] border-b border-slate-200 dark:border-[#233048] transition-colors">
       <nav className="flex items-center gap-1.5">
         <Link to={home} className="text-sm text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 transition-colors">
           SMBFlow
