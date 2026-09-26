@@ -5,6 +5,7 @@ import {
   ReactFlow, Controls, Background, MiniMap, addEdge, MarkerType,
   useNodesState, useEdgesState, Handle, Position,
   Panel, ReactFlowProvider, BackgroundVariant,
+  getBezierPath, useReactFlow,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -16,7 +17,7 @@ import {
   AlertTriangle, ShieldCheck, Database, Mail, Globe,
   Terminal, Sparkles, Building2, CreditCard, ArrowRight,
   HelpCircle, Sliders, Send, Clock, Check, ChevronDown,
-  Maximize2, Minimize2, Activity, PlayCircle, Loader2
+  Maximize2, Minimize2, Activity, PlayCircle, Loader2, Copy,
 } from 'lucide-react'
 import { useAuth }        from '../../contexts/AuthContext'
 import { useTheme }       from '../../contexts/ThemeContext'
@@ -270,6 +271,68 @@ const PALETTE_ITEMS = [
   },
 ]
 
+// ── NODE REQUIRED FIELDS CATALOGUE ─────────────────────────────────────────────
+// Maps agentType → array of required configuration descriptors.
+// Each entry: { key, label, placeholder, type: 'text'|'textarea' }
+// These fields live in node.data.config (separate namespace from existing node data).
+// Empty array means the node type needs no extra configuration to be considered ready.
+const NODE_REQUIRED_FIELDS = {
+  // Triggers
+  trigger_schedule:   [{ key: 'cronExpression',     label: 'Cron Expression',      placeholder: '0 8 * * 1-5 (weekdays at 8 AM)', type: 'text' }],
+  trigger_email:      [{ key: 'emailFilter',         label: 'Email Filter / Label', placeholder: 'e.g. inbox OR label:support',      type: 'text' }],
+  trigger_manual:     [], // on-demand — always ready
+  trigger_webhook:    [{ key: 'webhookPath',          label: 'Webhook Path',         placeholder: '/hooks/my-event',                  type: 'text' }],
+  // AI Agents — name is the minimum; all other fields are optional
+  research_agent:     [],
+  reasoning_agent:    [],
+  drafting_agent:     [],
+  verification_agent: [],
+  execution_agent:    [],
+  // Logic / Flow
+  logic_condition:    [{ key: 'conditionExpression', label: 'Condition Expression', placeholder: 'e.g. output.confidence >= 0.8',    type: 'text'     }],
+  logic_approval_gate:[{ key: 'reviewerRole',        label: 'Reviewer Role',        placeholder: 'e.g. manager, compliance_officer', type: 'text'     }],
+  code_transform:     [{ key: 'codeSnippet',         label: 'Transform Code',       placeholder: '// JavaScript\nreturn items;',     type: 'textarea' }],
+  group_section:      [], // visual only, never executes
+  // Tools / Connectors
+  tool_gmail:    [{ key: 'recipient',      label: 'Recipient(s)',        placeholder: 'email@example.com',                 type: 'text' }],
+  tool_slack:    [{ key: 'slackChannel',   label: 'Slack Channel',       placeholder: '#notifications',                    type: 'text' }],
+  tool_sheet:    [{ key: 'spreadsheetId',  label: 'Spreadsheet ID',      placeholder: 'Google Sheets ID or URL',           type: 'text' }],
+  tool_stripe:   [], // connection-only — no inline config required
+  tool_hubspot:  [], // connection-only
+  tool_telegram: [{ key: 'telegramChatId', label: 'Chat ID / Channel',   placeholder: '-100123456 or @channel',            type: 'text' }],
+  tool_postgres: [{ key: 'sqlQuery',       label: 'SQL Query',           placeholder: 'SELECT * FROM table WHERE id = ?',  type: 'textarea' }],
+  tool_calendar: [], // connection-only
+  tool_webhook:  [{ key: 'webhookUrl',     label: 'Webhook URL',         placeholder: 'https://api.example.com/endpoint',  type: 'text' }],
+}
+
+/**
+ * Derive whether a node has all required configuration filled in.
+ * Returns { ready: boolean, missing: string[] } where missing is a list of
+ * human-readable field labels that are empty.
+ * This is ALWAYS derived from node data — never stored in the DAG.
+ */
+function getNodeReadiness(data) {
+  const agentType = data?.agentType || ''
+  const requiredFields = NODE_REQUIRED_FIELDS[agentType]
+
+  // Unknown type or no requirements → always ready
+  if (!requiredFields || requiredFields.length === 0) {
+    return { ready: true, missing: [] }
+  }
+
+  const config = data?.config || {}
+  const missing = []
+
+  for (const field of requiredFields) {
+    const value = config[field.key]
+    if (!value || String(value).trim() === '') {
+      missing.push(field.label)
+    }
+  }
+
+  return { ready: missing.length === 0, missing }
+}
+
 const EDGE_CONDITIONS = [
   { value: 'null',                label: 'Always run (Default)' },
   { value: '1 item',              label: '1 item' },
@@ -334,15 +397,17 @@ function N8nTriggerNode({ data, selected }) {
   const isCompleted = data.status === 'completed' || data.executionStatus === 'completed'
   const isRunning   = data.status === 'running'   || data.executionStatus === 'running'
   const isError     = data.status === 'error'     || data.executionStatus === 'error'
+  const isDisabled  = data.status === 'disabled'  || data.executionStatus === 'disabled'
 
   return (
     <div
       className={cn(
         'group relative bg-[#131b2a] text-white rounded-2xl transition-all duration-200 min-w-[170px] border shadow-lg overflow-visible select-none',
-        isError ? 'border-red-500 ring-2 ring-red-500/40' :
-        isRunning ? 'border-amber-400 ring-2 ring-amber-400/50 shadow-[0_0_15px_rgba(245,158,11,0.4)]' :
+        isDisabled  ? 'border-slate-700/50 opacity-45 grayscale' :
+        isError     ? 'border-red-500 ring-2 ring-red-500/40' :
+        isRunning   ? 'border-amber-400 ring-2 ring-amber-400/50 shadow-[0_0_15px_rgba(245,158,11,0.4)]' :
         isCompleted ? 'border-emerald-500/80 shadow-[0_0_15px_rgba(16,185,129,0.3)]' :
-        selected ? 'border-emerald-400 ring-2 ring-emerald-400/40' : 'border-[#26354d] hover:border-emerald-500/60'
+        selected    ? 'border-emerald-400 ring-2 ring-emerald-400/40' : 'border-[#26354d] hover:border-emerald-500/60'
       )}
     >
       {/* Left Lightning Trigger Badge */}
@@ -371,6 +436,20 @@ function N8nTriggerNode({ data, selected }) {
         )}
       </div>
 
+      {/* Config-needed indicator — only shown when idle/unexecuted */}
+      {!isRunning && !isCompleted && !isError && !isDisabled && (() => {
+        const { ready, missing } = getNodeReadiness(data)
+        if (ready) return null
+        return (
+          <div className="px-3 py-1 border-t border-amber-500/25 bg-amber-500/8 flex items-center gap-1.5 rounded-b-2xl">
+            <AlertTriangle className="w-2.5 h-2.5 text-amber-400 shrink-0" />
+            <span className="text-[9px] font-semibold text-amber-400 truncate">
+              Config needed: {missing.join(', ')}
+            </span>
+          </div>
+        )
+      })()}
+
       {/* Output Handle */}
       <Handle
         type="source"
@@ -388,15 +467,17 @@ function N8nAgentNode({ data, selected }) {
   const isCompleted = data.status === 'completed' || data.executionStatus === 'completed'
   const isRunning   = data.status === 'running'   || data.executionStatus === 'running'
   const isError     = data.status === 'error'     || data.executionStatus === 'error'
+  const isDisabled  = data.status === 'disabled'  || data.executionStatus === 'disabled'
 
   return (
     <div
       className={cn(
         'group relative bg-[#131b2a] text-white rounded-2xl transition-all duration-200 min-w-[210px] border shadow-xl overflow-visible select-none',
-        isError ? 'border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.5)]' :
-        isRunning ? 'border-blue-400 ring-2 ring-blue-400/50 shadow-[0_0_20px_rgba(59,130,246,0.4)]' :
+        isDisabled  ? 'border-slate-700/50 opacity-45 grayscale' :
+        isError     ? 'border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.5)]' :
+        isRunning   ? 'border-blue-400 ring-2 ring-blue-400/50 shadow-[0_0_20px_rgba(59,130,246,0.4)]' :
         isCompleted ? 'border-emerald-500/80 shadow-[0_0_15px_rgba(16,185,129,0.3)]' :
-        selected ? 'border-blue-500 ring-2 ring-blue-500/40' : 'border-[#26354d] hover:border-slate-500'
+        selected    ? 'border-blue-500 ring-2 ring-blue-500/40' : 'border-[#26354d] hover:border-slate-500'
       )}
     >
       {/* Target Handle (Left) */}
@@ -455,6 +536,20 @@ function N8nAgentNode({ data, selected }) {
         <span className="text-[10px] text-blue-400 hover:text-blue-300 font-bold cursor-pointer">+</span>
       </div>
 
+      {/* Config-needed indicator — only shown when idle/unexecuted */}
+      {!isRunning && !isCompleted && !isError && !isDisabled && (() => {
+        const { ready, missing } = getNodeReadiness(data)
+        if (ready) return null
+        return (
+          <div className="px-3 py-1 border-t border-amber-500/25 bg-amber-500/8 flex items-center gap-1.5">
+            <AlertTriangle className="w-2.5 h-2.5 text-amber-400 shrink-0" />
+            <span className="text-[9px] font-semibold text-amber-400 truncate">
+              Config needed: {missing.join(', ')}
+            </span>
+          </div>
+        )
+      })()}
+
       {/* Bottom Tool Handle */}
       <Handle
         type="target"
@@ -480,15 +575,17 @@ function N8nToolNode({ data, selected }) {
   const isCompleted = data.status === 'completed' || data.executionStatus === 'completed'
   const isRunning   = data.status === 'running'   || data.executionStatus === 'running'
   const isError     = data.status === 'error'     || data.executionStatus === 'error'
+  const isDisabled  = data.status === 'disabled'  || data.executionStatus === 'disabled'
 
   return (
     <div
       className={cn(
         'group relative bg-[#131b2a] text-white rounded-2xl transition-all duration-200 min-w-[190px] border shadow-xl overflow-visible select-none',
-        isError ? 'border-red-500 ring-2 ring-red-500/40' :
-        isRunning ? 'border-purple-400 ring-2 ring-purple-400/50 shadow-[0_0_15px_rgba(168,85,247,0.4)]' :
+        isDisabled  ? 'border-slate-700/50 opacity-45 grayscale' :
+        isError     ? 'border-red-500 ring-2 ring-red-500/40' :
+        isRunning   ? 'border-purple-400 ring-2 ring-purple-400/50 shadow-[0_0_15px_rgba(168,85,247,0.4)]' :
         isCompleted ? 'border-emerald-500/80 shadow-[0_0_15px_rgba(16,185,129,0.3)]' :
-        selected ? 'border-purple-400 ring-2 ring-purple-400/40' : 'border-[#26354d] hover:border-purple-500/60'
+        selected    ? 'border-purple-400 ring-2 ring-purple-400/40' : 'border-[#26354d] hover:border-purple-500/60'
       )}
     >
       <Handle
@@ -523,6 +620,20 @@ function N8nToolNode({ data, selected }) {
         )}
       </div>
 
+      {/* Config-needed indicator for tool nodes */}
+      {!isRunning && !isCompleted && !isError && !isDisabled && (() => {
+        const { ready, missing } = getNodeReadiness(data)
+        if (ready) return null
+        return (
+          <div className="px-3 py-1 border-t border-amber-500/25 bg-amber-500/8 flex items-center gap-1.5">
+            <AlertTriangle className="w-2.5 h-2.5 text-amber-400 shrink-0" />
+            <span className="text-[9px] font-semibold text-amber-400 truncate">
+              Config needed: {missing.join(', ')}
+            </span>
+          </div>
+        )
+      })()}
+
       <Handle
         type="source"
         position={Position.Right}
@@ -544,14 +655,16 @@ function N8nToolNode({ data, selected }) {
 function N8nCodeNode({ data, selected }) {
   const isCompleted = data.status === 'completed' || data.executionStatus === 'completed'
   const isRunning   = data.status === 'running'   || data.executionStatus === 'running'
+  const isDisabled  = data.status === 'disabled'  || data.executionStatus === 'disabled'
 
   return (
     <div
       className={cn(
         'group relative bg-[#131b2a] text-white rounded-2xl transition-all duration-200 min-w-[180px] border shadow-xl overflow-visible select-none',
-        isRunning ? 'border-amber-400 ring-2 ring-amber-400/50' :
+        isDisabled  ? 'border-slate-700/50 opacity-45 grayscale' :
+        isRunning   ? 'border-amber-400 ring-2 ring-amber-400/50' :
         isCompleted ? 'border-emerald-500/80 shadow-[0_0_15px_rgba(16,185,129,0.3)]' :
-        selected ? 'border-amber-400 ring-2 ring-amber-400/40' : 'border-[#26354d] hover:border-slate-500'
+        selected    ? 'border-amber-400 ring-2 ring-amber-400/40' : 'border-[#26354d] hover:border-slate-500'
       )}
     >
       <Handle
@@ -579,6 +692,20 @@ function N8nCodeNode({ data, selected }) {
           </div>
         )}
       </div>
+
+      {/* Config-needed indicator for code/transform nodes */}
+      {!isRunning && !isCompleted && !isDisabled && (() => {
+        const { ready, missing } = getNodeReadiness(data)
+        if (ready) return null
+        return (
+          <div className="px-3 py-1 border-t border-amber-500/25 bg-amber-500/8 flex items-center gap-1.5 rounded-b-2xl">
+            <AlertTriangle className="w-2.5 h-2.5 text-amber-400 shrink-0" />
+            <span className="text-[9px] font-semibold text-amber-400 truncate">
+              Config needed: {missing.join(', ')}
+            </span>
+          </div>
+        )
+      })()}
 
       <Handle
         type="source"
@@ -618,30 +745,60 @@ function N8nGroupNode({ data }) {
 }
 
 // ── N8N CONDITION EDGE WITH ITEM BADGES ────────────────────────────────────────
-function N8nConditionEdge({ id, sourceX, sourceY, targetX, targetY, data, markerEnd, style }) {
-  const midX = (sourceX + targetX) / 2
-  const midY = (sourceY + targetY) / 2
-  const d = `M${sourceX},${sourceY} C${sourceX + 60},${sourceY} ${targetX - 60},${targetY} ${targetX},${targetY}`
+function N8nConditionEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, data, markerEnd, style, selected }) {
+  // Use React Flow's getBezierPath for proper smooth curves
+  const [edgePath, labelX, labelY] = getBezierPath({ sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition })
 
-  const labelText = data?.condition && data.condition !== 'null' ? data.condition : '1 item'
+  // Only show label when there's a real user-set condition — not the default '1 item'
+  const hasRealCondition = data?.condition && data.condition !== 'null' && data.condition !== '1 item'
+  const labelText = hasRealCondition ? data.condition : null
+
+  const strokeColor = selected ? '#6366F1' : '#10B981'
+  const strokeWidth = selected ? 2.5 : 2
 
   return (
     <>
+      {/* Invisible wider hit target so edge is easy to click */}
+      <path
+        d={edgePath}
+        fill="none"
+        stroke="transparent"
+        strokeWidth={16}
+        className="react-flow__edge-interaction"
+      />
       <path
         id={id}
-        d={d}
+        d={edgePath}
         fill="none"
         markerEnd={markerEnd}
-        style={{ ...style, stroke: '#10B981', strokeWidth: 2 }}
+        style={{ ...style, stroke: strokeColor, strokeWidth, transition: 'stroke 0.15s, stroke-width 0.15s' }}
         className="react-flow__edge-path"
       />
-      <foreignObject x={midX - 35} y={midY - 12} width="70" height="24" className="overflow-visible pointer-events-none">
-        <div className="flex items-center justify-center">
-          <span className="px-2 py-0.5 bg-[#0e1624] border border-[#233048] rounded-full text-[10px] font-mono font-bold text-slate-300 shadow-sm">
-            {labelText}
-          </span>
-        </div>
-      </foreignObject>
+      {/* Selected glow */}
+      {selected && (
+        <path
+          d={edgePath}
+          fill="none"
+          stroke="#6366F1"
+          strokeWidth={6}
+          strokeOpacity={0.18}
+          style={{ pointerEvents: 'none' }}
+        />
+      )}
+      {/* Condition label — only when a real condition exists */}
+      {labelText && (
+        <foreignObject x={labelX - 50} y={labelY - 12} width="100" height="24" className="overflow-visible pointer-events-none">
+          <div className="flex items-center justify-center">
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold shadow-sm whitespace-nowrap ${
+              selected
+                ? 'bg-indigo-950 border border-indigo-500/60 text-indigo-300'
+                : 'bg-[#0e1624] border border-[#233048] text-slate-300'
+            }`}>
+              {labelText}
+            </span>
+          </div>
+        </foreignObject>
+      )}
     </>
   )
 }
@@ -689,6 +846,9 @@ function dagToFlow(dag) {
         description: n.description || '',
         timeout: n.timeout_seconds || 90,
         status: n.status || 'idle',
+        // Restore persisted config — defaults to {} for backward compatibility
+        // with existing DAG files that predate this field.
+        config: n.config || {},
       },
     })
   })
@@ -720,6 +880,8 @@ function flowToDag(nodes, edges, meta) {
       tools: n.data.tools || [],
       timeout_seconds: n.data.timeout || 90,
       position: n.position,
+      // Persist type-specific config so it survives save/reload
+      config: n.data.config || {},
     })),
     edges: edges.map(e => ({
       from: e.source,
@@ -890,14 +1052,21 @@ function N8nPaletteDrawer({ open, onClose, onDragStart, onAddItem }) {
 }
 
 // ── NODE CONFIGURATION INSPECTOR ───────────────────────────────────────────────
-function NodeInspector({ node, onSave, onDelete, onClose, allTools, promptFiles }) {
+function NodeInspector({ node, onSave, onDelete, onDuplicate, onClose, allTools, promptFiles }) {
   const [data, setData] = useState({ ...node.data })
-  const set = (k, v) => setData(p => ({ ...p, [k]: v }))
+  const set    = (k, v) => setData(p => ({ ...p, [k]: v }))
+  // config is a nested object; setConfig merges one key at a time
+  const setConfig = (k, v) => setData(p => ({ ...p, config: { ...(p.config || {}), [k]: v } }))
 
   const toggleTool = (t) => {
     const cur = data.tools || []
     set('tools', cur.includes(t) ? cur.filter(x => x !== t) : [...cur, t])
   }
+
+  // Derive readiness from the CURRENT (unsaved) form state
+  const { ready, missing } = getNodeReadiness(data)
+  const requiredFields = NODE_REQUIRED_FIELDS[data.agentType] || []
+  const config = data.config || {}
 
   return (
     <motion.div
@@ -907,18 +1076,73 @@ function NodeInspector({ node, onSave, onDelete, onClose, allTools, promptFiles 
       transition={{ type: 'spring', damping: 25, stiffness: 320 }}
       className="absolute right-0 top-0 bottom-0 w-88 bg-[#0f1522] border-l border-[#233048] z-30 shadow-2xl overflow-y-auto flex flex-col text-slate-200"
     >
+      {/* ── Inspector Header ── */}
       <div className="sticky top-0 bg-[#0f1522] border-b border-[#233048] px-4 py-3 flex items-center justify-between z-10">
         <div>
           <h3 className="text-sm font-bold text-white">Node Settings</h3>
           <p className="text-[10px] text-slate-400 font-mono">{node.id}</p>
         </div>
         <div className="flex gap-1">
+          <Button size="xs" variant="secondary" icon={<Copy className="w-3 h-3" />} onClick={() => { onDuplicate(node); onClose() }} title="Duplicate node" />
           <Button size="xs" variant="danger" icon={<Trash2 className="w-3 h-3" />} onClick={() => { onDelete(node.id); onClose() }} />
           <Button size="xs" variant="secondary" onClick={onClose} icon={<X className="w-3 h-3" />} />
         </div>
       </div>
 
+      {/* ── Readiness Status Bar ── */}
+      <div className={`px-4 py-2 flex items-center gap-2 text-[11px] font-semibold border-b ${
+        ready
+          ? 'bg-emerald-500/8 border-emerald-500/20 text-emerald-400'
+          : 'bg-amber-500/8 border-amber-500/20 text-amber-400'
+      }`}>
+        {ready
+          ? <><Check className="w-3 h-3 stroke-[3]" /> Ready — all required fields filled</>
+          : <><AlertTriangle className="w-3 h-3" /> Needs configuration: {missing.join(', ')}</>
+        }
+      </div>
+
       <div className="p-4 space-y-4 flex-1">
+
+        {/* ── Type-Specific Required Fields (shown first, prominent) ── */}
+        {requiredFields.length > 0 && (
+          <div className="space-y-3 p-3 bg-[#162030] border border-[#2a3850] rounded-xl">
+            <p className="text-[10px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+              <Settings2 className="w-3 h-3 text-blue-400" />
+              Configuration
+            </p>
+            {requiredFields.map(field => (
+              <div key={field.key}>
+                <label className="flex items-center gap-1 text-xs font-semibold text-slate-300 mb-1.5">
+                  {field.label}
+                  <span className="text-amber-400 font-bold text-[10px]">*</span>
+                  {config[field.key]?.trim()
+                    ? <Check className="w-3 h-3 text-emerald-400 ml-auto" />
+                    : <span className="ml-auto text-[9px] font-medium text-amber-500/80">Required</span>
+                  }
+                </label>
+                {field.type === 'textarea' ? (
+                  <textarea
+                    value={config[field.key] || ''}
+                    onChange={e => setConfig(field.key, e.target.value)}
+                    placeholder={field.placeholder}
+                    rows={3}
+                    className="w-full text-xs p-2 bg-[#0d1422] border border-[#2a3850] rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 resize-none font-mono"
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    value={config[field.key] || ''}
+                    onChange={e => setConfig(field.key, e.target.value)}
+                    placeholder={field.placeholder}
+                    className="w-full text-xs p-2 bg-[#0d1422] border border-[#2a3850] rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ── Standard Node Fields ── */}
         <Select
           label="Component Type"
           value={data.agentType || ''}
@@ -994,15 +1218,17 @@ function NodeInspector({ node, onSave, onDelete, onClose, allTools, promptFiles 
 }
 
 // ── MAIN N8N STYLE CANVAS ──────────────────────────────────────────────────────
-function FlowCanvas({ workflowName, dag, allTools, promptFiles, onSave, isSaving, onTestRun, onOpenAssign, onOpenAICopilot }) {
+function FlowCanvas({ workflowName, dag, allTools, promptFiles, onSave, isSaving, onTestRun, onOpenAssign, onOpenAICopilot, api }) {
   const [nodes, setNodes, onNodesChange] = useNodesState([])
   const [edges, setEdges, onEdgesChange] = useEdgesState([])
   const [editingNode, setEditingNode]    = useState(null)
   const [activeTab, setActiveTab]        = useState('editor') // editor | executions | evaluations
   const [paletteOpen, setPaletteOpen]    = useState(false)
-  const [showMiniMap, setShowMiniMap]    = useState(false)
+  const [showMiniMap, setShowMiniMap]    = useState(true)   // on by default
+  const [selectedEdgeId, setSelectedEdgeId] = useState(null) // for edge highlight
   const [isPublished, setIsPublished]    = useState(true)
   const [testingWorkflow, setTestingWorkflow] = useState(false)
+  const [testRunResult,   setTestRunResult]   = useState(null)   // { ok, message, nodes_executed, tokens, cost } | null
   const [nodeErrorToast, setNodeErrorToast]   = useState(null)
   const { setDirty }                     = useBuilderStore()
   const rfWrapper                        = useRef(null)
@@ -1053,20 +1279,25 @@ function FlowCanvas({ workflowName, dag, allTools, promptFiles, onSave, isSaving
     else if (type === 'code_transform') customType = 'codeNode'
     else if (type === 'group_section') customType = 'groupNode'
 
-    setNodes(ns => [...ns, {
-      id: nodeId,
-      type: customType,
-      position: pos,
-      data: {
+    setNodes(ns => {
+      const newNode = {
         id: nodeId,
-        agentType: type,
-        name: pItem?.name || type,
-        subtitle: pItem?.subtitle || 'Response Text',
-        tools: [],
-        promptFile: '',
-        description: pItem?.description || '',
-      },
-    }])
+        type: customType,
+        position: pos,
+        data: {
+          id: nodeId,
+          agentType: type,
+          name: pItem?.name || type,
+          subtitle: pItem?.subtitle || 'Response Text',
+          tools: [],
+          promptFile: '',
+          description: pItem?.description || '',
+        },
+      }
+      // Auto-open inspector for the dropped node
+      setTimeout(() => setEditingNode(newNode), 0)
+      return [...ns, newNode]
+    })
     setDirty(true)
   }, [rfInstance, setNodes, setDirty])
 
@@ -1076,14 +1307,14 @@ function FlowCanvas({ workflowName, dag, allTools, promptFiles, onSave, isSaving
     const pItem = PALETTE_ITEMS.find(p => p.type === type)
     const nodeId = `${type.replace('trigger_', '').replace('tool_', '').replace('logic_', '').replace('_agent', '')}_${Date.now().toString(36)}`
     const pos = { x: 100 + (nodes.length * 50), y: 140 }
-    
+
     let customType = 'agentNode'
     if (type.startsWith('trigger_')) customType = 'triggerNode'
     else if (type.startsWith('tool_')) customType = 'toolNode'
     else if (type === 'code_transform') customType = 'codeNode'
     else if (type === 'group_section') customType = 'groupNode'
 
-    setNodes(ns => [...ns, {
+    const newNode = {
       id: nodeId,
       type: customType,
       position: pos,
@@ -1096,142 +1327,100 @@ function FlowCanvas({ workflowName, dag, allTools, promptFiles, onSave, isSaving
         promptFile: '',
         description: pItem?.description || '',
       },
-    }])
+    }
+    setNodes(ns => [...ns, newNode])
     setDirty(true)
+    // Auto-open inspector for click-to-add
+    setTimeout(() => setEditingNode(newNode), 0)
   }
 
-  // Real-time Canvas AI Pipeline Assistant
+  // ── Inline Canvas AI Copilot ────────────────────────────────────────────────
+  // Calls the same POST /admin/workflows/ai-generate endpoint used by the modal.
+  // The response shape differs from dagToFlow's expected format, so a thin
+  // adapter normalises nodes (data.agentType → agent) and edges (source/target → from/to)
+  // before passing to the existing dagToFlow() conversion.
   const [aiCanvasPrompt, setAiCanvasPrompt] = useState('')
   const [aiCanvasLoading, setAiCanvasLoading] = useState(false)
   const [aiCanvasSuccess, setAiCanvasSuccess] = useState('')
 
   const handleCanvasAIGenerate = async () => {
     if (!aiCanvasPrompt.trim() || aiCanvasLoading) return
+
+    // Guard: if the canvas already has nodes, confirm before replacing them
+    if (nodes.length > 0) {
+      const ok = window.confirm(
+        `Replace the current ${nodes.length}-node canvas with a new AI-generated workflow?\n\nUnsaved changes will be lost.`
+      )
+      if (!ok) return
+    }
+
     setAiCanvasLoading(true)
     setAiCanvasSuccess('')
+
     try {
-      const promptLower = aiCanvasPrompt.toLowerCase()
-      
-      let newType = 'agentNode'
-      let agentKey = 'drafting_agent'
-      let nodeName = 'AI Agent'
-      let nodeSubtitle = 'Multi-Agent Step'
-      let provider = 'openai'
-      let tools = []
+      // Exact same request body as AICopilotModal.handleGenerate
+      const resp = await api.post('/admin/workflows/ai-generate', {
+        prompt:   aiCanvasPrompt.trim(),
+        industry: 'general',
+      })
 
-      if (promptLower.includes('slack')) {
-        newType = 'toolNode'
-        agentKey = 'tool_slack'
-        nodeName = 'Slack Alert Dispatcher'
-        nodeSubtitle = 'Channel Notifications'
-      } else if (promptLower.includes('stripe') || promptLower.includes('payment') || promptLower.includes('invoice')) {
-        newType = 'toolNode'
-        agentKey = 'tool_stripe'
-        nodeName = 'Stripe Billing API'
-        nodeSubtitle = 'Payment Verification'
-      } else if (promptLower.includes('sheet') || promptLower.includes('excel')) {
-        newType = 'toolNode'
-        agentKey = 'tool_sheet'
-        nodeName = 'Google Sheets Logger'
-        nodeSubtitle = 'Spreadsheet Sync'
-      } else if (promptLower.includes('hubspot') || promptLower.includes('crm') || promptLower.includes('lead')) {
-        newType = 'toolNode'
-        agentKey = 'tool_hubspot'
-        nodeName = 'HubSpot CRM Sync'
-        nodeSubtitle = 'Lead & Deal Ingest'
-      } else if (promptLower.includes('telegram')) {
-        newType = 'toolNode'
-        agentKey = 'tool_telegram'
-        nodeName = 'Telegram Bot Agent'
-        nodeSubtitle = 'Customer Messaging'
-      } else if (promptLower.includes('postgres') || promptLower.includes('database') || promptLower.includes('sql')) {
-        newType = 'toolNode'
-        agentKey = 'tool_postgres'
-        nodeName = 'PostgreSQL Query'
-        nodeSubtitle = 'Database Connector'
-      } else if (promptLower.includes('calendar') || promptLower.includes('schedule') || promptLower.includes('booking')) {
-        newType = 'toolNode'
-        agentKey = 'tool_calendar'
-        nodeName = 'Google Calendar'
-        nodeSubtitle = 'Slot Booking'
-      } else if (promptLower.includes('gmail') || promptLower.includes('email')) {
-        newType = 'toolNode'
-        agentKey = 'tool_gmail'
-        nodeName = 'Gmail Dispatch'
-        nodeSubtitle = 'Email API'
-      } else if (promptLower.includes('verification') || promptLower.includes('guardrail') || promptLower.includes('safety') || promptLower.includes('hipaa')) {
-        newType = 'agentNode'
-        agentKey = 'verification_agent'
-        nodeName = 'Verification Guardrail'
-        nodeSubtitle = 'Quality & Policy'
-        provider = 'gemini'
-      } else if (promptLower.includes('approval') || promptLower.includes('hitl') || promptLower.includes('gate') || promptLower.includes('human')) {
-        newType = 'agentNode'
-        agentKey = 'logic_approval_gate'
-        nodeName = 'HITL Approval Gate'
-        nodeSubtitle = 'Action Center Review'
-      } else if (promptLower.includes('research') || promptLower.includes('intel') || promptLower.includes('vector')) {
-        newType = 'agentNode'
-        agentKey = 'research_agent'
-        nodeName = 'Research Agent'
-        nodeSubtitle = 'Vector Context'
-        provider = 'claude'
-      } else if (promptLower.includes('reasoning') || promptLower.includes('classifier') || promptLower.includes('score')) {
-        newType = 'agentNode'
-        agentKey = 'reasoning_agent'
-        nodeName = 'Reasoning Agent'
-        nodeSubtitle = 'Decision Logic'
-        provider = 'openai'
+      // ── Adapt ai-generate response → dagToFlow input format ──────────────
+      // The backend returns nodes with shape { id, type, position, data: { name, agentType, ... } }
+      // dagToFlow expects                    { id, agent, name, tools, description, position, ... }
+      // The backend returns edges with shape { source, target, condition }
+      // dagToFlow expects                    { from, to, condition }
+      const adaptedDag = {
+        nodes: (resp.nodes || []).map(n => ({
+          id:              n.id,
+          // prefer data.agentType; fall back to the top-level type field
+          agent:           n.data?.agentType || n.type || 'drafting_agent',
+          name:            n.data?.name      || n.id,
+          description:     n.data?.prompt_directive || n.data?.description || '',
+          tools:           n.data?.tools     || [],
+          timeout_seconds: n.data?.timeout_seconds || 90,
+          // keep the pre-calculated 2D layout from the generator
+          position:        n.position        || undefined,
+        })),
+        edges: (resp.edges || []).map(e => ({
+          from:      e.source || e.from,
+          to:        e.target || e.to,
+          condition: e.condition || null,
+        })),
       }
 
-      const nodeId = `${agentKey.replace('tool_', '').replace('trigger_', '')}_${Date.now().toString(36)}`
-      const lastNode = nodes[nodes.length - 1]
-      const newPos = lastNode 
-        ? { x: (lastNode.position?.x || 100) + 260, y: (lastNode.position?.y || 140) }
-        : { x: 100, y: 140 }
+      const { nodes: newNodes, edges: newEdges } = dagToFlow(adaptedDag)
 
-      const newNode = {
-        id: nodeId,
-        type: newType,
-        position: newPos,
-        data: {
-          id: nodeId,
-          agentType: agentKey,
-          name: nodeName,
-          subtitle: nodeSubtitle,
-          provider: provider,
-          tools: tools,
-          promptFile: '',
-          description: `Synthesized via AI Canvas Copilot: ${aiCanvasPrompt}`,
-          timeout: 90,
-          status: 'idle',
-        }
-      }
-
-      const newNodes = [...nodes, newNode]
-      let newEdges = [...edges]
-
-      if (lastNode) {
-        newEdges.push({
-          id: `e-${lastNode.id}-${nodeId}-${Date.now().toString(36)}`,
-          source: lastNode.id,
-          target: nodeId,
-          type: 'conditionEdge',
-          animated: true,
-          data: { condition: '1 item' },
-          markerEnd: { type: MarkerType.ArrowClosed, width: 12, height: 12, color: '#10B981' },
-          style: { stroke: '#10B981', strokeWidth: 2 },
-        })
-      }
-
+      // Replace canvas content
       setNodes(newNodes)
       setEdges(newEdges)
+
+      // Propagate metadata back into the canvas meta state so Save DAG
+      // picks up the AI-generated name/key/industry
+      setMeta(m => ({
+        ...m,
+        workflow_id:  resp.key        || m.workflow_id,
+        name:         resp.name       || m.name,
+        industry:     resp.industry   || m.industry,
+        description:  resp.description || m.description,
+        trigger_types: resp.trigger_type ? [resp.trigger_type] : m.trigger_types,
+        sla_hours:    resp.sla_hours  || m.sla_hours,
+      }))
+
       setDirty(true)
-      setAiCanvasSuccess(`Added '${nodeName}' to pipeline!`)
+
+      // Fit the newly loaded workflow into the visible canvas area
+      // Small timeout lets React flush the new node positions first
+      setTimeout(() => rfInstance?.fitView({ padding: 0.25 }), 50)
+
+      setAiCanvasSuccess(
+        `Generated "${resp.name}" — ${newNodes.length} nodes loaded. Click Save DAG to publish.`
+      )
       setAiCanvasPrompt('')
-      setTimeout(() => setAiCanvasSuccess(''), 4000)
+      setTimeout(() => setAiCanvasSuccess(''), 6000)
     } catch (err) {
-      setNodeErrorToast({ nodeName: 'AI Copilot', error: err.message })
+      // Keep existing canvas intact on failure; surface the real backend message
+      const detail = err?.message || 'AI generation failed'
+      setNodeErrorToast({ nodeName: 'AI Copilot', error: detail })
     } finally {
       setAiCanvasLoading(false)
     }
@@ -1243,31 +1432,147 @@ function FlowCanvas({ workflowName, dag, allTools, promptFiles, onSave, isSaving
     setDirty(false)
   }
 
-  // Real live execution simulation across canvas nodes (n8n green execution path)
-  const handleTestWorkflow = async () => {
-    setTestingWorkflow(true)
-    setNodeErrorToast(null)
+  // ── Duplicate a node ────────────────────────────────────────────────────────
+  // Creates a new node with a unique ID, copied data, offset 40px down-right.
+  const handleDuplicateNode = useCallback((node) => {
+    const newId = `${node.id}_copy_${Date.now().toString(36)}`
+    const newNode = {
+      ...node,
+      id: newId,
+      selected: false,
+      position: {
+        x: (node.position?.x ?? 0) + 40,
+        y: (node.position?.y ?? 0) + 40,
+      },
+      data: {
+        ...node.data,
+        id: newId,
+        status: 'idle',
+        executionStatus: 'idle',
+      },
+    }
+    setNodes(ns => [...ns, newNode])
+    setDirty(true)
+  }, [setNodes, setDirty])
 
-    // Reset all nodes to running sequentially
-    for (let i = 0; i < nodes.length; i++) {
-      setNodes(ns => ns.map((node, idx) => ({
-        ...node,
-        data: {
-          ...node.data,
-          status: idx === i ? 'running' : idx < i ? 'completed' : 'idle'
-        }
-      })))
-      await new Promise(r => setTimeout(r, 450))
+  // ── Keyboard shortcuts ───────────────────────────────────────────────────────
+  // Backspace → delete selected node (supplement React Flow's Delete key)
+  // Escape    → clear selection & close inspector
+  // Ctrl/Cmd+S → save DAG
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      // Skip when focus is inside any input/textarea so typing isn't intercepted
+      const tag = document.activeElement?.tagName?.toLowerCase()
+      const isInput = tag === 'input' || tag === 'textarea' || tag === 'select'
+        || document.activeElement?.isContentEditable
+
+      if (e.key === 'Backspace' && !isInput) {
+        // Delete currently selected nodes (React Flow's "Delete" key already handles
+        // this, but Backspace is also expected in most canvas editors)
+        setNodes(ns => {
+          const toRemove = new Set(ns.filter(n => n.selected).map(n => n.id))
+          if (toRemove.size === 0) return ns
+          setEdges(es => es.filter(e => !toRemove.has(e.source) && !toRemove.has(e.target)))
+          return ns.filter(n => !toRemove.has(n.id))
+        })
+        setDirty(true)
+        setEditingNode(null)
+        return
+      }
+
+      if (e.key === 'Escape' && !isInput) {
+        setEditingNode(null)
+        setSelectedEdgeId(null)
+        // Deselect all nodes
+        setNodes(ns => ns.map(n => ({ ...n, selected: false })))
+        return
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault()
+        handleSave()
+      }
     }
 
-    // Set all nodes to completed
-    setNodes(ns => ns.map(node => ({
-      ...node,
-      data: { ...node.data, status: 'completed' }
-    })))
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [handleSave, setNodes, setEdges, setDirty])
 
-    setTestingWorkflow(false)
+  // ── Test Workflow — calls the real backend sandbox endpoint ─────────────────
+  // Pre-flight: validate all executable nodes before hitting the backend.
+  const handleTestWorkflow = async () => {
+    if (!workflowName) return
+
+    // ── Pre-flight node validation ────────────────────────────────────────────
+    // Skip group_section (visual only). Collect nodes with missing required config.
+    const executableNodes = nodes.filter(n => n.type !== 'groupNode')
+    const invalidNodes = executableNodes
+      .map(n => {
+        const { ready, missing } = getNodeReadiness(n.data)
+        return ready ? null : { id: n.id, name: n.data.name || n.id, missing }
+      })
+      .filter(Boolean)
+
+    if (invalidNodes.length > 0) {
+      // Block execution — show which nodes need configuration
+      const names = invalidNodes.map(n => n.name).join(', ')
+      setTestRunResult({
+        ok:           false,
+        message:      `Workflow cannot run. ${invalidNodes.length} node${invalidNodes.length > 1 ? 's' : ''} require${invalidNodes.length === 1 ? 's' : ''} configuration: ${names}`,
+        invalidNodes, // array of { id, name, missing[] }
+      })
+      return
+    }
+    // ── End pre-flight ────────────────────────────────────────────────────────
+
+    setTestingWorkflow(true)
+    setNodeErrorToast(null)
+    setTestRunResult(null)
+
+    // Mark every canvas node as 'running' while the request is in flight
+    setNodes(ns => ns.map(n => ({ ...n, data: { ...n.data, status: 'running', executionStatus: 'running' } })))
+
+    try {
+      const resp = await api.post(`/admin/workflows/${workflowName}/test-run`, {
+        input_payload: { sample_customer: 'Acme Corp', sample_revenue: 120000 },
+        mock_mode: true,
+      })
+
+      // Build a quick lookup: node_id → step result from backend
+      const stepMap = {}
+      ;(resp.steps || []).forEach(s => { stepMap[s.node_id] = s })
+
+      // Update each canvas node with its individual step outcome
+      setNodes(ns => ns.map(n => {
+        const step = stepMap[n.id]
+        const outcome = step ? (step.status === 'success' ? 'completed' : 'error') : 'completed'
+        return { ...n, data: { ...n.data, status: outcome, executionStatus: outcome } }
+      }))
+
+      setTestRunResult({
+        ok:             true,
+        message:        resp.message || `Dry-run passed — ${resp.total_nodes_executed} node(s) executed.`,
+        nodes_executed: resp.total_nodes_executed,
+        tokens:         resp.total_simulated_tokens,
+        cost:           resp.total_simulated_cost_usd,
+        test_run_id:    resp.test_run_id,
+      })
+    } catch (e) {
+      // Reset all nodes back to idle so the canvas doesn't stay "running"
+      setNodes(ns => ns.map(n => ({ ...n, data: { ...n.data, status: 'idle', executionStatus: 'idle' } })))
+
+      const detail = e?.message || 'Test run failed'
+      setTestRunResult({ ok: false, message: detail })
+    } finally {
+      setTestingWorkflow(false)
+    }
   }
+
+  // Inject selected flag into edges so N8nConditionEdge can highlight the active one
+  const displayEdges = useMemo(
+    () => edges.map(e => ({ ...e, selected: e.id === selectedEdgeId })),
+    [edges, selectedEdgeId]
+  )
 
   return (
     <div className="flex flex-col h-full bg-[#0d1117] text-white relative select-none">
@@ -1384,30 +1689,52 @@ function FlowCanvas({ workflowName, dag, allTools, promptFiles, onSave, isSaving
         {/* Main ReactFlow Canvas */}
         <ReactFlow
           nodes={nodes}
-          edges={edges}
+          edges={displayEdges}
           onNodesChange={(changes) => { onNodesChange(changes); setDirty(true) }}
           onEdgesChange={(changes) => { onEdgesChange(changes); setDirty(true) }}
           onConnect={onConnect}
           onInit={setRfInstance}
           onDrop={onDrop}
           onDragOver={e => e.preventDefault()}
-          onNodeClick={(_, node) => setEditingNode(node)}
+          onNodeClick={(_, node) => { setEditingNode(node); setSelectedEdgeId(null) }}
+          onPaneClick={() => { setEditingNode(null); setSelectedEdgeId(null) }}
+          onEdgeClick={(_, edge) => setSelectedEdgeId(prev => prev === edge.id ? null : edge.id)}
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
           fitView
           fitViewOptions={{ padding: 0.25 }}
-          deleteKeyCode="Delete"
+          minZoom={0.2}
+          maxZoom={1.5}
+          deleteKeyCode={['Delete', 'Backspace']}
+          multiSelectionKeyCode="Shift"
+          selectionOnDrag={false}
+          panOnDrag={[1, 2]}
+          zoomOnScroll
+          zoomOnPinch
           proOptions={{ hideAttribution: true }}
           className="bg-[#0d1117]"
         >
-          <Background variant={BackgroundVariant.Dots} gap={22} size={1.2} color="#202c3f" />
-          {showMiniMap && (
-            <MiniMap
-              nodeColor="#233048"
-              maskColor="rgba(13, 17, 23, 0.85)"
-              className="!bg-[#121824] !border !border-[#233048] !rounded-xl"
-            />
-          )}
+          <Background
+            variant={BackgroundVariant.Lines}
+            gap={28}
+            size={0.5}
+            color="#1a2336"
+          />
+          <MiniMap
+            nodeColor={n => {
+              if (n.type === 'triggerNode') return '#10b981'
+              if (n.type === 'toolNode') return '#a855f7'
+              if (n.type === 'codeNode') return '#f59e0b'
+              return '#3b82f6'
+            }}
+            maskColor="rgba(10,14,22,0.88)"
+            className={cn(
+              '!bg-[#0d1117] !border !border-[#233048] !rounded-xl',
+              !showMiniMap && '!hidden'
+            )}
+            pannable
+            zoomable
+          />
         </ReactFlow>
 
         {/* Node Inspector Slide-over */}
@@ -1418,6 +1745,7 @@ function FlowCanvas({ workflowName, dag, allTools, promptFiles, onSave, isSaving
               allTools={allTools}
               promptFiles={promptFiles}
               onClose={() => setEditingNode(null)}
+              onDuplicate={(node) => { handleDuplicateNode(node); setEditingNode(null) }}
               onSave={(id, data) => {
                 setNodes(ns => ns.map(n => n.id === id ? { ...n, data } : n))
                 setDirty(true)
@@ -1457,7 +1785,7 @@ function FlowCanvas({ workflowName, dag, allTools, promptFiles, onSave, isSaving
                   handleCanvasAIGenerate()
                 }
               }}
-              placeholder="Instruct AI to edit DAG (e.g. 'Add Slack alert node', 'Connect Stripe tool', 'Add Verification gate')..."
+              placeholder="Describe a workflow to generate (e.g. 'Customer onboarding with email verification, risk review and welcome email')..."
               className="flex-1 bg-transparent text-xs text-white placeholder-slate-400 focus:outline-none"
               disabled={aiCanvasLoading}
             />
@@ -1483,6 +1811,68 @@ function FlowCanvas({ workflowName, dag, allTools, promptFiles, onSave, isSaving
               <p className="text-[11px] text-red-300">{nodeErrorToast.error}</p>
             </div>
             <button onClick={() => setNodeErrorToast(null)} className="text-slate-400 hover:text-white ml-2">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        {/* Test-Run Result Toast */}
+        {testRunResult && (
+          <div className={`absolute bottom-5 right-5 z-40 p-3 rounded-xl shadow-2xl flex items-start gap-3 text-xs animate-in fade-in duration-200 max-w-sm ${
+            testRunResult.ok
+              ? 'bg-[#0e1f18] border border-emerald-500/60 text-emerald-200'
+              : 'bg-[#1e1518] border border-red-500/60 text-red-200'
+          }`}>
+            <div className={`w-5 h-5 rounded-full flex items-center justify-center font-bold shrink-0 mt-0.5 ${
+              testRunResult.ok
+                ? 'bg-emerald-500/20 border border-emerald-500 text-emerald-400'
+                : 'bg-red-500/20 border border-red-500 text-red-400'
+            }`}>
+              {testRunResult.ok ? <Check className="w-3 h-3 stroke-[3]" /> : <AlertTriangle className="w-3 h-3" />}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="font-bold text-white leading-snug">
+                {testRunResult.ok ? 'Test run passed' : 'Cannot run workflow'}
+              </p>
+              <p className="text-[11px] mt-0.5 leading-relaxed opacity-80">{testRunResult.message}</p>
+              {testRunResult.ok && (
+                <div className="flex items-center gap-3 mt-1.5 font-mono text-[10px]">
+                  <span className="text-slate-400">{testRunResult.nodes_executed} nodes</span>
+                  <span className="text-slate-500">·</span>
+                  <span className="text-slate-400">{testRunResult.tokens?.toLocaleString()} tok</span>
+                  <span className="text-slate-500">·</span>
+                  <span className="text-emerald-400">${testRunResult.cost}</span>
+                </div>
+              )}
+              {/* Clickable list of invalid nodes — each opens its inspector */}
+              {testRunResult.invalidNodes?.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  {testRunResult.invalidNodes.map(inv => {
+                    const canvasNode = nodes.find(n => n.id === inv.id)
+                    return (
+                      <button
+                        key={inv.id}
+                        type="button"
+                        onClick={() => {
+                          if (canvasNode) setEditingNode(canvasNode)
+                          setTestRunResult(null)
+                        }}
+                        className="w-full text-left flex items-start gap-1.5 px-2 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/25 hover:bg-amber-500/20 transition-colors cursor-pointer"
+                      >
+                        <AlertTriangle className="w-2.5 h-2.5 text-amber-400 shrink-0 mt-0.5" />
+                        <span className="text-[10px] text-amber-200 leading-snug">
+                          <span className="font-semibold">{inv.name}</span>
+                          {' — '}
+                          <span className="opacity-75">{inv.missing.join(', ')}</span>
+                        </span>
+                      </button>
+                    )
+                  })}
+                  <p className="text-[9px] text-slate-500 mt-1 pl-1">Click a node above to configure it</p>
+                </div>
+              )}
+            </div>
+            <button onClick={() => setTestRunResult(null)} className="text-slate-400 hover:text-white ml-1 shrink-0">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -2155,6 +2545,7 @@ export default function WorkflowBuilder() {
                 onTestRun={() => setTestDrawerOpen(true)}
                 onOpenAssign={() => setAssignModalOpen(true)}
                 onOpenAICopilot={() => setAiCopilotOpen(true)}
+                api={api}
               />
             </ReactFlowProvider>
           ) : (

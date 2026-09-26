@@ -1,0 +1,49 @@
+{
+  "_meta": {
+    "name": "Customer Onboarding",
+    "description": "Onboard a new customer by validating their information, checking risk, sending an approval email, and routing high-risk cases for human review.",
+    "category": "operations",
+    "industry": "saas",
+    "sla_hours": 4,
+    "estimated_duration_minutes": 2,
+    "trigger": {
+      "type": "manual",
+      "source": "visual_builder"
+    },
+    "trigger_types": [
+      "manual"
+    ],
+    "created_by": "admin@smbflow.com",
+    "created_at": "2026-09-26T12:07:21.462867",
+    "is_custom": true
+  },
+  "nodes": [
+    {
+      "id": "trigger_1",
+      "agent": "trigger_manual",
+      "name": "Inbound Ingest",
+      "description": "Trigger",
+      "timeout_seconds": 60,
+      "tools": []
+    },
+    {
+      "id": "agent_process",
+      "agent": "drafting_agent",
+      "name": "Summarize Emails",
+      "description": "AI Agent",
+      "timeout_seconds": 60,
+      "tools": []
+    }
+  ],
+  "edges": [
+    {
+      "from": "trigger_1",
+      "to": "agent_process",
+      "condition": "1 item"
+    }
+  ],
+  "escalation_config": {
+    "sla_hours": 4,
+    "resume_after_decision": true
+  }
+}
