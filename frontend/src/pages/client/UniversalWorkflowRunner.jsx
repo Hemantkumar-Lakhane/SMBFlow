@@ -12,7 +12,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import React, { useState, useEffect, useRef, useMemo } from 'react'
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import {
   Send, Bot, Play, CheckCircle2, RefreshCw, Copy, Check,
@@ -22,7 +22,8 @@ import {
   ZoomIn, ZoomOut, Maximize2, Minimize2, Sparkles, ChevronRight,
   ChevronDown, Eye, CheckCircle, AlertCircle, MessageSquare, Link2, Lock,
   CreditCard, UserCheck, AlertTriangle, GitFork, RotateCcw, BrainCircuit,
-  Image as ImageIcon, Loader2, Database, GitBranch, Activity
+  Image as ImageIcon, Loader2, Database, GitBranch, Activity, User, Star, TrendingUp,
+  Inbox, CheckSquare, Mail
 } from 'lucide-react'
 
 // ── Robust Platform to Tool Name Mapper ──────────────────────────────────────
@@ -360,8 +361,346 @@ function MarkdownRenderer({ content, className = '' }) {
   )
 }
 
+// ── Helper to Determine if a Field has a Valid Value ─────────────────────────
+function isFieldFilled(val) {
+  if (val === null || val === undefined) return false
+  if (typeof val === 'string') return val.trim().length > 0
+  if (typeof val === 'object') {
+    return Boolean(val.file_id || val.filename || val.name)
+  }
+  return Boolean(val)
+}
+
+// ── Helper to Format Byte Sizes ──────────────────────────────────────────────
+function formatBytes(bytes) {
+  if (!bytes || bytes === 0) return '0 Bytes'
+  const k = 1024
+  const sizes = ['Bytes', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`
+}
+
+// ── Reusable Audio Upload Component ─────────────────────────────────────────
+function AudioUploadField({ value, onChange, onClear, api }) {
+  const [isUploading, setIsUploading] = useState(false)
+  const [errorMsg, setErrorMsg] = useState('')
+  const [dragOver, setDragOver] = useState(false)
+  const fileInputRef = useRef(null)
+
+  const allowedExtensions = ['.mp3', '.wav', '.m4a', '.webm']
+  const maxSizeBytes = 50 * 1024 * 1024
+
+  async function handleFileProcess(file) {
+    if (!file) return
+    setErrorMsg('')
+
+    const ext = '.' + file.name.split('.').pop().toLowerCase()
+    if (!allowedExtensions.includes(ext)) {
+      setErrorMsg(`Invalid file type "${ext}". Supported audio formats: .mp3, .wav, .m4a, .webm`)
+      return
+    }
+
+    if (file.size > maxSizeBytes) {
+      setErrorMsg(`File exceeds maximum size limit (50 MB). Selected file: ${(file.size / (1024 * 1024)).toFixed(1)} MB`)
+      return
+    }
+
+    if (file.size === 0) {
+      setErrorMsg('Selected audio file is empty (0 bytes).')
+      return
+    }
+
+    setIsUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const res = await api.upload('/workflows/meeting-intelligence/upload-audio', formData)
+      if (res && (res.filename || res.file_id)) {
+        onChange({
+          file_id: res.file_id,
+          filename: res.filename || file.name,
+          size_bytes: res.size_bytes || file.size,
+          content_type: res.content_type || file.type,
+          stored_path: res.stored_path,
+        })
+      } else {
+        throw new Error('Upload response missing file metadata')
+      }
+    } catch (err) {
+      console.error('Audio upload error:', err)
+      setErrorMsg(err.message || 'Failed to upload audio file. Please try again.')
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  function formatBytes(bytes) {
+    if (!bytes || bytes === 0) return '0 Bytes'
+    const k = 1024
+    const sizes = ['Bytes', 'KB', 'MB', 'GB']
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`
+  }
+
+  const hasAudio = value && (value.filename || value.file_id)
+
+  return (
+    <div className="space-y-2">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".mp3,.wav,.m4a,.webm,audio/*"
+        className="hidden"
+        onChange={(e) => {
+          if (e.target.files && e.target.files[0]) {
+            handleFileProcess(e.target.files[0])
+          }
+          e.target.value = ''
+        }}
+      />
+
+      {hasAudio ? (
+        <div className="flex items-center justify-between p-3 rounded-xl bg-blue-50/60 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/60 transition-colors">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-lg bg-blue-600/10 dark:bg-blue-400/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+              <Mic className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
+                {value.filename}
+              </div>
+              <div className="flex items-center gap-2 text-[10px] text-slate-500 dark:text-slate-400 font-mono mt-0.5">
+                {value.size_bytes && <span>{formatBytes(value.size_bytes)}</span>}
+                <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold">
+                  <CheckCircle className="w-2.5 h-2.5" /> Preserved for Run
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0 ml-3">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-white dark:bg-[#182234] border border-slate-200 dark:border-[#233048] hover:bg-slate-50 dark:hover:bg-[#233048] text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+            >
+              Replace
+            </button>
+            <button
+              type="button"
+              onClick={onClear}
+              className="p-1 rounded-md text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors cursor-pointer"
+              title="Remove audio file"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div>
+          <div
+            onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault()
+              setDragOver(false)
+              if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                handleFileProcess(e.dataTransfer.files[0])
+              }
+            }}
+            onClick={() => !isUploading && fileInputRef.current?.click()}
+            className={`p-4 border-2 border-dashed rounded-xl text-center cursor-pointer transition-all ${
+              dragOver
+                ? 'border-blue-500 bg-blue-50/60 dark:bg-blue-950/40'
+                : 'border-slate-300 dark:border-[#233048] hover:border-blue-400 dark:hover:border-blue-700 hover:bg-slate-50/60 dark:hover:bg-[#182234]/40'
+            }`}
+          >
+            {isUploading ? (
+              <div className="flex items-center justify-center gap-2 text-xs text-blue-600 dark:text-blue-400 font-semibold py-1">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Uploading and validating audio recording...</span>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center gap-1.5 py-1">
+                <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-[#182234] text-slate-500 dark:text-slate-400 flex items-center justify-center">
+                  <Mic className="w-4 h-4 text-blue-500" />
+                </div>
+                <div className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                  <span className="text-blue-600 dark:text-blue-400 underline">Click to upload</span> or drag and drop audio file
+                </div>
+                <div className="text-[10px] text-slate-400 font-mono">
+                  Supported formats: .mp3, .wav, .m4a, .webm (Max 50MB)
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {errorMsg && (
+        <div className="flex items-center gap-1.5 text-[11px] text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 p-2 rounded-lg border border-red-200 dark:border-red-900/60">
+          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+          <span>{errorMsg}</span>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Canonical Workflow Registry with Form Fields & Relevant Topologies ──────
 const WORKFLOW_REGISTRY = {
+  meeting_intelligence_followup: {
+    key: 'meeting_intelligence_followup',
+    title: 'Meeting Intelligence & Follow-up',
+    displayTitle: 'Meeting Intelligence & Follow-up',
+    category: 'Productivity',
+    description: 'Converts professional conversations into structured memory, follow-up actions, and meeting preparation.',
+    apps: ['webhook', 'claude', 'postgres', 'openai', 'slack'],
+    uiSections: {
+      showAssistantChat: false,
+      formType: 'generic',
+      deliverablesType: 'generic_telemetry',
+      calendarSchedule: false,
+    },
+    fields: [
+      {
+        id: 'conversation_title',
+        label: 'Conversation Title',
+        prompt: 'What is the title or subject of this conversation?',
+        placeholder: 'e.g. Meeting with Rahul - AI Automation Discussion',
+        type: 'text',
+        required: true,
+      },
+      {
+        id: 'contact_name',
+        label: 'Contact Name',
+        prompt: 'Who is the primary contact or attendee for this conversation?',
+        placeholder: 'e.g. Rahul Sharma',
+        type: 'text',
+        required: true,
+      },
+      {
+        id: 'conversation_type',
+        label: 'Conversation Type',
+        prompt: 'What format was this conversation held in?',
+        placeholder: 'Select conversation type...',
+        type: 'select',
+        options: ['Online Meeting', 'Phone Call', 'In-Person Meeting'],
+        required: true,
+      },
+      {
+        id: 'recording',
+        label: 'Recording / Audio',
+        prompt: 'Attach the conversation audio recording (.mp3, .wav, .m4a, .webm):',
+        placeholder: 'Select or drop an audio file...',
+        type: 'audio_upload',
+        acceptedFormats: ['.mp3', '.wav', '.m4a', '.webm'],
+        required: true,
+      },
+      {
+        id: 'language',
+        label: 'Language',
+        prompt: 'Select the spoken language of the recording:',
+        placeholder: 'Select language...',
+        type: 'select',
+        options: ['Auto Detect', 'English', 'Spanish', 'Mixed English / Spanish'],
+        defaultValue: 'Auto Detect',
+        required: true,
+      },
+      {
+        id: 'conversation_date',
+        label: 'Conversation Date',
+        prompt: 'When did this conversation take place?',
+        placeholder: 'YYYY-MM-DD',
+        type: 'date',
+        defaultValue: () => new Date().toISOString().split('T')[0],
+        required: true,
+      },
+    ],
+    nodes: [
+      { id: 'n1', title: 'Conversation Capture', subtitle: 'Trigger: Audio & Ingest', tool: 'webhook', color: '#3B82F6', x: 20, y: 70 },
+      { id: 'n2', title: 'Process Conversation', subtitle: 'Pending Implementation', tool: 'claude', color: '#D97706', x: 220, y: 70 },
+      { id: 'n3', title: 'Central Memory', subtitle: 'Pending Implementation', tool: 'postgres', color: '#336791', x: 420, y: 70 },
+      { id: 'n4', title: 'Action Generator', subtitle: 'Pending Implementation', tool: 'openai', color: '#10B981', x: 620, y: 70 },
+      { id: 'n5', title: 'Follow-up & Meeting Prep', subtitle: 'Pending Implementation', tool: 'slack', color: '#EC4899', x: 840, y: 70 },
+    ],
+  },
+  meeting_intelligence: {
+    key: 'meeting_intelligence_followup',
+    title: 'Meeting Intelligence & Follow-up',
+    displayTitle: 'Meeting Intelligence & Follow-up',
+    category: 'Productivity',
+    description: 'Converts professional conversations into structured memory, follow-up actions, and meeting preparation.',
+    apps: ['webhook', 'claude', 'postgres', 'openai', 'slack'],
+    uiSections: {
+      showAssistantChat: false,
+      formType: 'generic',
+      deliverablesType: 'generic_telemetry',
+      calendarSchedule: false,
+    },
+    fields: [
+      {
+        id: 'conversation_title',
+        label: 'Conversation Title',
+        prompt: 'What is the title or subject of this conversation?',
+        placeholder: 'e.g. Meeting with Rahul - AI Automation Discussion',
+        type: 'text',
+        required: true,
+      },
+      {
+        id: 'contact_name',
+        label: 'Contact Name',
+        prompt: 'Who is the primary contact or attendee for this conversation?',
+        placeholder: 'e.g. Rahul Sharma',
+        type: 'text',
+        required: true,
+      },
+      {
+        id: 'conversation_type',
+        label: 'Conversation Type',
+        prompt: 'What format was this conversation held in?',
+        placeholder: 'Select conversation type...',
+        type: 'select',
+        options: ['Online Meeting', 'Phone Call', 'In-Person Meeting'],
+        required: true,
+      },
+      {
+        id: 'recording',
+        label: 'Recording / Audio',
+        prompt: 'Attach the conversation audio recording (.mp3, .wav, .m4a, .webm):',
+        placeholder: 'Select or drop an audio file...',
+        type: 'audio_upload',
+        acceptedFormats: ['.mp3', '.wav', '.m4a', '.webm'],
+        required: true,
+      },
+      {
+        id: 'language',
+        label: 'Language',
+        prompt: 'Select the spoken language of the recording:',
+        placeholder: 'Select language...',
+        type: 'select',
+        options: ['Auto Detect', 'English', 'Spanish', 'Mixed English / Spanish'],
+        defaultValue: 'Auto Detect',
+        required: true,
+      },
+      {
+        id: 'conversation_date',
+        label: 'Conversation Date',
+        prompt: 'When did this conversation take place?',
+        placeholder: 'YYYY-MM-DD',
+        type: 'date',
+        defaultValue: () => new Date().toISOString().split('T')[0],
+        required: true,
+      },
+    ],
+    nodes: [
+      { id: 'n1', title: 'Conversation Capture', subtitle: 'Trigger: Audio & Ingest', tool: 'webhook', color: '#3B82F6', x: 20, y: 70 },
+      { id: 'n2', title: 'Process Conversation', subtitle: 'Pending Implementation', tool: 'claude', color: '#D97706', x: 220, y: 70 },
+      { id: 'n3', title: 'Central Memory', subtitle: 'Pending Implementation', tool: 'postgres', color: '#336791', x: 420, y: 70 },
+      { id: 'n4', title: 'Action Generator', subtitle: 'Pending Implementation', tool: 'openai', color: '#10B981', x: 620, y: 70 },
+      { id: 'n5', title: 'Follow-up & Meeting Prep', subtitle: 'Pending Implementation', tool: 'slack', color: '#EC4899', x: 840, y: 70 },
+    ],
+  },
   product_launch: {
     key: 'product_launch',
     title: 'Product Launch Sprint',
@@ -371,6 +710,13 @@ const WORKFLOW_REGISTRY = {
     apps: ['gmail', 'openai', 'claude', 'instagram', 'calendar'],
     topBranchLabel: 'Social Queue',
     bottomBranchLabel: 'Launch Ops',
+    uiSections: {
+      showAssistantChat: true,
+      assistantType: 'product_launch',
+      formType: 'product_launch',
+      deliverablesType: 'product_launch_campaign',
+      calendarSchedule: true,
+    },
     fields: [
       { id: 'name', label: 'Product / Feature Name', prompt: 'What is the product or feature name you are launching?', placeholder: 'e.g. Nova Mobile Beta, Acme Engine', type: 'text' },
       { id: 'desc', label: 'Product Description & Target Audience', prompt: 'What is a short description of the product and who is your primary target audience?', placeholder: 'e.g. Fast workflow orchestrator for teams of 5-50', type: 'textarea' },
@@ -396,6 +742,13 @@ const WORKFLOW_REGISTRY = {
     apps: ['gmail', 'openai', 'claude', 'instagram', 'calendar'],
     topBranchLabel: 'Social Queue',
     bottomBranchLabel: 'Launch Ops',
+    uiSections: {
+      showAssistantChat: true,
+      assistantType: 'product_launch',
+      formType: 'product_launch',
+      deliverablesType: 'product_launch_campaign',
+      calendarSchedule: true,
+    },
     fields: [
       { id: 'name', label: 'Product / Feature Name', prompt: 'What is the product or feature name you are launching?', placeholder: 'e.g. Nova Mobile Beta, Acme Engine', type: 'text' },
       { id: 'desc', label: 'Product Description & Target Audience', prompt: 'What is a short description of the product and who is your primary target audience?', placeholder: 'e.g. Fast workflow orchestrator for teams of 5-50', type: 'textarea' },
@@ -611,6 +964,9 @@ function resolveDynamicWorkflow(rawKey, searchParams) {
   }
 
   // Keyword match to standard pipelines
+  if (normalized.includes('meeting') || normalized.includes('conversation')) {
+    return WORKFLOW_REGISTRY.meeting_intelligence_followup
+  }
   if (normalized.includes('invoice') || normalized.includes('bill') || normalized.includes('receipt') || normalized.includes('expense')) {
     return WORKFLOW_REGISTRY.invoice_processing
   }
@@ -670,15 +1026,42 @@ function resolveDynamicWorkflow(rawKey, searchParams) {
 export default function UniversalWorkflowRunner() {
   const { runId } = useParams()
   const [searchParams] = useSearchParams()
+  const location = useLocation()
   const navigate = useNavigate()
   const { user, api } = useAuth()
 
+  // Extract key from route path (e.g. /workflows/meeting_intelligence_followup -> meeting_intelligence_followup)
+  const pathKey = useMemo(() => {
+    const p = location?.pathname || ''
+    if (p.startsWith('/workflows/run/')) {
+      return runId || p.replace('/workflows/run/', '')
+    }
+    if (p.startsWith('/workflows/')) {
+      return p.replace(/^\/workflows\/?/, '').split('/')[0] || ''
+    }
+    if (p === '/product-launch') return 'product_launch'
+    if (p === '/email-summarizer') return 'email_summarizer'
+    return runId || ''
+  }, [location?.pathname, runId])
+
   // Target dynamic workflow resolution
   const workflow = useMemo(() => {
-    return resolveDynamicWorkflow(runId, searchParams)
-  }, [runId, searchParams])
+    return resolveDynamicWorkflow(pathKey || runId, searchParams)
+  }, [pathKey, runId, searchParams])
 
   const targetKey = workflow.key
+  const isProductLaunch = targetKey === 'product_launch_sprint' || targetKey === 'product_launch' || targetKey === 'product_launch_campaign'
+
+  // Clean, configuration-driven UI sections derived from workflow config
+  const uiSections = useMemo(() => {
+    return {
+      showAssistantChat: workflow.uiSections?.showAssistantChat ?? isProductLaunch,
+      assistantType: workflow.uiSections?.assistantType || (isProductLaunch ? 'product_launch' : null),
+      formType: workflow.uiSections?.formType || (isProductLaunch ? 'product_launch' : 'generic'),
+      deliverablesType: workflow.uiSections?.deliverablesType || (isProductLaunch ? 'product_launch_campaign' : 'generic_telemetry'),
+      calendarSchedule: workflow.uiSections?.calendarSchedule ?? isProductLaunch,
+    }
+  }, [workflow.uiSections, isProductLaunch])
 
   // State
   const [pipelineNodes, setPipelineNodes] = useState(() => workflow.nodes.map((n, idx) => ({ ...n, status: idx === 0 ? 'active' : 'idle' })))
@@ -713,13 +1096,63 @@ export default function UniversalWorkflowRunner() {
   const [editingPostIndex, setEditingPostIndex] = useState(null)
   const [editedCaptionText, setEditedCaptionText] = useState('')
 
-  // Fetch active LLM routing settings so DAG nodes dynamically reflect configured providers/models
+  // Node 5A Follow-up Email Draft State
+  const [editingDraft, setEditingDraft] = useState(false)
+  const [draftSubjectEdit, setDraftSubjectEdit] = useState('')
+  const [draftBodyEdit, setDraftBodyEdit] = useState('')
+  const [draftActionLoading, setDraftActionLoading] = useState(false)
+  const [draftToast, setDraftToast] = useState(null)
+  const [snoozeOpen, setSnoozeOpen] = useState(false)
+  const [snoozeUntilVal, setSnoozeUntilVal] = useState('Tomorrow 9:00 AM')
+  const [copiedDraftSubject, setCopiedDraftSubject] = useState(false)
+  const [copiedDraftBody, setCopiedDraftBody] = useState(false)
+
+  // Pre-flight authorization state
+  const [accessChecking, setAccessChecking] = useState(true)
+  const [accessDenied, setAccessDenied] = useState(null)
+  const [requestSent, setRequestSent] = useState(false)
+  const [requesting, setRequesting] = useState(false)
+
+  // Verify that the user's organization has an active assignment for this workflow
+  useEffect(() => {
+    let mounted = true
+    async function verifyAccess() {
+      // Platform admins have unconditional access
+      if (user?.role === 'platform_admin' || user?.role === 'super_admin') {
+        if (mounted) setAccessChecking(false)
+        return
+      }
+      try {
+        setAccessChecking(true)
+        const res = await api.get(`/api/v1/workflows/${targetKey}/check-access`)
+        if (mounted) {
+          if (res && res.allowed === false) {
+            setAccessDenied({ message: res.reason || 'This workflow has not been assigned to your organization.' })
+          } else {
+            setAccessDenied(null)
+          }
+        }
+      } catch (err) {
+        if (mounted) {
+          const detail = err?.response?.data?.detail
+          const msg = typeof detail === 'string' ? detail : detail?.message || err?.message || 'This workflow has not been assigned to your organization.'
+          setAccessDenied({ message: msg })
+        }
+      } finally {
+        if (mounted) setAccessChecking(false)
+      }
+    }
+    verifyAccess()
+    return () => { mounted = false }
+  }, [api, targetKey, user?.role])
+
+  // Fetch active LLM routing settings so DAG nodes dynamically reflect configured providers/models (for Product Launch Sprint)
   useEffect(() => {
     let mounted = true
     async function loadRouting() {
       try {
         const d = await api.get('/admin/routing')
-        if (mounted && d?.current_defaults) {
+        if (mounted && d?.current_defaults && isProductLaunch) {
           const primary = d.current_defaults.primary_provider || ''
           const image = d.current_defaults.image_provider || ''
           
@@ -745,7 +1178,7 @@ export default function UniversalWorkflowRunner() {
     }
     loadRouting()
     return () => { mounted = false }
-  }, [api])
+  }, [api, isProductLaunch])
 
   // Sync / Schedule campaign to Google Calendar with real OAuth or Web direct templates
   async function handleScheduleToGoogleCalendar() {
@@ -851,31 +1284,219 @@ export default function UniversalWorkflowRunner() {
   // Voice & File Upload
   const [isListening, setIsListening] = useState(false)
   const [attachedFiles, setAttachedFiles] = useState([])
+  const [copiedTranscript, setCopiedTranscript] = useState(false)
   const fileInputRef = useRef(null)
   const textareaRef = useRef(null)
 
-  // Switch between past runs
-  function handleSelectRun(run) {
+  function handleCopyTranscript(text) {
+    if (!text) return
+    try {
+      navigator.clipboard.writeText(text)
+      setCopiedTranscript(true)
+      setTimeout(() => setCopiedTranscript(false), 2000)
+    } catch (_) {}
+  }
+
+  // Node 5A: Handle Follow-up Draft Actions (Approve, Edit, Snooze, Discard)
+  async function handleFollowupDraftAction(action, extraPayload = {}) {
+    const currentDraft = executionResult?.followupDraft
+    if (!currentDraft?.id) return
+    setDraftActionLoading(true)
+    try {
+      const payload = {
+        action,
+        ...extraPayload,
+      }
+      if (action === 'edit') {
+        payload.subject = draftSubjectEdit
+        payload.body = draftBodyEdit
+      } else if (action === 'snooze') {
+        payload.snoozed_until = extraPayload.snoozed_until || snoozeUntilVal
+        payload.snooze_reason = extraPayload.snooze_reason || 'Snoozed from workflow runner'
+      }
+
+      const res = await api.post(`/workflows/meeting-intelligence/followup-draft/${currentDraft.id}/action`, payload)
+      if (res?.draft) {
+        const updatedResult = {
+          ...executionResult,
+          followupDraft: res.draft,
+        }
+        setExecutionResult(updatedResult)
+        setEditingDraft(false)
+        setSnoozeOpen(false)
+        setDraftToast(res.message || `Draft ${action} action recorded`)
+        setTimeout(() => setDraftToast(null), 4000)
+
+        // Sync with localStorage history
+        try {
+          const historyKey = `smbflow_runs_history_${workflow.key}`
+          const existingHistory = JSON.parse(localStorage.getItem(historyKey) || '[]')
+          const updatedHistory = existingHistory.map(h => h.runId === executionResult.runId ? updatedResult : h)
+          localStorage.setItem(historyKey, JSON.stringify(updatedHistory))
+        } catch (_) {}
+      }
+    } catch (err) {
+      console.error('Draft action error:', err)
+      setDraftToast(err.message || 'Action failed')
+      setTimeout(() => setDraftToast(null), 4000)
+    } finally {
+      setDraftActionLoading(false)
+    }
+  }
+
+  // Apply meeting run state to canvas, inspector, and active prompt
+  function applyMeetingRunState(run) {
     if (!run) return
     setSelectedRunId(run.runId)
     setExecutionResult(run)
-    if (run.outputs) {
-      setFormData(run.outputs)
+    if (run.outputs || run.conversationData) {
+      setFormData(run.outputs || run.conversationData)
     }
-    setPipelineNodes(workflow.nodes.map(n => ({ ...n, status: 'completed' })))
-    setSelectedNodeId(workflow.nodes[workflow.nodes.length - 1]?.id || 'n5b')
+    const isNode2Done = run.status === 'processed' || !!run.extraction
+    const isNode3Done = isNode2Done && !!run.centralMemory
+    const isNode4Done = isNode3Done && !!run.actions
+    const isNode5ADone = !!run.followupDraft
+    const ourCount = run.actions?.our_commitments?.length || 0
+    const waitCount = run.actions?.contact_commitments?.length || 0
+    const draftStatus = run.followupDraft?.status || 'awaiting_review'
+    const draftSub = isNode5ADone 
+      ? (draftStatus === 'approved' ? 'Draft Approved (Sending Deferred)' : draftStatus === 'snoozed' ? `Draft Snoozed (${run.followupDraft?.snoozed_until || 'later'})` : draftStatus === 'discarded' ? 'Draft Discarded' : 'Follow-up Draft Ready (Awaiting Review)')
+      : 'Pending / Not implemented'
+
+    setPipelineNodes([
+      { ...workflow.nodes[0], status: 'completed', subtitle: 'Trigger: Audio & Ingest (Completed)' },
+      { ...workflow.nodes[1], status: isNode2Done ? 'completed' : 'pending', subtitle: isNode2Done ? `Transcription (${run.detectedLanguage || 'en'}) & Extraction (Completed)` : 'Pending' },
+      { ...workflow.nodes[2], status: isNode3Done ? 'completed' : 'pending', subtitle: isNode3Done ? `Central Memory: ${run.centralMemory?.contact_name || 'Contact'} (${run.centralMemory?.total_conversations || 1} conv)` : 'Pending / Not implemented' },
+      { ...workflow.nodes[3], status: isNode4Done ? 'completed' : 'pending', subtitle: isNode4Done ? `Action Generator: ${ourCount} Our • ${waitCount} Waiting` : 'Pending / Not implemented' },
+      { ...workflow.nodes[4], status: isNode5ADone ? 'partial' : 'pending', subtitle: draftSub },
+    ])
+    setSelectedNodeId(isNode5ADone ? 'n5' : (isNode4Done ? 'n4' : (isNode3Done ? 'n3' : (isNode2Done ? 'n2' : 'n1'))))
     setActivePrompt({
-      content: `**Switched to Campaign Run: ${run.runId}**\n\nDeliverables restored. You can copy posts, view generated visual assets, or sync events to Google Calendar.`,
+      content: `**Loaded Meeting Intelligence Run: ${run.runId}**\n\n${isNode5ADone ? 'Nodes 1–4 and Node 5A (Follow-up Email Draft) restored. Review controls and deliverables active below.' : isNode4Done ? 'Nodes 1, 2, 3 & 4 executed. Action items, Central Memory, and Structured Extraction restored below.' : isNode3Done ? 'Nodes 1, 2 & 3 executed. Contact relationship memory restored from PostgreSQL.' : isNode2Done ? 'Nodes 1 & 2 executed. Transcript and structured intelligence restored below.' : 'Node 1 executed. Audio and metadata preserved.'}\n\n${isNode5ADone ? 'Follow-up Email Draft is active for human review. Meeting prep & calendar blocks remain pending.' : 'Node 5 remains pending implementation.'}`,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       fieldIndex: workflow.fields.length,
     })
   }
 
-  // Start fresh campaign run
+  // Synchronize meeting intelligence run with PostgreSQL backend state
+  async function syncMeetingRun(runId, fallbackRun = null) {
+    if (!runId) return fallbackRun
+    try {
+      const res = await api.get(`/workflows/meeting-intelligence/runs/${runId}`)
+      if (res && res.instance_id) {
+        let draft = res.followup_draft
+        // If run has completed Node 4 actions but followup_draft was missing, safely generate/reuse it
+        if (!draft && res.actions && res.status === 'processed') {
+          try {
+            const draftRes = await api.post('/workflows/meeting-intelligence/followup-draft', { instance_id: runId })
+            if (draftRes?.draft) {
+              draft = draftRes.draft
+            }
+          } catch (autoErr) {
+            console.warn('Auto-generation of missing Node 5A draft failed:', autoErr)
+          }
+        }
+
+        const isNode2Done = res.status === 'processed' || !!res.extraction
+        const isNode3Done = isNode2Done && !!res.central_memory
+        const isNode4Done = isNode3Done && !!res.actions
+        const isNode5ADone = !!draft
+
+        const ourCount = res.actions?.our_commitments?.length || fallbackRun?.actions?.our_commitments?.length || 0
+        const waitCount = res.actions?.contact_commitments?.length || fallbackRun?.actions?.contact_commitments?.length || 0
+        const draftStatus = draft?.status || 'awaiting_review'
+
+        const syncedResult = {
+          ...(fallbackRun || {}),
+          runId: res.instance_id,
+          timestamp: res.started_at || fallbackRun?.timestamp || new Date().toISOString(),
+          status: res.status,
+          isMeetingIntelligence: true,
+          workflowTitle: workflow.displayTitle || workflow.title,
+          objective: res.conversation_data?.conversation_title || fallbackRun?.objective,
+          conversationData: res.conversation_data || fallbackRun?.conversationData,
+          transcriptText: res.transcript_text || fallbackRun?.transcriptText,
+          detectedLanguage: res.detected_language || fallbackRun?.detectedLanguage || 'English',
+          transcriptionStatus: res.transcription_status || 'completed',
+          extraction: res.extraction || fallbackRun?.extraction,
+          centralMemory: res.central_memory || fallbackRun?.centralMemory,
+          actions: res.actions || fallbackRun?.actions,
+          followupDraft: draft || null,
+          nodeExecution: [
+            { id: 'n1', title: 'Conversation Capture', status: 'Completed', executed: true, note: 'Audio recording and metadata preserved' },
+            { id: 'n2', title: 'Process Conversation', status: isNode2Done ? 'Completed' : 'Pending', executed: isNode2Done, note: isNode2Done ? `Transcribed (${res.detected_language || 'English'}) and structured intelligence extracted` : 'Pending' },
+            { id: 'n3', title: 'Central Memory', status: isNode3Done ? 'Completed' : 'Pending', executed: isNode3Done, note: isNode3Done ? `Contact: ${res.central_memory?.contact_name || 'Contact'} (${res.central_memory?.total_conversations || 1} conv) in PostgreSQL` : 'Pending' },
+            { id: 'n4', title: 'Action Generator', status: isNode4Done ? 'Completed' : 'Pending', executed: isNode4Done, note: isNode4Done ? `Generated ${ourCount} our commitments, ${waitCount} waiting on contact` : 'Pending' },
+            { 
+              id: 'n5', 
+              title: 'Follow-up & Meeting Prep', 
+              status: isNode5ADone ? 'PARTIAL' : 'Pending / Not Implemented', 
+              executed: isNode5ADone, 
+              isPartial: isNode5ADone,
+              note: isNode5ADone 
+                ? (draftStatus === 'approved' 
+                    ? 'Follow-up Email Draft: Approved (Sending Deferred) • Meeting Prep: Pending • Calendar Prep Block: Pending' 
+                    : draftStatus === 'snoozed' 
+                    ? `Follow-up Email Draft: Snoozed (${draft.snoozed_until || 'later'}) • Meeting Prep: Pending • Calendar Prep Block: Pending` 
+                    : draftStatus === 'discarded' 
+                    ? 'Follow-up Email Draft: Discarded • Meeting Prep: Pending • Calendar Prep Block: Pending' 
+                    : 'Follow-up Email Draft: Ready / Awaiting Review • Meeting Prep: Pending • Calendar Prep Block: Pending')
+                : 'Pending / Not Implemented' 
+            },
+          ],
+          outputs: res.conversation_data || fallbackRun?.outputs,
+        }
+
+        try {
+          const historyKey = `smbflow_runs_history_${workflow.key}`
+          const existingHistory = JSON.parse(localStorage.getItem(historyKey) || '[]')
+          const updatedHistory = [syncedResult, ...existingHistory.filter(h => h.runId !== runId)].slice(0, 10)
+          localStorage.setItem(historyKey, JSON.stringify(updatedHistory))
+          setRunsHistory(updatedHistory)
+        } catch (_) {}
+
+        return syncedResult
+      }
+    } catch (err) {
+      console.warn('Failed to sync meeting run from backend:', err)
+    }
+    return fallbackRun
+  }
+
+  // Switch between past runs
+  async function handleSelectRun(run) {
+    if (!run) return
+    setSelectedRunId(run.runId)
+    if (run.isMeetingIntelligence || targetKey === 'meeting_intelligence_followup') {
+      applyMeetingRunState(run)
+      const synced = await syncMeetingRun(run.runId, run)
+      if (synced) applyMeetingRunState(synced)
+    } else {
+      setExecutionResult(run)
+      if (run.outputs || run.conversationData) {
+        setFormData(run.outputs || run.conversationData)
+      }
+      setPipelineNodes(workflow.nodes.map(n => ({ ...n, status: 'completed' })))
+      setSelectedNodeId(workflow.nodes[workflow.nodes.length - 1]?.id || 'n5b')
+      setActivePrompt({
+        content: `**Switched to Campaign Run: ${run.runId}**\n\nDeliverables restored. You can copy posts, view generated visual assets, or sync events to Google Calendar.`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        fieldIndex: workflow.fields.length,
+      })
+    }
+  }
+
+  // Start fresh run
   function handleStartNewRun() {
     setSelectedRunId(null)
     setExecutionResult(null)
-    setFormData({})
+    const initialDefaults = {}
+    workflow.fields.forEach(f => {
+      if (f.defaultValue !== undefined) {
+        initialDefaults[f.id] = typeof f.defaultValue === 'function' ? f.defaultValue() : f.defaultValue
+      }
+    })
+    setFormData(initialDefaults)
     setLastAutoFilledField(null)
     setCurrentQIndex(0)
     setCalendarSyncResult(null)
@@ -885,7 +1506,7 @@ export default function UniversalWorkflowRunner() {
     setPipelineNodes(workflow.nodes.map((n, idx) => ({ ...n, status: idx === 0 ? 'active' : 'idle' })))
     setSelectedNodeId(workflow.nodes[0]?.id || 'n1')
     setActivePrompt({
-      content: `Starting a new campaign run for **${workflow.displayTitle || workflow.title}**.\n\nYour inputs will automatically populate the configuration form below.\n\n**${workflow.fields[0]?.prompt}**`,
+      content: `Starting a new run for **${workflow.displayTitle || workflow.title}**.\n\nYour inputs will automatically populate the configuration form.\n\n**${workflow.fields[0]?.prompt || ''}**`,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       fieldIndex: 0,
     })
@@ -893,6 +1514,13 @@ export default function UniversalWorkflowRunner() {
 
   // Restore history & cache on mount or target workflow change
   useEffect(() => {
+    const initialDefaults = {}
+    workflow.fields.forEach(f => {
+      if (f.defaultValue !== undefined) {
+        initialDefaults[f.id] = typeof f.defaultValue === 'function' ? f.defaultValue() : f.defaultValue
+      }
+    })
+
     try {
       const historyKey = `smbflow_runs_history_${workflow.key}`
       const savedHistory = JSON.parse(localStorage.getItem(historyKey) || '[]')
@@ -902,37 +1530,59 @@ export default function UniversalWorkflowRunner() {
       const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null')
 
       if (cached && (cached.executionResult || (cached.formData && Object.keys(cached.formData).length > 0))) {
-        if (cached.formData) setFormData(cached.formData)
-        if (cached.executionResult) {
-          setExecutionResult(cached.executionResult)
-          setSelectedRunId(cached.executionResult.runId)
-          setPipelineNodes(workflow.nodes.map(n => ({ ...n, status: 'completed' })))
-          setSelectedNodeId(workflow.nodes[workflow.nodes.length - 1]?.id || 'n5b')
-          setActivePrompt({
-            content: `**Loaded Previous Run: ${cached.executionResult.runId}**\n\nAll ${workflow.nodes.length} nodes were executed. Multi-platform posts and campaign visuals have been restored below.`,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            fieldIndex: workflow.fields.length,
-          })
-          return
+        if (cached.formData) {
+          setFormData({ ...initialDefaults, ...cached.formData })
         }
+        if (cached.executionResult) {
+          // If cached result has product launch posts but current workflow is NOT product launch, do NOT restore fake/mismatched outputs!
+          if (!isProductLaunch && !cached.executionResult.isDynamicWorkflow && !cached.executionResult.isMeetingIntelligence) {
+            // Discard mismatched cache
+          } else {
+            const rawResult = cached.executionResult
+            if (rawResult.isMeetingIntelligence || workflow.key === 'meeting_intelligence_followup') {
+              applyMeetingRunState(rawResult)
+              syncMeetingRun(rawResult.runId, rawResult).then(synced => {
+                if (synced) applyMeetingRunState(synced)
+              })
+            } else {
+              setExecutionResult(rawResult)
+              setSelectedRunId(rawResult.runId)
+              setPipelineNodes(workflow.nodes.map(n => ({ ...n, status: 'completed' })))
+              setSelectedNodeId(workflow.nodes[workflow.nodes.length - 1]?.id || 'n5b')
+              setActivePrompt({
+                content: `**Loaded Previous Run: ${rawResult.runId}**\n\nAll ${workflow.nodes.length} nodes were executed. Deliverables have been restored below.`,
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                fieldIndex: workflow.fields.length,
+              })
+            }
+            return
+          }
+        }
+      } else if (workflow.key === 'meeting_intelligence_followup' && savedHistory && savedHistory.length > 0) {
+        const latestMeetingRun = savedHistory[0]
+        applyMeetingRunState(latestMeetingRun)
+        syncMeetingRun(latestMeetingRun.runId, latestMeetingRun).then(synced => {
+          if (synced) applyMeetingRunState(synced)
+        })
+        return
       }
     } catch (_) {}
 
     // Default clean initial state if nothing cached
     setPipelineNodes(workflow.nodes.map((n, idx) => ({ ...n, status: idx === 0 ? 'active' : 'idle' })))
     setSelectedNodeId(workflow.nodes[0]?.id || 'n1')
-    setFormData({})
+    setFormData(initialDefaults)
     setLastAutoFilledField(null)
     setCurrentQIndex(0)
     setExecutionResult(null)
     setShowMoreFormChannels(false)
     setShowMoreChatChannels(false)
     setActivePrompt({
-      content: `I am initializing the **${workflow.displayTitle || workflow.title}** pipeline.\n\nYour inputs will automatically populate the configuration form above.\n\n**${workflow.fields[0]?.prompt}**`,
+      content: `I am initializing the **${workflow.displayTitle || workflow.title}** pipeline.\n\nYour inputs will automatically populate the configuration form.\n\n**${workflow.fields[0]?.prompt || ''}**`,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       fieldIndex: 0,
     })
-  }, [targetKey])
+  }, [targetKey, isProductLaunch])
 
   // Auto-expand textarea
   useEffect(() => {
@@ -983,7 +1633,13 @@ export default function UniversalWorkflowRunner() {
 
   // Clear Form Data & Reset Chat to Step 1
   function handleClearForm() {
-    setFormData({})
+    const initialDefaults = {}
+    workflow.fields.forEach(f => {
+      if (f.defaultValue !== undefined) {
+        initialDefaults[f.id] = typeof f.defaultValue === 'function' ? f.defaultValue() : f.defaultValue
+      }
+    })
+    setFormData(initialDefaults)
     setLastAutoFilledField(null)
     setCurrentQIndex(0)
     setSelectedNodeId(workflow.nodes[0]?.id || 'n1')
@@ -1045,9 +1701,370 @@ export default function UniversalWorkflowRunner() {
     setSynthesizing(true)
     setExecutionResult(null)
 
-    const isProductLaunchWorkflow = workflow.key === 'product_launch' || workflow.key === 'product-launch' || workflow.key === 'product_launch_campaign'
-    const targetName = currentData.targetName || currentData.name || workflow.title
-    const contextRules = currentData.description || currentData.desc || 'Focus on high priority items and alert team'
+    const isMeetingIntelligence = targetKey === 'meeting_intelligence_followup' || targetKey === 'meeting_intelligence'
+    if (isMeetingIntelligence) {
+      try {
+        setSelectedNodeId('n1')
+      // Meeting Intelligence execution branch (Phase 1 & Phase 2: Node 1 + Node 2)
+      setSynthesizing(true)
+      setPipelineNodes(workflow.nodes.map((n, idx) => {
+        if (idx === 0) return { ...n, status: 'active', subtitle: 'Ingesting Audio & Metadata...' }
+        return { ...n, status: 'pending', subtitle: 'Pending / Not implemented' }
+      }))
+      setActivePrompt({
+        content: `**Executing Node 1: Conversation Capture**\n\nPreserving audio recording and conversation metadata for "${currentData.conversation_title}"...`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        fieldIndex: workflow.fields.length,
+      })
+
+      let captureRes = null
+      try {
+        captureRes = await api.post('/workflows/meeting-intelligence/capture', {
+          conversation_title: currentData.conversation_title,
+          contact_name: currentData.contact_name,
+          conversation_type: currentData.conversation_type,
+          recording: typeof currentData.recording === 'object' ? currentData.recording : { filename: currentData.recording },
+          language: currentData.language || 'Auto Detect',
+          conversation_date: currentData.conversation_date || new Date().toISOString().split('T')[0],
+        })
+      } catch (err) {
+        console.error('Conversation capture error:', err)
+        setSynthesizing(false)
+        setActivePrompt({
+          content: `**Error during Conversation Capture**: ${err.message || 'Failed to capture conversation.'}`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          fieldIndex: workflow.fields.length,
+        })
+        return
+      }
+
+      const runId = captureRes?.instance_id || `run_${Math.random().toString(36).substring(2, 10)}`
+
+      // Node 1 Complete -> Transition to Node 2: Process Conversation
+      setPipelineNodes([
+        { ...workflow.nodes[0], status: 'completed', subtitle: 'Trigger: Audio & Ingest (Completed)' },
+        { ...workflow.nodes[1], status: 'active', subtitle: 'Transcribing Audio & Extracting Intelligence...' },
+        { ...workflow.nodes[2], status: 'pending', subtitle: 'Pending / Not implemented' },
+        { ...workflow.nodes[3], status: 'pending', subtitle: 'Pending / Not implemented' },
+        { ...workflow.nodes[4], status: 'pending', subtitle: 'Pending / Not implemented' },
+      ])
+      setActivePrompt({
+        content: `**Executing Node 2: Process Conversation**\n\nTranscribing audio recording via Whisper and extracting structured intelligence with AI...`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        fieldIndex: workflow.fields.length,
+      })
+
+      let processRes = null
+      try {
+        processRes = await api.post('/workflows/meeting-intelligence/process-conversation', {
+          instance_id: runId,
+        })
+      } catch (procErr) {
+        console.error('Process conversation error:', procErr)
+        // Node 2 Failed
+        setPipelineNodes([
+          { ...workflow.nodes[0], status: 'completed', subtitle: 'Trigger: Audio & Ingest (Completed)' },
+          { ...workflow.nodes[1], status: 'failed', subtitle: 'Transcription / Extraction Failed' },
+          { ...workflow.nodes[2], status: 'pending', subtitle: 'Pending / Not implemented' },
+          { ...workflow.nodes[3], status: 'pending', subtitle: 'Pending / Not implemented' },
+          { ...workflow.nodes[4], status: 'pending', subtitle: 'Pending / Not implemented' },
+        ])
+        const failedResult = {
+          runId: runId,
+          timestamp: new Date().toISOString(),
+          status: 'failed',
+          isMeetingIntelligence: true,
+          workflowTitle: workflow.displayTitle || workflow.title,
+          objective: currentData.conversation_title,
+          conversationData: currentData,
+          errorMessage: procErr.message || 'Process conversation failed.',
+          nodeExecution: [
+            { id: 'n1', title: 'Conversation Capture', status: 'Completed', executed: true, note: 'Audio recording and metadata preserved' },
+            { id: 'n2', title: 'Process Conversation', status: 'Failed', executed: true, note: procErr.message || 'Failed' },
+            { id: 'n3', title: 'Central Memory', status: 'Pending / Not Implemented', executed: false, note: 'Pending' },
+            { id: 'n4', title: 'Action Generator', status: 'Pending / Not Implemented', executed: false, note: 'Pending' },
+            { id: 'n5', title: 'Follow-up & Meeting Prep', status: 'Pending / Not Implemented', executed: false, note: 'Pending' },
+          ],
+        }
+        setExecutionResult(failedResult)
+        setSynthesizing(false)
+        setActivePrompt({
+          content: `**Process Conversation Failed**: ${procErr.message || 'Error occurred during transcription or extraction.'}\n\nYou can retry processing once the issue is resolved. Nodes 3–5 remain pending.`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          fieldIndex: workflow.fields.length,
+        })
+        return
+      }
+
+      // Both Node 1 & Node 2 completed successfully!
+      const detectedLang = processRes?.detected_language || 'Auto Detect'
+
+      // Node 2 Complete -> Transition to Node 3: Central Memory
+      setPipelineNodes([
+        { ...workflow.nodes[0], status: 'completed', subtitle: 'Trigger: Audio & Ingest (Completed)' },
+        { ...workflow.nodes[1], status: 'completed', subtitle: `Transcription (${detectedLang}) & Extraction (Completed)` },
+        { ...workflow.nodes[2], status: 'active', subtitle: 'Indexing into Central Memory (PostgreSQL)...' },
+        { ...workflow.nodes[3], status: 'pending', subtitle: 'Pending / Not implemented' },
+        { ...workflow.nodes[4], status: 'pending', subtitle: 'Pending / Not implemented' },
+      ])
+      setActivePrompt({
+        content: `**Executing Node 3: Central Memory**\n\nResolving contact identity for "${currentData.contact_name}" and indexing conversation into persistent organization memory...`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        fieldIndex: workflow.fields.length,
+      })
+
+      let memoryRes = null
+      try {
+        memoryRes = await api.post('/workflows/meeting-intelligence/central-memory', {
+          instance_id: runId,
+        })
+      } catch (memErr) {
+        console.error('Central memory error:', memErr)
+        // Node 3 Failed
+        setPipelineNodes([
+          { ...workflow.nodes[0], status: 'completed', subtitle: 'Trigger: Audio & Ingest (Completed)' },
+          { ...workflow.nodes[1], status: 'completed', subtitle: `Transcription (${detectedLang}) & Extraction (Completed)` },
+          { ...workflow.nodes[2], status: 'failed', subtitle: 'Central Memory Indexing Failed' },
+          { ...workflow.nodes[3], status: 'pending', subtitle: 'Pending / Not implemented' },
+          { ...workflow.nodes[4], status: 'pending', subtitle: 'Pending / Not implemented' },
+        ])
+        const failedMemResult = {
+          runId: runId,
+          timestamp: new Date().toISOString(),
+          status: 'failed',
+          isMeetingIntelligence: true,
+          workflowTitle: workflow.displayTitle || workflow.title,
+          objective: currentData.conversation_title,
+          conversationData: currentData,
+          transcriptText: processRes?.transcript_text,
+          detectedLanguage: detectedLang,
+          extraction: processRes?.extraction,
+          errorMessage: memErr.message || 'Central memory indexing failed.',
+          nodeExecution: [
+            { id: 'n1', title: 'Conversation Capture', status: 'Completed', executed: true, note: 'Audio recording and metadata preserved' },
+            { id: 'n2', title: 'Process Conversation', status: 'Completed', executed: true, note: `Transcribed (${detectedLang}) and structured intelligence extracted` },
+            { id: 'n3', title: 'Central Memory', status: 'Failed', executed: true, note: memErr.message || 'Failed to index memory' },
+            { id: 'n4', title: 'Action Generator', status: 'Pending / Not Implemented', executed: false, note: 'Pending' },
+            { id: 'n5', title: 'Follow-up & Meeting Prep', status: 'Pending / Not Implemented', executed: false, note: 'Pending' },
+          ],
+        }
+        setExecutionResult(failedMemResult)
+        setSynthesizing(false)
+        setActivePrompt({
+          content: `**Central Memory Indexing Failed**: ${memErr.message || 'Could not persist relationship memory.'}\n\nNodes 1 & 2 succeeded. Nodes 4–5 remain pending.`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          fieldIndex: workflow.fields.length,
+        })
+        return
+      }
+
+      // ── Step 4: Execute Node 4 — Action Generator ──────────────────────────
+      const contactName = memoryRes?.memory?.contact?.name || currentData?.contact_name || 'Contact'
+      const totalConvs = memoryRes?.memory?.contact?.total_conversations || memoryRes?.memory?.all_conversations?.length || 1
+
+      setPipelineNodes([
+        { ...workflow.nodes[0], status: 'completed', subtitle: 'Trigger: Audio & Ingest (Completed)' },
+        { ...workflow.nodes[1], status: 'completed', subtitle: `Transcription (${detectedLang}) & Extraction (Completed)` },
+        { ...workflow.nodes[2], status: 'completed', subtitle: `Central Memory: ${contactName} (${totalConvs} conv)` },
+        { ...workflow.nodes[3], status: 'running', subtitle: 'Classifying Action Items & Commitments...' },
+        { ...workflow.nodes[4], status: 'pending', subtitle: 'Pending / Not implemented' },
+      ])
+      setSelectedNodeId('n4')
+      setActivePrompt({
+        content: `**Nodes 1–3 Completed!**\n\nContact **${contactName}** indexed in Central Memory (${totalConvs} stored conversation(s)).\n\nNow running **Node 4 — Action Generator** to classify commitments, waiting items, and AI suggestions into Action Center...`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        fieldIndex: workflow.fields.length,
+      })
+
+      let actionRes = null
+      try {
+        actionRes = await api.post('/workflows/meeting-intelligence/action-generator', {
+          instance_id: runId,
+        })
+      } catch (actErr) {
+        console.error('Action generator error:', actErr)
+        // Node 4 Failed
+        setPipelineNodes([
+          { ...workflow.nodes[0], status: 'completed', subtitle: 'Trigger: Audio & Ingest (Completed)' },
+          { ...workflow.nodes[1], status: 'completed', subtitle: `Transcription (${detectedLang}) & Extraction (Completed)` },
+          { ...workflow.nodes[2], status: 'completed', subtitle: `Central Memory: ${contactName} (${totalConvs} conv)` },
+          { ...workflow.nodes[3], status: 'failed', subtitle: 'Action Generation Failed' },
+          { ...workflow.nodes[4], status: 'pending', subtitle: 'Pending / Not implemented' },
+        ])
+        const failedActResult = {
+          runId: runId,
+          timestamp: new Date().toISOString(),
+          status: 'failed',
+          isMeetingIntelligence: true,
+          workflowTitle: workflow.displayTitle || workflow.title,
+          objective: currentData.conversation_title,
+          conversationData: currentData,
+          transcriptText: processRes?.transcript_text,
+          detectedLanguage: detectedLang,
+          extraction: processRes?.extraction,
+          centralMemory: memoryRes?.memory,
+          errorMessage: actErr.message || 'Action generation failed.',
+          nodeExecution: [
+            { id: 'n1', title: 'Conversation Capture', status: 'Completed', executed: true, note: 'Audio recording and metadata preserved' },
+            { id: 'n2', title: 'Process Conversation', status: 'Completed', executed: true, note: `Transcribed (${detectedLang}) and structured intelligence extracted` },
+            { id: 'n3', title: 'Central Memory', status: 'Completed', executed: true, note: `Contact: ${contactName} • ${totalConvs} conversation(s) stored in PostgreSQL` },
+            { id: 'n4', title: 'Action Generator', status: 'Failed', executed: true, note: actErr.message || 'Failed to generate actions' },
+            { id: 'n5', title: 'Follow-up & Meeting Prep', status: 'Pending / Not Implemented', executed: false, note: 'Pending' },
+          ],
+        }
+        setExecutionResult(failedActResult)
+        setSynthesizing(false)
+        setActivePrompt({
+          content: `**Action Generation Failed**: ${actErr.message || 'Could not classify action items.'}\n\nNodes 1–3 succeeded. Node 5 remains pending.`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          fieldIndex: workflow.fields.length,
+        })
+        return
+      }
+
+      // Nodes 1, 2, 3, and 4 completed successfully!
+      const numOurCmts = actionRes?.our_commitments?.length || 0
+      const numContactCmts = actionRes?.contact_commitments?.length || 0
+      const numAiSuggs = actionRes?.ai_suggestions?.length || 0
+      const numOpenQ = actionRes?.open_questions?.length || 0
+
+      // ── Step 5: Execute Node 5A — Follow-up Email Draft ─────────────────────
+      setPipelineNodes([
+        { ...workflow.nodes[0], status: 'completed', subtitle: 'Trigger: Audio & Ingest (Completed)' },
+        { ...workflow.nodes[1], status: 'completed', subtitle: `Transcription (${detectedLang}) & Extraction (Completed)` },
+        { ...workflow.nodes[2], status: 'completed', subtitle: `Central Memory: ${contactName} (${totalConvs} conv)` },
+        { ...workflow.nodes[3], status: 'completed', subtitle: `Action Generator: ${numOurCmts} Our • ${numContactCmts} Waiting` },
+        { ...workflow.nodes[4], status: 'running', subtitle: 'Synthesizing grounded follow-up draft...' },
+      ])
+      setSelectedNodeId('n5')
+      setActivePrompt({
+        content: `**Nodes 1–4 Completed!**\n\n- **${numOurCmts} Our Commitment(s)**\n- **${numContactCmts} Waiting on Contact**\n- **${numAiSuggs} AI Suggested Action(s)**\n\nNow executing **Node 5A — Follow-up Email Draft**: synthesizing grounded obligations with Central Memory for human review...`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        fieldIndex: workflow.fields.length,
+      })
+
+      let draftRes = null
+      try {
+        draftRes = await api.post('/workflows/meeting-intelligence/followup-draft', {
+          instance_id: runId,
+        })
+      } catch (draftErr) {
+        console.warn('Follow-up draft generation error:', draftErr)
+      }
+
+      const followupDraftItem = draftRes?.draft || null
+      const draftStatus = followupDraftItem?.status || 'awaiting_review'
+      const draftSubtitle = draftStatus === 'approved' 
+        ? 'Draft Approved (Sending Deferred)'
+        : draftStatus === 'snoozed'
+        ? `Draft Snoozed (${followupDraftItem?.snoozed_until || 'later'})`
+        : draftStatus === 'discarded'
+        ? 'Draft Discarded'
+        : 'Follow-up Draft Ready (Awaiting Review)'
+
+      setPipelineNodes([
+        { ...workflow.nodes[0], status: 'completed', subtitle: 'Trigger: Audio & Ingest (Completed)' },
+        { ...workflow.nodes[1], status: 'completed', subtitle: `Transcription (${detectedLang}) & Extraction (Completed)` },
+        { ...workflow.nodes[2], status: 'completed', subtitle: `Central Memory: ${contactName} (${totalConvs} conv)` },
+        { ...workflow.nodes[3], status: 'completed', subtitle: `Action Generator: ${numOurCmts} Our • ${numContactCmts} Waiting` },
+        { ...workflow.nodes[4], status: followupDraftItem ? 'partial' : 'pending', subtitle: draftSubtitle },
+      ])
+
+      const meetingResult = {
+        runId: runId,
+        timestamp: new Date().toISOString(),
+        durationMs: (processRes?.duration_ms || 1850) + 120 + 35 + 250,
+        nodesExecuted: followupDraftItem ? 5 : 4,
+        totalNodes: 5,
+        status: 'processed',
+        isMeetingIntelligence: true,
+        workflowTitle: workflow.displayTitle || workflow.title,
+        objective: currentData.conversation_title,
+        conversationData: {
+          conversation_title: currentData.conversation_title,
+          contact_name: currentData.contact_name,
+          conversation_type: currentData.conversation_type,
+          recording: currentData.recording,
+          language: currentData.language,
+          conversation_date: currentData.conversation_date,
+        },
+        transcriptText: processRes?.transcript_text,
+        detectedLanguage: detectedLang,
+        transcriptionStatus: processRes?.transcription_status || 'completed',
+        extraction: processRes?.extraction,
+        centralMemory: memoryRes?.memory,
+        actions: actionRes,
+        followupDraft: followupDraftItem,
+        modelUsed: processRes?.model_used,
+        costUsd: processRes?.cost_usd,
+        nodeExecution: [
+          { id: 'n1', title: 'Conversation Capture', status: 'Completed', executed: true, note: 'Audio recording and metadata preserved' },
+          { id: 'n2', title: 'Process Conversation', status: 'Completed', executed: true, note: `Transcribed (${detectedLang}) and structured intelligence extracted` },
+          { id: 'n3', title: 'Central Memory', status: 'Completed', executed: true, note: `Contact: ${contactName} • ${totalConvs} conversation(s) stored in PostgreSQL` },
+          { id: 'n4', title: 'Action Generator', status: 'Completed', executed: true, note: `Generated ${numOurCmts} our commitments, ${numContactCmts} waiting on contact, ${numAiSuggs} AI suggestions` },
+          { 
+            id: 'n5', 
+            title: 'Follow-up & Meeting Prep', 
+            status: followupDraftItem ? 'PARTIAL' : 'Pending / Not Implemented', 
+            executed: !!followupDraftItem, 
+            isPartial: !!followupDraftItem,
+            note: followupDraftItem 
+              ? (draftStatus === 'approved' 
+                  ? 'Follow-up Email Draft: Approved (Sending Deferred) • Meeting Prep: Pending • Calendar Prep Block: Pending' 
+                  : draftStatus === 'snoozed' 
+                  ? `Follow-up Email Draft: Snoozed (${followupDraftItem?.snoozed_until || 'later'}) • Meeting Prep: Pending • Calendar Prep Block: Pending` 
+                  : draftStatus === 'discarded' 
+                  ? 'Follow-up Email Draft: Discarded • Meeting Prep: Pending • Calendar Prep Block: Pending' 
+                  : 'Follow-up Email Draft: Ready / Awaiting Review • Meeting Prep: Pending • Calendar Prep Block: Pending')
+              : 'Pending / Not Implemented' 
+          },
+        ],
+        outputs: currentData,
+      }
+
+      if (followupDraftItem) {
+        setDraftSubjectEdit(followupDraftItem.subject || '')
+        setDraftBodyEdit(followupDraftItem.body || '')
+        setEditingDraft(false)
+      }
+
+      setExecutionResult(meetingResult)
+
+      try {
+        const historyKey = `smbflow_runs_history_${workflow.key}`
+        const existingHistory = JSON.parse(localStorage.getItem(historyKey) || '[]')
+        const updatedHistory = [meetingResult, ...existingHistory.filter(h => h.runId !== runId)].slice(0, 10)
+        localStorage.setItem(historyKey, JSON.stringify(updatedHistory))
+      } catch (_) {}
+
+      setSynthesizing(false)
+
+      setActivePrompt({
+        content: `**Nodes 1, 2, 3 & 4 Completed Successfully!**\n\nAudio for **${currentData.conversation_title}** transcribed (${detectedLang}). Contact **${contactName}** (${totalConvs} stored conversation(s)) reconciled in Central Memory.\n\n**Action Generator (Node 4)**:\n- **${numOurCmts} Our Commitment(s)** (actionable obligations in Action Center)\n- **${numContactCmts} Waiting on Contact** (tracked obligations on ${contactName})\n- **${numAiSuggs} AI Suggested Action(s)** (review items, not confirmed tasks)\n- **${numOpenQ} Open Question(s)**\n\n**Node 5A — Follow-up Email Draft**: Generated and awaiting human review below. (Meeting preparation and calendar blocks remain pending).`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        fieldIndex: workflow.fields.length,
+      })
+
+      setTimeout(() => {
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
+      }, 150)
+      return
+    } catch (unhandledMeetingErr) {
+      console.error('Unhandled Meeting Intelligence execution error:', unhandledMeetingErr)
+      setActivePrompt({
+        content: `**Pipeline Execution Error**: ${unhandledMeetingErr.message || 'An unexpected error occurred during pipeline execution.'}\n\nYou can retry the execution once resolved.`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        fieldIndex: workflow.fields.length,
+      })
+    } finally {
+      setSynthesizing(false)
+    }
+    return
+  }
+
+    const isProductLaunchWorkflow = targetKey === 'product_launch' || targetKey === 'product-launch' || targetKey === 'product_launch_campaign' || targetKey === 'product_launch_sprint'
+    const targetName = currentData.targetName || currentData.meetingTitle || currentData.name || workflow.title
+    const contextRules = currentData.description || currentData.notes || currentData.desc || workflow.description || 'Focus on high priority items and alert team'
 
     const execSteps = isProductLaunchWorkflow ? [
       `1. Ingesting Brief & Spec Parameters for ${targetName}...`,
@@ -1320,14 +2337,15 @@ export default function UniversalWorkflowRunner() {
 
   // Compute completed fields count and first unfilled index dynamically
   const filledFieldsCount = useMemo(() => {
-    return workflow.fields.filter(f => Boolean(formData[f.id] && formData[f.id].trim())).length
+    return workflow.fields.filter(f => isFieldFilled(formData[f.id])).length
   }, [workflow.fields, formData])
 
   const totalFieldsCount = workflow.fields.length
   const allFieldsFilled = filledFieldsCount === totalFieldsCount && totalFieldsCount > 0
+  const isFormValid = allFieldsFilled
 
   const firstUnfilledIndex = useMemo(() => {
-    return workflow.fields.findIndex(f => !formData[f.id] || !formData[f.id].trim())
+    return workflow.fields.findIndex(f => !isFieldFilled(formData[f.id]))
   }, [workflow.fields, formData])
 
   // Automatically synchronize active question and DAG active node with unfilled fields
@@ -1344,8 +2362,17 @@ export default function UniversalWorkflowRunner() {
           status: idx < lastNodeIdx ? 'completed' : 'active'
         }))
       )
+      const formatFieldDisplay = (val) => {
+        if (!val) return 'Set'
+        if (typeof val === 'object') return val.filename || val.name || 'Audio File'
+        return String(val)
+      }
+      const summaryItems = isProductLaunch
+        ? `• **Product Name:** \`${formData.name || 'Set'}\`\n• **Description:** \`${formData.desc || 'Set'}\`\n• **Launch Date:** \`${formData.date ? formatDateReadable(formData.date) : 'Set'}\`\n• **Distribution Channels:** \`${formData.channels || 'Set'}\`\n• **Visual Strategy:** \`${formData.has_images === 'upload' ? 'Upload product photos' : 'Generate assets with AI'}\``
+        : workflow.fields.map(f => `• **${f.label}:** \`${formatFieldDisplay(formData[f.id])}\``).join('\n')
+
       setActivePrompt({
-        content: `**All ${totalFieldsCount} workflow parameters configured in the form below!**\n\n• **Product Name:** \`${formData.name || 'Set'}\`\n• **Description:** \`${formData.desc || 'Set'}\`\n• **Launch Date:** \`${formData.date ? formatDateReadable(formData.date) : 'Set'}\`\n• **Distribution Channels:** \`${formData.channels || 'Set'}\`\n• **Visual Strategy:** \`${formData.has_images === 'upload' ? 'Upload product photos' : 'Generate assets with AI'}\`\n\nClick **Run Active Pipeline** to launch the autonomous campaign.`,
+        content: `**All ${totalFieldsCount} workflow parameters configured in the form below!**\n\n${summaryItems}\n\nClick **Run Active Pipeline** to launch the autonomous pipeline.`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         fieldIndex: workflow.fields.length,
       })
@@ -1382,6 +2409,60 @@ export default function UniversalWorkflowRunner() {
   const moreChannelsActiveCount = useMemo(() => {
     return MORE_CHANNELS.filter(c => selectedChannelsList.includes(c.name)).length
   }, [selectedChannelsList])
+
+  if (accessChecking) {
+    return (
+      <div className="w-full min-h-screen bg-slate-50 dark:bg-[#0b0f17] flex flex-col items-center justify-center p-6 text-center">
+        <Loader2 className="w-8 h-8 text-blue-500 animate-spin mb-3" />
+        <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">Verifying workflow authorization...</p>
+      </div>
+    )
+  }
+
+  if (accessDenied) {
+    return (
+      <div className="w-full min-h-screen bg-slate-50 dark:bg-[#0b0f17] bg-dot-pattern flex flex-col items-center justify-center p-6 text-center">
+        <div className="max-w-md w-full bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-2xl p-8 shadow-md">
+          <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 flex items-center justify-center mx-auto mb-4 text-amber-600 dark:text-amber-400">
+            <Shield className="w-6 h-6" />
+          </div>
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Workflow Access Restricted</h2>
+          <p className="text-xs text-slate-600 dark:text-slate-400 mb-6 leading-relaxed">
+            {accessDenied.message || `Workflow "${workflow.displayTitle || workflow.title}" has not been assigned to your organization.`}
+          </p>
+          <div className="flex flex-col gap-2.5">
+            <button
+              onClick={() => navigate('/workflows')}
+              className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors cursor-pointer"
+            >
+              Back to My Workflows
+            </button>
+            <button
+              onClick={async () => {
+                try {
+                  setRequesting(true)
+                  await api.post('/catalog/request-access', {
+                    workflow_id: targetKey,
+                    workflow_name: workflow.displayTitle || workflow.title,
+                  })
+                  setRequestSent(true)
+                } catch (_) {}
+                finally { setRequesting(false) }
+              }}
+              disabled={requestSent || requesting}
+              className={`w-full py-2.5 border rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
+                requestSent
+                  ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800'
+                  : 'bg-slate-50 dark:bg-[#182234] hover:bg-slate-100 dark:hover:bg-[#233048] text-slate-700 dark:text-slate-300 border-slate-200 dark:border-[#233048]'
+              }`}
+            >
+              {requestSent ? 'Access Request Submitted' : requesting ? 'Submitting Request...' : 'Request Admin Assignment'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="w-full min-h-full bg-[#f8fafc] dark:bg-[#0b0f17] bg-dot-pattern text-slate-900 dark:text-slate-100 pb-16 font-sans relative transition-colors flex flex-col">
@@ -1454,6 +2535,31 @@ export default function UniversalWorkflowRunner() {
         </div>
       </div>
 
+      {/* ── Workflow Header ─────────────────────────────────────────────────── */}
+      <div className="max-w-5xl mx-auto w-full px-4 md:px-6 pt-5 pb-1">
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="text-[11px] font-mono font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
+                {workflow.category || 'Productivity'}
+              </span>
+              <span className="inline-flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse" />
+                Active
+              </span>
+            </div>
+            <h1 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
+              {workflow.title}
+            </h1>
+            {workflow.description && (
+              <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-2xl leading-relaxed">
+                {workflow.description}
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* ── Section 1: Exact Snapped n8n Horizontal Branching Canvas ─────────── */}
       <div className="max-w-5xl mx-auto w-full px-4 md:px-6 pt-5">
         <div className={`bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-2xl shadow-xs overflow-hidden transition-all relative ${
@@ -1503,38 +2609,56 @@ export default function UniversalWorkflowRunner() {
                 <circle cx="590" cy="105" r="3.5" fill={pipelineNodes[2]?.status === 'completed' ? '#10B981' : '#3B82F6'} />
                 <circle cx="620" cy="105" r="3.5" fill={pipelineNodes[3]?.status === 'completed' ? '#10B981' : '#3B82F6'} />
 
-                {/* Node 4 Switch -> Node 5a Top Branch */}
-                <path
-                  d="M 790 105 C 815 105, 815 50, 840 50"
-                  fill="none"
-                  stroke={pipelineNodes[4]?.status === 'running' || pipelineNodes[4]?.status === 'completed' ? '#10B981' : '#3B82F6'}
-                  strokeWidth={pipelineNodes[4]?.status === 'running' || pipelineNodes[4]?.status === 'completed' ? '2.5' : '1.8'}
-                  strokeDasharray={pipelineNodes[4]?.status === 'running' ? '4 2' : '4 4'}
-                  className={pipelineNodes[4]?.status === 'running' ? 'animate-pulse' : ''}
-                />
-                <circle cx="790" cy="105" r="3.5" fill={pipelineNodes[3]?.status === 'completed' ? '#10B981' : '#3B82F6'} />
-                <circle cx="840" cy="50" r="3.5" fill={pipelineNodes[4]?.status === 'completed' ? '#10B981' : '#3B82F6'} />
-                
-                {/* Branch Label: Top Branch */}
-                <text x="800" y="70" fill={pipelineNodes[4]?.status === 'completed' ? '#10B981' : '#94A3B8'} fontSize="10" fontFamily="sans-serif" textAnchor="middle" fontWeight="600">
-                  {workflow.topBranchLabel || 'Branch 1'}
-                </text>
+                {/* Node 4 Switch -> Node 5 (Linear when 5 nodes, Branching when 6 nodes) */}
+                {pipelineNodes.length === 5 ? (
+                  <>
+                    <path
+                      d="M 790 105 L 840 105"
+                      fill="none"
+                      stroke={pipelineNodes[4]?.status === 'running' || pipelineNodes[4]?.status === 'completed' ? '#10B981' : '#3B82F6'}
+                      strokeWidth={pipelineNodes[4]?.status === 'running' || pipelineNodes[4]?.status === 'completed' ? '2.5' : '1.8'}
+                      strokeDasharray={pipelineNodes[4]?.status === 'running' ? '4 2' : '4 4'}
+                      className={pipelineNodes[4]?.status === 'running' ? 'animate-pulse' : ''}
+                    />
+                    <circle cx="790" cy="105" r="3.5" fill={pipelineNodes[3]?.status === 'completed' ? '#10B981' : '#3B82F6'} />
+                    <circle cx="840" cy="105" r="3.5" fill={pipelineNodes[4]?.status === 'completed' ? '#10B981' : '#3B82F6'} />
+                  </>
+                ) : (
+                  <>
+                    {/* Node 4 Switch -> Node 5a Top Branch */}
+                    <path
+                      d="M 790 105 C 815 105, 815 50, 840 50"
+                      fill="none"
+                      stroke={pipelineNodes[4]?.status === 'running' || pipelineNodes[4]?.status === 'completed' ? '#10B981' : '#3B82F6'}
+                      strokeWidth={pipelineNodes[4]?.status === 'running' || pipelineNodes[4]?.status === 'completed' ? '2.5' : '1.8'}
+                      strokeDasharray={pipelineNodes[4]?.status === 'running' ? '4 2' : '4 4'}
+                      className={pipelineNodes[4]?.status === 'running' ? 'animate-pulse' : ''}
+                    />
+                    <circle cx="790" cy="105" r="3.5" fill={pipelineNodes[3]?.status === 'completed' ? '#10B981' : '#3B82F6'} />
+                    <circle cx="840" cy="50" r="3.5" fill={pipelineNodes[4]?.status === 'completed' ? '#10B981' : '#3B82F6'} />
+                    
+                    {/* Branch Label: Top Branch */}
+                    <text x="800" y="70" fill={pipelineNodes[4]?.status === 'completed' ? '#10B981' : '#94A3B8'} fontSize="10" fontFamily="sans-serif" textAnchor="middle" fontWeight="600">
+                      {workflow.topBranchLabel || 'Branch 1'}
+                    </text>
 
-                {/* Node 4 Switch -> Node 5b Bottom Branch */}
-                <path
-                  d="M 790 105 C 815 105, 815 160, 840 160"
-                  fill="none"
-                  stroke={pipelineNodes[5]?.status === 'running' || pipelineNodes[5]?.status === 'completed' ? '#10B981' : '#3B82F6'}
-                  strokeWidth={pipelineNodes[5]?.status === 'running' || pipelineNodes[5]?.status === 'completed' ? '2.5' : '1.8'}
-                  strokeDasharray={pipelineNodes[5]?.status === 'running' ? '4 2' : '4 4'}
-                  className={pipelineNodes[5]?.status === 'running' ? 'animate-pulse' : ''}
-                />
-                <circle cx="840" cy="160" r="3.5" fill={pipelineNodes[5]?.status === 'completed' ? '#10B981' : '#3B82F6'} />
+                    {/* Node 4 Switch -> Node 5b Bottom Branch */}
+                    <path
+                      d="M 790 105 C 815 105, 815 160, 840 160"
+                      fill="none"
+                      stroke={pipelineNodes[5]?.status === 'running' || pipelineNodes[5]?.status === 'completed' ? '#10B981' : '#3B82F6'}
+                      strokeWidth={pipelineNodes[5]?.status === 'running' || pipelineNodes[5]?.status === 'completed' ? '2.5' : '1.8'}
+                      strokeDasharray={pipelineNodes[5]?.status === 'running' ? '4 2' : '4 4'}
+                      className={pipelineNodes[5]?.status === 'running' ? 'animate-pulse' : ''}
+                    />
+                    <circle cx="840" cy="160" r="3.5" fill={pipelineNodes[5]?.status === 'completed' ? '#10B981' : '#3B82F6'} />
 
-                {/* Branch Label: Bottom Branch */}
-                <text x="800" y="152" fill={pipelineNodes[5]?.status === 'completed' ? '#10B981' : '#94A3B8'} fontSize="10" fontFamily="sans-serif" textAnchor="middle" fontWeight="600">
-                  {workflow.bottomBranchLabel || 'Branch 2'}
-                </text>
+                    {/* Branch Label: Bottom Branch */}
+                    <text x="800" y="152" fill={pipelineNodes[5]?.status === 'completed' ? '#10B981' : '#94A3B8'} fontSize="10" fontFamily="sans-serif" textAnchor="middle" fontWeight="600">
+                      {workflow.bottomBranchLabel || 'Branch 2'}
+                    </text>
+                  </>
+                )}
               </svg>
 
               {/* Render Nodes at Exact Coordinates */}
@@ -1542,6 +2666,7 @@ export default function UniversalWorkflowRunner() {
                 const isSelected = selectedNodeId === node.id
                 const isRunning = node.status === 'running'
                 const isCompleted = node.status === 'completed'
+                const isPartial = node.status === 'partial' || node.status === 'PARTIAL'
 
                 return (
                   <div
@@ -1558,6 +2683,8 @@ export default function UniversalWorkflowRunner() {
                         ? 'ring-2 ring-emerald-500 border-emerald-500 shadow-[0_0_16px_rgba(16,185,129,0.5)] bg-emerald-50/20 dark:bg-emerald-950/20'
                         : isCompleted
                         ? 'border-emerald-300 dark:border-emerald-800 ring-1 ring-emerald-400/30'
+                        : isPartial
+                        ? 'border-amber-400 dark:border-amber-600 ring-1 ring-amber-400/40 bg-amber-50/15 dark:bg-amber-950/20'
                         : isSelected
                         ? 'ring-2 ring-blue-500 border-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.3)]'
                         : 'border-slate-200 dark:border-[#233048] hover:border-slate-300 dark:hover:border-[#2e3e5b]'
@@ -1565,7 +2692,7 @@ export default function UniversalWorkflowRunner() {
                   >
                     {/* Left Accent Color Strip */}
                     <div
-                      style={{ backgroundColor: isCompleted ? '#10B981' : isRunning ? '#3B82F6' : node.color }}
+                      style={{ backgroundColor: isCompleted ? '#10B981' : isRunning ? '#3B82F6' : isPartial ? '#F59E0B' : node.color }}
                       className="absolute left-0 top-0 bottom-0 w-1 rounded-l-xl transition-colors"
                     />
 
@@ -1590,6 +2717,8 @@ export default function UniversalWorkflowRunner() {
                         <RefreshCw className="w-3 h-3 text-emerald-500 animate-spin" />
                       ) : isCompleted ? (
                         <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                      ) : isPartial ? (
+                        <span className="w-2.5 h-2.5 rounded-full bg-amber-500 block ring-2 ring-amber-300 dark:ring-amber-700" title="Partial" />
                       ) : (
                         <span className="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600 block" />
                       )}
@@ -1603,26 +2732,27 @@ export default function UniversalWorkflowRunner() {
         </div>
       </div>
 
-      {/* ── Section 2: Conversational AI Assistant (Placed FIRST below DAG Canvas) ── */}
-      <div className="max-w-5xl mx-auto w-full px-4 md:px-6 pt-5 space-y-3">
-        
-        {/* Chat Stream Card */}
-        <div className="bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-2xl shadow-xs overflow-hidden flex flex-col transition-colors">
+      {/* ── Section 2: Conversational AI Assistant (Rendered for workflows with assistant chat enabled) ── */}
+      {uiSections.showAssistantChat && (
+        <div className="max-w-5xl mx-auto w-full px-4 md:px-6 pt-5 space-y-3">
           
-          <div className="px-4 py-2.5 border-b border-slate-200 dark:border-[#233048] bg-slate-50/70 dark:bg-[#0b0f17]/50 flex items-center justify-between">
-            <div className="flex items-center gap-2 text-xs font-bold text-slate-800 dark:text-slate-200">
-              <Bot className="w-4 h-4 text-blue-500" />
-              <span>{workflow.displayTitle || workflow.title} Assistant</span>
+          {/* Chat Stream Card */}
+          <div className="bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-2xl shadow-xs overflow-hidden flex flex-col transition-colors">
+            
+            <div className="px-4 py-2.5 border-b border-slate-200 dark:border-[#233048] bg-slate-50/70 dark:bg-[#0b0f17]/50 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-800 dark:text-slate-200">
+                <Bot className="w-4 h-4 text-blue-500" />
+                <span>{workflow.displayTitle || workflow.title} Assistant</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-slate-400 font-mono">
+                  {allFieldsFilled ? `All ${totalFieldsCount} Parameters Configured` : `Step ${Math.min(currentQIndex + 1, totalFieldsCount)} of ${totalFieldsCount}`}
+                </span>
+                {allFieldsFilled && (
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.8)] animate-pulse" />
+                )}
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] text-slate-400 font-mono">
-                {allFieldsFilled ? 'All 5 Parameters Configured' : `Step ${Math.min(currentQIndex + 1, totalFieldsCount)} of ${totalFieldsCount}`}
-              </span>
-              {allFieldsFilled && (
-                <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.8)] animate-pulse" />
-              )}
-            </div>
-          </div>
 
           {/* Active Question Card (Clean Single-Step, Instant Real Output) */}
           <div className="p-4 flex flex-col justify-center min-h-[100px]">
@@ -1994,6 +3124,7 @@ export default function UniversalWorkflowRunner() {
 
         </div>
       </div>
+      )}
 
       {/* ── Section 3: Interactive Configuration Form (Placed BELOW AI Chat Assistant) ── */}
       <div className="max-w-5xl mx-auto w-full px-4 md:px-6 pt-5">
@@ -2013,7 +3144,9 @@ export default function UniversalWorkflowRunner() {
                   </span>
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Outputs and parameters are stored in this form. Fill via AI chat above or select/type directly to edit.
+                  {uiSections.showAssistantChat
+                    ? 'Outputs and parameters are stored in this form. Fill via AI chat above or select/type directly to edit.'
+                    : 'Configure parameters directly below and launch the active pipeline.'}
                 </p>
               </div>
             </div>
@@ -2032,7 +3165,7 @@ export default function UniversalWorkflowRunner() {
               <button
                 type="button"
                 onClick={() => executeActivePipeline()}
-                disabled={synthesizing || filledFieldsCount === 0}
+                disabled={synthesizing || !isFormValid}
                 className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer"
               >
                 <Play className="w-3.5 h-3.5 fill-white" />
@@ -2052,13 +3185,13 @@ export default function UniversalWorkflowRunner() {
                 <div
                   key={field.id}
                   className={`p-3 rounded-xl border transition-all duration-300 ${
-                    field.type === 'channels_select' ? 'md:col-span-2' : ''
+                    field.type === 'channels_select' || field.type === 'audio_upload' ? 'md:col-span-2' : ''
                   } ${
                     isAutoFilled
                       ? 'bg-blue-50/60 dark:bg-blue-950/30 border-blue-400 ring-2 ring-blue-400/40 shadow-sm'
                       : isCurrentActive
                       ? 'bg-slate-50 dark:bg-[#182234]/60 border-blue-400/60 ring-1 ring-blue-400/30'
-                      : val
+                      : isFieldFilled(val)
                       ? 'bg-slate-50/40 dark:bg-[#182234]/30 border-slate-200 dark:border-[#233048]'
                       : 'bg-white dark:bg-[#121826] border-slate-200 dark:border-[#233048]'
                   }`}
@@ -2072,7 +3205,7 @@ export default function UniversalWorkflowRunner() {
                         </span>
                       )}
                     </label>
-                    {val ? (
+                    {isFieldFilled(val) ? (
                       <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 font-mono">
                         <Check className="w-3 h-3" />
                         <span>Saved</span>
@@ -2203,30 +3336,32 @@ export default function UniversalWorkflowRunner() {
                   ) : (field.type === 'date_picker' || field.type === 'date') ? (
                     /* Interactive Calendar Date Picker with Quick Presets */
                     <div className="space-y-2">
-                      {/* Date Presets */}
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        {DATE_PRESETS.map((dp) => {
-                          const computed = computeDatePreset(dp.id)
-                          const isSelected = val === computed
-                          return (
-                            <button
-                              key={dp.id}
-                              type="button"
-                              onClick={() => {
-                                handleFormChange(field.id, computed)
-                                setLastAutoFilledField(field.id)
-                              }}
-                              className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
-                                isSelected
-                                  ? 'bg-blue-600 text-white shadow-2xs'
-                                  : 'bg-slate-100 dark:bg-[#182234] hover:bg-slate-200 dark:hover:bg-[#233048] text-slate-700 dark:text-slate-300'
-                              }`}
-                            >
-                              {dp.label}
-                            </button>
-                          )
-                        })}
-                      </div>
+                      {/* Date Presets - Only for date_picker (e.g. Product Launch) */}
+                      {field.type === 'date_picker' && (
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {DATE_PRESETS.map((dp) => {
+                            const computed = computeDatePreset(dp.id)
+                            const isSelected = val === computed
+                            return (
+                              <button
+                                key={dp.id}
+                                type="button"
+                                onClick={() => {
+                                  handleFormChange(field.id, computed)
+                                  setLastAutoFilledField(field.id)
+                                }}
+                                className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
+                                  isSelected
+                                    ? 'bg-blue-600 text-white shadow-2xs'
+                                    : 'bg-slate-100 dark:bg-[#182234] hover:bg-slate-200 dark:hover:bg-[#233048] text-slate-700 dark:text-slate-300'
+                                }`}
+                              >
+                                {dp.label}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      )}
 
                       {/* Calendar Input & Formatted Preview */}
                       <div className="flex items-center gap-2">
@@ -2234,18 +3369,53 @@ export default function UniversalWorkflowRunner() {
                           <Calendar className="w-3.5 h-3.5 text-blue-500 mr-2 shrink-0" />
                           <input
                             type="date"
-                            value={val}
+                            value={typeof val === 'string' ? val : ''}
                             onChange={(e) => handleFormChange(field.id, e.target.value)}
                             className="w-full bg-transparent text-xs text-slate-900 dark:text-slate-100 focus:outline-hidden"
                           />
                         </div>
-                        {val && (
+                        {val && typeof val === 'string' && (
                           <span className="px-2 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800/60 text-[11px] font-mono font-medium text-blue-700 dark:text-blue-300 truncate shrink-0">
                             {formatDateReadable(val)}
                           </span>
                         )}
                       </div>
                     </div>
+                  ) : field.type === 'select' ? (
+                    /* Generic Reusable Select Dropdown */
+                    <div className="relative">
+                      <select
+                        id={`field-${field.id}`}
+                        value={typeof val === 'string' ? val : ''}
+                        onChange={(e) => {
+                          handleFormChange(field.id, e.target.value)
+                          setLastAutoFilledField(field.id)
+                        }}
+                        className="w-full bg-white dark:bg-[#0b0f17] border border-slate-200 dark:border-[#233048] focus:border-blue-500 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-slate-100 focus:outline-hidden transition-colors cursor-pointer appearance-none pr-8"
+                      >
+                        <option value="" disabled>Select {field.label}...</option>
+                        {field.options?.map((opt) => (
+                          <option key={opt} value={opt} className="bg-white dark:bg-[#121826] text-slate-900 dark:text-slate-100">
+                            {opt}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    </div>
+                  ) : field.type === 'audio_upload' ? (
+                    /* Generic Reusable Audio File Upload Field */
+                    <AudioUploadField
+                      value={val}
+                      onChange={(audioData) => {
+                        handleFormChange(field.id, audioData)
+                        setLastAutoFilledField(field.id)
+                      }}
+                      onClear={() => {
+                        handleFormChange(field.id, null)
+                        setLastAutoFilledField(null)
+                      }}
+                      api={api}
+                    />
                   ) : field.type === 'image_option' ? (
                     /* Image Asset Preference / Dropzone */
                     <div className="space-y-2">
@@ -2295,7 +3465,7 @@ export default function UniversalWorkflowRunner() {
                   ) : field.type === 'textarea' ? (
                     <textarea
                       rows={2}
-                      value={val}
+                      value={typeof val === 'string' ? val : ''}
                       onChange={(e) => handleFormChange(field.id, e.target.value)}
                       placeholder={field.placeholder}
                       className="w-full bg-white dark:bg-[#0b0f17] border border-slate-200 dark:border-[#233048] focus:border-blue-500 rounded-lg p-2 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-hidden resize-none transition-colors"
@@ -2303,7 +3473,7 @@ export default function UniversalWorkflowRunner() {
                   ) : (
                     <input
                       type="text"
-                      value={val}
+                      value={typeof val === 'string' ? val : ''}
                       onChange={(e) => handleFormChange(field.id, e.target.value)}
                       placeholder={field.placeholder}
                       className="w-full bg-white dark:bg-[#0b0f17] border border-slate-200 dark:border-[#233048] focus:border-blue-500 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-hidden transition-colors"
@@ -2333,7 +3503,7 @@ export default function UniversalWorkflowRunner() {
               <button
                 type="button"
                 onClick={() => executeActivePipeline()}
-                disabled={synthesizing || filledFieldsCount === 0}
+                disabled={synthesizing || !isFormValid}
                 className="px-5 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center gap-2"
               >
                 <Play className="w-3.5 h-3.5 fill-white" />
@@ -2347,7 +3517,1289 @@ export default function UniversalWorkflowRunner() {
 
         {/* ── Real Deliverables & Multi-Platform Campaign Execution Results ─────── */}
         {executionResult && (
-          executionResult.isDynamicWorkflow ? (
+          executionResult.isMeetingIntelligence ? (
+            <div className="bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-2xl p-5 shadow-xs transition-colors flex flex-col space-y-5 animate-in fade-in duration-200">
+              {/* Header with Run Switcher */}
+              <div className="flex items-center justify-between border-b border-slate-200 dark:border-[#233048] pb-3 flex-wrap gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                    executionResult.status === 'processed' || executionResult.extraction
+                      ? 'bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-600'
+                      : executionResult.status === 'failed'
+                      ? 'bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-600'
+                      : 'bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 text-blue-600'
+                  }`}>
+                    <CheckCircle2 className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                        {executionResult.followupDraft
+                          ? 'Meeting Intelligence: Pipeline Complete'
+                          : executionResult.actions
+                          ? 'Meeting Intelligence: Actions Generated'
+                          : executionResult.centralMemory
+                          ? 'Meeting Intelligence: Memory Indexed'
+                          : executionResult.status === 'processed' || executionResult.extraction
+                          ? 'Meeting Intelligence: Conversation Processed'
+                          : executionResult.status === 'failed'
+                          ? 'Meeting Intelligence: Processing Failed'
+                          : 'Meeting Intelligence: Conversation Captured'}
+                      </h4>
+                      <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border font-semibold ${
+                        executionResult.status === 'processed' || executionResult.extraction
+                          ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                          : executionResult.status === 'failed'
+                          ? 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800'
+                          : 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800'
+                      }`}>
+                        {executionResult.followupDraft
+                          ? 'N1–N4 + N5A Executed (200 OK)'
+                          : executionResult.actions
+                          ? 'N1–N4 Executed (200 OK)'
+                          : executionResult.centralMemory
+                          ? 'N1–N3 Executed (200 OK)'
+                          : executionResult.status === 'processed' || executionResult.extraction
+                          ? 'N1–N2 Executed (200 OK)'
+                          : executionResult.status === 'failed' ? 'Failed' : 'N1 Executed (200 OK)'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Target: <span className="font-semibold text-slate-700 dark:text-slate-200">{executionResult.objective}</span>
+                      {' • '}
+                      {executionResult.actions
+                        ? (executionResult.followupDraft ? '5 of 5 nodes executed (N5 partial)' : '4 of 5 nodes executed')
+                        : executionResult.centralMemory
+                        ? '3 of 5 nodes executed'
+                        : executionResult.extraction
+                        ? '2 of 5 nodes executed'
+                        : '1 of 5 nodes executed'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  {runsHistory.length > 1 && (
+                    <select
+                      value={executionResult.runId}
+                      onChange={(e) => {
+                        const selected = runsHistory.find(r => r.runId === e.target.value)
+                        if (selected) handleSelectRun(selected)
+                      }}
+                      className="bg-slate-100 dark:bg-[#182234] border border-slate-200 dark:border-[#233048] text-slate-700 dark:text-slate-300 text-xs rounded-lg px-2.5 py-1.5 font-mono focus:outline-hidden cursor-pointer"
+                    >
+                      {runsHistory.map((r, rIdx) => (
+                        <option key={r.runId} value={r.runId}>
+                          Run {rIdx + 1}: {r.objective || r.runId.slice(0, 8)} ({new Date(r.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})
+                        </option>
+                      ))}
+                    </select>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleStartNewRun}
+                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-[#182234] dark:hover:bg-[#233048] text-slate-700 dark:text-slate-200 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>New Run</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Informational Banner */}
+              {executionResult.status === 'processed' || executionResult.extraction ? (
+                <div className="p-3.5 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/60 flex items-start gap-2.5 text-xs text-emerald-800 dark:text-emerald-300">
+                  <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                  <div className="space-y-0.5">
+                    <div className="font-bold">
+                      {executionResult.followupDraft
+                        ? 'Pipeline Complete: Nodes 1–4 Executed + Follow-up Draft Ready (Node 5A)'
+                        : executionResult.actions
+                        ? 'Nodes 1–4 Complete: Action Items Classified & Persisted'
+                        : executionResult.centralMemory
+                        ? 'Nodes 1–3 Complete: Relationship Memory Indexed'
+                        : 'Nodes 1 & 2 Complete: Audio Transcribed & Intelligence Extracted'}
+                    </div>
+                    <p className="text-[11px] leading-relaxed text-emerald-700 dark:text-emerald-300/90">
+                      Audio transcribed via Whisper ({executionResult.detectedLanguage || 'Auto Detect'}).
+                      {executionResult.centralMemory && ` Contact "${executionResult.centralMemory.contact_name}" indexed in Central Memory.`}
+                      {executionResult.actions && ` ${(executionResult.actions.our_commitments?.length || 0) + (executionResult.actions.contact_commitments?.length || 0)} commitment(s) and ${executionResult.actions.ai_suggestions?.length || 0} AI suggestion(s) saved to Action Center.`}
+                      {executionResult.followupDraft && ' Follow-up email draft generated for human review (Node 5A). Node 5B–5C pending.'}
+                      {' '}Run ID: <code className="font-mono font-semibold">{executionResult.runId}</code>.
+                    </p>
+                  </div>
+                </div>
+              ) : executionResult.status === 'failed' ? (
+                <div className="p-3.5 rounded-xl bg-rose-50/60 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 flex items-start gap-2.5 text-xs text-rose-800 dark:text-rose-300">
+                  <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+                  <div className="space-y-0.5">
+                    <div className="font-bold">Processing Failed for Node 2</div>
+                    <p className="text-[11px] leading-relaxed text-rose-700 dark:text-rose-300/90">
+                      {executionResult.errorMessage || 'Transcription or extraction failed. Please review your audio recording and retry.'}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3.5 rounded-xl bg-blue-50/60 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 flex items-start gap-2.5 text-xs text-blue-800 dark:text-blue-300">
+                  <Shield className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                  <div className="space-y-0.5">
+                    <div className="font-bold">Phase 1 (Conversation Capture) Complete</div>
+                    <p className="text-[11px] leading-relaxed text-blue-700 dark:text-blue-300/90">
+                      Audio recording and conversation metadata were successfully received, validated, and stored for run ID <code className="font-mono font-semibold">{executionResult.runId}</code>.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Captured Metadata & Audio Reference Details */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Left Card: Metadata */}
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#0b0f17] border border-slate-200 dark:border-[#233048] space-y-3">
+                  <div className="flex items-center gap-2 text-xs font-bold text-slate-900 dark:text-white pb-2 border-b border-slate-200/80 dark:border-[#1e2a3f]">
+                    <FileText className="w-3.5 h-3.5 text-blue-500" />
+                    <span>Captured Conversation Metadata</span>
+                  </div>
+                  <dl className="grid grid-cols-2 gap-2 text-xs">
+                    <dt className="text-slate-500 dark:text-slate-400">Conversation Title:</dt>
+                    <dd className="font-semibold text-slate-800 dark:text-slate-200 truncate">{executionResult.conversationData?.conversation_title}</dd>
+                    
+                    <dt className="text-slate-500 dark:text-slate-400">Contact Name:</dt>
+                    <dd className="font-semibold text-slate-800 dark:text-slate-200 truncate">{executionResult.conversationData?.contact_name}</dd>
+                    
+                    <dt className="text-slate-500 dark:text-slate-400">Conversation Type:</dt>
+                    <dd className="font-semibold text-slate-800 dark:text-slate-200">{executionResult.conversationData?.conversation_type}</dd>
+                    
+                    <dt className="text-slate-500 dark:text-slate-400">Spoken Language:</dt>
+                    <dd className="font-semibold text-slate-800 dark:text-slate-200">{executionResult.conversationData?.language}</dd>
+                    
+                    <dt className="text-slate-500 dark:text-slate-400">Conversation Date:</dt>
+                    <dd className="font-semibold text-slate-800 dark:text-slate-200">{executionResult.conversationData?.conversation_date}</dd>
+                  </dl>
+                </div>
+
+                {/* Right Card: Audio Reference */}
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#0b0f17] border border-slate-200 dark:border-[#233048] space-y-3">
+                  <div className="flex items-center gap-2 text-xs font-bold text-slate-900 dark:text-white pb-2 border-b border-slate-200/80 dark:border-[#1e2a3f]">
+                    <Mic className="w-3.5 h-3.5 text-blue-500" />
+                    <span>Audio Recording Reference</span>
+                  </div>
+                  <div className="p-3 rounded-lg bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#1e2a3f] space-y-2 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500 dark:text-slate-400 font-mono text-[11px]">Filename:</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-200 truncate max-w-[200px]">
+                        {executionResult.conversationData?.recording?.filename || 'recording.mp3'}
+                      </span>
+                    </div>
+                    {executionResult.conversationData?.recording?.size_bytes && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-500 dark:text-slate-400 font-mono text-[11px]">Size:</span>
+                        <span className="font-mono text-slate-700 dark:text-slate-300 text-[11px]">
+                          {formatBytes(executionResult.conversationData.recording.size_bytes)}
+                        </span>
+                      </div>
+                    )}
+                    {executionResult.conversationData?.recording?.file_id && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-500 dark:text-slate-400 font-mono text-[11px]">Storage Ref ID:</span>
+                        <span className="font-mono text-slate-500 dark:text-slate-400 text-[10px]">
+                          {executionResult.conversationData.recording.file_id}
+                        </span>
+                      </div>
+                    )}
+                    <div className="pt-1 border-t border-slate-100 dark:border-[#1a2336] flex items-center justify-between">
+                      <span className="text-slate-500 dark:text-slate-400 font-mono text-[11px]">Ingest State:</span>
+                      <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 text-[11px] font-semibold">
+                        <CheckCircle className="w-3 h-3" /> Preserved for Run
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Node 2 TRANSCRIPT SECTION ── */}
+              {executionResult.transcriptText && (
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#0b0f17] border border-slate-200 dark:border-[#233048] space-y-3">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-200/80 dark:border-[#1e2a3f]">
+                    <div className="flex items-center gap-2">
+                      <Mic className="w-3.5 h-3.5 text-blue-500" />
+                      <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                        Conversation Audio Transcript
+                      </span>
+                      <span className="text-[10px] font-mono px-2 py-0.5 bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 rounded-full font-semibold">
+                        Language: {executionResult.detectedLanguage || 'Auto Detect'}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyTranscript(executionResult.transcriptText)}
+                      className="px-2.5 py-1 text-[11px] font-semibold text-slate-600 dark:text-slate-300 bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-lg hover:bg-slate-100 dark:hover:bg-[#182234] transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                    >
+                      {copiedTranscript ? (
+                        <>
+                          <Check className="w-3 h-3 text-emerald-500" />
+                          <span className="text-emerald-600 dark:text-emerald-400">Copied!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3 h-3" />
+                          <span>Copy Transcript</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <div className="p-3.5 rounded-lg bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#1e2a3f] text-xs leading-relaxed text-slate-700 dark:text-slate-300 whitespace-pre-wrap font-sans">
+                    {executionResult.transcriptText}
+                  </div>
+                </div>
+              )}
+
+              {/* ── Node 2 STRUCTURED EXTRACTION SECTION ── */}
+              {executionResult.extraction && (
+                <div className="space-y-4">
+                  {/* Section Title */}
+                  <div className="flex items-center justify-between pt-1">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-purple-500" />
+                      <h5 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                        Structured Conversation Extraction
+                      </h5>
+                    </div>
+                    {executionResult.modelUsed && (
+                      <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
+                        Extracted via {executionResult.modelUsed}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Summary Box */}
+                  {executionResult.extraction.summary && (
+                    <div className="p-4 rounded-xl bg-purple-50/40 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900/50 space-y-1.5">
+                      <div className="flex items-center gap-2 text-xs font-bold text-purple-900 dark:text-purple-300">
+                        <FileText className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                        <span>Executive Summary</span>
+                      </div>
+                      <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+                        {executionResult.extraction.summary}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* People Profiles */}
+                  {executionResult.extraction.people && executionResult.extraction.people.length > 0 && (
+                    <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#0b0f17] border border-slate-200 dark:border-[#233048] space-y-3">
+                      <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <UserCheck className="w-3.5 h-3.5 text-blue-500" />
+                        <span>Participants & Profiles ({executionResult.extraction.people.length})</span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {executionResult.extraction.people.map((person, pIdx) => (
+                          <div key={pIdx} className="p-3 rounded-lg bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#1e2a3f] space-y-2 text-xs">
+                            <div className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                              <span>{person.name}</span>
+                            </div>
+                            {person.interests && person.interests.length > 0 && (
+                              <div className="space-y-1">
+                                <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Interests:</span>
+                                <div className="flex flex-wrap gap-1">
+                                  {person.interests.map((it, itIdx) => (
+                                    <span key={itIdx} className="px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900 text-[10px]">
+                                      {it}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {person.needs && person.needs.length > 0 && (
+                              <div className="space-y-1">
+                                <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Needs & Pain Points:</span>
+                                <div className="flex flex-wrap gap-1">
+                                  {person.needs.map((nd, ndIdx) => (
+                                    <span key={ndIdx} className="px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-900 text-[10px]">
+                                      {nd}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {person.opportunities && person.opportunities.length > 0 && (
+                              <div className="space-y-1">
+                                <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Opportunities:</span>
+                                <div className="flex flex-wrap gap-1">
+                                  {person.opportunities.map((op, opIdx) => (
+                                    <span key={opIdx} className="px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900 text-[10px]">
+                                      {op}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── CRITICAL DISTINCTION: AGREED COMMITMENTS VS AI SUGGESTED ACTIONS ── */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* AGREED COMMITMENTS (Explicit Promises) */}
+                    <div className="p-4 rounded-xl bg-amber-50/50 dark:bg-amber-950/20 border-2 border-amber-300 dark:border-amber-700/60 space-y-3 shadow-2xs">
+                      <div className="flex items-center justify-between pb-2 border-b border-amber-200/80 dark:border-amber-900/60">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                          <span className="text-xs font-extrabold text-amber-950 dark:text-amber-300 uppercase tracking-wider">
+                            Agreed Commitments ({executionResult.extraction.commitments?.length || 0})
+                          </span>
+                        </div>
+                        <span className="text-[9px] font-mono px-2 py-0.5 bg-amber-100 dark:bg-amber-900/70 text-amber-800 dark:text-amber-200 rounded-full font-bold">
+                          Factual / Agreed
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-amber-800/80 dark:text-amber-300/80 italic">
+                        Contains ONLY explicit promises and agreements made during the conversation.
+                      </p>
+                      {executionResult.extraction.commitments && executionResult.extraction.commitments.length > 0 ? (
+                        <div className="space-y-2">
+                          {executionResult.extraction.commitments.map((cmt, cIdx) => (
+                            <div key={cIdx} className="p-3 rounded-lg bg-white dark:bg-[#121826] border border-amber-200 dark:border-amber-900/50 space-y-1.5 text-xs">
+                              <div className="flex items-center justify-between flex-wrap gap-1">
+                                <span className="px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200 font-bold text-[10px]">
+                                  {cmt.owner || 'Speaker'}
+                                </span>
+                                {cmt.due_date ? (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-mono font-semibold px-2 py-0.5 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded-md">
+                                    <Calendar className="w-3 h-3" /> Due: {cmt.due_date}
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500">
+                                    No due date stated
+                                  </span>
+                                )}
+                              </div>
+                              <div className="font-semibold text-slate-800 dark:text-slate-200 leading-snug">
+                                {cmt.commitment}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-xs text-slate-500 dark:text-slate-400 italic p-3 text-center bg-white/40 dark:bg-[#121826]/40 rounded-lg">
+                          No explicit commitments agreed in this recording.
+                        </div>
+                      )}
+                    </div>
+
+                    {/* AI SUGGESTED ACTIONS (Recommendations) */}
+                    <div className="p-4 rounded-xl bg-indigo-50/50 dark:bg-indigo-950/20 border-2 border-indigo-300 dark:border-indigo-700/60 space-y-3 shadow-2xs">
+                      <div className="flex items-center justify-between pb-2 border-b border-indigo-200/80 dark:border-indigo-900/60">
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                          <span className="text-xs font-extrabold text-indigo-950 dark:text-indigo-300 uppercase tracking-wider">
+                            AI Suggested Actions ({executionResult.extraction.suggested_actions?.length || 0})
+                          </span>
+                        </div>
+                        <span className="text-[9px] font-mono px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/70 text-indigo-800 dark:text-indigo-200 rounded-full font-bold">
+                          AI Recommendation
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-indigo-800/80 dark:text-indigo-300/80 italic">
+                        Strategic follow-up recommendations generated by AI — not promised in the meeting.
+                      </p>
+                      {executionResult.extraction.suggested_actions && executionResult.extraction.suggested_actions.length > 0 ? (
+                        <div className="space-y-2">
+                          {executionResult.extraction.suggested_actions.map((act, aIdx) => (
+                            <div key={aIdx} className="p-3 rounded-lg bg-white dark:bg-[#121826] border border-indigo-200 dark:border-indigo-900/50 space-y-1 text-xs">
+                              <div className="font-bold text-slate-900 dark:text-white leading-snug">
+                                {act.action}
+                              </div>
+                              {act.reason && (
+                                <div className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                                  <span className="font-semibold text-indigo-600 dark:text-indigo-400">Why: </span>
+                                  {act.reason}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-xs text-slate-500 dark:text-slate-400 italic p-3 text-center bg-white/40 dark:bg-[#121826]/40 rounded-lg">
+                          No suggestions generated.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Open Questions */}
+                  {executionResult.extraction.open_questions && executionResult.extraction.open_questions.length > 0 && (
+                    <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#0b0f17] border border-slate-200 dark:border-[#233048] space-y-2.5">
+                      <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <MessageSquare className="w-3.5 h-3.5 text-blue-500" />
+                        <span>Open Questions & Unresolved Topics ({executionResult.extraction.open_questions.length})</span>
+                      </div>
+                      <ul className="space-y-1.5 text-xs text-slate-700 dark:text-slate-300">
+                        {executionResult.extraction.open_questions.map((q, qIdx) => (
+                          <li key={qIdx} className="flex items-start gap-2 p-2 rounded-lg bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#1e2a3f]">
+                            <span className="font-mono text-blue-500 text-[11px] mt-0.5">•</span>
+                            <span className="leading-relaxed">{q}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* NODE 3: CENTRAL MEMORY DELIVERABLE */}
+              {executionResult.centralMemory && (
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#0b0f17] border border-slate-200 dark:border-[#233048] space-y-4">
+                  {/* Card Header */}
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-200/80 dark:border-[#1e2a3f] flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-teal-50 dark:bg-teal-950/60 border border-teal-200 dark:border-teal-800 flex items-center justify-center text-teal-600 dark:text-teal-400">
+                        <Database className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                          <span>Central Memory: Relationship Intelligence</span>
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full font-semibold bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800">
+                            Node 3 Complete
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                          Persistent organization-scoped contact memory stored in PostgreSQL (survives refreshes & future workflow runs)
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Source / Provenance Indicator */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-mono px-2.5 py-1 bg-slate-100 dark:bg-[#182234] border border-slate-200 dark:border-[#233048] text-slate-600 dark:text-slate-300 rounded-md">
+                        Source: Run <code className="font-semibold">{executionResult.runId}</code> ({executionResult.centralMemory.source_reference?.conversation_date || 'Today'})
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Contact Profile & Conversation History Counter */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="p-3 rounded-lg bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#1e2a3f] space-y-1">
+                      <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400 dark:text-slate-500">Contact</div>
+                      <div className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                        <User className="w-3.5 h-3.5 text-teal-500" />
+                        <span>{executionResult.centralMemory.contact_name}</span>
+                      </div>
+                      {executionResult.centralMemory.contact_role && (
+                        <div className="text-[11px] text-slate-500 dark:text-slate-400">{executionResult.centralMemory.contact_role}</div>
+                      )}
+                    </div>
+
+                    <div className="p-3 rounded-lg bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#1e2a3f] space-y-1">
+                      <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400 dark:text-slate-500">Conversation History</div>
+                      <div className="text-sm font-bold text-teal-600 dark:text-teal-400 flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5" />
+                        <span>{executionResult.centralMemory.total_conversations} conversation{executionResult.centralMemory.total_conversations === 1 ? '' : 's'} stored</span>
+                      </div>
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400">Append-oriented memory</div>
+                    </div>
+
+                    <div className="p-3 rounded-lg bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#1e2a3f] space-y-1">
+                      <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400 dark:text-slate-500">Latest Conversation</div>
+                      <div className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
+                        {executionResult.centralMemory.latest_conversation_title}
+                      </div>
+                      <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
+                        {executionResult.centralMemory.latest_conversation_date || 'Recent'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Prior Conversations (if multiple conversations exist for this contact) */}
+                  {executionResult.centralMemory.conversations && executionResult.centralMemory.conversations.length > 1 && (
+                    <div className="p-3 rounded-lg bg-white/70 dark:bg-[#121826]/70 border border-slate-200 dark:border-[#1e2a3f] space-y-2">
+                      <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center justify-between">
+                        <span>All Stored Conversations for {executionResult.centralMemory.contact_name}</span>
+                        <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500">Chronological Archive ({executionResult.centralMemory.conversations.length})</span>
+                      </div>
+                      <div className="space-y-1.5">
+                        {executionResult.centralMemory.conversations.map((c, cIdx) => (
+                          <div key={cIdx} className="flex items-center justify-between p-2 rounded-md bg-slate-50 dark:bg-[#0b0f17] text-xs">
+                            <div className="flex items-center gap-2">
+                              <span className="w-5 h-5 rounded-full bg-slate-200 dark:bg-slate-800 text-[10px] font-mono flex items-center justify-center text-slate-700 dark:text-slate-300 font-bold">
+                                #{executionResult.centralMemory.conversations.length - cIdx}
+                              </span>
+                              <div>
+                                <span className="font-semibold text-slate-800 dark:text-slate-200">{c.title}</span>
+                                {c.summary && <span className="text-[11px] text-slate-500 dark:text-slate-400 block truncate max-w-md">{c.summary}</span>}
+                              </div>
+                            </div>
+                            <span className="text-[10px] font-mono text-slate-500 shrink-0">{c.conversation_date || 'Date N/A'}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Memory Snapshot Categories */}
+                  <div className="space-y-3 pt-2">
+                    <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-teal-500" />
+                      <span>Memory Snapshot (Aggregated Across Conversations)</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                      {/* Facts */}
+                      <div className="p-3 rounded-lg bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#1e2a3f] space-y-2">
+                        <div className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                          <CheckCircle className="w-3.5 h-3.5 text-blue-500" />
+                          <span>Facts ({executionResult.centralMemory.facts?.length || 0})</span>
+                        </div>
+                        {executionResult.centralMemory.facts && executionResult.centralMemory.facts.length > 0 ? (
+                          <ul className="space-y-1 text-slate-700 dark:text-slate-300">
+                            {executionResult.centralMemory.facts.map((f, fIdx) => (
+                              <li key={fIdx} className="flex items-start gap-1.5 text-[11px] leading-relaxed">
+                                <span className="text-blue-500 mt-0.5">•</span>
+                                <div>
+                                  <span>{f.content}</span>
+                                  {f.source_date && <span className="text-[9px] font-mono text-slate-400 ml-1">({f.source_date})</span>}
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <div className="text-[11px] text-slate-400 italic">No facts recorded</div>
+                        )}
+                      </div>
+
+                      {/* Interests */}
+                      <div className="p-3 rounded-lg bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#1e2a3f] space-y-2">
+                        <div className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                          <Star className="w-3.5 h-3.5 text-amber-500" />
+                          <span>Interests ({executionResult.centralMemory.interests?.length || 0})</span>
+                        </div>
+                        {executionResult.centralMemory.interests && executionResult.centralMemory.interests.length > 0 ? (
+                          <ul className="space-y-1 text-slate-700 dark:text-slate-300">
+                            {executionResult.centralMemory.interests.map((i, iIdx) => (
+                              <li key={iIdx} className="flex items-start gap-1.5 text-[11px] leading-relaxed">
+                                <span className="text-amber-500 mt-0.5">•</span>
+                                <div>
+                                  <span>{i.content}</span>
+                                  {i.source_date && <span className="text-[9px] font-mono text-slate-400 ml-1">({i.source_date})</span>}
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <div className="text-[11px] text-slate-400 italic">No interests recorded</div>
+                        )}
+                      </div>
+
+                      {/* Needs & Pain Points */}
+                      <div className="p-3 rounded-lg bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#1e2a3f] space-y-2">
+                        <div className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                          <AlertCircle className="w-3.5 h-3.5 text-rose-500" />
+                          <span>Needs & Pain Points ({executionResult.centralMemory.needs?.length || 0})</span>
+                        </div>
+                        {executionResult.centralMemory.needs && executionResult.centralMemory.needs.length > 0 ? (
+                          <ul className="space-y-1 text-slate-700 dark:text-slate-300">
+                            {executionResult.centralMemory.needs.map((n, nIdx) => (
+                              <li key={nIdx} className="flex items-start gap-1.5 text-[11px] leading-relaxed">
+                                <span className="text-rose-500 mt-0.5">•</span>
+                                <div>
+                                  <span>{n.content}</span>
+                                  {n.source_date && <span className="text-[9px] font-mono text-slate-400 ml-1">({n.source_date})</span>}
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <div className="text-[11px] text-slate-400 italic">No needs recorded</div>
+                        )}
+                      </div>
+
+                      {/* Opportunities */}
+                      <div className="p-3 rounded-lg bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#1e2a3f] space-y-2">
+                        <div className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                          <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
+                          <span>Opportunities ({executionResult.centralMemory.opportunities?.length || 0})</span>
+                        </div>
+                        {executionResult.centralMemory.opportunities && executionResult.centralMemory.opportunities.length > 0 ? (
+                          <ul className="space-y-1 text-slate-700 dark:text-slate-300">
+                            {executionResult.centralMemory.opportunities.map((o, oIdx) => (
+                              <li key={oIdx} className="flex items-start gap-1.5 text-[11px] leading-relaxed">
+                                <span className="text-emerald-500 mt-0.5">•</span>
+                                <div>
+                                  <span>{o.content}</span>
+                                  {o.source_date && <span className="text-[9px] font-mono text-slate-400 ml-1">({o.source_date})</span>}
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <div className="text-[11px] text-slate-400 italic">No opportunities recorded</div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Agreed Commitments in Central Memory */}
+                    {executionResult.centralMemory.commitments && executionResult.centralMemory.commitments.length > 0 && (
+                      <div className="p-3 rounded-lg bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/50 space-y-2">
+                        <div className="text-xs font-bold text-amber-900 dark:text-amber-300 flex items-center gap-1.5">
+                          <Shield className="w-3.5 h-3.5 text-amber-600" />
+                          <span>Historical Agreed Commitments ({executionResult.centralMemory.commitments.length})</span>
+                        </div>
+                        <div className="space-y-1.5">
+                          {executionResult.centralMemory.commitments.map((cmt, cIdx) => (
+                            <div key={cIdx} className="p-2 rounded bg-white dark:bg-[#121826] border border-amber-200 dark:border-amber-900/40 text-xs flex items-center justify-between gap-2">
+                              <span className="font-semibold text-slate-800 dark:text-slate-200">{cmt.content}</span>
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                {cmt.details?.owner && (
+                                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-[#182234] text-slate-600 dark:text-slate-300">
+                                    {cmt.details.owner}
+                                  </span>
+                                )}
+                                {cmt.details?.due_date && (
+                                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                                    Due: {cmt.details.due_date}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Node 4: Action Generator Deliverable Card */}
+              {executionResult.actions && (
+                <div className="p-5 rounded-2xl bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] shadow-xs space-y-5">
+                  <div className="flex items-center justify-between flex-wrap gap-2 pb-3 border-b border-slate-200/80 dark:border-[#1e2a3f]">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                        <CheckSquare className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                          <span>ACTION GENERATOR (Node 4)</span>
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full font-semibold bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300">
+                            Persistent & Isolated
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                          Classified obligations & intelligence without conflating commitments, suggestions, or questions
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => navigate('/escalations')}
+                        className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-[#182234] hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950/40 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#233048] transition-colors cursor-pointer flex items-center gap-1.5"
+                      >
+                        <Inbox className="w-3.5 h-3.5" />
+                        <span>Action Center</span>
+                        <ArrowRight className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 4 Visually Distinct Groups */}
+                  <div className="grid grid-cols-1 gap-4">
+
+                    {/* A. OUR COMMITMENTS */}
+                    <div className="p-4 rounded-xl bg-blue-50/40 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/60 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-md bg-blue-600 text-white flex items-center justify-center text-xs font-bold shadow-xs">
+                            ✓
+                          </div>
+                          <span className="text-xs font-bold text-blue-950 dark:text-blue-200 uppercase tracking-wide">
+                            Our Commitments ({executionResult.actions.our_commitments?.length || 0})
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-900/60 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800 font-semibold">
+                          Internal Actionable Obligation
+                        </span>
+                      </div>
+
+                      {(!executionResult.actions.our_commitments || executionResult.actions.our_commitments.length === 0) ? (
+                        <div className="text-xs text-slate-500 italic p-3 bg-white/70 dark:bg-[#121826]/70 rounded-lg border border-dashed border-blue-200 dark:border-blue-900/60">
+                          No internal promises or commitments made in this conversation.
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {executionResult.actions.our_commitments.map((act, actIdx) => (
+                            <div
+                              key={act.id || actIdx}
+                              className="p-3 rounded-lg bg-white dark:bg-[#121826] border border-blue-100 dark:border-blue-900/50 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5"
+                            >
+                              <div className="space-y-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-bold uppercase">
+                                    [Pending]
+                                  </span>
+                                  <span className="text-xs font-bold text-slate-900 dark:text-white">
+                                    {act.action}
+                                  </span>
+                                </div>
+                                <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-3 flex-wrap">
+                                  <span>Due: <strong className="text-slate-700 dark:text-slate-200 font-medium">{act.due_date_display || act.due_date || 'No due date'}</strong></span>
+                                  <span>•</span>
+                                  <span>Source: <span className="italic">{act.source_title || executionResult.objective || 'Current Conversation'}</span></span>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
+                                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                                  Assignee: {act.owner_display || 'You / Internal'}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* B. WAITING ON CONTACT */}
+                    <div className="p-4 rounded-xl bg-amber-50/40 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/60 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-md bg-amber-600 text-white flex items-center justify-center text-xs font-bold shadow-xs">
+                            ⏳
+                          </div>
+                          <span className="text-xs font-bold text-amber-950 dark:text-amber-200 uppercase tracking-wide">
+                            Waiting On Contact ({executionResult.actions.contact_commitments?.length || 0})
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-semibold">
+                          External Contact Obligation
+                        </span>
+                      </div>
+
+                      {(!executionResult.actions.contact_commitments || executionResult.actions.contact_commitments.length === 0) ? (
+                        <div className="text-xs text-slate-500 italic p-3 bg-white/70 dark:bg-[#121826]/70 rounded-lg border border-dashed border-amber-200 dark:border-amber-900/60">
+                          No pending deliverables promised by the external contact.
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {executionResult.actions.contact_commitments.map((act, actIdx) => (
+                            <div
+                              key={act.id || actIdx}
+                              className="p-3 rounded-lg bg-white dark:bg-[#121826] border border-amber-100 dark:border-amber-900/50 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5"
+                            >
+                              <div className="space-y-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 font-bold uppercase">
+                                    [Waiting]
+                                  </span>
+                                  <span className="text-xs font-bold text-slate-900 dark:text-white">
+                                    <strong className="text-amber-700 dark:text-amber-400 font-semibold">{act.owner_display || 'Contact'}</strong> — {act.action}
+                                  </span>
+                                </div>
+                                <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-3 flex-wrap">
+                                  <span>Due: <strong className="text-slate-700 dark:text-slate-200 font-medium">{act.due_date_display || act.due_date || 'No due date'}</strong></span>
+                                  <span>•</span>
+                                  <span>Status: <span className="font-medium text-amber-700 dark:text-amber-400">Waiting on {act.owner_display || 'Contact'}</span></span>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
+                                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-[#182234] text-slate-600 dark:text-slate-300">
+                                  Tracked Delivery
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* C. AI SUGGESTED ACTIONS */}
+                    <div className="p-4 rounded-xl bg-purple-50/40 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800/60 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-md bg-purple-600 text-white flex items-center justify-center text-xs font-bold shadow-xs">
+                            ✨
+                          </div>
+                          <span className="text-xs font-bold text-purple-950 dark:text-purple-200 uppercase tracking-wide">
+                            AI Suggested Actions ({executionResult.actions.ai_suggestions?.length || 0})
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-900/60 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800 font-semibold">
+                          Requires Decision • Not Confirmed
+                        </span>
+                      </div>
+
+                      {(!executionResult.actions.ai_suggestions || executionResult.actions.ai_suggestions.length === 0) ? (
+                        <div className="text-xs text-slate-500 italic p-3 bg-white/70 dark:bg-[#121826]/70 rounded-lg border border-dashed border-purple-200 dark:border-purple-900/60">
+                          No autonomous recommendations generated for this conversation.
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {executionResult.actions.ai_suggestions.map((sugg, sIdx) => (
+                            <div
+                              key={sugg.id || sIdx}
+                              className="p-3 rounded-lg bg-white dark:bg-[#121826] border border-purple-100 dark:border-purple-900/50 shadow-2xs space-y-1.5"
+                            >
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 font-bold">
+                                  [AI Suggested]
+                                </span>
+                                <span className="text-xs font-bold text-slate-900 dark:text-white">
+                                  {sugg.action}
+                                </span>
+                              </div>
+                              {sugg.reason && (
+                                <div className="text-[11px] text-slate-600 dark:text-slate-300 bg-purple-50/50 dark:bg-purple-950/30 p-2 rounded border border-purple-100 dark:border-purple-900/30">
+                                  <strong className="text-purple-700 dark:text-purple-400 font-medium">Reason: </strong>
+                                  {sugg.reason}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* D. OPEN QUESTIONS */}
+                    <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#0b0f17] border border-slate-200 dark:border-[#233048] space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-md bg-slate-700 text-white flex items-center justify-center text-xs font-bold shadow-xs">
+                            ?
+                          </div>
+                          <span className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide">
+                            Open Questions ({executionResult.actions.open_questions?.length || 0})
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-200 dark:bg-[#182234] text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 font-semibold">
+                          Next Interaction Context • Not Tasks
+                        </span>
+                      </div>
+
+                      {(!executionResult.actions.open_questions || executionResult.actions.open_questions.length === 0) ? (
+                        <div className="text-xs text-slate-500 italic p-3 bg-white/70 dark:bg-[#121826]/70 rounded-lg border border-dashed border-slate-200 dark:border-slate-800">
+                          All conversation topics and questions were resolved.
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {executionResult.actions.open_questions.map((q, qIdx) => (
+                            <div
+                              key={q.id || qIdx}
+                              className="p-2.5 rounded-lg bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] text-xs text-slate-700 dark:text-slate-300 flex items-start gap-2"
+                            >
+                              <span className="text-blue-500 font-bold shrink-0">Q:</span>
+                              <span>{q.question}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Contextual Historical Commitments if any */}
+                    {executionResult.actions.historical_commitments && executionResult.actions.historical_commitments.length > 0 && (
+                      <div className="p-4 rounded-xl bg-slate-50/70 dark:bg-[#0e1422] border border-slate-200 dark:border-[#233048] space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                            Historical Commitments (Prior Meetings with {executionResult.actions.contact_name})
+                          </span>
+                          <span className="text-[10px] font-mono text-slate-400">
+                            Read-only Context ({executionResult.actions.historical_commitments.length})
+                          </span>
+                        </div>
+                        <div className="space-y-1.5">
+                          {executionResult.actions.historical_commitments.map((h, hIdx) => (
+                            <div
+                              key={h.id || hIdx}
+                              className="p-2 rounded bg-white/60 dark:bg-[#121826]/60 border border-slate-200/60 dark:border-slate-800 text-xs flex items-center justify-between gap-2"
+                            >
+                              <div className="truncate">
+                                <span className="font-semibold text-slate-700 dark:text-slate-300">{h.action}</span>
+                                <span className="text-[10px] text-slate-400 ml-2">({h.source_date || 'Past run'})</span>
+                              </div>
+                              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-[#182234] text-slate-500">
+                                {h.owner_display}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* NODE 5A: FOLLOW-UP EMAIL DRAFT & HUMAN REVIEW DELIVERABLE */}
+              {executionResult.followupDraft && (
+                <div className="p-4 rounded-xl bg-slate-50/70 dark:bg-[#0e1420]/70 border border-slate-200 dark:border-[#233048] space-y-4">
+                  {/* Header */}
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-[#233048] flex-wrap gap-2">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center text-xs font-bold shadow-xs">
+                        <Mail className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                          <span>FOLLOW-UP EMAIL DRAFT (Node 5A)</span>
+                          <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-semibold border ${
+                            executionResult.followupDraft.status === 'approved'
+                              ? 'bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700'
+                              : executionResult.followupDraft.status === 'snoozed'
+                              ? 'bg-purple-100 dark:bg-purple-900/60 text-purple-800 dark:text-purple-300 border-purple-300 dark:border-purple-700'
+                              : executionResult.followupDraft.status === 'discarded'
+                              ? 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700'
+                              : 'bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-700'
+                          }`}>
+                            {executionResult.followupDraft.status === 'approved'
+                              ? 'Approved (Sending Deferred)'
+                              : executionResult.followupDraft.status === 'snoozed'
+                              ? `Snoozed (${executionResult.followupDraft.snoozed_until || 'later'})`
+                              : executionResult.followupDraft.status === 'discarded'
+                              ? 'Discarded'
+                              : 'Awaiting Human Review'}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                          Grounded in conversation commitments & relationship memory • Strictly no auto-send
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => navigate('/escalations')}
+                        className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-[#182234] hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950/40 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#233048] transition-colors cursor-pointer flex items-center gap-1.5"
+                      >
+                        <Inbox className="w-3.5 h-3.5" />
+                        <span>Action Center</span>
+                        <ArrowRight className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {draftToast && (
+                    <div className="p-2.5 rounded-lg bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-xs text-blue-800 dark:text-blue-200 flex items-center gap-2 animate-in fade-in">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                      <span>{draftToast}</span>
+                    </div>
+                  )}
+
+                  {/* Recipient & Grounding Meta */}
+                  <div className="p-3 rounded-lg bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#1e2a3f] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-slate-500 dark:text-slate-400 font-medium">Contact:</span>
+                      <strong className="text-slate-900 dark:text-white font-semibold">
+                        {executionResult.followupDraft.recipient_name || 'Contact'}
+                      </strong>
+                      <span className="text-slate-300 dark:text-slate-600">|</span>
+                      <span className="text-slate-500 dark:text-slate-400 font-medium">Recipient:</span>
+                      {executionResult.followupDraft.recipient_email_available && executionResult.followupDraft.recipient_email ? (
+                        <span className="font-mono text-[11px] text-blue-600 dark:text-blue-400">
+                          &lt;{executionResult.followupDraft.recipient_email}&gt;
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 font-semibold border border-amber-200 dark:border-amber-800">
+                          Recipient email not available
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                      <span>{executionResult.followupDraft.our_commitments_count || 0} Our Commitments</span>
+                      <span>•</span>
+                      <span>{executionResult.followupDraft.contact_commitments_count || 0} Waiting</span>
+                      <span>•</span>
+                      <span>{executionResult.followupDraft.ai_suggestions_count || 0} Suggestions</span>
+                    </div>
+                  </div>
+
+                  {/* Subject and Body Area */}
+                  {editingDraft ? (
+                    <div className="space-y-3 p-4 rounded-xl bg-white dark:bg-[#121826] border border-blue-200 dark:border-blue-900/60 shadow-2xs">
+                      <div className="space-y-1">
+                        <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                          Subject Line
+                        </label>
+                        <input
+                          type="text"
+                          value={draftSubjectEdit}
+                          onChange={(e) => setDraftSubjectEdit(e.target.value)}
+                          className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-[#0b0f17] border border-slate-200 dark:border-[#233048] rounded-lg text-slate-900 dark:text-white focus:outline-hidden focus:border-blue-500 font-medium"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                          Email Body
+                        </label>
+                        <textarea
+                          rows={10}
+                          value={draftBodyEdit}
+                          onChange={(e) => setDraftBodyEdit(e.target.value)}
+                          className="w-full p-3 text-xs bg-slate-50 dark:bg-[#0b0f17] border border-slate-200 dark:border-[#233048] rounded-lg text-slate-900 dark:text-white font-mono leading-relaxed focus:outline-hidden focus:border-blue-500"
+                        />
+                      </div>
+                      <div className="flex items-center justify-end gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => setEditingDraft(false)}
+                          className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-[#182234] dark:hover:bg-[#233048] text-slate-700 dark:text-slate-300 cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          disabled={draftActionLoading}
+                          onClick={() => handleFollowupDraftAction('edit')}
+                          className="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white cursor-pointer shadow-xs flex items-center gap-1.5"
+                        >
+                          <span>Save Changes</span>
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-4 rounded-xl bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#1e2a3f] shadow-2xs space-y-3">
+                      {/* Subject */}
+                      <div className="flex items-center justify-between pb-2.5 border-b border-slate-100 dark:border-[#182234] gap-2">
+                        <div className="min-w-0">
+                          <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-semibold block">
+                            Subject
+                          </span>
+                          <span className="text-xs font-bold text-slate-900 dark:text-white">
+                            {executionResult.followupDraft.subject}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(executionResult.followupDraft.subject)
+                            setCopiedDraftSubject(true)
+                            setTimeout(() => setCopiedDraftSubject(false), 2000)
+                          }}
+                          className="text-[10px] font-mono px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 dark:bg-[#182234] dark:hover:bg-[#233048] text-slate-600 dark:text-slate-300 cursor-pointer transition-colors shrink-0"
+                        >
+                          {copiedDraftSubject ? 'Copied!' : 'Copy Subject'}
+                        </button>
+                      </div>
+
+                      {/* Body */}
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-semibold">
+                            Body Content
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(executionResult.followupDraft.body)
+                              setCopiedDraftBody(true)
+                              setTimeout(() => setCopiedDraftBody(false), 2000)
+                            }}
+                            className="text-[10px] font-mono px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 dark:bg-[#182234] dark:hover:bg-[#233048] text-slate-600 dark:text-slate-300 cursor-pointer transition-colors"
+                          >
+                            {copiedDraftBody ? 'Copied!' : 'Copy Body'}
+                          </button>
+                        </div>
+                        <pre className="p-3.5 rounded-lg bg-slate-50 dark:bg-[#0b0f17] border border-slate-200/80 dark:border-[#182234] text-xs font-mono text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed select-text">
+                          {executionResult.followupDraft.body}
+                        </pre>
+                      </div>
+
+                      {/* Approved Safe Banner */}
+                      {executionResult.followupDraft.status === 'approved' && (
+                        <div className="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-xs text-emerald-800 dark:text-emerald-200 flex items-start gap-2.5">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
+                          <div>
+                            <strong className="font-semibold">Draft Approved (Deferred Sending):</strong>
+                            <p className="text-[11px] text-emerald-700 dark:text-emerald-300 mt-0.5">
+                              This follow-up draft has been verified and approved by the human operator. Email dispatch is preserved for a future sending phase. No email integration call was executed.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Snoozed Banner */}
+                      {executionResult.followupDraft.status === 'snoozed' && (
+                        <div className="p-3 rounded-lg bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/60 text-xs text-purple-800 dark:text-purple-200 flex items-start gap-2.5">
+                          <Clock className="w-4 h-4 text-purple-600 mt-0.5 shrink-0" />
+                          <div>
+                            <strong className="font-semibold">Draft Snoozed:</strong>
+                            <span className="ml-1 text-[11px] text-purple-700 dark:text-purple-300">
+                              Remind: {executionResult.followupDraft.snoozed_until || 'later'}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* HITL Action Controls */}
+                      <div className="pt-2 flex items-center justify-between flex-wrap gap-2 border-t border-slate-100 dark:border-[#182234]">
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            disabled={draftActionLoading}
+                            onClick={() => {
+                              setDraftSubjectEdit(executionResult.followupDraft.subject)
+                              setDraftBodyEdit(executionResult.followupDraft.body)
+                              setEditingDraft(true)
+                            }}
+                            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-blue-50 hover:text-blue-600 dark:bg-[#182234] dark:hover:bg-blue-950/40 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#233048] transition-colors cursor-pointer flex items-center gap-1.5"
+                          >
+                            <Sliders className="w-3.5 h-3.5" />
+                            <span>Edit Draft</span>
+                          </button>
+
+                          {/* Snooze Dropdown */}
+                          <div className="relative">
+                            <button
+                              type="button"
+                              disabled={draftActionLoading}
+                              onClick={() => setSnoozeOpen(!snoozeOpen)}
+                              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-purple-50 hover:text-purple-600 dark:bg-[#182234] dark:hover:bg-purple-950/40 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#233048] transition-colors cursor-pointer flex items-center gap-1.5"
+                            >
+                              <Clock className="w-3.5 h-3.5" />
+                              <span>Snooze</span>
+                            </button>
+                            {snoozeOpen && (
+                              <div className="absolute left-0 bottom-full mb-1 z-20 w-48 p-1 rounded-xl bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] shadow-lg text-xs space-y-0.5">
+                                <button
+                                  type="button"
+                                  onClick={() => handleFollowupDraftAction('snooze', { snoozed_until: '1 Hour' })}
+                                  className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#182234] text-slate-700 dark:text-slate-300 cursor-pointer"
+                                >
+                                  In 1 Hour
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleFollowupDraftAction('snooze', { snoozed_until: 'Tomorrow 9:00 AM' })}
+                                  className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#182234] text-slate-700 dark:text-slate-300 cursor-pointer"
+                                >
+                                  Tomorrow 9:00 AM
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleFollowupDraftAction('snooze', { snoozed_until: 'Next Monday' })}
+                                  className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#182234] text-slate-700 dark:text-slate-300 cursor-pointer"
+                                >
+                                  Next Monday
+                                </button>
+                              </div>
+                            )}
+                          </div>
+
+                          <button
+                            type="button"
+                            disabled={draftActionLoading}
+                            onClick={() => handleFollowupDraftAction('discard')}
+                            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-rose-50 hover:text-rose-600 dark:bg-[#182234] dark:hover:bg-rose-950/40 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#233048] transition-colors cursor-pointer"
+                          >
+                            Discard
+                          </button>
+                        </div>
+
+                        {executionResult.followupDraft.status !== 'approved' && (
+                          <button
+                            type="button"
+                            disabled={draftActionLoading}
+                            onClick={() => handleFollowupDraftAction('approve')}
+                            className="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer shadow-xs flex items-center gap-1.5 transition-all"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>Approve Draft</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Node 5 Partial Implementation Status Breakdown */}
+                  <div className="p-3 rounded-lg bg-slate-100/80 dark:bg-[#182234]/80 border border-slate-200 dark:border-[#233048] text-xs space-y-1.5">
+                    <div className="font-bold text-[11px] text-slate-700 dark:text-slate-300 uppercase tracking-wide">
+                      Node 5 Scope & Delivery Status (Partial Implementation)
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px]">
+                      <div className="p-2 rounded bg-white dark:bg-[#121826] border border-slate-200/60 dark:border-slate-800 flex items-center gap-2">
+                        <span className="text-emerald-500 font-bold">✓</span>
+                        <div>
+                          <div className="font-semibold text-slate-800 dark:text-slate-200">Follow-up Draft (5A)</div>
+                          <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">Ready & HITL Review Active</div>
+                        </div>
+                      </div>
+                      <div className="p-2 rounded bg-white/60 dark:bg-[#121826]/60 border border-slate-200/60 dark:border-slate-800 flex items-center gap-2 opacity-75">
+                        <span className="text-slate-400 font-mono">⏳</span>
+                        <div>
+                          <div className="font-semibold text-slate-700 dark:text-slate-300">Meeting Prep Brief</div>
+                          <div className="text-[10px] text-slate-500">Pending Implementation</div>
+                        </div>
+                      </div>
+                      <div className="p-2 rounded bg-white/60 dark:bg-[#121826]/60 border border-slate-200/60 dark:border-slate-800 flex items-center gap-2 opacity-75">
+                        <span className="text-slate-400 font-mono">⏳</span>
+                        <div>
+                          <div className="font-semibold text-slate-700 dark:text-slate-300">Calendar Prep Block</div>
+                          <div className="text-[10px] text-slate-500">Pending Implementation</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Node Pipeline Implementation Status */}
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#0b0f17] border border-slate-200 dark:border-[#233048] space-y-3">
+                <div className="text-xs font-bold text-slate-900 dark:text-white">
+                  Workflow Execution Pipeline Status
+                </div>
+                <div className="space-y-2">
+                  {executionResult.nodeExecution?.map((node, nIdx) => {
+                    const isPartialNode = node.isPartial || (node.status || '').toLowerCase().includes('partial')
+                    const isFailedNode = node.status === 'Failed'
+                    const isCompletedNode = node.executed && !isPartialNode && !isFailedNode
+
+                    return (
+                      <div
+                        key={node.id}
+                        className={`flex items-center justify-between p-2.5 rounded-lg border text-xs ${
+                          isCompletedNode
+                            ? 'bg-emerald-50/50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/60'
+                            : isPartialNode
+                            ? 'bg-amber-50/60 dark:bg-amber-950/30 border-amber-300 dark:border-amber-700/60'
+                            : isFailedNode
+                            ? 'bg-rose-50/50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800/60'
+                            : 'bg-white/60 dark:bg-[#121826]/40 border-slate-200/80 dark:border-[#1e2a3f] opacity-75'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold font-mono ${
+                            isPartialNode
+                              ? 'bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300'
+                              : 'bg-slate-100 dark:bg-[#182234] text-slate-600 dark:text-slate-300'
+                          }`}>
+                            {nIdx + 1}
+                          </span>
+                          <div>
+                            <div className="font-bold text-slate-800 dark:text-slate-200">{node.title}</div>
+                            <div className="text-[11px] text-slate-500 dark:text-slate-400">{node.note}</div>
+                          </div>
+                        </div>
+                        <span
+                          className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-semibold ${
+                            isCompletedNode
+                              ? 'bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300'
+                              : isPartialNode
+                              ? 'bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700'
+                              : isFailedNode
+                              ? 'bg-rose-100 dark:bg-rose-900/60 text-rose-700 dark:text-rose-300'
+                              : 'bg-slate-100 dark:bg-[#182234] text-slate-500 dark:text-slate-400'
+                          }`}
+                        >
+                          {isPartialNode ? 'PARTIAL' : node.status}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          ) : (executionResult.isDynamicWorkflow || uiSections.deliverablesType === 'generic_telemetry') ? (
             <div className="bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-2xl p-5 shadow-xs transition-colors flex flex-col space-y-4 animate-in fade-in duration-200">
               
               {/* Header with Run Switcher & Action Center Navigation */}

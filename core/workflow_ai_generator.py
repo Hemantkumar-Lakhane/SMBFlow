@@ -405,6 +405,8 @@ def _agent_type_to_canvas_type(agent_type: str) -> str:
         return "toolNode"
     if agent_type == "code_transform":
         return "codeNode"
+    if agent_type.startswith("logic_") or agent_type in ("approval_gate", "condition_branch"):
+        return "logicNode"
     return "agentNode"
 
 

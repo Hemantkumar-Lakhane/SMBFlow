@@ -1457,7 +1457,12 @@ async def list_approval_items(
         org_uuid = uuid.UUID(organization_id) if isinstance(organization_id, str) else organization_id
         q = q.where(ApprovalItem.organization_id == org_uuid)
     if status and status != "all":
-        q = q.where(ApprovalItem.status == status)
+        if status == "pending":
+            q = q.where(ApprovalItem.status.in_(["pending", "waiting", "suggested", "pending_review", "awaiting_review", "snoozed"]))
+        elif status in ("resolved", "approved"):
+            q = q.where(ApprovalItem.status.in_(["approved", "completed", "rejected", "dismissed", "discarded"]))
+        else:
+            q = q.where(ApprovalItem.status == status)
     q = q.order_by(ApprovalItem.created_at.desc())
     result = await db.execute(q)
     return list(result.scalars().all())
@@ -1504,6 +1509,8 @@ async def approval_item_to_dict(item) -> dict:
         or raw_payload.get("to_address")
         or raw_payload.get("to")
         or raw_payload.get("recipient")
+        or raw_payload.get("contact_name")
+        or raw_payload.get("owner_display")
         or source.get("sender")
         or inner_payload.get("to_address")
         or inner_payload.get("recipient")
@@ -1512,6 +1519,8 @@ async def approval_item_to_dict(item) -> dict:
     subject = (
         proposed_action.get("subject")
         or raw_payload.get("subject")
+        or raw_payload.get("action")
+        or (f"Meeting Action: {item.reason}" if item.review_type == "meeting_action" else None)
         or source.get("subject")
         or inner_payload.get("subject")
         or "CRITICAL SLA Notice — Incident Investigation Update"
@@ -1611,6 +1620,8 @@ async def approval_item_to_dict(item) -> dict:
         "escalation_id": str(item.id),
         "instance_id": str(item.instance_id) if item.instance_id else None,
         "run_id": str(item.instance_id) if item.instance_id else None,
+        "workflow_name": raw_payload.get("workflow_name") or "email_summarizer",
+        "workflow_key": raw_payload.get("workflow_key") or raw_payload.get("workflow_name") or "email_summarizer",
         "node_id": item.node_id or "evaluate_actions",
         "review_type": item.review_type or "approval",
         "reason": item.reason or "Action requires human approval",
@@ -1716,7 +1727,26 @@ async def get_workflow_catalog_entry(db: AsyncSession, workflow_id: str) -> Opti
 
 async def get_workflow_catalog_by_key(db: AsyncSession, key: str) -> Optional[WorkflowCatalog]:
     result = await db.execute(select(WorkflowCatalog).where(WorkflowCatalog.key == key))
-    return result.scalar_one_or_none()
+    wf = result.scalar_one_or_none()
+    if wf is not None:
+        return wf
+
+    # Alias fallback: some workflows have a canonical key that differs from the
+    # short alias used in routing (e.g. frontend route key "meeting_intelligence"
+    # maps to the catalog key "meeting_intelligence_followup").
+    # Rather than requiring every caller to know the canonical form, we resolve
+    # well-known aliases here so check_org_workflow_access never hard-fails on
+    # an alias that wasn't seeded under that exact name.
+    _ALIASES: dict[str, str] = {
+        "meeting_intelligence": "meeting_intelligence_followup",
+        "product_launch":       "product_launch_sprint",
+    }
+    canonical = _ALIASES.get(key)
+    if canonical:
+        result2 = await db.execute(select(WorkflowCatalog).where(WorkflowCatalog.key == canonical))
+        return result2.scalar_one_or_none()
+
+    return None
 
 
 async def create_workflow_catalog_entry(db: AsyncSession, data: dict) -> WorkflowCatalog:
@@ -2361,6 +2391,12 @@ async def auto_assign_industry_workflows(
     )
     result = await db.execute(stmt)
     candidates = list(result.scalars().all())
+
+    # Filter out workflows that require explicit administrator assignment
+    candidates = [
+        w for w in candidates
+        if not (getattr(w, "metadata_", {}) or {}).get("requires_explicit_assignment", False)
+    ]
 
     # Apply plan entitlement filter; bypass if no entitlements seeded yet
     if plan_entitled_ids:

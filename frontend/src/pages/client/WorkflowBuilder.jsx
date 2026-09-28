@@ -18,6 +18,7 @@ import {
   Terminal, Sparkles, Building2, CreditCard, ArrowRight,
   HelpCircle, Sliders, Send, Clock, Check, ChevronDown,
   Maximize2, Minimize2, Activity, PlayCircle, Loader2, Copy,
+  Sun, Moon, BrainCircuit, PenTool, UserCheck, Calendar,
 } from 'lucide-react'
 import { useAuth }        from '../../contexts/AuthContext'
 import { useTheme }       from '../../contexts/ThemeContext'
@@ -89,8 +90,7 @@ const PALETTE_ITEMS = [
     description: 'Combines and drafts synthesized response content with LLM',
     color: '#10B981',
     light: '#064e3b',
-    icon: Sparkles,
-    provider: 'openai',
+    icon: PenTool,
   },
   {
     type: 'research_agent',
@@ -101,7 +101,6 @@ const PALETTE_ITEMS = [
     color: '#6366F1',
     light: '#312e81',
     icon: Search,
-    provider: 'claude',
   },
   {
     type: 'reasoning_agent',
@@ -111,8 +110,7 @@ const PALETTE_ITEMS = [
     description: 'Multi-step logic, analysis, and classification',
     color: '#00D4FF',
     light: '#164e63',
-    icon: Sparkles,
-    provider: 'openai',
+    icon: BrainCircuit,
   },
   {
     type: 'verification_agent',
@@ -123,7 +121,6 @@ const PALETTE_ITEMS = [
     color: '#F59E0B',
     light: '#78350f',
     icon: ShieldCheck,
-    provider: 'gemini',
   },
   {
     type: 'execution_agent',
@@ -133,7 +130,7 @@ const PALETTE_ITEMS = [
     description: 'Dispatches tool actions and external integrations',
     color: '#EF4444',
     light: '#7f1d1d',
-    icon: Terminal,
+    icon: Zap,
   },
 
   // Logic & Code
@@ -165,7 +162,7 @@ const PALETTE_ITEMS = [
     description: 'Pauses execution for human SME review & approval',
     color: '#6366F1',
     light: '#312e81',
-    icon: CheckCircle2,
+    icon: UserCheck,
   },
   {
     type: 'group_section',
@@ -257,7 +254,7 @@ const PALETTE_ITEMS = [
     description: 'Schedules calendar invites and sets reminders',
     color: '#4285F4',
     light: '#1e3a8a',
-    icon: Clock,
+    icon: Calendar,
   },
   {
     type: 'tool_webhook',
@@ -345,51 +342,364 @@ const EDGE_CONDITIONS = [
 const INDUSTRIES = ['saas', 'retail', 'healthcare', 'finance', 'logistics', 'cpg', 'real_estate', 'general']
 const CATEGORIES = ['operations', 'marketing', 'sales', 'support', 'finance', 'compliance', 'productivity']
 
-// Helper tool logo for node icons with PNG image assets
-function ProviderOrToolLogo({ type, provider, className = "w-4 h-4" }) {
-  const t = (type || '').toLowerCase()
-  const p = (provider || '').toLowerCase()
+// ── Brand Vector Logos for Stripe and HubSpot ─────────────────────────────────
+function StripeIcon({ className = "w-4 h-4" }) {
+  return (
+    <svg viewBox="0 0 32 32" className={className} fill="none" aria-label="Stripe">
+      <rect width="32" height="32" rx="8" fill="#635BFF"/>
+      <path d="M14.5 13.2c0-1.1.9-1.5 2.3-1.5 2.1 0 4.7.7 6.4 1.7V8.5c-1.9-.8-4.2-1.2-6.4-1.2-5.4 0-9 2.8-9 7.7 0 7.5 10.3 6.3 10.3 9.5 0 1.2-1.1 1.7-2.6 1.7-2.4 0-5.5-1-7.5-2.2v5c2.3 1 4.9 1.5 7.4 1.5 5.6 0 9.4-2.8 9.4-7.8 0-8.1-10.3-6.7-10.3-9.5z" fill="#FFFFFF"/>
+    </svg>
+  )
+}
 
-  if (p === 'claude' || t.includes('claude') || t.includes('anthropic')) {
-    return <img src="/assets/tools/claude.png" alt="Claude" className={`${className} object-contain`} onError={(e) => { e.target.style.display='none' }} />
+function HubSpotIcon({ className = "w-4 h-4" }) {
+  return (
+    <svg viewBox="0 0 32 32" className={className} fill="none" aria-label="HubSpot">
+      <rect width="32" height="32" rx="8" fill="#FF7A59"/>
+      <path d="M22.5 14.2v-2.8a2.1 2.1 0 0 0 1.2-1.9 2.2 2.2 0 1 0-4.4 0c0 .8.5 1.5 1.2 1.9v2.8a6.3 6.3 0 0 0-3.3 1.8l-5.6-4.3a2.3 2.3 0 1 0-1.3 1.4l5.4 4.2a6.3 6.3 0 0 0-.2 1.7c0 .7.1 1.3.3 1.9l-2.4 1.8a2.1 2.1 0 1 0 1.1 1.5l2.6-2a6.3 6.3 0 1 0 6.5-8.1zm-3.5 6.3a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0z" fill="#FFFFFF"/>
+    </svg>
+  )
+}
+
+// ── Comprehensive n8n-Style Node Visual & Icon Resolver ───────────────────────
+// Maps any node data (type, name, tools, trigger) to its authentic visual representation.
+// Eliminates the generic ChatGPT default icon across all workflow builder nodes.
+function resolveNodeVisual(data = {}) {
+  const t = (data.agentType || data.type || data.agent || '').toLowerCase()
+  const n = (data.name || data.label || '').toLowerCase()
+  const s = (data.subtitle || '').toLowerCase()
+  const tools = (data.tools || []).map(x => (typeof x === 'string' ? x : x.name || '').toLowerCase())
+  const p = (data.provider || '').toLowerCase()
+
+  // 1. Gmail / Inbound Email (Triggers, Tools, & Dedicated Email Steps like n8n)
+  const isEmail =
+    t === 'trigger_email' || t === 'tool_gmail' || t.includes('gmail') ||
+    n.includes('inbound email') || n.includes('fetch email') || n.includes('gmail') ||
+    s.includes('gmail') || s.includes('inbound email') ||
+    tools.some(x => x.includes('gmail') || x.includes('email_get_synthetic') || x === 'tool_email_dispatch' && n.includes('email'))
+
+  if (isEmail) {
+    return {
+      kind: 'image',
+      src: '/assets/tools/gmail.png',
+      alt: 'Gmail',
+      iconBg: 'bg-red-50 dark:bg-red-950/60 border-red-300 dark:border-red-500/40 text-red-500',
+      accentColor: '#EA4335',
+      defaultSubtitle: 'Gmail / Email Event',
+    }
   }
-  if (p === 'openai' || t.includes('openai') || t.includes('gpt')) {
-    return <img src="/assets/tools/openai.png" alt="OpenAI" className={`${className} object-contain`} onError={(e) => { e.target.style.display='none' }} />
+
+  // 2. Google Sheets
+  const isSheet = t.includes('sheet') || tools.some(x => x.includes('sheet')) || n.includes('sheet') || n.includes('spreadsheet')
+  if (isSheet) {
+    return {
+      kind: 'image',
+      src: '/assets/tools/sheet.png',
+      alt: 'Google Sheets',
+      iconBg: 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-500/40 text-emerald-600',
+      accentColor: '#10B981',
+      defaultSubtitle: 'Google Sheets',
+    }
   }
-  if (t.includes('gmail') || t.includes('mail') || t.includes('email')) {
-    return <img src="/assets/tools/gmail.png" alt="Gmail" className={`${className} object-contain`} onError={(e) => { e.target.style.display='none' }} />
+
+  // 3. Google Calendar
+  const isCalendar = t.includes('calendar') || tools.some(x => x.includes('calendar')) || n.includes('calendar') || n.includes('booking') || n.includes('appointment')
+  if (isCalendar) {
+    return {
+      kind: 'image',
+      src: '/assets/tools/calendar.png',
+      alt: 'Google Calendar',
+      iconBg: 'bg-blue-50 dark:bg-blue-950/60 border-blue-300 dark:border-blue-500/40 text-blue-600',
+      accentColor: '#4285F4',
+      defaultSubtitle: 'Google Calendar',
+    }
   }
-  if (t.includes('sheet')) {
-    return <img src="/assets/tools/sheet.png" alt="Sheets" className={`${className} object-contain`} onError={(e) => { e.target.style.display='none' }} />
+
+  // 4. Slack
+  const isSlack = t.includes('slack') || tools.some(x => x.includes('slack')) || n.includes('slack')
+  if (isSlack) {
+    return {
+      kind: 'image',
+      src: '/assets/tools/slack.png',
+      alt: 'Slack',
+      iconBg: 'bg-pink-50 dark:bg-pink-950/60 border-pink-300 dark:border-pink-500/40 text-pink-500',
+      accentColor: '#EC4899',
+      defaultSubtitle: 'Slack Bot & Alerts',
+    }
   }
-  if (t.includes('calendar')) {
-    return <img src="/assets/tools/calendar.png" alt="Calendar" className={`${className} object-contain`} onError={(e) => { e.target.style.display='none' }} />
+
+  // 5. Telegram
+  const isTelegram = t.includes('telegram') || tools.some(x => x.includes('telegram')) || n.includes('telegram')
+  if (isTelegram) {
+    return {
+      kind: 'image',
+      src: '/assets/tools/telegram.png',
+      alt: 'Telegram',
+      iconBg: 'bg-sky-50 dark:bg-sky-950/60 border-sky-300 dark:border-sky-500/40 text-sky-500',
+      accentColor: '#229ED9',
+      defaultSubtitle: 'Telegram Bot',
+    }
   }
-  if (t.includes('slack')) {
-    return <img src="/assets/tools/slack.png" alt="Slack" className={`${className} object-contain`} onError={(e) => { e.target.style.display='none' }} />
+
+  // 6. PostgreSQL / Relational Database
+  const isDb = t.includes('postgres') || t.includes('database') || tools.some(x => x.includes('postgres') || x.includes('db_mutation')) || n.includes('postgres') || n.includes('database') || n.includes('sql')
+  if (isDb) {
+    return {
+      kind: 'image',
+      src: '/assets/tools/postgres.png',
+      alt: 'PostgreSQL',
+      iconBg: 'bg-blue-50 dark:bg-blue-950/60 border-blue-300 dark:border-blue-500/40 text-blue-600',
+      accentColor: '#336791',
+      defaultSubtitle: 'PostgreSQL DB',
+    }
   }
-  if (t.includes('telegram')) {
-    return <img src="/assets/tools/telegram.png" alt="Telegram" className={`${className} object-contain`} onError={(e) => { e.target.style.display='none' }} />
+
+  // 7. Webhook / REST Endpoint
+  const isWebhook = t.includes('webhook') || tools.some(x => x.includes('webhook')) || n.includes('webhook') || n.includes('rest endpoint') || n.includes('http post')
+  if (isWebhook) {
+    return {
+      kind: 'image',
+      src: '/assets/tools/webhook.png',
+      alt: 'Webhook',
+      iconBg: 'bg-teal-50 dark:bg-teal-950/60 border-teal-300 dark:border-teal-500/40 text-teal-600',
+      accentColor: '#14B8A6',
+      defaultSubtitle: 'REST Webhook',
+    }
   }
-  if (t.includes('postgres') || t.includes('db') || t.includes('database')) {
-    return <img src="/assets/tools/postgres.png" alt="PostgreSQL" className={`${className} object-contain`} onError={(e) => { e.target.style.display='none' }} />
+
+  // 8. Stripe Billing
+  const isStripe = t.includes('stripe') || tools.some(x => x.includes('stripe')) || n.includes('stripe') || n.includes('billing') || n.includes('invoice')
+  if (isStripe) {
+    return {
+      kind: 'stripe',
+      iconBg: 'bg-indigo-50 dark:bg-indigo-950/60 border-indigo-300 dark:border-indigo-500/40 text-indigo-600',
+      accentColor: '#635BFF',
+      defaultSubtitle: 'Stripe Billing',
+    }
   }
-  if (t.includes('webhook') || t.includes('rest')) {
-    return <img src="/assets/tools/webhook.png" alt="Webhook" className={`${className} object-contain`} onError={(e) => { e.target.style.display='none' }} />
+
+  // 9. HubSpot CRM
+  const isHubSpot = t.includes('hubspot') || tools.some(x => x.includes('hubspot')) || n.includes('hubspot') || n.includes('crm') || n.includes('deal sync')
+  if (isHubSpot) {
+    return {
+      kind: 'hubspot',
+      iconBg: 'bg-orange-50 dark:bg-orange-950/60 border-orange-300 dark:border-orange-500/40 text-orange-600',
+      accentColor: '#FF7A59',
+      defaultSubtitle: 'HubSpot CRM',
+    }
   }
-  if (t.includes('stripe')) {
-    return <img src="/assets/tools/conversasionai.png" alt="Stripe" className={`${className} object-contain`} onError={(e) => { e.target.style.display='none' }} />
+
+  // 10. Social Media (Instagram / YouTube)
+  if (t.includes('instagram') || n.includes('instagram')) {
+    return {
+      kind: 'image',
+      src: '/assets/tools/instagram.png',
+      alt: 'Instagram',
+      iconBg: 'bg-pink-50 dark:bg-pink-950/60 border-pink-300 dark:border-pink-500/40',
+      accentColor: '#E1306C',
+      defaultSubtitle: 'Instagram',
+    }
   }
-  if (t.includes('hubspot')) {
-    return <img src="/assets/tools/aichatbot.png" alt="HubSpot" className={`${className} object-contain`} onError={(e) => { e.target.style.display='none' }} />
+  if (t.includes('youtube') || n.includes('youtube')) {
+    return {
+      kind: 'image',
+      src: '/assets/tools/youtube.png',
+      alt: 'YouTube',
+      iconBg: 'bg-red-50 dark:bg-red-950/60 border-red-300 dark:border-red-500/40',
+      accentColor: '#FF0000',
+      defaultSubtitle: 'YouTube',
+    }
   }
-  if (t === 'code_transform' || t.includes('code')) {
-    return <span className="font-mono font-bold text-amber-400 text-sm">{`{ }`}</span>
+
+  // 11. Schedule / Cron Trigger
+  if (t === 'trigger_schedule' || t.includes('schedule') || t.includes('cron') || n.includes('morning') || n.includes('schedule') || n.includes('cron')) {
+    return {
+      kind: 'lucide',
+      Icon: Clock,
+      iconBg: 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-500/40 text-emerald-600 dark:text-emerald-400',
+      accentColor: '#10B981',
+      defaultSubtitle: 'Cron Schedule',
+    }
   }
-  if (t.includes('schedule') || t.includes('cron')) {
-    return <Clock className={className} />
+
+  // 12. Manual Trigger
+  if (t === 'trigger_manual' || t.includes('manual') || n.includes('manual run') || n.includes('manual trigger')) {
+    return {
+      kind: 'lucide',
+      Icon: Play,
+      iconBg: 'bg-blue-50 dark:bg-blue-950/60 border-blue-300 dark:border-blue-500/40 text-blue-600 dark:text-blue-400',
+      accentColor: '#3B82F6',
+      defaultSubtitle: 'Manual Run',
+    }
   }
-  return <Sparkles className={className} />
+
+  // 13. Code / Transform Node
+  if (t === 'code_transform' || t.includes('code') || n.includes('code') || n.includes('transform') || n.includes('combine')) {
+    return {
+      kind: 'code',
+      iconBg: 'bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-500/40 text-amber-500',
+      accentColor: '#F59E0B',
+      defaultSubtitle: 'Code Transform',
+    }
+  }
+
+  // 14. Condition / Logic Filter Node
+  if (t.includes('condition') || t.includes('filter') || t.includes('branch') || n.includes('condition') || n.includes('filter') || n.includes('branch')) {
+    return {
+      kind: 'lucide',
+      Icon: GitBranch,
+      iconBg: 'bg-amber-50 dark:bg-amber-950/60 border-amber-300 dark:border-amber-500/40 text-amber-500',
+      accentColor: '#F59E0B',
+      defaultSubtitle: 'Boolean Condition',
+    }
+  }
+
+  // 15. HITL Approval Gate Node
+  if (t.includes('approval') || t.includes('gate') || n.includes('approval') || n.includes('gate') || n.includes('review') || n.includes('sme')) {
+    return {
+      kind: 'lucide',
+      Icon: UserCheck,
+      iconBg: 'bg-indigo-50 dark:bg-indigo-950/60 border-indigo-300 dark:border-indigo-500/40 text-indigo-600 dark:text-indigo-400',
+      accentColor: '#6366F1',
+      defaultSubtitle: 'HITL Review Gate',
+    }
+  }
+
+  // 16. Multi-Agent Pipeline Nodes (Cognitive Roles)
+  // RESEARCH AGENT / DATA GATHERER / INTEL
+  if (t.includes('research') || t.includes('discovery') || n.includes('gather') || n.includes('research') || n.includes('intel')) {
+    return {
+      kind: 'lucide',
+      Icon: Search,
+      iconBg: 'bg-indigo-50 dark:bg-indigo-950/60 border-indigo-300 dark:border-indigo-500/40 text-indigo-600 dark:text-indigo-400',
+      accentColor: '#6366F1',
+      defaultSubtitle: 'Research & Intel',
+    }
+  }
+
+  // REASONING AGENT / DECISION SYNTHESIS / LOGIC & RISK
+  if (t.includes('reason') || n.includes('reason') || n.includes('logic') || n.includes('assessor') || n.includes('classify')) {
+    return {
+      kind: 'lucide',
+      Icon: BrainCircuit,
+      iconBg: 'bg-cyan-50 dark:bg-cyan-950/60 border-cyan-300 dark:border-cyan-500/40 text-cyan-600 dark:text-cyan-400',
+      accentColor: '#00D4FF',
+      defaultSubtitle: 'Decision Synthesis',
+    }
+  }
+
+  // DRAFTING AGENT / CONTENT GENERATION / SUMMARIZER
+  if (t.includes('draft') || t.includes('summar') || t.includes('humaniz') || n.includes('draft') || n.includes('compose') || n.includes('summar') || n.includes('report') || n.includes('response')) {
+    return {
+      kind: 'lucide',
+      Icon: PenTool,
+      iconBg: 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-500/40 text-emerald-600 dark:text-emerald-400',
+      accentColor: '#10B981',
+      defaultSubtitle: 'Response Drafter',
+    }
+  }
+
+  // VERIFICATION AGENT / SAFETY GUARDRAIL / POLICY
+  if (t.includes('verif') || n.includes('verif') || n.includes('guard') || n.includes('safety') || n.includes('policy') || n.includes('compliance')) {
+    return {
+      kind: 'lucide',
+      Icon: ShieldCheck,
+      iconBg: 'bg-amber-50 dark:bg-amber-950/60 border-amber-300 dark:border-amber-500/40 text-amber-600 dark:text-amber-400',
+      accentColor: '#F59E0B',
+      defaultSubtitle: 'Quality & Guardrail',
+    }
+  }
+
+  // EXECUTION AGENT / DISPATCH EXECUTOR / API CALLS
+  if (t.includes('exec') || n.includes('exec') || n.includes('dispatch') || n.includes('action')) {
+    return {
+      kind: 'lucide',
+      Icon: Zap,
+      iconBg: 'bg-rose-50 dark:bg-rose-950/60 border-rose-300 dark:border-rose-500/40 text-rose-600 dark:text-rose-400',
+      accentColor: '#EF4444',
+      defaultSubtitle: 'Action Dispatcher',
+    }
+  }
+
+  // MEMORY AGENT / CONTEXT STORE
+  if (t.includes('memory') || n.includes('memory') || n.includes('persist')) {
+    return {
+      kind: 'lucide',
+      Icon: Database,
+      iconBg: 'bg-purple-50 dark:bg-purple-950/60 border-purple-300 dark:border-purple-500/40 text-purple-600 dark:text-purple-400',
+      accentColor: '#8B5CF6',
+      defaultSubtitle: 'Memory Store',
+    }
+  }
+
+  // Explicit model override ONLY if requested and matches known provider
+  if (p === 'claude' || p === 'anthropic') {
+    return {
+      kind: 'image',
+      src: '/assets/tools/claude.png',
+      alt: 'Claude',
+      iconBg: 'bg-amber-50 dark:bg-amber-950/60 border-amber-300 dark:border-amber-500/40 text-amber-600',
+      accentColor: '#D97706',
+      defaultSubtitle: 'Anthropic Claude',
+    }
+  }
+
+  if (p === 'openai' && (t.includes('openai') || t.includes('gpt'))) {
+    return {
+      kind: 'image',
+      src: '/assets/tools/openai.png',
+      alt: 'OpenAI',
+      iconBg: 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700',
+      accentColor: '#10A37F',
+      defaultSubtitle: 'OpenAI GPT',
+    }
+  }
+
+  // Default clean agent fallback (Sparkles) — NEVER default to OpenAI / ChatGPT icon
+  return {
+    kind: 'lucide',
+    Icon: Sparkles,
+    iconBg: 'bg-indigo-50 dark:bg-indigo-950/60 border-indigo-300 dark:border-indigo-500/40 text-indigo-600 dark:text-indigo-400',
+    accentColor: '#6366F1',
+    defaultSubtitle: 'AI Agent',
+  }
+}
+
+// ── NodeDisplayIcon Component ──────────────────────────────────────────────────
+// Renders the resolved icon (image, vector SVG, code block, or Lucide icon)
+function NodeDisplayIcon({ data, type, provider, className = "w-4 h-4", fallback = null }) {
+  const nodeData = data || { agentType: type, provider }
+  const visual = resolveNodeVisual(nodeData)
+
+  if (visual.kind === 'image') {
+    return (
+      <img
+        src={visual.src}
+        alt={visual.alt}
+        className={`${className} object-contain`}
+        onError={(e) => { e.target.style.display = 'none' }}
+      />
+    )
+  }
+  if (visual.kind === 'stripe') {
+    return <StripeIcon className={className} />
+  }
+  if (visual.kind === 'hubspot') {
+    return <HubSpotIcon className={className} />
+  }
+  if (visual.kind === 'code') {
+    return <span className="font-mono font-bold text-amber-500 text-xs leading-none">{`{ }`}</span>
+  }
+  if (fallback && visual.kind === 'lucide' && visual.Icon === Sparkles) {
+    return fallback
+  }
+  const IconComp = visual.Icon || Sparkles
+  return <IconComp className={className} />
+}
+
+// Backward-compatible alias
+function ProviderOrToolLogo(props) {
+  return <NodeDisplayIcon {...props} />
 }
 
 // ── N8N TRIGGER NODE ──────────────────────────────────────────────────────────
@@ -399,64 +709,65 @@ function N8nTriggerNode({ data, selected }) {
   const isError     = data.status === 'error'     || data.executionStatus === 'error'
   const isDisabled  = data.status === 'disabled'  || data.executionStatus === 'disabled'
 
+  const visual = resolveNodeVisual(data)
+
   return (
     <div
       className={cn(
-        'group relative bg-[#131b2a] text-white rounded-2xl transition-all duration-200 min-w-[170px] border shadow-lg overflow-visible select-none',
-        isDisabled  ? 'border-slate-700/50 opacity-45 grayscale' :
+        'group relative rounded-2xl transition-all duration-200 min-w-[175px] border shadow-lg overflow-visible select-none',
+        'bg-white dark:bg-[#131b2a] text-slate-800 dark:text-white',
+        isDisabled  ? 'border-slate-300 dark:border-slate-700/50 opacity-45 grayscale' :
         isError     ? 'border-red-500 ring-2 ring-red-500/40' :
         isRunning   ? 'border-amber-400 ring-2 ring-amber-400/50 shadow-[0_0_15px_rgba(245,158,11,0.4)]' :
         isCompleted ? 'border-emerald-500/80 shadow-[0_0_15px_rgba(16,185,129,0.3)]' :
-        selected    ? 'border-emerald-400 ring-2 ring-emerald-400/40' : 'border-[#26354d] hover:border-emerald-500/60'
+        selected    ? 'border-emerald-500 ring-2 ring-emerald-400/40' :
+                      'border-slate-200 dark:border-[#26354d] hover:border-emerald-500/60 shadow-sm'
       )}
     >
       {/* Left Lightning Trigger Badge */}
-      <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-[#0d1422] border border-amber-500/60 flex items-center justify-center text-amber-400 shadow-sm z-10">
+      <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white dark:bg-[#0d1422] border border-amber-400 flex items-center justify-center text-amber-500 shadow-sm z-10">
         <Zap className="w-3.5 h-3.5 fill-amber-400" />
       </div>
 
       <div className="p-3 pl-4 pr-3.5 flex items-center gap-3">
-        <div className="w-9 h-9 rounded-xl bg-emerald-950/60 border border-emerald-500/40 text-emerald-400 flex items-center justify-center shrink-0">
-          <Clock className="w-4 h-4" />
+        <div className={cn("w-9 h-9 rounded-xl border flex items-center justify-center shrink-0 p-1.5 shadow-inner", visual.iconBg)}>
+          <NodeDisplayIcon data={data} className="w-5 h-5 object-contain" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-bold text-white tracking-tight truncate">
-            {data.name || 'Every Morning'}
+          <p className="text-xs font-bold text-slate-800 dark:text-white tracking-tight truncate">
+            {data.name || 'Trigger Event'}
           </p>
-          <p className="text-[10px] text-slate-400 font-medium truncate">
-            {data.subtitle || 'Cron Trigger'}
+          <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate">
+            {data.subtitle || visual.defaultSubtitle}
           </p>
         </div>
 
-        {/* Success checkmark badge */}
         {isCompleted && (
-          <div className="w-4 h-4 rounded-full bg-emerald-500/20 border border-emerald-500 text-emerald-400 flex items-center justify-center shrink-0">
+          <div className="w-4 h-4 rounded-full bg-emerald-100 dark:bg-emerald-500/20 border border-emerald-500 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
             <Check className="w-2.5 h-2.5 stroke-[3]" />
           </div>
         )}
       </div>
 
-      {/* Config-needed indicator — only shown when idle/unexecuted */}
       {!isRunning && !isCompleted && !isError && !isDisabled && (() => {
         const { ready, missing } = getNodeReadiness(data)
         if (ready) return null
         return (
-          <div className="px-3 py-1 border-t border-amber-500/25 bg-amber-500/8 flex items-center gap-1.5 rounded-b-2xl">
-            <AlertTriangle className="w-2.5 h-2.5 text-amber-400 shrink-0" />
-            <span className="text-[9px] font-semibold text-amber-400 truncate">
+          <div className="px-3 py-1 border-t border-amber-200 dark:border-amber-500/25 bg-amber-50 dark:bg-amber-500/8 flex items-center gap-1.5 rounded-b-2xl">
+            <AlertTriangle className="w-2.5 h-2.5 text-amber-500 shrink-0" />
+            <span className="text-[9px] font-semibold text-amber-600 dark:text-amber-400 truncate">
               Config needed: {missing.join(', ')}
             </span>
           </div>
         )
       })()}
 
-      {/* Output Handle */}
       <Handle
         type="source"
         position={Position.Right}
-        className="!w-4 !h-4 !-right-2 !bg-[#131b2a] !border-2 !border-emerald-500 transition-all hover:!w-4.5 hover:!h-4.5 cursor-crosshair shadow-xs flex items-center justify-center"
+        className="!w-4 !h-4 !-right-2 !bg-white dark:!bg-[#131b2a] !border-2 !border-emerald-500 transition-all hover:!w-4.5 hover:!h-4.5 cursor-crosshair shadow-xs flex items-center justify-center"
       >
-        <span className="text-[9px] font-bold text-emerald-400 pointer-events-none">+</span>
+        <span className="text-[9px] font-bold text-emerald-500 pointer-events-none">+</span>
       </Handle>
     </div>
   )
@@ -469,46 +780,48 @@ function N8nAgentNode({ data, selected }) {
   const isError     = data.status === 'error'     || data.executionStatus === 'error'
   const isDisabled  = data.status === 'disabled'  || data.executionStatus === 'disabled'
 
+  const visual = resolveNodeVisual(data)
+
   return (
     <div
       className={cn(
-        'group relative bg-[#131b2a] text-white rounded-2xl transition-all duration-200 min-w-[210px] border shadow-xl overflow-visible select-none',
-        isDisabled  ? 'border-slate-700/50 opacity-45 grayscale' :
+        'group relative rounded-2xl transition-all duration-200 min-w-[210px] border shadow-xl overflow-visible select-none',
+        'bg-white dark:bg-[#131b2a] text-slate-800 dark:text-white',
+        isDisabled  ? 'border-slate-300 dark:border-slate-700/50 opacity-45 grayscale' :
         isError     ? 'border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.5)]' :
-        isRunning   ? 'border-blue-400 ring-2 ring-blue-400/50 shadow-[0_0_20px_rgba(59,130,246,0.4)]' :
+        isRunning   ? 'border-blue-500 ring-2 ring-blue-400/50 shadow-[0_0_20px_rgba(59,130,246,0.4)]' :
         isCompleted ? 'border-emerald-500/80 shadow-[0_0_15px_rgba(16,185,129,0.3)]' :
-        selected    ? 'border-blue-500 ring-2 ring-blue-500/40' : 'border-[#26354d] hover:border-slate-500'
+        selected    ? 'border-blue-500 ring-2 ring-blue-500/40' :
+                      'border-slate-200 dark:border-[#26354d] hover:border-slate-400 dark:hover:border-slate-500 shadow-sm'
       )}
     >
-      {/* Target Handle (Left) */}
       <Handle
         type="target"
         position={Position.Left}
-        className="!w-3.5 !h-3.5 !-left-2 !bg-[#131b2a] !border-2 !border-[#38bdf8] transition-all hover:!w-4 hover:!h-4 cursor-crosshair shadow-xs"
+        className="!w-3.5 !h-3.5 !-left-2 !bg-white dark:!bg-[#131b2a] !border-2 !border-sky-400 transition-all hover:!w-4 hover:!h-4 cursor-crosshair shadow-xs"
       />
 
       <div className="p-3.5 pb-3">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-[#1b2538] border border-slate-700/60 flex items-center justify-center shrink-0 p-1 shadow-inner">
-            <ProviderOrToolLogo type={data.agentType} provider={data.provider || 'openai'} className="w-5 h-5 object-contain" />
+          <div className={cn("w-8 h-8 rounded-xl border flex items-center justify-center shrink-0 p-1 shadow-inner", visual.iconBg)}>
+            <NodeDisplayIcon data={data} className="w-5 h-5 object-contain" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-bold text-white tracking-tight truncate">
-              {data.name || 'Summarize Emails'}
+            <p className="text-xs font-bold text-slate-800 dark:text-white tracking-tight truncate">
+              {data.name || 'AI Agent'}
             </p>
-            <p className="text-[10px] text-slate-400 font-medium truncate">
-              {data.subtitle || 'Response Text'}
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate">
+              {data.subtitle || visual.defaultSubtitle}
             </p>
           </div>
 
-          {/* Execution status badges */}
           {isCompleted && (
-            <div className="w-4 h-4 rounded-full bg-emerald-500/20 border border-emerald-500 text-emerald-400 flex items-center justify-center shrink-0">
+            <div className="w-4 h-4 rounded-full bg-emerald-100 dark:bg-emerald-500/20 border border-emerald-500 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
               <Check className="w-2.5 h-2.5 stroke-[3]" />
             </div>
           )}
           {isRunning && (
-            <Loader2 className="w-4 h-4 text-blue-400 animate-spin shrink-0" />
+            <Loader2 className="w-4 h-4 text-blue-500 animate-spin shrink-0" />
           )}
           {isError && (
             <div className="w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center text-[10px] font-bold shrink-0">
@@ -517,12 +830,11 @@ function N8nAgentNode({ data, selected }) {
           )}
         </div>
 
-        {/* Connected Tools / Badges with real PNGs */}
         {data.tools?.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-2.5 pt-2 border-t border-slate-800/80">
+          <div className="flex flex-wrap gap-1 mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80">
             {data.tools.map(t => (
-              <span key={t} className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[9px] rounded bg-[#1e2a3f] text-slate-300 font-mono">
-                <ProviderOrToolLogo type={t} className="w-3 h-3" />
+              <span key={t} className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[9px] rounded bg-slate-100 dark:bg-[#1e2a3f] text-slate-600 dark:text-slate-300 font-mono border border-slate-200 dark:border-transparent">
+                <NodeDisplayIcon type={t} className="w-3 h-3" />
                 <span>{t}</span>
               </span>
             ))}
@@ -530,41 +842,37 @@ function N8nAgentNode({ data, selected }) {
         )}
       </div>
 
-      {/* Bottom Tools Connector Port */}
-      <div className="border-t border-slate-800/60 py-1 px-3 flex items-center justify-between text-[10px] text-slate-400 bg-[#0d1422]/60 rounded-b-2xl">
-        <span className="text-[9px] font-mono font-medium text-slate-400">Tools / Integrations</span>
-        <span className="text-[10px] text-blue-400 hover:text-blue-300 font-bold cursor-pointer">+</span>
+      <div className="border-t border-slate-100 dark:border-slate-800/60 py-1 px-3 flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-[#0d1422]/60 rounded-b-2xl">
+        <span className="text-[9px] font-mono font-medium">Tools / Integrations</span>
+        <span className="text-[10px] text-blue-500 hover:text-blue-400 font-bold cursor-pointer">+</span>
       </div>
 
-      {/* Config-needed indicator — only shown when idle/unexecuted */}
       {!isRunning && !isCompleted && !isError && !isDisabled && (() => {
         const { ready, missing } = getNodeReadiness(data)
         if (ready) return null
         return (
-          <div className="px-3 py-1 border-t border-amber-500/25 bg-amber-500/8 flex items-center gap-1.5">
-            <AlertTriangle className="w-2.5 h-2.5 text-amber-400 shrink-0" />
-            <span className="text-[9px] font-semibold text-amber-400 truncate">
+          <div className="px-3 py-1 border-t border-amber-200 dark:border-amber-500/25 bg-amber-50 dark:bg-amber-500/8 flex items-center gap-1.5">
+            <AlertTriangle className="w-2.5 h-2.5 text-amber-500 shrink-0" />
+            <span className="text-[9px] font-semibold text-amber-600 dark:text-amber-400 truncate">
               Config needed: {missing.join(', ')}
             </span>
           </div>
         )
       })()}
 
-      {/* Bottom Tool Handle */}
       <Handle
         type="target"
         id="tool-input"
         position={Position.Bottom}
-        className="!w-3 !h-3 !-bottom-1.5 !bg-[#131b2a] !border-2 !border-slate-500 cursor-pointer"
+        className="!w-3 !h-3 !-bottom-1.5 !bg-white dark:!bg-[#131b2a] !border-2 !border-slate-400 cursor-pointer"
       />
 
-      {/* Source Handle (Right) */}
       <Handle
         type="source"
         position={Position.Right}
-        className="!w-4 !h-4 !-right-2 !bg-[#131b2a] !border-2 !border-[#38bdf8] transition-all hover:!w-4.5 hover:!h-4.5 cursor-crosshair shadow-xs flex items-center justify-center"
+        className="!w-4 !h-4 !-right-2 !bg-white dark:!bg-[#131b2a] !border-2 !border-sky-400 transition-all hover:!w-4.5 hover:!h-4.5 cursor-crosshair shadow-xs flex items-center justify-center"
       >
-        <span className="text-[9px] font-bold text-[#38bdf8] pointer-events-none">+</span>
+        <span className="text-[9px] font-bold text-sky-500 pointer-events-none">+</span>
       </Handle>
     </div>
   )
@@ -577,57 +885,60 @@ function N8nToolNode({ data, selected }) {
   const isError     = data.status === 'error'     || data.executionStatus === 'error'
   const isDisabled  = data.status === 'disabled'  || data.executionStatus === 'disabled'
 
+  const visual = resolveNodeVisual(data)
+
   return (
     <div
       className={cn(
-        'group relative bg-[#131b2a] text-white rounded-2xl transition-all duration-200 min-w-[190px] border shadow-xl overflow-visible select-none',
-        isDisabled  ? 'border-slate-700/50 opacity-45 grayscale' :
+        'group relative rounded-2xl transition-all duration-200 min-w-[190px] border shadow-xl overflow-visible select-none',
+        'bg-white dark:bg-[#131b2a] text-slate-800 dark:text-white',
+        isDisabled  ? 'border-slate-300 dark:border-slate-700/50 opacity-45 grayscale' :
         isError     ? 'border-red-500 ring-2 ring-red-500/40' :
-        isRunning   ? 'border-purple-400 ring-2 ring-purple-400/50 shadow-[0_0_15px_rgba(168,85,247,0.4)]' :
+        isRunning   ? 'border-purple-500 ring-2 ring-purple-400/50 shadow-[0_0_15px_rgba(168,85,247,0.4)]' :
         isCompleted ? 'border-emerald-500/80 shadow-[0_0_15px_rgba(16,185,129,0.3)]' :
-        selected    ? 'border-purple-400 ring-2 ring-purple-400/40' : 'border-[#26354d] hover:border-purple-500/60'
+        selected    ? 'border-purple-500 ring-2 ring-purple-400/40' :
+                      'border-slate-200 dark:border-[#26354d] hover:border-purple-400/60 shadow-sm'
       )}
     >
       <Handle
         type="target"
         position={Position.Left}
-        className="!w-3.5 !h-3.5 !-left-2 !bg-[#131b2a] !border-2 !border-purple-400 cursor-crosshair"
+        className="!w-3.5 !h-3.5 !-left-2 !bg-white dark:!bg-[#131b2a] !border-2 !border-purple-400 cursor-crosshair"
       />
       <Handle
         type="target"
         id="tool-link-top"
         position={Position.Top}
-        className="!w-3 !h-3 !-top-1.5 !bg-[#131b2a] !border-2 !border-purple-400 cursor-crosshair"
+        className="!w-3 !h-3 !-top-1.5 !bg-white dark:!bg-[#131b2a] !border-2 !border-purple-400 cursor-crosshair"
       />
 
       <div className="p-3 pl-3.5 pr-3 flex items-center gap-3">
-        <div className="w-9 h-9 rounded-xl bg-[#1b2538] border border-purple-500/30 flex items-center justify-center shrink-0 p-1.5 shadow-inner">
-          <ProviderOrToolLogo type={data.agentType} provider={data.provider} className="w-5 h-5 object-contain" />
+        <div className={cn("w-9 h-9 rounded-xl border flex items-center justify-center shrink-0 p-1.5 shadow-inner", visual.iconBg)}>
+          <NodeDisplayIcon data={data} className="w-5 h-5 object-contain" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-bold text-white tracking-tight truncate">
+          <p className="text-xs font-bold text-slate-800 dark:text-white tracking-tight truncate">
             {data.name || 'Tool Action'}
           </p>
-          <p className="text-[10px] text-purple-400 font-medium truncate">
-            {data.subtitle || 'Connected Tool'}
+          <p className="text-[10px] text-purple-600 dark:text-purple-400 font-medium truncate">
+            {data.subtitle || visual.defaultSubtitle}
           </p>
         </div>
 
         {isCompleted && (
-          <div className="w-4 h-4 rounded-full bg-emerald-500/20 border border-emerald-500 text-emerald-400 flex items-center justify-center shrink-0">
+          <div className="w-4 h-4 rounded-full bg-emerald-100 dark:bg-emerald-500/20 border border-emerald-500 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
             <Check className="w-2.5 h-2.5 stroke-[3]" />
           </div>
         )}
       </div>
 
-      {/* Config-needed indicator for tool nodes */}
       {!isRunning && !isCompleted && !isError && !isDisabled && (() => {
         const { ready, missing } = getNodeReadiness(data)
         if (ready) return null
         return (
-          <div className="px-3 py-1 border-t border-amber-500/25 bg-amber-500/8 flex items-center gap-1.5">
-            <AlertTriangle className="w-2.5 h-2.5 text-amber-400 shrink-0" />
-            <span className="text-[9px] font-semibold text-amber-400 truncate">
+          <div className="px-3 py-1 border-t border-amber-200 dark:border-amber-500/25 bg-amber-50 dark:bg-amber-500/8 flex items-center gap-1.5">
+            <AlertTriangle className="w-2.5 h-2.5 text-amber-500 shrink-0" />
+            <span className="text-[9px] font-semibold text-amber-600 dark:text-amber-400 truncate">
               Config needed: {missing.join(', ')}
             </span>
           </div>
@@ -637,16 +948,86 @@ function N8nToolNode({ data, selected }) {
       <Handle
         type="source"
         position={Position.Right}
-        className="!w-4 !h-4 !-right-2 !bg-[#131b2a] !border-2 !border-purple-400 transition-all hover:!w-4.5 cursor-crosshair flex items-center justify-center"
+        className="!w-4 !h-4 !-right-2 !bg-white dark:!bg-[#131b2a] !border-2 !border-purple-400 transition-all hover:!w-4.5 cursor-crosshair flex items-center justify-center"
       >
-        <span className="text-[9px] font-bold text-purple-400 pointer-events-none">+</span>
+        <span className="text-[9px] font-bold text-purple-500 pointer-events-none">+</span>
       </Handle>
       <Handle
         type="source"
         id="tool-link-bottom"
         position={Position.Bottom}
-        className="!w-3 !h-3 !-bottom-1.5 !bg-[#131b2a] !border-2 !border-purple-400 cursor-crosshair"
+        className="!w-3 !h-3 !-bottom-1.5 !bg-white dark:!bg-[#131b2a] !border-2 !border-purple-400 cursor-crosshair"
       />
+    </div>
+  )
+}
+
+// ── N8N LOGIC NODE (Condition / Filter & Approval Gate) ────────────────────────
+function N8nLogicNode({ data, selected }) {
+  const isCompleted = data.status === 'completed' || data.executionStatus === 'completed'
+  const isRunning   = data.status === 'running'   || data.executionStatus === 'running'
+  const isDisabled  = data.status === 'disabled'  || data.executionStatus === 'disabled'
+
+  const visual = resolveNodeVisual(data)
+
+  return (
+    <div
+      className={cn(
+        'group relative rounded-2xl transition-all duration-200 min-w-[185px] border shadow-xl overflow-visible select-none',
+        'bg-white dark:bg-[#131b2a] text-slate-800 dark:text-white',
+        isDisabled  ? 'border-slate-300 dark:border-slate-700/50 opacity-45 grayscale' :
+        isRunning   ? 'border-amber-400 ring-2 ring-amber-400/50' :
+        isCompleted ? 'border-emerald-500/80 shadow-[0_0_15px_rgba(16,185,129,0.3)]' :
+        selected    ? 'border-indigo-400 ring-2 ring-indigo-400/40' :
+                      'border-slate-200 dark:border-[#26354d] hover:border-slate-400 shadow-sm'
+      )}
+    >
+      <Handle
+        type="target"
+        position={Position.Left}
+        className="!w-3.5 !h-3.5 !-left-2 !bg-white dark:!bg-[#131b2a] !border-2 !border-indigo-400 cursor-crosshair"
+      />
+
+      <div className="p-3 pl-3.5 pr-3 flex items-center gap-2.5">
+        <div className={cn("w-8 h-8 rounded-xl border flex items-center justify-center shrink-0 p-1 shadow-inner", visual.iconBg)}>
+          <NodeDisplayIcon data={data} className="w-4 h-4 object-contain" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-bold text-slate-800 dark:text-white tracking-tight truncate">
+            {data.name || 'Logic Step'}
+          </p>
+          <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate">
+            {data.subtitle || visual.defaultSubtitle}
+          </p>
+        </div>
+
+        {isCompleted && (
+          <div className="w-4 h-4 rounded-full bg-emerald-100 dark:bg-emerald-500/20 border border-emerald-500 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+            <Check className="w-2.5 h-2.5 stroke-[3]" />
+          </div>
+        )}
+      </div>
+
+      {!isRunning && !isCompleted && !isDisabled && (() => {
+        const { ready, missing } = getNodeReadiness(data)
+        if (ready) return null
+        return (
+          <div className="px-3 py-1 border-t border-amber-200 dark:border-amber-500/25 bg-amber-50 dark:bg-amber-500/8 flex items-center gap-1.5 rounded-b-2xl">
+            <AlertTriangle className="w-2.5 h-2.5 text-amber-500 shrink-0" />
+            <span className="text-[9px] font-semibold text-amber-600 dark:text-amber-400 truncate">
+              Config needed: {missing.join(', ')}
+            </span>
+          </div>
+        )
+      })()}
+
+      <Handle
+        type="source"
+        position={Position.Right}
+        className="!w-4 !h-4 !-right-2 !bg-white dark:!bg-[#131b2a] !border-2 !border-indigo-400 transition-all hover:!w-4.5 cursor-crosshair flex items-center justify-center"
+      >
+        <span className="text-[9px] font-bold text-indigo-500 pointer-events-none">+</span>
+      </Handle>
     </div>
   )
 }
@@ -660,47 +1041,48 @@ function N8nCodeNode({ data, selected }) {
   return (
     <div
       className={cn(
-        'group relative bg-[#131b2a] text-white rounded-2xl transition-all duration-200 min-w-[180px] border shadow-xl overflow-visible select-none',
-        isDisabled  ? 'border-slate-700/50 opacity-45 grayscale' :
+        'group relative rounded-2xl transition-all duration-200 min-w-[180px] border shadow-xl overflow-visible select-none',
+        'bg-white dark:bg-[#131b2a] text-slate-800 dark:text-white',
+        isDisabled  ? 'border-slate-300 dark:border-slate-700/50 opacity-45 grayscale' :
         isRunning   ? 'border-amber-400 ring-2 ring-amber-400/50' :
         isCompleted ? 'border-emerald-500/80 shadow-[0_0_15px_rgba(16,185,129,0.3)]' :
-        selected    ? 'border-amber-400 ring-2 ring-amber-400/40' : 'border-[#26354d] hover:border-slate-500'
+        selected    ? 'border-amber-400 ring-2 ring-amber-400/40' :
+                      'border-slate-200 dark:border-[#26354d] hover:border-slate-400 shadow-sm'
       )}
     >
       <Handle
         type="target"
         position={Position.Left}
-        className="!w-3.5 !h-3.5 !-left-2 !bg-[#131b2a] !border-2 !border-amber-400 cursor-crosshair"
+        className="!w-3.5 !h-3.5 !-left-2 !bg-white dark:!bg-[#131b2a] !border-2 !border-amber-400 cursor-crosshair"
       />
 
       <div className="p-3 pl-3.5 pr-3 flex items-center gap-2.5">
-        <div className="w-8 h-8 rounded-xl bg-amber-950/40 border border-amber-500/40 flex items-center justify-center text-amber-400 font-mono font-bold text-sm shrink-0">
+        <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-500/40 flex items-center justify-center text-amber-500 font-mono font-bold text-sm shrink-0">
           {`{ }`}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-bold text-white tracking-tight truncate">
+          <p className="text-xs font-bold text-slate-800 dark:text-white tracking-tight truncate">
             {data.name || 'Combine Emails'}
           </p>
-          <p className="text-[10px] text-slate-400 font-medium truncate">
+          <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate">
             {data.subtitle || 'Code Transform'}
           </p>
         </div>
 
         {isCompleted && (
-          <div className="w-4 h-4 rounded-full bg-emerald-500/20 border border-emerald-500 text-emerald-400 flex items-center justify-center shrink-0">
+          <div className="w-4 h-4 rounded-full bg-emerald-100 dark:bg-emerald-500/20 border border-emerald-500 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
             <Check className="w-2.5 h-2.5 stroke-[3]" />
           </div>
         )}
       </div>
 
-      {/* Config-needed indicator for code/transform nodes */}
       {!isRunning && !isCompleted && !isDisabled && (() => {
         const { ready, missing } = getNodeReadiness(data)
         if (ready) return null
         return (
-          <div className="px-3 py-1 border-t border-amber-500/25 bg-amber-500/8 flex items-center gap-1.5 rounded-b-2xl">
-            <AlertTriangle className="w-2.5 h-2.5 text-amber-400 shrink-0" />
-            <span className="text-[9px] font-semibold text-amber-400 truncate">
+          <div className="px-3 py-1 border-t border-amber-200 dark:border-amber-500/25 bg-amber-50 dark:bg-amber-500/8 flex items-center gap-1.5 rounded-b-2xl">
+            <AlertTriangle className="w-2.5 h-2.5 text-amber-500 shrink-0" />
+            <span className="text-[9px] font-semibold text-amber-600 dark:text-amber-400 truncate">
               Config needed: {missing.join(', ')}
             </span>
           </div>
@@ -710,9 +1092,9 @@ function N8nCodeNode({ data, selected }) {
       <Handle
         type="source"
         position={Position.Right}
-        className="!w-4 !h-4 !-right-2 !bg-[#131b2a] !border-2 !border-amber-400 transition-all hover:!w-4.5 cursor-crosshair flex items-center justify-center"
+        className="!w-4 !h-4 !-right-2 !bg-white dark:!bg-[#131b2a] !border-2 !border-amber-400 transition-all hover:!w-4.5 cursor-crosshair flex items-center justify-center"
       >
-        <span className="text-[9px] font-bold text-amber-400 pointer-events-none">+</span>
+        <span className="text-[9px] font-bold text-amber-500 pointer-events-none">+</span>
       </Handle>
     </div>
   )
@@ -724,18 +1106,18 @@ function N8nGroupNode({ data }) {
 
   return (
     <div
-      className="rounded-3xl border border-dashed border-slate-700/80 bg-[#121824]/40 p-4 transition-all pointer-events-auto select-none"
+      className="rounded-3xl border border-dashed border-slate-300 dark:border-slate-700/80 bg-slate-50/60 dark:bg-[#121824]/40 p-4 transition-all pointer-events-auto select-none"
       style={{ minWidth: data.width || 480, minHeight: collapsed ? 60 : (data.height || 260) }}
     >
       <div className="flex items-start justify-between gap-2 mb-2">
         <div>
-          <h4 className="text-sm font-bold text-slate-200">{data.label || 'Summarize'}</h4>
-          <p className="text-xs text-slate-400">{data.description || 'Combine the emails into one text and generate an AI digest.'}</p>
+          <h4 className="text-sm font-bold text-slate-700 dark:text-slate-200">{data.label || 'Summarize'}</h4>
+          <p className="text-xs text-slate-500 dark:text-slate-400">{data.description || 'Combine the emails into one text and generate an AI digest.'}</p>
         </div>
         <button
           type="button"
           onClick={() => setCollapsed(c => !c)}
-          className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+          className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
         >
           <ChevronDown className={cn('w-4 h-4 transition-transform', collapsed && '-rotate-90')} />
         </button>
@@ -791,8 +1173,8 @@ function N8nConditionEdge({ id, sourceX, sourceY, targetX, targetY, sourcePositi
           <div className="flex items-center justify-center">
             <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold shadow-sm whitespace-nowrap ${
               selected
-                ? 'bg-indigo-950 border border-indigo-500/60 text-indigo-300'
-                : 'bg-[#0e1624] border border-[#233048] text-slate-300'
+                ? 'bg-indigo-100 dark:bg-indigo-950 border border-indigo-400 dark:border-indigo-500/60 text-indigo-700 dark:text-indigo-300'
+                : 'bg-white dark:bg-[#0e1624] border border-slate-200 dark:border-[#233048] text-slate-600 dark:text-slate-300'
             }`}>
               {labelText}
             </span>
@@ -808,6 +1190,7 @@ const nodeTypes = {
   agentNode:   N8nAgentNode,
   codeNode:    N8nCodeNode,
   toolNode:    N8nToolNode,
+  logicNode:   N8nLogicNode,
   groupNode:   N8nGroupNode,
 }
 const edgeTypes = {
@@ -823,12 +1206,18 @@ function dagToFlow(dag) {
   // Create primary workflow nodes
   dag.nodes.forEach((n, i) => {
     let customType = 'agentNode'
-    if (n.agent?.startsWith('trigger_') || n.type?.startsWith('trigger_') || n.id?.includes('trigger') || n.id?.includes('morning')) {
+    const agentStr = (n.agent || n.type || '').toLowerCase()
+    const idStr = (n.id || '').toLowerCase()
+    const nameStr = (n.name || '').toLowerCase()
+
+    if (agentStr.startsWith('trigger_') || idStr.includes('trigger') || idStr.includes('morning') || nameStr.includes('trigger')) {
       customType = 'triggerNode'
-    } else if (n.agent?.startsWith('tool_') || n.type?.startsWith('tool_') || n.id?.includes('tool') || n.id?.includes('slack') || n.id?.includes('stripe') || n.id?.includes('sheet') || n.id?.includes('hubspot') || n.id?.includes('telegram')) {
+    } else if (agentStr.startsWith('tool_') || idStr.includes('tool') || idStr.includes('slack') || idStr.includes('stripe') || idStr.includes('sheet') || idStr.includes('hubspot') || idStr.includes('telegram')) {
       customType = 'toolNode'
-    } else if (n.agent === 'code_transform' || n.type === 'code_transform' || n.id?.includes('combine') || n.id?.includes('code')) {
+    } else if (agentStr === 'code_transform' || agentStr.includes('code') || idStr.includes('combine') || idStr.includes('code')) {
       customType = 'codeNode'
+    } else if (agentStr.startsWith('logic_') || agentStr === 'approval_gate' || agentStr === 'condition_branch' || idStr.includes('gate') || idStr.includes('condition')) {
+      customType = 'logicNode'
     }
 
     nodes.push({
@@ -839,8 +1228,8 @@ function dagToFlow(dag) {
         id: n.id,
         name: n.name,
         agentType: n.agent || n.type || 'drafting_agent',
-        provider: n.provider || (n.agent?.includes('claude') ? 'claude' : 'openai'),
-        subtitle: n.subtitle || (customType === 'triggerNode' ? 'Cron Trigger' : customType === 'toolNode' ? 'Connected Tool' : 'Response Text'),
+        provider: n.provider || null,
+        subtitle: n.subtitle || (customType === 'triggerNode' ? 'Event Trigger' : customType === 'toolNode' ? 'Connected Tool' : customType === 'logicNode' ? 'Logic Step' : 'Response Text'),
         tools: n.tools || [],
         promptFile: n.prompt_file || '',
         description: n.description || '',
@@ -895,7 +1284,7 @@ function flowToDag(nodes, edges, meta) {
 // ── FLOATING N8N CANVAS TOOLBAR ────────────────────────────────────────────────
 function N8nCanvasToolbar({ onOpenPalette, onZoomIn, onZoomOut, onFitView, onToggleMiniMap, showMiniMap, onOpenAICopilot }) {
   return (
-    <div className="absolute right-4 top-16 z-20 flex flex-col items-center bg-[#131b2a]/95 border border-[#233048] rounded-2xl p-1.5 shadow-2xl backdrop-blur-md space-y-1">
+    <div className="absolute right-4 top-16 z-20 flex flex-col items-center bg-white/95 dark:bg-[#131b2a]/95 border border-slate-200 dark:border-[#233048] rounded-2xl p-1.5 shadow-xl backdrop-blur-md space-y-1">
       <button
         type="button"
         onClick={onOpenPalette}
@@ -905,12 +1294,12 @@ function N8nCanvasToolbar({ onOpenPalette, onZoomIn, onZoomOut, onFitView, onTog
         <Plus className="w-4 h-4 stroke-[2.5]" />
       </button>
 
-      <div className="w-5 h-[1px] bg-slate-800 my-0.5" />
+      <div className="w-5 h-[1px] bg-slate-200 dark:bg-slate-800 my-0.5" />
 
       <button
         type="button"
         onClick={onZoomIn}
-        className="w-8 h-8 rounded-xl hover:bg-[#1f2c40] text-slate-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer text-xs font-bold"
+        className="w-8 h-8 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1f2c40] text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer text-xs font-bold"
         title="Zoom In"
       >
         +
@@ -919,7 +1308,7 @@ function N8nCanvasToolbar({ onOpenPalette, onZoomIn, onZoomOut, onFitView, onTog
       <button
         type="button"
         onClick={onZoomOut}
-        className="w-8 h-8 rounded-xl hover:bg-[#1f2c40] text-slate-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer text-xs font-bold"
+        className="w-8 h-8 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1f2c40] text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer text-xs font-bold"
         title="Zoom Out"
       >
         -
@@ -928,7 +1317,7 @@ function N8nCanvasToolbar({ onOpenPalette, onZoomIn, onZoomOut, onFitView, onTog
       <button
         type="button"
         onClick={onFitView}
-        className="w-8 h-8 rounded-xl hover:bg-[#1f2c40] text-slate-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+        className="w-8 h-8 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1f2c40] text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
         title="Fit View"
       >
         <Maximize2 className="w-3.5 h-3.5" />
@@ -939,7 +1328,9 @@ function N8nCanvasToolbar({ onOpenPalette, onZoomIn, onZoomOut, onFitView, onTog
         onClick={onToggleMiniMap}
         className={cn(
           'w-8 h-8 rounded-xl flex items-center justify-center transition-colors cursor-pointer',
-          showMiniMap ? 'bg-[#1f2c40] text-blue-400' : 'hover:bg-[#1f2c40] text-slate-400 hover:text-white'
+          showMiniMap
+            ? 'bg-blue-100 dark:bg-[#1f2c40] text-blue-600 dark:text-blue-400'
+            : 'hover:bg-slate-100 dark:hover:bg-[#1f2c40] text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
         )}
         title="Toggle MiniMap"
       >
@@ -949,7 +1340,7 @@ function N8nCanvasToolbar({ onOpenPalette, onZoomIn, onZoomOut, onFitView, onTog
       <button
         type="button"
         onClick={onOpenAICopilot}
-        className="w-8 h-8 rounded-xl hover:bg-indigo-950/80 text-indigo-400 hover:text-indigo-300 flex items-center justify-center transition-colors cursor-pointer"
+        className="w-8 h-8 rounded-xl hover:bg-indigo-50 dark:hover:bg-indigo-950/80 text-indigo-500 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 flex items-center justify-center transition-colors cursor-pointer"
         title="AI Copilot Assistant"
       >
         <Sparkles className="w-3.5 h-3.5" />
@@ -978,26 +1369,26 @@ function N8nPaletteDrawer({ open, onClose, onDragStart, onAddItem }) {
       initial={{ x: -280, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: -280, opacity: 0 }}
-      className="absolute left-0 top-0 bottom-0 w-72 bg-[#0f1522] border-r border-[#233048] flex flex-col z-30 shadow-2xl select-none"
+      className="absolute left-0 top-0 bottom-0 w-72 bg-white dark:bg-[#0f1522] border-r border-slate-200 dark:border-[#233048] flex flex-col z-30 shadow-2xl select-none"
     >
-      <div className="p-3.5 border-b border-[#233048] flex items-center justify-between">
+      <div className="p-3.5 border-b border-slate-200 dark:border-[#233048] flex items-center justify-between">
         <div>
-          <p className="text-xs font-bold text-white">Add Node or Tool</p>
-          <p className="text-[10px] text-slate-400">Drag to canvas or click to add</p>
+          <p className="text-xs font-bold text-slate-800 dark:text-white">Add Node or Tool</p>
+          <p className="text-[10px] text-slate-500 dark:text-slate-400">Drag to canvas or click to add</p>
         </div>
-        <button onClick={onClose} className="text-slate-400 hover:text-white p-1 rounded-lg">
+        <button onClick={onClose} className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
           <X className="w-4 h-4" />
         </button>
       </div>
 
-      <div className="p-3 space-y-2 border-b border-[#233048]">
+      <div className="p-3 space-y-2 border-b border-slate-200 dark:border-[#233048]">
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search nodes, agents, triggers..."
-            className="w-full pl-8 pr-3 py-1.5 text-xs bg-[#162030] border border-[#2a3850] rounded-lg text-white focus:outline-none focus:border-blue-500"
+            className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 dark:bg-[#162030] border border-slate-200 dark:border-[#2a3850] rounded-lg text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:border-blue-500"
           />
         </div>
 
@@ -1010,7 +1401,7 @@ function N8nPaletteDrawer({ open, onClose, onDragStart, onAddItem }) {
                 'text-[10px] font-semibold px-2 py-1 rounded-md transition-all cursor-pointer',
                 activeTab === c.id
                   ? 'bg-blue-600 text-white shadow-xs'
-                  : 'bg-[#182335] text-slate-300 hover:bg-[#202e45]'
+                  : 'bg-slate-100 dark:bg-[#182335] text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-[#202e45]'
               )}
             >
               {c.label}
@@ -1028,21 +1419,21 @@ function N8nPaletteDrawer({ open, onClose, onDragStart, onAddItem }) {
               draggable
               onDragStart={(e) => onDragStart(e, item.type)}
               onClick={() => onAddItem(item.type)}
-              className="flex items-center gap-2.5 p-2.5 rounded-xl border border-[#233048] bg-[#141c2c] hover:border-blue-500 hover:bg-[#1a253a] cursor-grab active:cursor-grabbing transition-all group"
+              className="flex items-center gap-2.5 p-2.5 rounded-xl border border-slate-200 dark:border-[#233048] bg-white dark:bg-[#141c2c] hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-[#1a253a] cursor-grab active:cursor-grabbing transition-all group"
             >
               <div
-                className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 shadow-xs"
+                className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 shadow-xs p-1"
                 style={{ background: item.light, color: item.color }}
               >
-                <IconComp size={16} />
+                <NodeDisplayIcon data={{ agentType: item.type, name: item.name }} className="w-4 h-4 object-contain" fallback={<IconComp size={16} />} />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-bold text-white truncate group-hover:text-blue-400 transition-colors">
+                <p className="text-xs font-bold text-slate-800 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                   {item.name}
                 </p>
-                <p className="text-[10px] text-slate-400 truncate">{item.subtitle || item.description}</p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">{item.subtitle || item.description}</p>
               </div>
-              <Plus className="w-3.5 h-3.5 text-slate-500 opacity-0 group-hover:opacity-100 shrink-0" />
+              <Plus className="w-3.5 h-3.5 text-slate-400 opacity-0 group-hover:opacity-100 shrink-0" />
             </div>
           )
         })}
@@ -1055,7 +1446,6 @@ function N8nPaletteDrawer({ open, onClose, onDragStart, onAddItem }) {
 function NodeInspector({ node, onSave, onDelete, onDuplicate, onClose, allTools, promptFiles }) {
   const [data, setData] = useState({ ...node.data })
   const set    = (k, v) => setData(p => ({ ...p, [k]: v }))
-  // config is a nested object; setConfig merges one key at a time
   const setConfig = (k, v) => setData(p => ({ ...p, config: { ...(p.config || {}), [k]: v } }))
 
   const toggleTool = (t) => {
@@ -1063,7 +1453,6 @@ function NodeInspector({ node, onSave, onDelete, onDuplicate, onClose, allTools,
     set('tools', cur.includes(t) ? cur.filter(x => x !== t) : [...cur, t])
   }
 
-  // Derive readiness from the CURRENT (unsaved) form state
   const { ready, missing } = getNodeReadiness(data)
   const requiredFields = NODE_REQUIRED_FIELDS[data.agentType] || []
   const config = data.config || {}
@@ -1074,15 +1463,20 @@ function NodeInspector({ node, onSave, onDelete, onDuplicate, onClose, allTools,
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: 340, opacity: 0 }}
       transition={{ type: 'spring', damping: 25, stiffness: 320 }}
-      className="absolute right-0 top-0 bottom-0 w-88 bg-[#0f1522] border-l border-[#233048] z-30 shadow-2xl overflow-y-auto flex flex-col text-slate-200"
+      className="absolute right-0 top-0 bottom-0 w-88 bg-white dark:bg-[#0f1522] border-l border-slate-200 dark:border-[#233048] z-30 shadow-2xl overflow-y-auto flex flex-col text-slate-700 dark:text-slate-200"
     >
       {/* ── Inspector Header ── */}
-      <div className="sticky top-0 bg-[#0f1522] border-b border-[#233048] px-4 py-3 flex items-center justify-between z-10">
-        <div>
-          <h3 className="text-sm font-bold text-white">Node Settings</h3>
-          <p className="text-[10px] text-slate-400 font-mono">{node.id}</p>
+      <div className="sticky top-0 bg-white dark:bg-[#0f1522] border-b border-slate-200 dark:border-[#233048] px-4 py-3 flex items-center justify-between z-10">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className={cn("w-7 h-7 rounded-lg border flex items-center justify-center shrink-0 p-1 shadow-inner", resolveNodeVisual(data).iconBg)}>
+            <NodeDisplayIcon data={data} className="w-4 h-4 object-contain" />
+          </div>
+          <div className="min-w-0">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate">{data.name || 'Node Settings'}</h3>
+            <p className="text-[10px] text-slate-400 font-mono truncate">{node.id}</p>
+          </div>
         </div>
-        <div className="flex gap-1">
+        <div className="flex gap-1 shrink-0">
           <Button size="xs" variant="secondary" icon={<Copy className="w-3 h-3" />} onClick={() => { onDuplicate(node); onClose() }} title="Duplicate node" />
           <Button size="xs" variant="danger" icon={<Trash2 className="w-3 h-3" />} onClick={() => { onDelete(node.id); onClose() }} />
           <Button size="xs" variant="secondary" onClick={onClose} icon={<X className="w-3 h-3" />} />
@@ -1092,8 +1486,8 @@ function NodeInspector({ node, onSave, onDelete, onDuplicate, onClose, allTools,
       {/* ── Readiness Status Bar ── */}
       <div className={`px-4 py-2 flex items-center gap-2 text-[11px] font-semibold border-b ${
         ready
-          ? 'bg-emerald-500/8 border-emerald-500/20 text-emerald-400'
-          : 'bg-amber-500/8 border-amber-500/20 text-amber-400'
+          ? 'bg-emerald-50 dark:bg-emerald-500/8 border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-400'
+          : 'bg-amber-50 dark:bg-amber-500/8 border-amber-200 dark:border-amber-500/20 text-amber-700 dark:text-amber-400'
       }`}>
         {ready
           ? <><Check className="w-3 h-3 stroke-[3]" /> Ready — all required fields filled</>
@@ -1103,20 +1497,19 @@ function NodeInspector({ node, onSave, onDelete, onDuplicate, onClose, allTools,
 
       <div className="p-4 space-y-4 flex-1">
 
-        {/* ── Type-Specific Required Fields (shown first, prominent) ── */}
         {requiredFields.length > 0 && (
-          <div className="space-y-3 p-3 bg-[#162030] border border-[#2a3850] rounded-xl">
-            <p className="text-[10px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-              <Settings2 className="w-3 h-3 text-blue-400" />
+          <div className="space-y-3 p-3 bg-slate-50 dark:bg-[#162030] border border-slate-200 dark:border-[#2a3850] rounded-xl">
+            <p className="text-[10px] font-bold text-slate-500 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+              <Settings2 className="w-3 h-3 text-blue-500" />
               Configuration
             </p>
             {requiredFields.map(field => (
               <div key={field.key}>
-                <label className="flex items-center gap-1 text-xs font-semibold text-slate-300 mb-1.5">
+                <label className="flex items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                   {field.label}
-                  <span className="text-amber-400 font-bold text-[10px]">*</span>
+                  <span className="text-amber-500 font-bold text-[10px]">*</span>
                   {config[field.key]?.trim()
-                    ? <Check className="w-3 h-3 text-emerald-400 ml-auto" />
+                    ? <Check className="w-3 h-3 text-emerald-500 ml-auto" />
                     : <span className="ml-auto text-[9px] font-medium text-amber-500/80">Required</span>
                   }
                 </label>
@@ -1126,7 +1519,7 @@ function NodeInspector({ node, onSave, onDelete, onDuplicate, onClose, allTools,
                     onChange={e => setConfig(field.key, e.target.value)}
                     placeholder={field.placeholder}
                     rows={3}
-                    className="w-full text-xs p-2 bg-[#0d1422] border border-[#2a3850] rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 resize-none font-mono"
+                    className="w-full text-xs p-2 bg-white dark:bg-[#0d1422] border border-slate-200 dark:border-[#2a3850] rounded-lg text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 resize-none font-mono"
                   />
                 ) : (
                   <input
@@ -1134,7 +1527,7 @@ function NodeInspector({ node, onSave, onDelete, onDuplicate, onClose, allTools,
                     value={config[field.key] || ''}
                     onChange={e => setConfig(field.key, e.target.value)}
                     placeholder={field.placeholder}
-                    className="w-full text-xs p-2 bg-[#0d1422] border border-[#2a3850] rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                    className="w-full text-xs p-2 bg-white dark:bg-[#0d1422] border border-slate-200 dark:border-[#2a3850] rounded-lg text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:border-blue-500"
                   />
                 )}
               </div>
@@ -1142,7 +1535,6 @@ function NodeInspector({ node, onSave, onDelete, onDuplicate, onClose, allTools,
           </div>
         )}
 
-        {/* ── Standard Node Fields ── */}
         <Select
           label="Component Type"
           value={data.agentType || ''}
@@ -1155,9 +1547,9 @@ function NodeInspector({ node, onSave, onDelete, onDuplicate, onClose, allTools,
         <Textarea label="Node Purpose & Description" value={data.description || ''} onChange={e => set('description', e.target.value)} rows={2} />
 
         <div>
-          <label className="block text-xs font-semibold text-slate-300 mb-1.5">Prompt Template File</label>
+          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Prompt Template File</label>
           {promptFiles.length > 0 ? (
-            <select value={data.promptFile || ''} onChange={e => set('promptFile', e.target.value)} className="w-full text-xs p-2 bg-[#162030] border border-[#2a3850] rounded-lg text-white">
+            <select value={data.promptFile || ''} onChange={e => set('promptFile', e.target.value)} className="w-full text-xs p-2 bg-slate-50 dark:bg-[#162030] border border-slate-200 dark:border-[#2a3850] rounded-lg text-slate-800 dark:text-white">
               <option value="">— system default prompt —</option>
               {promptFiles.map(f => <option key={f.path} value={f.path}>{f.path}</option>)}
             </select>
@@ -1167,7 +1559,7 @@ function NodeInspector({ node, onSave, onDelete, onDuplicate, onClose, allTools,
         </div>
 
         <div>
-          <p className="text-xs font-semibold text-slate-300 mb-2">Connected Tools & Capabilities</p>
+          <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">Connected Tools & Capabilities</p>
           <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
             {allTools.length > 0 ? (
               allTools.map(t => {
@@ -1181,8 +1573,8 @@ function NodeInspector({ node, onSave, onDelete, onDuplicate, onClose, allTools,
                     className={cn(
                       'px-2.5 py-1 rounded-lg text-[11px] border transition-all font-medium cursor-pointer',
                       on
-                        ? 'bg-blue-600/30 border-blue-400 text-blue-300 font-semibold'
-                        : 'bg-[#182335] border-[#2a3850] text-slate-400 hover:border-slate-500'
+                        ? 'bg-blue-100 dark:bg-blue-600/30 border-blue-400 text-blue-700 dark:text-blue-300 font-semibold'
+                        : 'bg-slate-100 dark:bg-[#182335] border-slate-200 dark:border-[#2a3850] text-slate-600 dark:text-slate-400 hover:border-slate-400 dark:hover:border-slate-500'
                     )}
                   >
                     {name}
@@ -1203,7 +1595,7 @@ function NodeInspector({ node, onSave, onDelete, onDuplicate, onClose, allTools,
         />
       </div>
 
-      <div className="p-4 border-t border-[#233048] bg-[#0c121d]">
+      <div className="p-4 border-t border-slate-200 dark:border-[#233048] bg-slate-50 dark:bg-[#0c121d]">
         <Button
           variant="primary"
           className="w-full"
@@ -1222,15 +1614,17 @@ function FlowCanvas({ workflowName, dag, allTools, promptFiles, onSave, isSaving
   const [nodes, setNodes, onNodesChange] = useNodesState([])
   const [edges, setEdges, onEdgesChange] = useEdgesState([])
   const [editingNode, setEditingNode]    = useState(null)
-  const [activeTab, setActiveTab]        = useState('editor') // editor | executions | evaluations
+  const [activeTab, setActiveTab]        = useState('editor')
   const [paletteOpen, setPaletteOpen]    = useState(false)
-  const [showMiniMap, setShowMiniMap]    = useState(true)   // on by default
-  const [selectedEdgeId, setSelectedEdgeId] = useState(null) // for edge highlight
+  const [showMiniMap, setShowMiniMap]    = useState(true)
+  const [selectedEdgeId, setSelectedEdgeId] = useState(null)
   const [isPublished, setIsPublished]    = useState(true)
   const [testingWorkflow, setTestingWorkflow] = useState(false)
-  const [testRunResult,   setTestRunResult]   = useState(null)   // { ok, message, nodes_executed, tokens, cost } | null
+  const [testRunResult,   setTestRunResult]   = useState(null)
   const [nodeErrorToast, setNodeErrorToast]   = useState(null)
   const { setDirty }                     = useBuilderStore()
+  const { theme, toggle: toggleTheme }   = useTheme()
+  const isDark = theme === 'dark'
   const rfWrapper                        = useRef(null)
   const [rfInstance, setRfInstance]      = useState(null)
 
@@ -1277,6 +1671,7 @@ function FlowCanvas({ workflowName, dag, allTools, promptFiles, onSave, isSaving
     if (type.startsWith('trigger_')) customType = 'triggerNode'
     else if (type.startsWith('tool_')) customType = 'toolNode'
     else if (type === 'code_transform') customType = 'codeNode'
+    else if (type.startsWith('logic_')) customType = 'logicNode'
     else if (type === 'group_section') customType = 'groupNode'
 
     setNodes(ns => {
@@ -1312,6 +1707,7 @@ function FlowCanvas({ workflowName, dag, allTools, promptFiles, onSave, isSaving
     if (type.startsWith('trigger_')) customType = 'triggerNode'
     else if (type.startsWith('tool_')) customType = 'toolNode'
     else if (type === 'code_transform') customType = 'codeNode'
+    else if (type.startsWith('logic_')) customType = 'logicNode'
     else if (type === 'group_section') customType = 'groupNode'
 
     const newNode = {
@@ -1575,23 +1971,23 @@ function FlowCanvas({ workflowName, dag, allTools, promptFiles, onSave, isSaving
   )
 
   return (
-    <div className="flex flex-col h-full bg-[#0d1117] text-white relative select-none">
+    <div className="flex flex-col h-full bg-slate-50 dark:bg-[#0d1117] text-slate-900 dark:text-white relative select-none">
       
-      {/* ── Top Bar (n8n Breadcrumb + Editor/Executions Switcher + Actions) ── */}
-      <div className="px-5 py-2.5 bg-[#121824] border-b border-[#233048] flex items-center justify-between shrink-0 z-20 shadow-sm">
+      {/* ── Top Bar ── */}
+      <div className="px-5 py-2.5 bg-white dark:bg-[#121824] border-b border-slate-200 dark:border-[#233048] flex items-center justify-between shrink-0 z-20 shadow-sm">
         
         {/* Left: Breadcrumb */}
         <div className="flex items-center gap-2.5">
-          <div className="flex items-center gap-1.5 text-xs text-slate-400">
+          <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
             <span>Personal</span>
-            <span className="text-slate-600">/</span>
-            <span className="text-white font-bold tracking-tight">{meta.name || workflowName}</span>
+            <span className="text-slate-300 dark:text-slate-600">/</span>
+            <span className="text-slate-900 dark:text-white font-bold tracking-tight">{meta.name || workflowName}</span>
           </div>
           <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
         </div>
 
         {/* Center: Editor | Executions | Evaluations Switcher */}
-        <div className="flex items-center bg-[#090d16] border border-[#233048] rounded-xl p-0.5 text-xs font-semibold">
+        <div className="flex items-center bg-slate-100 dark:bg-[#090d16] border border-slate-200 dark:border-[#233048] rounded-xl p-0.5 text-xs font-semibold">
           {[
             { id: 'editor',      label: 'Editor' },
             { id: 'executions',  label: 'Executions' },
@@ -1603,8 +1999,8 @@ function FlowCanvas({ workflowName, dag, allTools, promptFiles, onSave, isSaving
               className={cn(
                 'px-3 py-1 rounded-lg transition-all cursor-pointer',
                 activeTab === tab.id
-                  ? 'bg-[#1b2538] text-white shadow-xs font-bold'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-white dark:bg-[#1b2538] text-slate-900 dark:text-white shadow-xs font-bold'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
               )}
             >
               {tab.label}
@@ -1612,37 +2008,47 @@ function FlowCanvas({ workflowName, dag, allTools, promptFiles, onSave, isSaving
           ))}
         </div>
 
-        {/* Right: Actions (Test Workflow, Publish, Save) */}
+        {/* Right: Theme Toggle + Actions */}
         <div className="flex items-center gap-2">
+          {/* Light / Dark Mode Toggle */}
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className="w-8 h-8 rounded-xl flex items-center justify-center border border-slate-200 dark:border-[#2a3850] bg-slate-100 dark:bg-[#1b2538] text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:border-slate-300 dark:hover:border-slate-600 transition-all cursor-pointer"
+            title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          >
+            {isDark ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+          </button>
+
           {/* Test Workflow Button */}
           <button
             type="button"
             disabled={testingWorkflow}
             onClick={handleTestWorkflow}
-            className="px-3 py-1.5 rounded-xl bg-[#1b2538] hover:bg-[#25334c] text-white border border-[#2a3850] text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-[#1b2538] hover:bg-slate-200 dark:hover:bg-[#25334c] text-slate-700 dark:text-white border border-slate-200 dark:border-[#2a3850] text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
           >
             {testingWorkflow ? (
               <>
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-400" />
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-500" />
                 <span>Running...</span>
               </>
             ) : (
               <>
-                <Play className="w-3 h-3 text-emerald-400 fill-emerald-400" />
+                <Play className="w-3 h-3 text-emerald-500 fill-emerald-500" />
                 <span>Test workflow</span>
               </>
             )}
           </button>
 
           {/* Publish Toggle */}
-          <div className="flex items-center gap-2 bg-[#1b2538] border border-[#2a3850] rounded-xl px-2.5 py-1 text-xs">
-            <span className="text-slate-300 font-semibold text-[11px]">Publish</span>
+          <div className="flex items-center gap-2 bg-slate-100 dark:bg-[#1b2538] border border-slate-200 dark:border-[#2a3850] rounded-xl px-2.5 py-1 text-xs">
+            <span className="text-slate-600 dark:text-slate-300 font-semibold text-[11px]">Publish</span>
             <button
               type="button"
               onClick={() => setIsPublished(p => !p)}
               className={cn(
                 'w-7 h-4 rounded-full transition-colors relative cursor-pointer',
-                isPublished ? 'bg-emerald-500' : 'bg-slate-600'
+                isPublished ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'
               )}
             >
               <div className={cn(
@@ -1712,13 +2118,13 @@ function FlowCanvas({ workflowName, dag, allTools, promptFiles, onSave, isSaving
           zoomOnScroll
           zoomOnPinch
           proOptions={{ hideAttribution: true }}
-          className="bg-[#0d1117]"
+          className={isDark ? 'bg-[#0d1117]' : 'bg-white'}
         >
           <Background
-            variant={BackgroundVariant.Lines}
-            gap={28}
-            size={0.5}
-            color="#1a2336"
+            variant={BackgroundVariant.Dots}
+            gap={24}
+            size={1.5}
+            color={isDark ? '#2a3a56' : '#bfcad8'}
           />
           <MiniMap
             nodeColor={n => {
@@ -1727,9 +2133,12 @@ function FlowCanvas({ workflowName, dag, allTools, promptFiles, onSave, isSaving
               if (n.type === 'codeNode') return '#f59e0b'
               return '#3b82f6'
             }}
-            maskColor="rgba(10,14,22,0.88)"
+            maskColor={isDark ? 'rgba(10,14,22,0.88)' : 'rgba(248,250,252,0.88)'}
             className={cn(
-              '!bg-[#0d1117] !border !border-[#233048] !rounded-xl',
+              'border rounded-xl',
+              isDark
+                ? '!bg-[#0d1117] !border-[#233048]'
+                : '!bg-white !border-slate-200',
               !showMiniMap && '!hidden'
             )}
             pannable
@@ -1762,17 +2171,17 @@ function FlowCanvas({ workflowName, dag, allTools, promptFiles, onSave, isSaving
         {/* Floating Real-Time AI Canvas Copilot Command Bar */}
         <div className="absolute bottom-5 left-1/2 -translate-x-1/2 w-full max-w-xl px-4 z-30 pointer-events-auto">
           {aiCanvasSuccess && (
-            <div className="mb-2 p-2 px-3.5 bg-emerald-950/90 border border-emerald-500/50 rounded-xl text-xs text-emerald-300 shadow-xl flex items-center justify-between animate-in fade-in slide-in-from-bottom-2 duration-200">
+            <div className="mb-2 p-2 px-3.5 bg-emerald-50 dark:bg-emerald-950/90 border border-emerald-300 dark:border-emerald-500/50 rounded-xl text-xs text-emerald-700 dark:text-emerald-300 shadow-xl flex items-center justify-between animate-in fade-in slide-in-from-bottom-2 duration-200">
               <div className="flex items-center gap-2">
-                <CheckCircle2 size={13} className="text-emerald-400" />
+                <CheckCircle2 size={13} className="text-emerald-500" />
                 <span>{aiCanvasSuccess}</span>
               </div>
-              <button onClick={() => setAiCanvasSuccess('')} className="text-emerald-400 hover:text-white">×</button>
+              <button onClick={() => setAiCanvasSuccess('')} className="text-emerald-500 hover:text-emerald-700 dark:hover:text-white">×</button>
             </div>
           )}
 
-          <div className="bg-[#121826]/95 backdrop-blur-md border border-[#233048] rounded-2xl p-2 shadow-2xl flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-blue-600/20 border border-blue-500/30 text-blue-400 flex items-center justify-center shrink-0">
+          <div className="bg-white/95 dark:bg-[#121826]/95 backdrop-blur-md border border-slate-200 dark:border-[#233048] rounded-2xl p-2 shadow-2xl flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-blue-100 dark:bg-blue-600/20 border border-blue-300 dark:border-blue-500/30 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
               <Sparkles size={16} />
             </div>
             <input
@@ -1786,7 +2195,7 @@ function FlowCanvas({ workflowName, dag, allTools, promptFiles, onSave, isSaving
                 }
               }}
               placeholder="Describe a workflow to generate (e.g. 'Customer onboarding with email verification, risk review and welcome email')..."
-              className="flex-1 bg-transparent text-xs text-white placeholder-slate-400 focus:outline-none"
+              className="flex-1 bg-transparent text-xs text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none"
               disabled={aiCanvasLoading}
             />
             <button
@@ -1802,15 +2211,15 @@ function FlowCanvas({ workflowName, dag, allTools, promptFiles, onSave, isSaving
 
         {/* Error Notification Toast */}
         {nodeErrorToast && (
-          <div className="absolute bottom-5 right-5 z-40 p-3 bg-[#1e1518] border border-red-500/60 rounded-xl shadow-2xl flex items-center gap-3 text-xs text-red-200 animate-in fade-in duration-200">
-            <div className="w-5 h-5 rounded-full bg-red-500/20 border border-red-500 text-red-400 flex items-center justify-center font-bold">
+          <div className="absolute bottom-5 right-5 z-40 p-3 bg-red-50 dark:bg-[#1e1518] border border-red-300 dark:border-red-500/60 rounded-xl shadow-2xl flex items-center gap-3 text-xs text-red-700 dark:text-red-200 animate-in fade-in duration-200">
+            <div className="w-5 h-5 rounded-full bg-red-100 dark:bg-red-500/20 border border-red-400 dark:border-red-500 text-red-600 dark:text-red-400 flex items-center justify-center font-bold">
               !
             </div>
             <div>
-              <p className="font-bold text-white">Problem in node '{nodeErrorToast.nodeName}'</p>
-              <p className="text-[11px] text-red-300">{nodeErrorToast.error}</p>
+              <p className="font-bold text-red-800 dark:text-white">Problem in node '{nodeErrorToast.nodeName}'</p>
+              <p className="text-[11px] text-red-500 dark:text-red-300">{nodeErrorToast.error}</p>
             </div>
-            <button onClick={() => setNodeErrorToast(null)} className="text-slate-400 hover:text-white ml-2">
+            <button onClick={() => setNodeErrorToast(null)} className="text-slate-400 hover:text-slate-700 dark:hover:text-white ml-2">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -1820,31 +2229,30 @@ function FlowCanvas({ workflowName, dag, allTools, promptFiles, onSave, isSaving
         {testRunResult && (
           <div className={`absolute bottom-5 right-5 z-40 p-3 rounded-xl shadow-2xl flex items-start gap-3 text-xs animate-in fade-in duration-200 max-w-sm ${
             testRunResult.ok
-              ? 'bg-[#0e1f18] border border-emerald-500/60 text-emerald-200'
-              : 'bg-[#1e1518] border border-red-500/60 text-red-200'
+              ? 'bg-emerald-50 dark:bg-[#0e1f18] border border-emerald-300 dark:border-emerald-500/60 text-emerald-800 dark:text-emerald-200'
+              : 'bg-red-50 dark:bg-[#1e1518] border border-red-300 dark:border-red-500/60 text-red-800 dark:text-red-200'
           }`}>
             <div className={`w-5 h-5 rounded-full flex items-center justify-center font-bold shrink-0 mt-0.5 ${
               testRunResult.ok
-                ? 'bg-emerald-500/20 border border-emerald-500 text-emerald-400'
-                : 'bg-red-500/20 border border-red-500 text-red-400'
+                ? 'bg-emerald-100 dark:bg-emerald-500/20 border border-emerald-500 text-emerald-600 dark:text-emerald-400'
+                : 'bg-red-100 dark:bg-red-500/20 border border-red-500 text-red-600 dark:text-red-400'
             }`}>
               {testRunResult.ok ? <Check className="w-3 h-3 stroke-[3]" /> : <AlertTriangle className="w-3 h-3" />}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="font-bold text-white leading-snug">
+              <p className="font-bold text-slate-900 dark:text-white leading-snug">
                 {testRunResult.ok ? 'Test run passed' : 'Cannot run workflow'}
               </p>
               <p className="text-[11px] mt-0.5 leading-relaxed opacity-80">{testRunResult.message}</p>
               {testRunResult.ok && (
                 <div className="flex items-center gap-3 mt-1.5 font-mono text-[10px]">
-                  <span className="text-slate-400">{testRunResult.nodes_executed} nodes</span>
-                  <span className="text-slate-500">·</span>
-                  <span className="text-slate-400">{testRunResult.tokens?.toLocaleString()} tok</span>
-                  <span className="text-slate-500">·</span>
-                  <span className="text-emerald-400">${testRunResult.cost}</span>
+                  <span className="text-slate-500">{testRunResult.nodes_executed} nodes</span>
+                  <span className="text-slate-400">·</span>
+                  <span className="text-slate-500">{testRunResult.tokens?.toLocaleString()} tok</span>
+                  <span className="text-slate-400">·</span>
+                  <span className="text-emerald-600 dark:text-emerald-400">${testRunResult.cost}</span>
                 </div>
               )}
-              {/* Clickable list of invalid nodes — each opens its inspector */}
               {testRunResult.invalidNodes?.length > 0 && (
                 <div className="mt-2 space-y-1">
                   {testRunResult.invalidNodes.map(inv => {
@@ -1857,10 +2265,10 @@ function FlowCanvas({ workflowName, dag, allTools, promptFiles, onSave, isSaving
                           if (canvasNode) setEditingNode(canvasNode)
                           setTestRunResult(null)
                         }}
-                        className="w-full text-left flex items-start gap-1.5 px-2 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/25 hover:bg-amber-500/20 transition-colors cursor-pointer"
+                        className="w-full text-left flex items-start gap-1.5 px-2 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/25 hover:bg-amber-100 dark:hover:bg-amber-500/20 transition-colors cursor-pointer"
                       >
-                        <AlertTriangle className="w-2.5 h-2.5 text-amber-400 shrink-0 mt-0.5" />
-                        <span className="text-[10px] text-amber-200 leading-snug">
+                        <AlertTriangle className="w-2.5 h-2.5 text-amber-500 shrink-0 mt-0.5" />
+                        <span className="text-[10px] text-amber-700 dark:text-amber-200 leading-snug">
                           <span className="font-semibold">{inv.name}</span>
                           {' — '}
                           <span className="opacity-75">{inv.missing.join(', ')}</span>
@@ -1868,11 +2276,11 @@ function FlowCanvas({ workflowName, dag, allTools, promptFiles, onSave, isSaving
                       </button>
                     )
                   })}
-                  <p className="text-[9px] text-slate-500 mt-1 pl-1">Click a node above to configure it</p>
+                  <p className="text-[9px] text-slate-400 mt-1 pl-1">Click a node above to configure it</p>
                 </div>
               )}
             </div>
-            <button onClick={() => setTestRunResult(null)} className="text-slate-400 hover:text-white ml-1 shrink-0">
+            <button onClick={() => setTestRunResult(null)} className="text-slate-400 hover:text-slate-700 dark:hover:text-white ml-1 shrink-0">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -1912,21 +2320,21 @@ function TestRunDrawer({ open, onClose, workflowKey, api }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-      <div className="bg-[#121824] rounded-2xl shadow-2xl border border-[#233048] w-full max-w-xl max-h-[85vh] flex flex-col overflow-hidden text-white">
-        <div className="px-5 py-4 border-b border-[#233048] flex items-center justify-between">
+      <div className="bg-white dark:bg-[#121824] rounded-2xl shadow-2xl border border-slate-200 dark:border-[#233048] w-full max-w-xl max-h-[85vh] flex flex-col overflow-hidden text-slate-800 dark:text-white">
+        <div className="px-5 py-4 border-b border-slate-200 dark:border-[#233048] flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Terminal className="w-5 h-5 text-blue-400" />
+            <Terminal className="w-5 h-5 text-blue-500" />
             <div>
-              <h3 className="text-sm font-bold text-white">Execution Logs: {workflowKey}</h3>
-              <p className="text-[11px] text-slate-400">Live DAG telemetry trace</p>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">Execution Logs: {workflowKey}</h3>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">Live DAG telemetry trace</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white text-xl font-bold">×</button>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-700 dark:hover:text-white text-xl font-bold">×</button>
         </div>
 
         <div className="p-5 overflow-y-auto flex-1 space-y-4 text-xs">
           {error && (
-            <div className="p-3 bg-red-950/60 border border-red-800 rounded-xl text-red-300">
+            <div className="p-3 bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 rounded-xl text-red-700 dark:text-red-300">
               {error}
             </div>
           )}
@@ -1934,24 +2342,24 @@ function TestRunDrawer({ open, onClose, workflowKey, api }) {
           {result && (
             <div className="space-y-3">
               <div className="grid grid-cols-3 gap-2">
-                <div className="p-2.5 bg-[#162030] border border-[#233048] rounded-xl">
-                  <span className="text-[10px] text-slate-400 block font-semibold uppercase">Executed Nodes</span>
-                  <span className="text-sm font-bold text-white">{result.total_nodes_executed}</span>
+                <div className="p-2.5 bg-slate-50 dark:bg-[#162030] border border-slate-200 dark:border-[#233048] rounded-xl">
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-semibold uppercase">Executed Nodes</span>
+                  <span className="text-sm font-bold text-slate-900 dark:text-white">{result.total_nodes_executed}</span>
                 </div>
-                <div className="p-2.5 bg-[#162030] border border-[#233048] rounded-xl">
-                  <span className="text-[10px] text-slate-400 block font-semibold uppercase">Est. Tokens</span>
-                  <span className="text-sm font-bold text-white">{result.total_simulated_tokens}</span>
+                <div className="p-2.5 bg-slate-50 dark:bg-[#162030] border border-slate-200 dark:border-[#233048] rounded-xl">
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-semibold uppercase">Est. Tokens</span>
+                  <span className="text-sm font-bold text-slate-900 dark:text-white">{result.total_simulated_tokens}</span>
                 </div>
-                <div className="p-2.5 bg-[#162030] border border-[#233048] rounded-xl">
-                  <span className="text-[10px] text-slate-400 block font-semibold uppercase">Simulated Cost</span>
-                  <span className="text-sm font-bold text-emerald-400">${result.total_simulated_cost_usd}</span>
+                <div className="p-2.5 bg-slate-50 dark:bg-[#162030] border border-slate-200 dark:border-[#233048] rounded-xl">
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-semibold uppercase">Simulated Cost</span>
+                  <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">${result.total_simulated_cost_usd}</span>
                 </div>
               </div>
             </div>
           )}
         </div>
 
-        <div className="p-4 border-t border-[#233048] flex justify-end gap-2 bg-[#0c121d]">
+        <div className="p-4 border-t border-slate-200 dark:border-[#233048] flex justify-end gap-2 bg-slate-50 dark:bg-[#0c121d]">
           <Button variant="secondary" size="sm" onClick={onClose}>Close</Button>
           <Button variant="primary" size="sm" loading={running} onClick={executeTest} icon={<Play size={12} className="fill-white" />}>
             Run Simulation
@@ -2034,28 +2442,28 @@ function AssignWorkflowModal({ open, onClose, workflowKey, workflowName, api, on
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-      <div className="bg-[#121824] rounded-2xl shadow-2xl border border-[#233048] w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden text-white">
-        <div className="px-5 py-4 border-b border-[#233048] flex items-center justify-between">
+      <div className="bg-white dark:bg-[#121824] rounded-2xl shadow-2xl border border-slate-200 dark:border-[#233048] w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden text-slate-800 dark:text-white">
+        <div className="px-5 py-4 border-b border-slate-200 dark:border-[#233048] flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Building2 className="w-5 h-5 text-blue-400" />
+            <Building2 className="w-5 h-5 text-blue-500" />
             <div>
-              <h3 className="text-sm font-bold text-white">Assign Workflow: {workflowName}</h3>
-              <p className="text-[11px] text-slate-400">Configure organization access and subscription plan entitlements</p>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">Assign Workflow: {workflowName}</h3>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">Configure organization access and subscription plan entitlements</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white text-xl font-bold">×</button>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-700 dark:hover:text-white text-xl font-bold">×</button>
         </div>
 
         <div className="p-5 overflow-y-auto flex-1 space-y-4">
           {error && (
-            <div className="p-3 bg-red-950/60 border border-red-800 rounded-xl text-xs text-red-300">
+            <div className="p-3 bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 rounded-xl text-xs text-red-700 dark:text-red-300">
               {error}
             </div>
           )}
 
           <div>
-            <p className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-              <CreditCard size={13} className="text-blue-400" /> Entitle on Billing Plans
+            <p className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <CreditCard size={13} className="text-blue-500" /> Entitle on Billing Plans
             </p>
             <div className="grid grid-cols-2 gap-2">
               {plans.map(p => (
@@ -2064,15 +2472,15 @@ function AssignWorkflowModal({ open, onClose, workflowKey, workflowName, api, on
                   className={cn(
                     'flex items-center gap-2 p-2.5 rounded-xl border text-xs cursor-pointer transition-all',
                     selectedPlans.includes(p.slug)
-                      ? 'bg-blue-600/20 border-blue-500 text-blue-300 font-semibold'
-                      : 'bg-[#162030] border-[#233048] text-slate-400 hover:border-slate-500'
+                      ? 'bg-blue-50 dark:bg-blue-600/20 border-blue-400 dark:border-blue-500 text-blue-700 dark:text-blue-300 font-semibold'
+                      : 'bg-slate-50 dark:bg-[#162030] border-slate-200 dark:border-[#233048] text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-500'
                   )}
                 >
                   <input
                     type="checkbox"
                     checked={selectedPlans.includes(p.slug)}
                     onChange={() => togglePlan(p.slug)}
-                    className="rounded border-slate-700 text-blue-600 focus:ring-0"
+                    className="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-0"
                   />
                   <span>{p.name}</span>
                 </label>
@@ -2081,8 +2489,8 @@ function AssignWorkflowModal({ open, onClose, workflowKey, workflowName, api, on
           </div>
 
           <div>
-            <p className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-              <Building2 size={13} className="text-blue-400" /> Assign to Organizations
+            <p className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <Building2 size={13} className="text-blue-500" /> Assign to Organizations
             </p>
             <div className="space-y-1.5 max-h-48 overflow-y-auto">
               {orgs.map(o => (
@@ -2091,8 +2499,8 @@ function AssignWorkflowModal({ open, onClose, workflowKey, workflowName, api, on
                   className={cn(
                     'flex items-center justify-between p-2.5 rounded-xl border text-xs cursor-pointer transition-all',
                     selectedOrgs.includes(o.id)
-                      ? 'bg-blue-600/20 border-blue-500 text-blue-300 font-semibold'
-                      : 'bg-[#162030] border-[#233048] text-slate-400 hover:border-slate-500'
+                      ? 'bg-blue-50 dark:bg-blue-600/20 border-blue-400 dark:border-blue-500 text-blue-700 dark:text-blue-300 font-semibold'
+                      : 'bg-slate-50 dark:bg-[#162030] border-slate-200 dark:border-[#233048] text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-500'
                   )}
                 >
                   <div className="flex items-center gap-2">
@@ -2100,18 +2508,18 @@ function AssignWorkflowModal({ open, onClose, workflowKey, workflowName, api, on
                       type="checkbox"
                       checked={selectedOrgs.includes(o.id)}
                       onChange={() => toggleOrg(o.id)}
-                      className="rounded border-slate-700 text-blue-600 focus:ring-0"
+                      className="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-0"
                     />
                     <span>{o.name}</span>
                   </div>
-                  <span className="text-[10px] text-slate-500 font-mono">{o.plan || 'starter'}</span>
+                  <span className="text-[10px] text-slate-400 font-mono">{o.plan || 'starter'}</span>
                 </label>
               ))}
             </div>
           </div>
         </div>
 
-        <div className="p-4 border-t border-[#233048] flex justify-end gap-2 bg-[#0c121d]">
+        <div className="p-4 border-t border-slate-200 dark:border-[#233048] flex justify-end gap-2 bg-slate-50 dark:bg-[#0c121d]">
           <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
           <Button variant="primary" size="sm" loading={saving} onClick={handleSaveAssignments} icon={<CheckCircle2 size={12} />}>
             Save Assignments
@@ -2176,7 +2584,7 @@ function AICopilotModal({ open, onClose, api, onWorkflowGenerated }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-      <div className="bg-[#121824] rounded-2xl shadow-2xl border border-[#233048] w-full max-w-xl flex flex-col overflow-hidden text-white animate-scale-in">
+      <div className="bg-white dark:bg-[#121824] rounded-2xl shadow-2xl border border-slate-200 dark:border-[#233048] w-full max-w-xl flex flex-col overflow-hidden text-slate-800 dark:text-white animate-scale-in">
         <div className="px-5 py-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center backdrop-blur-xs">
@@ -2192,13 +2600,13 @@ function AICopilotModal({ open, onClose, api, onWorkflowGenerated }) {
 
         <form onSubmit={handleGenerate} className="p-5 space-y-4">
           {error && (
-            <div className="p-3 bg-red-950/60 border border-red-800 rounded-xl text-xs text-red-300">
+            <div className="p-3 bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 rounded-xl text-xs text-red-700 dark:text-red-300">
               {error}
             </div>
           )}
 
           <div>
-            <label className="block text-xs font-bold text-slate-300 mb-1.5">
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
               Describe the workflow you want to create
             </label>
             <textarea
@@ -2207,12 +2615,12 @@ function AICopilotModal({ open, onClose, api, onWorkflowGenerated }) {
               disabled={generating}
               rows={3}
               placeholder="e.g. Build an automated medical appointment reminder and triage workflow that ingests calendar bookings, verifies patient details, reasons on priority, alerts nurse SME if urgent, and sends SMS notifications."
-              className="w-full text-xs p-3 rounded-xl bg-[#162030] border border-[#2a3850] text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 resize-none font-medium leading-relaxed"
+              className="w-full text-xs p-3 rounded-xl bg-slate-50 dark:bg-[#162030] border border-slate-200 dark:border-[#2a3850] text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 resize-none font-medium leading-relaxed"
             />
           </div>
 
           <div>
-            <p className="text-[11px] font-semibold text-slate-400 mb-1.5 uppercase tracking-wider">
+            <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wider">
               Prompt Inspirations
             </p>
             <div className="grid grid-cols-2 gap-1.5">
@@ -2221,7 +2629,7 @@ function AICopilotModal({ open, onClose, api, onWorkflowGenerated }) {
                   key={idx}
                   type="button"
                   onClick={() => setPrompt(item.text)}
-                  className="text-left p-2 rounded-lg border border-[#233048] bg-[#162030] hover:bg-[#1f2c42] hover:border-blue-400 transition-all text-[11px] text-slate-300 font-medium truncate"
+                  className="text-left p-2 rounded-lg border border-slate-200 dark:border-[#233048] bg-slate-50 dark:bg-[#162030] hover:bg-blue-50 dark:hover:bg-[#1f2c42] hover:border-blue-300 dark:hover:border-blue-400 transition-all text-[11px] text-slate-600 dark:text-slate-300 font-medium truncate"
                 >
                   {item.label}
                 </button>
@@ -2237,25 +2645,25 @@ function AICopilotModal({ open, onClose, api, onWorkflowGenerated }) {
               options={INDUSTRIES.map(i => ({ value: i, label: i.charAt(0).toUpperCase() + i.slice(1) }))}
             />
             <div className="flex flex-col justify-end">
-              <p className="text-[11px] text-slate-400 pb-1">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 pb-1">
                 AI will automatically pick triggers, agents, HITL gates &amp; tool connectors.
               </p>
             </div>
           </div>
 
           {generating && (
-            <div className="p-4 bg-indigo-950/60 border border-indigo-800 rounded-xl space-y-2">
-              <div className="flex items-center gap-2 text-xs font-bold text-indigo-300">
+            <div className="p-4 bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 rounded-xl space-y-2">
+              <div className="flex items-center gap-2 text-xs font-bold text-indigo-700 dark:text-indigo-300">
                 <Spinner size="sm" />
                 <span>Generating Multi-Agent Workflow...</span>
               </div>
-              <p className="text-xs text-indigo-200 font-medium pl-6">
+              <p className="text-xs text-indigo-600 dark:text-indigo-200 font-medium pl-6">
                 {STEPS[stepIndex]}
               </p>
             </div>
           )}
 
-          <div className="flex justify-end gap-2 pt-3 border-t border-[#233048]">
+          <div className="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-[#233048]">
             <Button variant="secondary" size="sm" type="button" onClick={onClose} disabled={generating}>
               Cancel
             </Button>
@@ -2387,9 +2795,9 @@ export default function WorkflowBuilder() {
       },
       nodes: generatedWf.nodes.map(n => ({
         id: n.id,
-        agent: n.data?.agentType || 'reasoning_agent',
+        agent: n.data?.agentType || n.type || 'reasoning_agent',
         name: n.data?.name || n.id,
-        description: n.data?.prompt_directive || '',
+        description: n.data?.prompt_directive || n.data?.description || '',
         timeout_seconds: n.data?.timeout_seconds || 60,
         tools: n.data?.tools || [],
       })),
@@ -2442,8 +2850,8 @@ export default function WorkflowBuilder() {
         is_custom: true,
       },
       nodes: [
-        { id: 'trigger_1', agent: `trigger_${formTrigger}`, name: formTrigger === 'scheduled' ? 'Every Morning' : 'Inbound Ingest', description: 'Trigger', timeout_seconds: 60, tools: [] },
-        { id: 'agent_process', agent: 'drafting_agent', name: 'Summarize Emails', description: 'AI Agent', timeout_seconds: 60, tools: [] },
+        { id: 'trigger_1', agent: `trigger_${formTrigger}`, name: formTrigger === 'scheduled' ? 'Every Morning' : formTrigger === 'email' ? 'Inbound Email Ingest' : formTrigger === 'webhook' ? 'REST Webhook Ingest' : 'Manual Run', description: 'Trigger', timeout_seconds: 60, tools: [] },
+        { id: 'agent_process', agent: formTrigger === 'email' ? 'drafting_agent' : 'reasoning_agent', name: formTrigger === 'email' ? 'Summarize Emails' : 'Reasoning & Logic', description: 'AI Agent', timeout_seconds: 60, tools: formTrigger === 'email' ? ['tool_email_dispatch'] : [] },
       ],
       edges: [{ from: 'trigger_1', to: 'agent_process', condition: '1 item' }],
       escalation_config: { sla_hours: 4, resume_after_decision: true },
@@ -2473,22 +2881,22 @@ export default function WorkflowBuilder() {
 
   if (loading) {
     return (
-      <div className="h-full flex items-center justify-center bg-[#0d1117]">
+      <div className="h-full flex items-center justify-center bg-slate-50 dark:bg-[#0d1117]">
         <Spinner size="lg" />
       </div>
     )
   }
 
   return (
-    <div className="h-[calc(100vh-4rem)] flex flex-col bg-[#0d1117] overflow-hidden">
+    <div className="h-[calc(100vh-4rem)] flex flex-col bg-slate-50 dark:bg-[#0d1117] overflow-hidden">
       {error && (
-        <div className="px-4 py-2 bg-red-950/80 border-b border-red-800 text-xs text-red-200 flex items-center justify-between">
+        <div className="px-4 py-2 bg-red-50 dark:bg-red-950/80 border-b border-red-200 dark:border-red-800 text-xs text-red-700 dark:text-red-200 flex items-center justify-between">
           <span>{error}</span>
           <button onClick={() => setError('')} className="font-bold">×</button>
         </div>
       )}
       {success && (
-        <div className="px-4 py-2 bg-emerald-950/80 border-b border-emerald-800 text-xs text-emerald-200 flex items-center justify-between">
+        <div className="px-4 py-2 bg-emerald-50 dark:bg-emerald-950/80 border-b border-emerald-200 dark:border-emerald-800 text-xs text-emerald-700 dark:text-emerald-200 flex items-center justify-between">
           <span>{success}</span>
           <button onClick={() => setSuccess('')} className="font-bold">×</button>
         </div>
@@ -2496,10 +2904,10 @@ export default function WorkflowBuilder() {
 
       <div className="flex-1 flex min-h-0 relative">
         
-        {/* Left Workflow List Sidebar */}
-        <div className="w-56 shrink-0 bg-[#0f1522] border-r border-[#233048] flex flex-col h-full z-10 select-none">
-          <div className="p-3 border-b border-[#233048] flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-300">Workflows</span>
+        {/* ── Left Workflow List Sidebar ── */}
+        <div className="w-56 shrink-0 bg-white dark:bg-[#0f1522] border-r border-slate-200 dark:border-[#233048] flex flex-col h-full z-10 select-none">
+          <div className="p-3 border-b border-slate-200 dark:border-[#233048] flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Workflows</span>
             <button
               onClick={() => setShowCreate(true)}
               className="p-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white"
@@ -2519,12 +2927,12 @@ export default function WorkflowBuilder() {
                   className={cn(
                     'w-full text-left p-2.5 rounded-xl border text-xs transition-all flex items-center justify-between gap-2',
                     active
-                      ? 'bg-[#1b2538] border-blue-500/80 text-white font-bold shadow-xs'
-                      : 'bg-[#141c2c] border-[#233048] text-slate-300 hover:border-slate-500 hover:bg-[#182335]'
+                      ? 'bg-blue-50 dark:bg-[#1b2538] border-blue-400 dark:border-blue-500/80 text-blue-700 dark:text-white font-bold shadow-xs'
+                      : 'bg-white dark:bg-[#141c2c] border-slate-200 dark:border-[#233048] text-slate-600 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-500 hover:bg-slate-50 dark:hover:bg-[#182335]'
                   )}
                 >
                   <span className="truncate">{w.display_name || w.name}</span>
-                  <ChevronRight className={cn('w-3 h-3 text-slate-500 shrink-0', active && 'text-blue-400')} />
+                  <ChevronRight className={cn('w-3 h-3 text-slate-400 shrink-0', active && 'text-blue-500 dark:text-blue-400')} />
                 </button>
               )
             })}
@@ -2549,13 +2957,13 @@ export default function WorkflowBuilder() {
               />
             </ReactFlowProvider>
           ) : (
-            <div className="h-full flex items-center justify-center p-8 bg-[#0d1117] text-white">
+            <div className="h-full flex items-center justify-center p-8 bg-white dark:bg-[#0d1117]">
               <div className="text-center max-w-sm">
-                <div className="w-14 h-14 rounded-2xl bg-[#162030] border border-[#2a3850] text-blue-400 flex items-center justify-center mx-auto mb-3 shadow-md">
+                <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-[#162030] border border-slate-200 dark:border-[#2a3850] text-blue-500 flex items-center justify-center mx-auto mb-3 shadow-md">
                   <Sparkles size={24} />
                 </div>
-                <h3 className="text-sm font-bold text-white mb-1">Select Workflow or Generate with AI Copilot</h3>
-                <p className="text-xs text-slate-400 mb-4 leading-relaxed">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-1">Select Workflow or Generate with AI Copilot</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 leading-relaxed">
                   Open an existing workflow or use natural language to generate a connected multi-agent automation.
                 </p>
                 <div className="flex items-center justify-center gap-2">
@@ -2662,7 +3070,7 @@ export default function WorkflowBuilder() {
             placeholder="Describe what this multi-agent workflow accomplishes..."
             rows={2}
           />
-          <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+          <div className="flex justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-700">
             <Button variant="secondary" size="sm" type="button" onClick={() => setShowCreate(false)}>Cancel</Button>
             <Button variant="primary" size="sm" type="submit" loading={saving}>Create &amp; Open Canvas</Button>
           </div>

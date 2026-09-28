@@ -10,7 +10,7 @@ import uuid
 from datetime import datetime
 from typing import Any, Optional
 
-from sqlalchemy import Boolean, Column, DateTime, Float, Integer, String, Text
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase
 
@@ -339,3 +339,75 @@ class PlatformSetting(Base):
     description = Column(Text)
     updated_by  = Column(String(255))
     updated_at  = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+# =============================================================================
+# Relationship Intelligence & Central Memory Models (Node 3)
+# =============================================================================
+
+class RelationshipContact(Base):
+    """
+    Persistent, organization-scoped contact entity for relationship intelligence.
+    Enforces deterministic contact resolution via normalized_name scoped by organization_id.
+    """
+    __tablename__ = "relationship_contacts"
+    __table_args__ = (
+        UniqueConstraint("organization_id", "normalized_name", name="uq_relationship_contacts_org_normalized_name"),
+    )
+
+    id              = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+    name            = Column(String(255), nullable=False)
+    normalized_name = Column(String(255), nullable=False, index=True)
+    role            = Column(String(255), nullable=True)
+    company         = Column(String(255), nullable=True)
+    metadata_       = Column("metadata", JSONB, nullable=False, default=dict)
+    created_at      = Column(DateTime, default=datetime.utcnow)
+    updated_at      = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class RelationshipConversation(Base):
+    """
+    Append-only persistent record of a single conversation associated with a contact and workflow instance.
+    Survives page refresh, server restarts, and future workflow runs.
+    """
+    __tablename__ = "relationship_conversations"
+    __table_args__ = (
+        UniqueConstraint("organization_id", "workflow_instance_id", name="uq_relationship_conv_org_instance"),
+    )
+
+    id                   = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id      = Column(UUID(as_uuid=True), nullable=False, index=True)
+    contact_id           = Column(UUID(as_uuid=True), ForeignKey("relationship_contacts.id", ondelete="CASCADE"), nullable=False, index=True)
+    workflow_instance_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+    title                = Column(String(255), nullable=False)
+    conversation_type    = Column(String(100), nullable=False, default="meeting")
+    conversation_date    = Column(String(50), nullable=True)
+    detected_language    = Column(String(20), nullable=False, default="en")
+    transcript           = Column(Text, nullable=False)
+    summary              = Column(Text, nullable=True)
+    structured_memory    = Column(JSONB, nullable=False, default=dict)
+    created_at           = Column(DateTime, default=datetime.utcnow)
+    updated_at           = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class RelationshipMemoryItem(Base):
+    """
+    Granular, traceable memory element (fact, interest, need, opportunity, commitment, AI suggestion, open question).
+    Maintains provenance to source conversation, workflow instance, and conversation date.
+    Preserves strict separation between factual extracted knowledge and AI-generated suggestions.
+    """
+    __tablename__ = "relationship_memory_items"
+
+    id                   = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id      = Column(UUID(as_uuid=True), nullable=False, index=True)
+    contact_id           = Column(UUID(as_uuid=True), ForeignKey("relationship_contacts.id", ondelete="CASCADE"), nullable=False, index=True)
+    conversation_id      = Column(UUID(as_uuid=True), ForeignKey("relationship_conversations.id", ondelete="CASCADE"), nullable=False, index=True)
+    workflow_instance_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+    category             = Column(String(50), nullable=False, index=True)
+    content              = Column(Text, nullable=False)
+    details              = Column(JSONB, nullable=False, default=dict)
+    source_date          = Column(String(50), nullable=True)
+    is_ai_generated      = Column(Boolean, nullable=False, default=False)
+    created_at           = Column(DateTime, default=datetime.utcnow)
+

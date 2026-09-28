@@ -273,23 +273,41 @@ const CANONICAL_WORKFLOWS = [
       { name: 'Physician Consultation Sync', type: 'output', tool: 'calendar' },
     ],
   },
+  {
+    name: 'meeting_intelligence_followup',
+    display_name: 'Meeting Intelligence & Follow-up',
+    title: 'Transform messy meeting recordings into executive action items, CRM updates, and team tasks',
+    category: 'AI & LLMs',
+    description: 'Autonomous multi-agent pipeline for audio transcription, diarization, action item extraction, calendar invite generation, and multi-channel follow-up sync.',
+    apps: ['claude', 'gmail', 'calendar', 'slack'],
+    creator: 'Executive AI Ops',
+    status: 'ready',
+    nodes: [
+      { name: 'Audio Transcript Ingest', type: 'trigger', tool: 'webhook' },
+      { name: 'Meeting Intelligence LLM', type: 'ai_llm', tool: 'claude' },
+      { name: 'Calendar Schedule Sync', type: 'action', tool: 'calendar' },
+      { name: 'Executive Slack Dispatch', type: 'output', tool: 'slack' },
+    ],
+  },
 ]
 
 function StatusBadge({ status }) {
   const map = {
-    active:    'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60',
-    draft:     'bg-slate-100 dark:bg-[#182234] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-[#233048]',
-    paused:    'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800/60',
-    stopped:   'bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-300 border-red-200 dark:border-red-800/60',
-    running:   'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800/60',
-    completed: 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60',
-    failed:    'bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-300 border-red-200 dark:border-red-800/60',
+    active:     'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60',
+    ready:      'bg-slate-100 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700/60',
+    unassigned: 'bg-slate-100 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700/60',
+    draft:      'bg-slate-100 dark:bg-[#182234] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-[#233048]',
+    paused:     'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800/60',
+    stopped:    'bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-300 border-red-200 dark:border-red-800/60',
+    running:    'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800/60',
+    completed:  'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60',
+    failed:     'bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-300 border-red-200 dark:border-red-800/60',
   }
-  const s = (status || 'active').toLowerCase()
+  const s = (status || 'ready').toLowerCase()
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[11px] font-semibold rounded-full border ${map[s] || map.active}`}>
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[11px] font-semibold rounded-full border ${map[s] || map.ready}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${s === 'active' || s === 'completed' ? 'bg-emerald-500' : s === 'running' ? 'bg-blue-500 animate-pulse' : s === 'paused' ? 'bg-amber-500' : 'bg-slate-400'}`} />
-      {s.charAt(0).toUpperCase() + s.slice(1)}
+      {s === 'unassigned' ? 'Unassigned' : s.charAt(0).toUpperCase() + s.slice(1)}
     </span>
   )
 }
@@ -578,13 +596,19 @@ function NodePreviewModal({ workflow, onClose, onRun }) {
           >
             Close
           </button>
-          <button
-            onClick={() => { onClose(); onRun(workflow) }}
-            className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
-          >
-            <Play size={13} className="fill-white" />
-            <span>Open Workflow Dashboard</span>
-          </button>
+          {workflow?.is_assigned ? (
+            <button
+              onClick={() => { onClose(); onRun(workflow) }}
+              className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
+            >
+              <Play size={13} className="fill-white" />
+              <span>Open Workflow Dashboard</span>
+            </button>
+          ) : (
+            <span className="px-4 py-2 text-xs font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/40 rounded-xl">
+              Assignment Required to Execute
+            </span>
+          )}
         </div>
       </div>
     </div>
@@ -625,28 +649,42 @@ export default function WorkflowsPage() {
 
   // Merge canonical catalog with database records and execution run telemetry
   const enrichedWorkflows = useMemo(() => {
+    const canonicalMap = new Map()
+    CANONICAL_WORKFLOWS.forEach(w => {
+      canonicalMap.set(w.name, w)
+    })
+
     const map = new Map()
 
-    CANONICAL_WORKFLOWS.forEach(w => {
-      map.set(w.name, { ...w })
-    })
-
-    dbWorkflows.forEach(w => {
-      const existing = map.get(w.name) || {}
-      map.set(w.name, {
-        ...existing,
-        ...w,
-        display_name: getDisplayName(w.name, w.display_name || existing.display_name),
-        apps: existing.apps || ['webhook', 'claude', 'slack'],
-        nodes: existing.nodes || [
-          { name: 'Webhook Ingest', type: 'trigger', tool: 'webhook' },
-          { name: 'LLM Agent', type: 'ai_llm', tool: 'claude' },
-          { name: 'Data Pipeline', type: 'action', tool: 'postgres' },
-          { name: 'Notification', type: 'output', tool: 'slack' },
-        ],
-        category: existing.category || (w.category ? w.category.charAt(0).toUpperCase() + w.category.slice(1) : 'Operations'),
+    if (dbWorkflows && dbWorkflows.length > 0) {
+      dbWorkflows.forEach(w => {
+        const canonical = canonicalMap.get(w.name || w.key) || {}
+        const isAssigned = Boolean(w.is_assigned)
+        const name = w.key || w.name
+        map.set(name, {
+          ...canonical,
+          ...w,
+          name: name,
+          status: isAssigned ? 'active' : 'ready',
+          is_assigned: isAssigned,
+          can_run: isAssigned,
+          display_name: getDisplayName(name, w.display_name || canonical.display_name),
+          title: canonical.title || w.description || w.display_name,
+          apps: canonical.apps || w.required_integrations || ['webhook', 'claude', 'slack'],
+          nodes: canonical.nodes || [
+            { name: 'Webhook Ingest', type: 'trigger', tool: 'webhook' },
+            { name: 'LLM Agent', type: 'ai_llm', tool: 'claude' },
+            { name: 'Data Pipeline', type: 'action', tool: 'postgres' },
+            { name: 'Notification', type: 'output', tool: 'slack' },
+          ],
+          category: canonical.category || (w.category ? w.category.charAt(0).toUpperCase() + w.category.slice(1) : 'Operations'),
+        })
       })
-    })
+    } else {
+      CANONICAL_WORKFLOWS.forEach(w => {
+        map.set(w.name, { ...w, is_assigned: false, status: 'ready' })
+      })
+    }
 
     return Array.from(map.values()).map(wf => {
       const wfRuns = instances.filter(i => i.workflow_name === wf.name || (wf.name === 'product_launch_sprint' && i.workflow_name === 'product_launch'))
@@ -670,7 +708,7 @@ export default function WorkflowsPage() {
   const filteredWorkflows = useMemo(() => {
     return enrichedWorkflows.filter(wf => {
       if (selectedCategory !== 'All') {
-        if (selectedCategory === 'Featured' && !['email_summarizer', 'product_launch_sprint', 'finance_operations', 'invoice_extractor'].includes(wf.name)) return false
+        if (selectedCategory === 'Featured' && !['email_summarizer', 'product_launch_sprint', 'finance_operations', 'invoice_extractor', 'meeting_intelligence_followup'].includes(wf.name)) return false
         if (selectedCategory !== 'Featured' && (wf.category || '').toLowerCase() !== selectedCategory.toLowerCase()) return false
       }
 
@@ -707,6 +745,10 @@ export default function WorkflowsPage() {
     }
     if (name === 'product_launch' || name === 'product_launch_sprint' || name.includes('product_launch')) {
       navigate('/workflows/product_launch')
+      return
+    }
+    if (name === 'meeting_intelligence' || name === 'meeting_intelligence_followup' || name.includes('meeting')) {
+      navigate('/workflows/meeting_intelligence_followup')
       return
     }
     setTargetWf({
@@ -888,7 +930,11 @@ export default function WorkflowsPage() {
                     <div
                       key={wf.name}
                       onClick={() => {
-                        navigate(`/workflows/${wf.name}`)
+                        if (wf.is_assigned) {
+                          navigate(`/workflows/${wf.name}`)
+                        } else {
+                          setPreviewWorkflow(wf)
+                        }
                       }}
                       className="group bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] hover:border-blue-500 dark:hover:border-blue-400 rounded-2xl p-5 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between cursor-pointer relative"
                     >
@@ -898,7 +944,7 @@ export default function WorkflowsPage() {
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-100 dark:bg-[#182234] text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-[#233048]">
                             {wf.category || 'Operations'}
                           </span>
-                          <StatusBadge status={wf.status || 'active'} />
+                          <StatusBadge status={wf.is_assigned ? 'active' : 'ready'} />
                         </div>
 
                         {/* Title & Description */}
@@ -942,17 +988,30 @@ export default function WorkflowsPage() {
                           <span className="text-[11px] text-slate-400 ml-2 font-mono">{wf.totalRuns} runs</span>
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            navigate(`/workflows/${wf.name}`)
-                          }}
-                          className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer"
-                        >
-                          <Play className="w-3 h-3 fill-white" />
-                          <span>Run</span>
-                        </button>
+                        {wf.is_assigned ? (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              navigate(`/workflows/${wf.name}`)
+                            }}
+                            className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+                          >
+                            <Play className="w-3 h-3 fill-white" />
+                            <span>Run</span>
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setPreviewWorkflow(wf)
+                            }}
+                            className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-[#182234] dark:hover:bg-[#233048] text-slate-600 dark:text-slate-300 rounded-lg text-xs font-medium border border-slate-200 dark:border-[#233048] transition-colors cursor-pointer"
+                          >
+                            <span>Preview</span>
+                          </button>
+                        )}
                       </div>
                     </div>
                   )

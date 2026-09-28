@@ -56,7 +56,8 @@ WHERE key IN (
 UPDATE workflow_catalog SET scope = 'GLOBAL', industry = NULL
 WHERE key IN (
     'email_summarizer', 'compliance_monitor',
-    'document_intake_extraction', 'content_factory', 'ops_playbook'
+    'document_intake_extraction', 'content_factory', 'ops_playbook',
+    'meeting_intelligence_followup'
 );
 
 -- Seed plan_workflow_entitlements for the FREE plan with GLOBAL workflows only.

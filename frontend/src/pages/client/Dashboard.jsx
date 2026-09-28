@@ -86,6 +86,8 @@ function TimelineItem({ run, isLast, onNavigate }) {
       onNavigate('/workflows/invoice_processing')
     } else if (rawKey.includes('churn') || rawKey.includes('finance')) {
       onNavigate('/workflows/finance_operations')
+    } else if (rawKey.includes('meeting') || rawKey.includes('conversation')) {
+      onNavigate('/workflows/meeting_intelligence_followup')
     } else {
       onNavigate('/workflows')
     }
@@ -197,7 +199,10 @@ export default function Dashboard() {
   useEffect(() => {
     if (!user?.tenant_id) return
     api.get('/catalog/assigned')
-      .then(data => setWorkflowCount(Array.isArray(data) ? data.length : null))
+      .then(data => {
+        const assigned = Array.isArray(data) ? data.filter(w => w.is_assigned !== false) : []
+        setWorkflowCount(assigned.length)
+      })
       .catch(() => setWorkflowCount(null))
   }, [api, user?.tenant_id])
 

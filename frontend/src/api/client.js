@@ -12,8 +12,12 @@ export const WS_BASE  = import.meta.env.VITE_WS_BASE  || 'ws://127.0.0.1:8000/ws
  * - Returns null on 204 No Content
  */
 export async function apiCall(path, options = {}, token = null) {
-  const headers = { 'Content-Type': 'application/json' }
+  const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData
+  const headers = isFormData ? {} : { 'Content-Type': 'application/json' }
   if (token) headers['Authorization'] = `Bearer ${token}`
+  if (options.headers) {
+    Object.assign(headers, options.headers)
+  }
 
   // Normalize path to prevent double /api/v1 prefixes
   let cleanPath = path || ''
@@ -28,11 +32,20 @@ export async function apiCall(path, options = {}, token = null) {
     cleanPath = `/${cleanPath}`
   }
 
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), options.timeout || 60000)
+  const signal = options.signal || controller.signal
+
   let res
   try {
-    res = await fetch(`${API_BASE}${cleanPath}`, { headers, ...options })
+    res = await fetch(`${API_BASE}${cleanPath}`, { ...options, headers, signal })
   } catch (networkErr) {
+    if (networkErr.name === 'AbortError') {
+      throw new Error(`Request timed out after ${((options.timeout || 60000) / 1000).toFixed(0)}s. Please retry.`)
+    }
     throw new Error(`Network error: cannot reach API. Is the server running?`)
+  } finally {
+    clearTimeout(timeoutId)
   }
 
   if (!res.ok) {
@@ -101,8 +114,21 @@ export function createApiClient(token) {
       }
       return call(finalPath, { method: 'GET' })
     },
-    post:   (path, data)  => call(path, { method: 'POST',   body: JSON.stringify(data) }),
-    put:    (path, data)  => call(path, { method: 'PUT',    body: JSON.stringify(data) }),
+    post: (path, data) => {
+      const isFormData = typeof FormData !== 'undefined' && data instanceof FormData
+      return call(path, {
+        method: 'POST',
+        body: isFormData ? data : JSON.stringify(data),
+      })
+    },
+    upload: (path, formData) => call(path, { method: 'POST', body: formData }),
+    put: (path, data) => {
+      const isFormData = typeof FormData !== 'undefined' && data instanceof FormData
+      return call(path, {
+        method: 'PUT',
+        body: isFormData ? data : JSON.stringify(data),
+      })
+    },
     patch:  (path, data)  => call(path, { method: 'PATCH',  body: JSON.stringify(data) }),
     delete: (path)        => call(path, { method: 'DELETE' }),
   }

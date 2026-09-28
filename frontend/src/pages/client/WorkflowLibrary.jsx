@@ -16,7 +16,7 @@ import {
   Layers, CheckCircle2, Lock, Send,
   Cpu, Database, Calendar, Share2,
   ChevronDown, ChevronUp, Check, Shield, FileText, ArrowUpRight,
-  Filter, HelpCircle, X, Terminal, Server
+  Filter, HelpCircle, X, Terminal, Server, Wrench
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import RunWorkflowModal from '../../components/workflow/RunWorkflowModal'
@@ -291,6 +291,25 @@ const CURATED_TEMPLATES = [
       { name: 'Claude Clinical Parser', type: 'ai_llm', tool: 'claude' },
       { name: 'Treatment Cost Estimator', type: 'action', tool: 'sheet' },
       { name: 'Physician Consultation Sync', type: 'output', tool: 'calendar' },
+    ],
+  },
+  {
+    id: 'meeting_intelligence_followup',
+    name: 'meeting_intelligence_followup',
+    display_name: 'Meeting Intelligence & Follow-up',
+    title: 'Transform messy meeting recordings into executive action items, CRM updates, and team tasks',
+    category: 'AI & LLMs',
+    category_group: 'featured',
+    description: 'Autonomous multi-agent pipeline for audio transcription, diarization, action item extraction, calendar invite generation, and multi-channel follow-up sync.',
+    apps: ['claude', 'gmail', 'calendar', 'slack'],
+    creator: { name: 'Executive AI Ops', initials: 'EA' },
+    runs: '940 runs',
+    is_assigned: false,
+    nodes: [
+      { name: 'Audio Transcript Ingest', type: 'trigger', tool: 'webhook' },
+      { name: 'Meeting Intelligence LLM', type: 'ai_llm', tool: 'claude' },
+      { name: 'Calendar Schedule Sync', type: 'action', tool: 'calendar' },
+      { name: 'Executive Slack Dispatch', type: 'output', tool: 'slack' },
     ],
   },
 ]
@@ -626,14 +645,86 @@ export default function WorkflowLibrary() {
   const [requestingId, setRequestingId] = useState(null)
   const [requestToast, setRequestToast] = useState('')
 
-  const categories = ['All', 'Featured', 'AI & LLMs', 'Sales & CRM', 'Marketing', 'DevOps & IT', 'Finance', 'Customer Support']
+  // ── Catalog fetch: load admin-saved custom workflows ────────────────────────
+  const [catalogItems, setCatalogItems] = useState([])
+  const [assignedMap, setAssignedMap] = useState({})
 
-  // Filter templates
+  useEffect(() => {
+    async function fetchCatalog() {
+      try {
+        // Admins see the full catalog; org users see their workflows catalog with is_assigned flags
+        const endpoint = isAdmin ? '/admin/workflows/catalog' : '/catalog/assigned'
+        const data = await api.get(endpoint)
+        if (!Array.isArray(data)) return
+
+        // Set of keys already covered by the hardcoded curated templates
+        const curatedKeys = new Set(CURATED_TEMPLATES.map(t => t.name))
+
+        const aMap = {}
+        data.forEach(w => {
+          const k = w.key || w.name
+          aMap[k] = Boolean(w.is_assigned)
+        })
+        setAssignedMap(aMap)
+
+        // Map catalog API shape → Library card shape
+        const custom = data
+          .filter(w => w.active !== false && !curatedKeys.has(w.key || w.name))
+          .map(w => {
+            const catLabel = w.category
+              ? w.category.charAt(0).toUpperCase() + w.category.slice(1)
+              : 'Custom'
+            const wfKey = w.key || w.name
+            return {
+              id:             w.id,
+              name:           wfKey,
+              display_name:   w.display_name || w.name,
+              title:          w.description || w.display_name || w.name,
+              category:       catLabel,
+              category_group: 'custom',
+              description:    w.description || 'Admin-created workflow pipeline.',
+              apps:           Array.isArray(w.required_integrations) ? w.required_integrations : [],
+              creator:        { name: 'Custom Workflow', initials: 'CW' },
+              runs:           '',
+              is_assigned:    Boolean(w.is_assigned),
+              nodes:          [],     // catalog API has no node detail — fine for card display
+              is_custom:      true,   // flag for the "Custom" badge on the card
+            }
+          })
+
+        setCatalogItems(custom)
+      } catch {
+        // Non-fatal — curated templates still show if fetch fails
+      }
+    }
+    fetchCatalog()
+  }, [api, isAdmin])
+
+  // Merged template list: curated first (with accurate is_assigned status), then custom catalog entries
+  const allTemplates = useMemo(
+    () => {
+      const curated = CURATED_TEMPLATES.map(t => ({
+        ...t,
+        is_assigned: assignedMap[t.name] !== undefined ? Boolean(assignedMap[t.name]) : Boolean(t.is_assigned),
+      }))
+      return [...curated, ...catalogItems]
+    },
+    [catalogItems, assignedMap]
+  )
+
+  // Dynamic category chips: base set + "Custom" when custom workflows exist
+  const categories = useMemo(() => {
+    const base = ['All', 'Featured', 'AI & LLMs', 'Sales & CRM', 'Marketing', 'DevOps & IT', 'Finance', 'Customer Support']
+    return catalogItems.length > 0 ? [...base, 'Custom'] : base
+  }, [catalogItems])
+
+  // Filter against merged list
   const filteredTemplates = useMemo(() => {
-    return CURATED_TEMPLATES.filter(tpl => {
+    return allTemplates.filter(tpl => {
       if (selectedCategory !== 'All') {
         if (selectedCategory === 'Featured' && tpl.category_group !== 'featured') return false
-        if (selectedCategory !== 'Featured' && tpl.category !== selectedCategory) return false
+        if (selectedCategory === 'Custom'   && tpl.category_group !== 'custom')   return false
+        if (selectedCategory !== 'Featured' && selectedCategory !== 'Custom' && tpl.category !== selectedCategory) return false
       }
 
       if (selectedApp && !tpl.apps.includes(selectedApp)) return false
@@ -657,6 +748,10 @@ export default function WorkflowLibrary() {
     }
     if (tpl.name === 'product_launch_sprint' || tpl.name === 'product_launch') {
       navigate('/workflows/product_launch')
+      return
+    }
+    if (tpl.name === 'meeting_intelligence' || tpl.name === 'meeting_intelligence_followup' || tpl.name?.includes('meeting')) {
+      navigate('/workflows/meeting_intelligence_followup')
       return
     }
     setSelectedRunWf({
@@ -825,15 +920,23 @@ export default function WorkflowLibrary() {
                           {tpl.category}
                         </span>
 
-                        {tpl.is_assigned ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/80">
-                            <CheckCircle2 size={10} /> Active
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                            Ready
-                          </span>
-                        )}
+                        <div className="flex items-center gap-1 shrink-0">
+                          {/* Custom workflow badge */}
+                          {tpl.is_custom && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/80">
+                              <Wrench size={9} /> Custom
+                            </span>
+                          )}
+                          {tpl.is_assigned ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/80">
+                              <CheckCircle2 size={10} /> Active
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                              Ready
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       <h3 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2 mb-2 leading-snug">

@@ -92,6 +92,7 @@ WORKFLOW_APPLICABILITY: dict[str, dict] = {
     "document_intake_extraction":          {"scope": "GLOBAL",   "industry": None},
     "content_factory":                     {"scope": "GLOBAL",   "industry": None},
     "ops_playbook":                        {"scope": "GLOBAL",   "industry": None},
+    "meeting_intelligence_followup":       {"scope": "GLOBAL",   "industry": None},
 }
 
 

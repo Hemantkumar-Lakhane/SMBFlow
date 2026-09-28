@@ -185,6 +185,8 @@ function AppRoutes() {
       <Route path="/workflows/devops_alert_triage"       element={<Wrap><UniversalWorkflowRunner /></Wrap>} />
       <Route path="/workflows/medical_journey_operations" element={<Wrap><UniversalWorkflowRunner /></Wrap>} />
       <Route path="/workflows/email_summarizer"          element={<Wrap><UniversalWorkflowRunner /></Wrap>} />
+      <Route path="/workflows/meeting_intelligence_followup" element={<Wrap><UniversalWorkflowRunner /></Wrap>} />
+      <Route path="/workflows/meeting_intelligence"          element={<Wrap><UniversalWorkflowRunner /></Wrap>} />
       <Route path="/workflows/run/:runId"                element={<Wrap><UniversalWorkflowRunner /></Wrap>} />
       <Route path="/workflows/run"                       element={<Wrap><UniversalWorkflowRunner /></Wrap>} />
       <Route path="/product-launch"                      element={<Wrap><UniversalWorkflowRunner /></Wrap>} />

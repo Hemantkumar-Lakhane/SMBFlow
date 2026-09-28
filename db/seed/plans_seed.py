@@ -51,6 +51,18 @@ DEFAULT_CATALOG_ITEMS = [
         "industry": None,
     },
     {
+        "name": "Meeting Intelligence & Follow-up",
+        "key": "meeting_intelligence_followup",
+        "description": "Converts professional conversations into structured memory, follow-up actions, and meeting preparation.",
+        "category": "productivity",
+        "version": "1.0.0",
+        "pricing_model": "included",
+        "supported_modules": ["meetings", "productivity"],
+        "required_integrations": ["calendar", "email"],
+        "scope": "GLOBAL",
+        "industry": None,
+    },
+    {
         "name": "Medical Journey Operations",
         "key": "medical_journey_operations",
         "description": "Patient intake coordination, medical records parsing, appointment scheduling, and care follow-up.",
@@ -96,7 +108,7 @@ DEFAULT_PLANS = [
         "status": "active",
         "is_public": True,
         "sort_order": 1,
-        "entitled_keys": ["email_summarizer", "product_launch_sprint"],
+        "entitled_keys": ["email_summarizer", "product_launch_sprint", "meeting_intelligence_followup"],
     },
     {
         "name": "Starter",
@@ -116,7 +128,7 @@ DEFAULT_PLANS = [
         "status": "active",
         "is_public": True,
         "sort_order": 2,
-        "entitled_keys": ["email_summarizer", "product_launch_sprint", "finance_operations"],
+        "entitled_keys": ["email_summarizer", "product_launch_sprint", "finance_operations", "meeting_intelligence_followup"],
     },
     {
         "name": "Growth",
@@ -136,7 +148,7 @@ DEFAULT_PLANS = [
         "status": "active",
         "is_public": True,
         "sort_order": 3,
-        "entitled_keys": ["email_summarizer", "product_launch_sprint", "medical_journey_operations", "finance_operations"],
+        "entitled_keys": ["email_summarizer", "product_launch_sprint", "medical_journey_operations", "finance_operations", "meeting_intelligence_followup"],
     },
     {
         "name": "Enterprise",
@@ -156,7 +168,7 @@ DEFAULT_PLANS = [
         "status": "active",
         "is_public": True,
         "sort_order": 4,
-        "entitled_keys": ["email_summarizer", "product_launch_sprint", "medical_journey_operations", "finance_operations"],
+        "entitled_keys": ["email_summarizer", "product_launch_sprint", "medical_journey_operations", "finance_operations", "meeting_intelligence_followup"],
     },
 ]
 

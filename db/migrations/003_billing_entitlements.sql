@@ -262,7 +262,8 @@ VALUES
   ('Product Launch Sprint',  'product_launch_sprint', 'End-to-end product launch workflow with AI agents',    'marketing',      'active', '1.0.0', 'included', '[]',                     '["product_launch"]'),
   ('Medical Journey Ops',    'medical_journey_ops',   'Patient coordination and medical tourism workflow',    'healthcare',     'active', '1.0.0', 'included', '[]',                     '["medical_tourism"]'),
   ('Finance Operations',     'finance_operations',    'Financial reporting and reconciliation automation',    'finance',        'beta',   '0.9.0', 'included', '[]',                     '["finance"]'),
-  ('CRM Intelligence',       'crm_intelligence',      'CRM data enrichment and follow-up automation',         'sales',          'beta',   '0.9.0', 'included', '["hubspot","salesforce"]','["crm"]')
+  ('CRM Intelligence',       'crm_intelligence',      'CRM data enrichment and follow-up automation',         'sales',          'beta',   '0.9.0', 'included', '["hubspot","salesforce"]','["crm"]'),
+  ('Meeting Intelligence & Follow-up', 'meeting_intelligence_followup', 'Autonomous pipeline: audio transcription, relationship memory, action classification, and grounded follow-up email drafting', 'productivity', 'active', '1.0.0', 'included', '[]', '["meeting_intelligence"]')
 ON CONFLICT (key) DO NOTHING;
 
 -- ── Seed: Assign all workflows to Growth + Enterprise plans ──────────────────

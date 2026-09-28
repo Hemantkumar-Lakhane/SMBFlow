@@ -236,7 +236,7 @@ async def lifespan(app: FastAPI):
     log.info("SMBFlow API stopped")
 
 
-from api.routers import connections, reviews, medical_tourism, product_launch, copilot
+from api.routers import connections, reviews, medical_tourism, product_launch, copilot, meeting_intelligence
 from api.routers import admin as admin_router
 
 app = FastAPI(
@@ -251,6 +251,7 @@ app.include_router(connections.router)
 app.include_router(reviews.router)
 app.include_router(medical_tourism.router)
 app.include_router(product_launch.router)
+app.include_router(meeting_intelligence.router)
 app.include_router(copilot.router)
 
 
@@ -2462,7 +2463,17 @@ async def decide_escalation(
 
         if appr:
             action_lower = body.action_chosen.lower()
-            decided_status = "approved" if ("approve" in action_lower or "send" in action_lower) else "rejected"
+            if "snooze" in action_lower:
+                decided_status = "snoozed"
+            elif "discard" in action_lower or "dismiss" in action_lower:
+                decided_status = "discarded"
+            elif "edit" in action_lower:
+                decided_status = "awaiting_review"
+            elif "approve" in action_lower or "send" in action_lower:
+                decided_status = "approved"
+            else:
+                decided_status = "rejected"
+
             appr.status = decided_status
             appr.decided_by = body.decided_by or current_user.email
             appr.decided_at = datetime.utcnow()
@@ -2471,6 +2482,10 @@ async def decide_escalation(
                 payload["decision_notes"] = body.decision.get("notes")
             if isinstance(body.decision, dict) and isinstance(body.decision.get("patch_payload"), dict):
                 payload = {**payload, **body.decision.get("patch_payload")}
+            if isinstance(body.decision, dict) and body.decision.get("snoozed_until"):
+                payload["snoozed_until"] = body.decision.get("snoozed_until")
+            if isinstance(body.decision, dict) and body.decision.get("snooze_reason"):
+                payload["snooze_reason"] = body.decision.get("snooze_reason")
             appr.payload = payload
             await db.commit()
 
@@ -3276,6 +3291,7 @@ async def list_workflow_dags(db: AsyncSession = Depends(get_db)):
 
 @app.get("/api/v1/catalog/assigned", tags=["Workflows"])
 async def list_tenant_workflows(
+    include_unassigned: bool = Query(default=True),
     current_user: TokenData = Depends(require_any_auth),
     db: AsyncSession = Depends(get_db),
 ):
@@ -3485,34 +3501,46 @@ async def list_tenant_workflows(
     except Exception:
         pass
 
-    # ── Fetch all active catalog workflows so library shows all templates ───
+    # ── Tenant workflow catalog resolution ──────────────────────────────────────
+    # Returns all workflows applicable to this tenant's industry + universal GLOBAL workflows.
+    # ONLY workflows with an active OrganizationWorkflowAssignment have status="active" & is_assigned=True.
     all_cats_res = await db.execute(_sel(_WCat).where(_WCat.active.is_(True)))
     all_catalogs = all_cats_res.scalars().all()
-
-    # Map of assigned workflows for this org
-    assign_map = {str(assign.workflow_id): assign for assign, _ in rows}
+    assign_map = {str(assign.workflow_id): assign for assign, _ in rows if assign.status == "active"}
 
     result = []
     for wf_cat in all_catalogs:
         is_assigned = str(wf_cat.id) in assign_map
         assign = assign_map.get(str(wf_cat.id))
-        
-        result.append({
+        wf_scope = getattr(wf_cat, "scope", "GLOBAL") or "GLOBAL"
+        wf_industry = getattr(wf_cat, "industry", None)
+
+        # Non-assigned industry workflows only visible if matching tenant industry
+        if not is_assigned and wf_scope == "INDUSTRY" and wf_industry and org_industry != wf_industry.lower().strip():
+            continue
+
+        item = {
             "id":           str(wf_cat.id),
             "name":         wf_cat.key,
+            "key":          wf_cat.key,
             "display_name": wf_cat.name,
             "description":  wf_cat.description or "",
             "category":     wf_cat.category,
-            "status":       wf_cat.status,
-            "scope":        getattr(wf_cat, "scope", None) or "GLOBAL",
-            "industry":     getattr(wf_cat, "industry", None),
+            "status":       "active" if is_assigned else "ready",
+            "scope":        wf_scope,
+            "industry":     wf_industry,
             "trigger_type": "New Email" if "email" in (wf_cat.key or "") else "Manual",
             "assigned_at":  assign.assigned_at.isoformat() if (assign and assign.assigned_at) else None,
             "is_assigned":  is_assigned,
             "can_run":      is_assigned,
             "run_count":    run_counts.get(wf_cat.key, 0),
             "last_run_at":  last_run.get(wf_cat.key),
-        })
+        }
+
+        if not include_unassigned and not is_assigned:
+            continue
+
+        result.append(item)
 
     # Sort: assigned workflows first, then by runs, then alphabetical
     result.sort(key=lambda w: (
@@ -3521,6 +3549,43 @@ async def list_tenant_workflows(
         (w.get("display_name") or "").lower(),
     ))
     return result
+
+
+@app.get("/api/v1/workflows/{workflow_name}/check-access", tags=["Workflows"])
+async def check_workflow_access_endpoint(
+    workflow_name: str,
+    current_user: TokenData = Depends(require_any_auth),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Client-side pre-flight authorization check for workflow execution.
+    Returns 200 with access details if allowed, or raises 403 Forbidden.
+    Admins are always granted access.
+    Tenants must pass org active, industry match, active subscription, plan entitlement,
+    and explicit organization assignment.
+    """
+    if current_user.role in ("platform_admin", "super_admin"):
+        return {"allowed": True, "reason": "Platform admin access granted", "scope": "GLOBAL"}
+
+    org_id = current_user.organization_id or current_user.tenant_id
+    if not org_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"error_code": "NO_ORGANIZATION", "message": "User is not associated with an organization"},
+        )
+
+    res = await crud.check_org_workflow_access(db, str(org_id), workflow_name)
+    if not res.get("allowed"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "error_code": "WORKFLOW_ACCESS_DENIED",
+                "message": res.get("reason", "Workflow access denied"),
+                "workflow": workflow_name,
+                "organization_id": str(org_id),
+            },
+        )
+    return res
 
 
 class WorkflowAccessRequestPayload(BaseModel):

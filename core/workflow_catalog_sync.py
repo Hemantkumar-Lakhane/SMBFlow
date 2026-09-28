@@ -91,10 +91,18 @@ _WORKFLOW_APPLICABILITY: dict[str, dict] = {
     "document_intake_extraction":          {"scope": "GLOBAL",   "industry": None},
     "content_factory":                     {"scope": "GLOBAL",   "industry": None},
     "ops_playbook":                        {"scope": "GLOBAL",   "industry": None},
+    "meeting_intelligence_followup":       {"scope": "GLOBAL",   "industry": None},
 }
 
 # Manually curated metadata for workflows where the DAG _meta is sparse
 _CATALOG_OVERRIDES: dict[str, dict] = {
+    "meeting_intelligence_followup": {
+        "category": "productivity",
+        "status": "active",
+        "requires_explicit_assignment": True,
+        "supported_modules": ["meetings", "productivity"],
+        "required_integrations": ["calendar", "email"],
+    },
     "email_summarizer": {
         "category": "productivity",
         "status": "active",
@@ -337,6 +345,12 @@ def _dag_to_catalog_entry(dag_file: Path) -> Optional[dict]:
     wf_scope    = applicability["scope"]
     wf_industry = applicability["industry"]
 
+    requires_explicit = bool(
+        override.get("requires_explicit_assignment", meta.get("requires_explicit_assignment", False))
+    )
+    metadata_ = dict(meta)
+    metadata_["requires_explicit_assignment"] = requires_explicit
+
     return {
         "key":                    key,
         "name":                   name,
@@ -350,6 +364,7 @@ def _dag_to_catalog_entry(dag_file: Path) -> Optional[dict]:
         "active":                 True,
         "scope":                  wf_scope,
         "industry":               wf_industry,
+        "metadata_":              metadata_,
     }
 
 
@@ -397,6 +412,7 @@ async def sync_workflow_catalog(db: AsyncSession) -> dict:
                 active=entry["active"],
                 scope=entry.get("scope", "GLOBAL"),
                 industry=entry.get("industry"),
+                metadata_=entry.get("metadata_", {}),
             )
             db.add(wf)
             await db.flush()
@@ -410,9 +426,8 @@ async def sync_workflow_catalog(db: AsyncSession) -> dict:
     if inserted > 0:
         await db.commit()
 
-    # Back-fill scope/industry AND category on existing rows.
-    # This ensures category changes in _CATALOG_OVERRIDES take effect on restart
-    # even for rows that were already inserted.
+    # Back-fill scope/industry, category, AND requires_explicit_assignment on existing rows.
+    # This ensures catalog changes in DAG files or _CATALOG_OVERRIDES take effect on restart.
     backfilled = 0
     try:
         for wf_key, override in _CATALOG_OVERRIDES.items():
@@ -427,6 +442,7 @@ async def sync_workflow_catalog(db: AsyncSession) -> dict:
             correct_category = override.get("category")
             correct_scope    = applicability["scope"]
             correct_industry = applicability["industry"]
+            correct_explicit = bool(override.get("requires_explicit_assignment", False))
 
             needs_update = False
             if correct_category and existing_wf.category != correct_category:
@@ -438,6 +454,13 @@ async def sync_workflow_catalog(db: AsyncSession) -> dict:
             if getattr(existing_wf, "industry", None) != correct_industry:
                 existing_wf.industry = correct_industry
                 needs_update = True
+            
+            current_meta = dict(getattr(existing_wf, "metadata_", {}) or {})
+            if current_meta.get("requires_explicit_assignment") != correct_explicit:
+                current_meta["requires_explicit_assignment"] = correct_explicit
+                existing_wf.metadata_ = current_meta
+                needs_update = True
+
             if needs_update:
                 backfilled += 1
 
@@ -477,6 +500,9 @@ async def sync_plan_entitlements_for_new_workflows(db: AsyncSession) -> None:
     starter_result = await db.execute(select(BillingPlan).where(BillingPlan.slug == "starter"))
     starter = starter_result.scalar_one_or_none()
 
+    free_result = await db.execute(select(BillingPlan).where(BillingPlan.slug == "free"))
+    free_plan = free_result.scalar_one_or_none()
+
     # All active catalog entries
     wf_result = await db.execute(select(WorkflowCatalog).where(WorkflowCatalog.active.is_(True)))
     workflows = list(wf_result.scalars().all())
@@ -488,6 +514,7 @@ async def sync_plan_entitlements_for_new_workflows(db: AsyncSession) -> None:
     existing_entitlements: set[tuple] = {(str(r[0]), str(r[1])) for r in ent_result.all()}
 
     starter_categories = {"productivity", "sales", "marketing"}
+    free_keys = {"email_summarizer", "product_launch_sprint", "meeting_intelligence_followup"}
 
     to_add = []
     for wf in workflows:
@@ -501,6 +528,9 @@ async def sync_plan_entitlements_for_new_workflows(db: AsyncSession) -> None:
         if starter and wf.category in starter_categories and (str(starter.id), wid) not in existing_entitlements:
             to_add.append(PlanWorkflowEntitlement(plan_id=starter.id, workflow_id=wf.id))
             existing_entitlements.add((str(starter.id), wid))
+        if free_plan and wf.key in free_keys and (str(free_plan.id), wid) not in existing_entitlements:
+            to_add.append(PlanWorkflowEntitlement(plan_id=free_plan.id, workflow_id=wf.id))
+            existing_entitlements.add((str(free_plan.id), wid))
 
     if to_add:
         for item in to_add:
