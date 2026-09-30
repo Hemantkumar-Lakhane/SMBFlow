@@ -669,6 +669,90 @@ class GoogleWorkspaceConnector(BaseConnector):
             self._log.error("Google Calendar schedule event failed", error=str(e))
             raise
 
+    async def update_event(
+        self,
+        event_id: str,
+        summary: Optional[str] = None,
+        description: Optional[str] = None,
+        start_iso: Optional[str] = None,
+        end_iso: Optional[str] = None,
+        visibility: Optional[str] = None,
+        calendar_id: str = "primary",
+    ) -> dict:
+        """
+        Patch an existing Google Calendar event by event_id.
+        Only the fields supplied (non-None) are sent in the PATCH body.
+        Reuses the same token-refresh pattern as schedule_event().
+        """
+        await self._ensure_valid_token()
+        if not self._access_token:
+            return {"error": "Authentication token missing"}
+
+        patch_body: dict[str, Any] = {}
+        if summary is not None:
+            patch_body["summary"] = summary
+        if description is not None:
+            patch_body["description"] = description
+        if start_iso is not None:
+            patch_body["start"] = {"dateTime": start_iso}
+        if end_iso is not None:
+            patch_body["end"] = {"dateTime": end_iso}
+        if visibility is not None:
+            patch_body["visibility"] = visibility  # "private" | "public" | "default"
+
+        if not patch_body:
+            return {"id": event_id, "status": "no_changes"}
+
+        try:
+            if not self._client:
+                self._client = httpx.AsyncClient(
+                    headers={"Authorization": f"Bearer {self._access_token}"}, timeout=30
+                )
+            resp = await self._client.patch(
+                f"{self.CALENDAR_BASE_URL}/calendars/{calendar_id}/events/{event_id}",
+                json=patch_body,
+            )
+            resp.raise_for_status()
+            return resp.json()
+        except Exception as e:
+            self._log.error("Google Calendar update_event failed", event_id=event_id, error=str(e))
+            raise
+
+    async def delete_event(
+        self,
+        event_id: str,
+        calendar_id: str = "primary",
+    ) -> bool:
+        """
+        Delete (cancel) a Google Calendar event by event_id.
+        Returns True on success (204 No Content), False if event not found (410 Gone).
+        Raises on other HTTP errors.
+        Reuses the same token-refresh pattern as schedule_event().
+        """
+        await self._ensure_valid_token()
+        if not self._access_token:
+            return False
+
+        try:
+            if not self._client:
+                self._client = httpx.AsyncClient(
+                    headers={"Authorization": f"Bearer {self._access_token}"}, timeout=30
+                )
+            resp = await self._client.delete(
+                f"{self.CALENDAR_BASE_URL}/calendars/{calendar_id}/events/{event_id}",
+            )
+            if resp.status_code in (204, 200):
+                return True
+            if resp.status_code in (404, 410):
+                # Already deleted or never existed — treat as success
+                self._log.warning("Google Calendar delete_event: event not found (already removed)", event_id=event_id)
+                return True
+            resp.raise_for_status()
+            return False
+        except Exception as e:
+            self._log.error("Google Calendar delete_event failed", event_id=event_id, error=str(e))
+            raise
+
     async def health_check(self) -> bool:
         return await self.authenticate()
 

@@ -417,3 +417,71 @@ async def test_extract_structured_intelligence_malformed_json_recovery():
 
         assert extraction.summary == "Recovered summary"
         assert extraction.commitments == []
+
+
+@pytest.mark.asyncio
+async def test_extract_structured_intelligence_mixed_language():
+    """Verify that mixed English/Spanish conversations extract entities and commitments accurately."""
+    mixed_transcript = (
+        "Good morning Sofia. Gracias por conectarte hoy. Regarding our pilot timeline, "
+        "I will send over the bilingual integration guide by tomorrow afternoon. "
+        "Sofia agreed: 'Nosotros revisaremos los contratos legales para el lunes'. "
+        "We also discussed exploring an enterprise tier in Q4."
+    )
+
+    with patch("api.routers.meeting_intelligence.LLMRouter") as mock_router_cls:
+        mock_router = AsyncMock()
+        mock_call = MagicMock(model="claude-haiku-4-5", cost_usd=0.0001, tokens_in=120, tokens_out=180)
+        mock_router.call.return_value = (
+            """```json
+            {
+              "summary": "Bilingual sync with Sofia regarding pilot timeline and legal contracts.",
+              "people": [
+                {
+                  "name": "Sofia",
+                  "facts": [],
+                  "interests": ["Bilingual integration guide"],
+                  "needs": ["Legal contract review"],
+                  "opportunities": ["Enterprise tier in Q4"]
+                }
+              ],
+              "commitments": [
+                {
+                  "owner": "Speaker",
+                  "commitment": "Send over the bilingual integration guide",
+                  "due_date": "tomorrow afternoon"
+                },
+                {
+                  "owner": "Sofia",
+                  "commitment": "Revisar los contratos legales",
+                  "due_date": "Monday"
+                }
+              ],
+              "suggested_actions": [
+                {
+                  "action": "Schedule follow-up on Tuesday after legal review",
+                  "reason": "Ensure enterprise contract alignment"
+                }
+              ],
+              "open_questions": []
+            }
+            ```""",
+            mock_call,
+        )
+        mock_router_cls.return_value = mock_router
+
+        extraction, model_used, cost, t_in, t_out = await extract_structured_intelligence(
+            transcript=mixed_transcript,
+            contact_name="Sofia Rodriguez",
+            conversation_date="2026-09-28",
+            conversation_type="Online Meeting",
+        )
+
+        assert "Bilingual sync with Sofia" in extraction.summary
+        assert len(extraction.commitments) == 2
+        owners = [c.owner for c in extraction.commitments]
+        assert "Speaker" in owners
+        assert "Sofia" in owners
+        assert len(extraction.suggested_actions) == 1
+        assert "enterprise" in extraction.suggested_actions[0].reason.lower()
+

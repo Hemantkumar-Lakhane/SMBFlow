@@ -24,7 +24,7 @@ from typing import Any, Optional
 import aiofiles
 import structlog
 from fastapi import (
-    BackgroundTasks, Depends, FastAPI, HTTPException,
+    APIRouter, BackgroundTasks, Depends, FastAPI, HTTPException,
     Query, Request, WebSocket, WebSocketDisconnect, status,
 )
 from fastapi.responses import JSONResponse
@@ -58,6 +58,8 @@ from integrations.key_vault import (
 )
 from core.redis_pubsub import pubsub as redis_pubsub
 from core.dag_validator import validate_dag
+from core.business_context import get_business_context, update_business_context
+
 log = structlog.get_logger()
 
 
@@ -90,11 +92,87 @@ _ws_connections: dict[str, tuple] = {}
 _active_orchestrators: dict[str, Any] = {}
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# App lifespan
-# ─────────────────────────────────────────────────────────────────────────────
+_briefing_scheduler_task: Optional[asyncio.Task] = None
 
-# (No changes to lifespan section)
+
+async def _daily_briefing_scheduler_loop():
+    """
+    Background worker for automated Daily Briefing generation.
+    Periodically checks active organizations, evaluates their configured
+    local briefing time using zoneinfo, and triggers generation idempotently.
+    Uses its own independent DB session per tick.
+    """
+    import zoneinfo
+    from core.database import AsyncSessionLocal
+    from core.daily_briefing_generator import generate_daily_briefing
+    from db.models.core import Organization
+    from sqlalchemy import select
+
+    last_run_minute = ""
+    # Initial sleep before first loop tick
+    await asyncio.sleep(10)
+
+    while True:
+        try:
+            now_utc = datetime.utcnow()
+            current_minute_str = now_utc.strftime("%Y-%m-%d %H:%M")
+            current_time_utc = now_utc.strftime("%H:%M")
+
+            if current_minute_str != last_run_minute:
+                last_run_minute = current_minute_str
+
+                # Independent DB session for background scheduler
+                async with AsyncSessionLocal() as session:
+                    stmt = select(Organization).where(Organization.active == True)
+                    res = await session.execute(stmt)
+                    orgs = res.scalars().all()
+
+                    for org in orgs:
+                        try:
+                            p_cfg = org.profile_config or {}
+                            b_cfg = p_cfg.get("daily_briefing_config") or {}
+                            if not b_cfg.get("enabled", True):
+                                continue
+
+                            org_tz_name = b_cfg.get("timezone", "UTC")
+                            target_time = b_cfg.get("time", "08:00")
+
+                            try:
+                                tz = zoneinfo.ZoneInfo(org_tz_name)
+                                local_now = datetime.now(tz)
+                                local_time_str = local_now.strftime("%H:%M")
+                                local_date_str = local_now.date().isoformat()
+                            except Exception:
+                                local_time_str = current_time_utc
+                                local_date_str = now_utc.date().isoformat()
+
+                            if local_time_str == target_time:
+                                log.info(
+                                    "Scheduled Daily Briefing triggered",
+                                    org_id=str(org.id),
+                                    date=local_date_str,
+                                    time=local_time_str,
+                                    tz=org_tz_name,
+                                )
+                                await generate_daily_briefing(
+                                    db=session,
+                                    org_uuid=org.id,
+                                    briefing_date=local_date_str,
+                                    generated_by="scheduler",
+                                    scheduled_time_utc=current_time_utc,
+                                    org_timezone=org_tz_name,
+                                    force=False,
+                                )
+                        except Exception as org_err:
+                            log.error("Scheduled briefing error for org", org_id=str(org.id), error=str(org_err))
+        except asyncio.CancelledError:
+            log.info("Daily briefing scheduler loop cancelled")
+            break
+        except Exception as loop_err:
+            log.warning("Daily briefing scheduler loop error", error=str(loop_err))
+
+        await asyncio.sleep(30)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -226,10 +304,24 @@ async def lifespan(app: FastAPI):
     except Exception as _det_err:
         log.error("Failed to start EmailEventDetector", error=str(_det_err))
 
+    # Start Daily Briefing Scheduler Worker
+    global _briefing_scheduler_task
+    try:
+        _briefing_scheduler_task = asyncio.create_task(_daily_briefing_scheduler_loop())
+        log.info("Daily Briefing background scheduler task started")
+    except Exception as _sched_err:
+        log.error("Failed to start Daily Briefing scheduler loop", error=str(_sched_err))
+
     log.info("SMBFlow API started")
     yield
 
     # Shutdown
+    if "_briefing_scheduler_task" in globals() and _briefing_scheduler_task:
+        _briefing_scheduler_task.cancel()
+        try:
+            await _briefing_scheduler_task
+        except asyncio.CancelledError:
+            pass
     if "_email_detector" in globals() and _email_detector:
         await _email_detector.stop()
     await redis_pubsub.stop()
@@ -253,6 +345,14 @@ app.include_router(medical_tourism.router)
 app.include_router(product_launch.router)
 app.include_router(meeting_intelligence.router)
 app.include_router(copilot.router)
+
+# Top-level alias router for /api/v1/daily-briefing (routes identical to meeting_intelligence router)
+briefing_alias_router = APIRouter(prefix="/api/v1/daily-briefing", tags=["Daily Briefing"])
+briefing_alias_router.add_api_route("", meeting_intelligence.get_daily_briefing, methods=["GET"], response_model=meeting_intelligence.DailyBriefingResponse)
+briefing_alias_router.add_api_route("/generate", meeting_intelligence.generate_daily_briefing_endpoint, methods=["POST"], response_model=meeting_intelligence.DailyBriefingResponse)
+briefing_alias_router.add_api_route("/config", meeting_intelligence.get_daily_briefing_config, methods=["GET"], response_model=meeting_intelligence.DailyBriefingConfigResponse)
+briefing_alias_router.add_api_route("/config", meeting_intelligence.update_daily_briefing_config, methods=["PUT"], response_model=meeting_intelligence.DailyBriefingConfigResponse)
+app.include_router(briefing_alias_router)
 
 
 app.add_middleware(
@@ -869,6 +969,51 @@ async def update_my_organization_profile(
         "name":     updated.name if updated else body.name,
         "industry": updated.industry if updated else body.industry,
     }
+
+
+@app.get("/api/v1/organizations/me/business-context", tags=["Organizations"])
+async def get_my_organization_business_context(
+    current_user: TokenData = Depends(require_any_auth),
+    db: AsyncSession = Depends(get_db),
+):
+    """Retrieve Business Context Pack for the authenticated user's organization."""
+    org_user, org = await crud.ensure_user_organization_provisioned(
+        db,
+        user_id=current_user.user_id,
+        email=current_user.email,
+        full_name=current_user.full_name,
+    )
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    ctx = await get_business_context(db, org.id)
+    return ctx
+
+
+@app.put("/api/v1/organizations/me/business-context", tags=["Organizations"])
+async def update_my_organization_business_context(
+    body: dict,
+    current_user: TokenData = Depends(require_any_auth),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update Business Context Pack for the authenticated user's organization."""
+    org_user, org = await crud.ensure_user_organization_provisioned(
+        db,
+        user_id=current_user.user_id,
+        email=current_user.email,
+        full_name=current_user.full_name,
+    )
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    updated_by = str(getattr(current_user, "email", None) or getattr(current_user, "user_id", "admin"))
+    updated = await update_business_context(
+        db=db,
+        org_uuid=org.id,
+        data=body,
+        updated_by=updated_by,
+    )
+    await broadcast_event("org_business_context_updated", {"org_id": str(org.id)})
+    return updated
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────

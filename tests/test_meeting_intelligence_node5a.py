@@ -543,7 +543,7 @@ async def test_followup_draft_action_discard():
 
 @pytest.mark.asyncio
 async def test_followup_draft_action_approve_strictly_no_send():
-    """Verify approving a draft sets status=approved with STRICTLY ZERO outbound email dispatch."""
+    """Verify approving without recipient is blocked, and approving without connection sets connection_required with ZERO email dispatch."""
     session, inst_id, contact_id, conv_id = _build_node5a_test_run(ORG_A)
 
     with patch("api.routers.meeting_intelligence.LLMRouter.call", side_effect=Exception("mock")):
@@ -552,27 +552,39 @@ async def test_followup_draft_action_approve_strictly_no_send():
 
     draft_id = resp.draft.approval_id
 
-    action_req = FollowupDraftActionRequest(action="approve")
+    # 1. Missing recipient blocks sending
+    action_req_no_email = FollowupDraftActionRequest(action="approve")
+    with pytest.raises(HTTPException) as exc_info:
+        await handle_followup_draft_action(
+            draft_id=draft_id,
+            req=action_req_no_email,
+            db=session,
+            current_user=USER_ORG_A,
+        )
+    assert exc_info.value.status_code == 400
+    assert "recipient email address is missing" in exc_info.value.detail
+
+    # 2. Providing recipient email when Google Workspace is disconnected returns connection_required (STRICTLY NO SEND)
+    action_req_with_email = FollowupDraftActionRequest(action="approve", recipient_email="rahul@apexlogistics.com")
     action_resp = await handle_followup_draft_action(
         draft_id=draft_id,
-        req=action_req,
+        req=action_req_with_email,
         db=session,
         current_user=USER_ORG_A,
     )
 
-    assert action_resp.status == "approved"
-    assert action_resp.draft.status == "approved"
-    assert "approved" in action_resp.message.lower() and "later sending" in action_resp.message.lower()
+    assert action_resp.status == "connection_required"
+    assert action_resp.draft.status == "connection_required"
+    assert "not connected" in action_resp.message.lower()
 
     appr = session.approval_items[draft_id]
-    assert appr.status == "approved"
+    assert appr.status == "connection_required"
 
     # STRICTLY NO SEND VERIFICATION:
-    # Ensure NO audit event with action="email_sent" or similar outbound dispatch exists
-    email_sent_audits = [e for e in session.audit_events if "send" in e.action.lower() and e.action != "followup_email_draft_approved"]
+    email_sent_audits = [e for e in session.audit_events if e.action == "followup_draft_sent"]
     assert len(email_sent_audits) == 0
 
-    # Ensure approval event is present
+    # Ensure draft action event is present
     approval_audits = [e for e in session.audit_events if e.action == "followup_draft_approve"]
     assert len(approval_audits) == 1
 

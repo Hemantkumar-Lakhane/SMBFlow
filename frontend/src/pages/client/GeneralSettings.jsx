@@ -13,6 +13,8 @@ import {
   Mail, ShieldCheck, Bell, Clock, Database, Save, Trash2, Edit3
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
+import BusinessContextCard from './BusinessContextCard'
+
 
 const INDUSTRIES = [
   { label: 'SaaS / Technology', value: 'saas' },
@@ -514,7 +516,12 @@ export default function GeneralSettings() {
         </SectionCard>
 
         {/* ══════════════════════════════════════════════════════════════════
-            CARD 3: NOTIFICATIONS & AGENT DISPATCHES
+            CARD 3: BUSINESS CONTEXT PACK
+            ══════════════════════════════════════════════════════════════════ */}
+        <BusinessContextCard />
+
+        {/* ══════════════════════════════════════════════════════════════════
+            CARD 4: NOTIFICATIONS & AGENT DISPATCHES
             ══════════════════════════════════════════════════════════════════ */}
         <SectionCard
           title="Notification & Escalation Preferences"

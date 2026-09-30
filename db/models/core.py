@@ -411,3 +411,74 @@ class RelationshipMemoryItem(Base):
     is_ai_generated      = Column(Boolean, nullable=False, default=False)
     created_at           = Column(DateTime, default=datetime.utcnow)
 
+
+
+# =============================================================================
+# Daily Briefing Model (Meeting Intelligence — Daily Briefing feature)
+# =============================================================================
+
+class DailyBriefing(Base):
+    """
+    Persisted daily briefing for an organization.
+    One row per organization per calendar date (idempotency_key = org_id:YYYY-MM-DD).
+    Content is a structured JSONB payload assembled from Meeting Intelligence state.
+    """
+    __tablename__ = "daily_briefings"
+    __table_args__ = (
+        UniqueConstraint("organization_id", "briefing_date", name="uq_daily_briefing_org_date"),
+    )
+
+    id               = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id  = Column(UUID(as_uuid=True), nullable=False, index=True)
+    briefing_date    = Column(String(10), nullable=False, index=True)   # "YYYY-MM-DD"
+    status           = Column(String(50), nullable=False, default="pending")
+    # "pending" | "generating" | "ready" | "error"
+    content          = Column(JSONB, nullable=False, default=dict)
+    # Keys: meetings_today, pending_commitments, contacts_waiting,
+    #       drafts_awaiting_review, suggested_followups, research_highlights,
+    #       summary_text, generated_by ("scheduler" | "manual")
+    idempotency_key  = Column(String(255), nullable=False, unique=True, index=True)
+    # Format: "{org_id}:{YYYY-MM-DD}"
+    scheduled_time_utc = Column(String(10), nullable=True)
+    # HH:MM at which the scheduler fires (e.g. "08:00")
+    generated_at     = Column(DateTime, nullable=True)
+    error            = Column(Text, nullable=True)
+    created_at       = Column(DateTime, default=datetime.utcnow)
+    updated_at       = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+# =============================================================================
+# Conversation Ingestion Model (Meeting Intelligence — Automatic Ingestion)
+# =============================================================================
+
+class ConversationIngestionRecord(Base):
+    """
+    Persisted automatic conversation ingestion record.
+    Tracks external webhook/recording ingestions, idempotency keys,
+    retry attempts, and linkage to downstream WorkflowInstance.
+    """
+    __tablename__ = "conversation_ingestion_records"
+    __table_args__ = (
+        UniqueConstraint("organization_id", "external_event_id", name="uq_conv_ingest_org_event"),
+    )
+
+    id                 = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id    = Column(UUID(as_uuid=True), nullable=False, index=True)
+    external_event_id  = Column(String(255), nullable=False, index=True)
+    source             = Column(String(100), default="webhook", nullable=False)
+    status             = Column(String(50), default="received", nullable=False)
+    # "received" | "processing" | "completed" | "failed"
+    conversation_title = Column(String(255), nullable=False)
+    contact_name       = Column(String(255), nullable=False)
+    conversation_type  = Column(String(100), default="Online Meeting", nullable=False)
+    conversation_date  = Column(String(50), nullable=False)
+    language           = Column(String(50), default="Auto Detect", nullable=False)
+    recording_data     = Column(JSONB, nullable=False, default=dict)
+    instance_id        = Column(UUID(as_uuid=True), nullable=True, index=True)
+    error_message      = Column(Text, nullable=True)
+    retry_count        = Column(Integer, default=0, nullable=False)
+    received_at        = Column(DateTime, default=datetime.utcnow, nullable=False)
+    completed_at       = Column(DateTime, nullable=True)
+    last_attempt_at    = Column(DateTime, nullable=True)
+    metadata_          = Column("metadata", JSONB, default=dict)
+

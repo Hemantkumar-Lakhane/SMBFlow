@@ -23,8 +23,12 @@ import {
   ChevronDown, Eye, CheckCircle, AlertCircle, MessageSquare, Link2, Lock,
   CreditCard, UserCheck, AlertTriangle, GitFork, RotateCcw, BrainCircuit,
   Image as ImageIcon, Loader2, Database, GitBranch, Activity, User, Star, TrendingUp,
-  Inbox, CheckSquare, Mail
+  Inbox, CheckSquare, Mail, Search, Briefcase, Radio
 } from 'lucide-react'
+import CentralMemoryQueryCard from './CentralMemoryQueryCard'
+import BusinessContextCard from './BusinessContextCard'
+import AutomaticIngestionModal from './AutomaticIngestionModal'
+
 
 // ── Robust Platform to Tool Name Mapper ──────────────────────────────────────
 function getToolForPlatform(platform) {
@@ -1100,12 +1104,44 @@ export default function UniversalWorkflowRunner() {
   const [editingDraft, setEditingDraft] = useState(false)
   const [draftSubjectEdit, setDraftSubjectEdit] = useState('')
   const [draftBodyEdit, setDraftBodyEdit] = useState('')
+  const [draftRecipientEdit, setDraftRecipientEdit] = useState('')
   const [draftActionLoading, setDraftActionLoading] = useState(false)
   const [draftToast, setDraftToast] = useState(null)
   const [snoozeOpen, setSnoozeOpen] = useState(false)
   const [snoozeUntilVal, setSnoozeUntilVal] = useState('Tomorrow 9:00 AM')
   const [copiedDraftSubject, setCopiedDraftSubject] = useState(false)
   const [copiedDraftBody, setCopiedDraftBody] = useState(false)
+
+  // Business Context Pack, Central Memory Query & Automatic Ingestion Modals
+  const [showBusinessContextModal, setShowBusinessContextModal] = useState(false)
+  const [showMemoryQueryModal, setShowMemoryQueryModal] = useState(false)
+  const [showAutoIngestModal, setShowAutoIngestModal] = useState(false)
+
+
+  // Node 5B Meeting Prep State — pre-populate start/end with next-day defaults
+  // so datetime-local inputs are not empty (avoids disabled button when user sees
+  // native picker showing a date but React state is still '')
+  const _defaultMeetingStart = (() => {
+    const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(15, 0, 0, 0)
+    return d.toISOString().slice(0, 16) // "YYYY-MM-DDTHH:MM"
+  })()
+  const _defaultMeetingEnd = (() => {
+    const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(16, 0, 0, 0)
+    return d.toISOString().slice(0, 16)
+  })()
+  const [meetingTitle, setMeetingTitle] = useState('')
+  const [meetingStart, setMeetingStart] = useState(_defaultMeetingStart)
+  const [meetingEnd, setMeetingEnd] = useState(_defaultMeetingEnd)
+  const [meetingTimezone, setMeetingTimezone] = useState('UTC')
+  const [meetingSourceEventId, setMeetingSourceEventId] = useState('')
+  const [meetingPrepLoading, setMeetingPrepLoading] = useState(false)
+  const [meetingPrepToast, setMeetingPrepToast] = useState(null)
+  const [meetingPrepExpanded, setMeetingPrepExpanded] = useState(true)
+
+  // Contact Research state
+  const [researchLoading, setResearchLoading] = useState(false)
+  const [researchToast, setResearchToast] = useState(null)
+  const [researchExpanded, setResearchExpanded] = useState(true)
 
   // Pre-flight authorization state
   const [accessChecking, setAccessChecking] = useState(true)
@@ -1310,6 +1346,13 @@ export default function UniversalWorkflowRunner() {
       if (action === 'edit') {
         payload.subject = draftSubjectEdit
         payload.body = draftBodyEdit
+        if (draftRecipientEdit?.trim()) {
+          payload.recipient_email = draftRecipientEdit.trim()
+        }
+      } else if (action === 'approve') {
+        if (draftRecipientEdit?.trim()) {
+          payload.recipient_email = draftRecipientEdit.trim()
+        }
       } else if (action === 'snooze') {
         payload.snoozed_until = extraPayload.snoozed_until || snoozeUntilVal
         payload.snooze_reason = extraPayload.snooze_reason || 'Snoozed from workflow runner'
@@ -1344,10 +1387,142 @@ export default function UniversalWorkflowRunner() {
     }
   }
 
+  // Node 5B: Handle Meeting Prep Brief + Calendar Prep Block
+  async function handleMeetingPrep(action = 'generate') {
+    const instanceId = executionResult?.runId
+    if (!instanceId) return
+    if (!meetingTitle.trim() || !meetingStart.trim() || !meetingEnd.trim()) {
+      setMeetingPrepToast('Upcoming meeting title, start, and end are required.')
+      setTimeout(() => setMeetingPrepToast(null), 4000)
+      return
+    }
+    setMeetingPrepLoading(true)
+    try {
+      const endpoint = action === 'reschedule'
+        ? '/workflows/meeting-intelligence/meeting-prep/reschedule'
+        : '/workflows/meeting-intelligence/meeting-prep'
+      const res = await api.post(endpoint, {
+        instance_id: instanceId,
+        meeting: {
+          title: meetingTitle.trim(),
+          start: meetingStart.trim(),
+          end: meetingEnd.trim(),
+          timezone: meetingTimezone || 'UTC',
+          source_event_id: meetingSourceEventId.trim() || null,
+        },
+      })
+      if (res?.brief || res?.prep_block) {
+        const updatedResult = {
+          ...executionResult,
+          meetingPrep: {
+            brief: res.brief,
+            prepBlock: res.prep_block,
+            status: res.status,
+            message: res.message,
+          },
+        }
+        setExecutionResult(updatedResult)
+        setMeetingPrepToast(res.message || 'Meeting prep generated.')
+        setTimeout(() => setMeetingPrepToast(null), 5000)
+
+        // Sync localStorage
+        try {
+          const historyKey = `smbflow_runs_history_${workflow.key}`
+          const existing = JSON.parse(localStorage.getItem(historyKey) || '[]')
+          const updated = existing.map(h => h.runId === instanceId ? updatedResult : h)
+          localStorage.setItem(historyKey, JSON.stringify(updated))
+        } catch (_) {}
+      }
+    } catch (err) {
+      console.error('Meeting prep error:', err)
+      setMeetingPrepToast(err.message || 'Meeting prep failed.')
+      setTimeout(() => setMeetingPrepToast(null), 4000)
+    } finally {
+      setMeetingPrepLoading(false)
+    }
+  }
+
+  async function handleCancelMeetingPrep() {
+    const instanceId = executionResult?.runId
+    if (!instanceId) return
+    setMeetingPrepLoading(true)
+    try {
+      const res = await api.post('/workflows/meeting-intelligence/meeting-prep/cancel', {
+        instance_id: instanceId,
+        reason: 'Cancelled by user',
+      })
+      if (res?.status === 'cancelled') {
+        const updatedResult = {
+          ...executionResult,
+          meetingPrep: {
+            ...(executionResult.meetingPrep || {}),
+            prepBlock: { ...(executionResult.meetingPrep?.prepBlock || {}), status: 'cancelled' },
+            status: 'cancelled',
+            message: res.message,
+          },
+        }
+        setExecutionResult(updatedResult)
+        setMeetingPrepToast(res.message || 'Prep block cancelled.')
+        setTimeout(() => setMeetingPrepToast(null), 4000)
+      }
+    } catch (err) {
+      setMeetingPrepToast(err.message || 'Cancel failed.')
+      setTimeout(() => setMeetingPrepToast(null), 4000)
+    } finally {
+      setMeetingPrepLoading(false)
+    }
+  }
+
+  // Contact Research & Enrichment handler
+  async function handleContactResearch(forceRefresh = false) {
+    const instanceId = executionResult?.runId
+    if (!instanceId) return
+    setResearchLoading(true)
+    try {
+      const res = await api.post('/workflows/meeting-intelligence/contact-research', {
+        instance_id: instanceId,
+        force_refresh: forceRefresh,
+      })
+      if (res?.status) {
+        const updatedResult = {
+          ...executionResult,
+          contactResearch: {
+            status: res.status,
+            contact_name: res.contact_name,
+            company: res.company,
+            role: res.role,
+            provider: res.provider,
+            queries_used: res.queries_used || [],
+            verified_facts: res.verified_facts || [],
+            uncertain_matches: res.uncertain_matches || [],
+            ai_talking_points: res.ai_talking_points || [],
+            retrieved_at: res.retrieved_at,
+            error: res.error,
+            idempotent_reused: res.idempotent_reused,
+          },
+        }
+        setExecutionResult(updatedResult)
+        setResearchToast(res.message || 'Research completed.')
+        setTimeout(() => setResearchToast(null), 5000)
+        // Sync localStorage
+        try {
+          const historyKey = `smbflow_runs_history_${workflow.key}`
+          const existing = JSON.parse(localStorage.getItem(historyKey) || '[]')
+          const updated = existing.map(h => h.runId === instanceId ? updatedResult : h)
+          localStorage.setItem(historyKey, JSON.stringify(updated))
+        } catch (_) {}
+      }
+    } catch (err) {
+      console.error('Contact research error:', err)
+      setResearchToast(err.message || 'Research failed.')
+      setTimeout(() => setResearchToast(null), 4000)
+    } finally {
+      setResearchLoading(false)
+    }
+  }
+
   // Apply meeting run state to canvas, inspector, and active prompt
   function applyMeetingRunState(run) {
-    if (!run) return
-    setSelectedRunId(run.runId)
     setExecutionResult(run)
     if (run.outputs || run.conversationData) {
       setFormData(run.outputs || run.conversationData)
@@ -1422,6 +1597,36 @@ export default function UniversalWorkflowRunner() {
           centralMemory: res.central_memory || fallbackRun?.centralMemory,
           actions: res.actions || fallbackRun?.actions,
           followupDraft: draft || null,
+          meetingPrep: res.meeting_prep ? {
+            brief: res.meeting_prep.brief,
+            prepBlock: {
+              prep_start: res.meeting_prep.prep_start,
+              prep_end: res.meeting_prep.prep_end,
+              meeting_start: res.meeting_prep.meeting_start,
+              meeting_end: res.meeting_prep.meeting_end,
+              meeting_title: res.meeting_prep.meeting_title,
+              timezone: res.meeting_prep.timezone,
+              event_title: res.meeting_prep.event_title,
+              status: res.meeting_prep.status,
+              google_event_id: res.meeting_prep.google_event_id,
+              conflict_metadata: res.meeting_prep.conflict_metadata,
+              is_private: true,
+            },
+            status: res.meeting_prep.status,
+          } : (fallbackRun?.meetingPrep || null),
+          contactResearch: res.contact_research ? {
+            status: res.contact_research.status,
+            contact_name: res.contact_research.contact_name,
+            company: res.contact_research.company,
+            role: res.contact_research.role,
+            provider: res.contact_research.provider,
+            queries_used: res.contact_research.queries_used || [],
+            verified_facts: res.contact_research.verified_facts || [],
+            uncertain_matches: res.contact_research.uncertain_matches || [],
+            ai_talking_points: res.contact_research.ai_talking_points || [],
+            retrieved_at: res.contact_research.retrieved_at,
+            error: res.contact_research.error,
+          } : (fallbackRun?.contactResearch || null),
           nodeExecution: [
             { id: 'n1', title: 'Conversation Capture', status: 'Completed', executed: true, note: 'Audio recording and metadata preserved' },
             { id: 'n2', title: 'Process Conversation', status: isNode2Done ? 'Completed' : 'Pending', executed: isNode2Done, note: isNode2Done ? `Transcribed (${res.detected_language || 'English'}) and structured intelligence extracted` : 'Pending' },
@@ -3152,6 +3357,17 @@ export default function UniversalWorkflowRunner() {
             </div>
 
             <div className="flex items-center gap-2">
+              {workflow.key === 'meeting_intelligence_followup' && (
+                <button
+                  type="button"
+                  onClick={() => setShowAutoIngestModal(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-50 hover:bg-violet-100 dark:bg-violet-950/60 dark:hover:bg-violet-900/60 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-800 rounded-xl text-xs font-semibold transition-all cursor-pointer"
+                  title="Automatic Conversation Ingestion & Webhook Stream"
+                >
+                  <Radio className="w-3.5 h-3.5" />
+                  <span>Auto Ingest</span>
+                </button>
+              )}
               {filledFieldsCount > 0 && (
                 <button
                   type="button"
@@ -3598,12 +3814,43 @@ export default function UniversalWorkflowRunner() {
 
                   <button
                     type="button"
+                    onClick={() => setShowBusinessContextModal(true)}
+                    className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5"
+                    title="View or configure organization Business Context Pack"
+                  >
+                    <Briefcase className="w-3.5 h-3.5" />
+                    <span>Business Context</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowMemoryQueryModal(true)}
+                    className="px-3 py-1.5 bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/60 dark:hover:bg-teal-900/60 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5"
+                    title="Ask natural-language questions over Central Memory"
+                  >
+                    <Search className="w-3.5 h-3.5" />
+                    <span>Query Memory</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowAutoIngestModal(true)}
+                    className="px-3 py-1.5 bg-violet-50 hover:bg-violet-100 dark:bg-violet-950/60 dark:hover:bg-violet-900/60 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-800 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5"
+                    title="Automatic Conversation Ingestion & Webhook Stream"
+                  >
+                    <Radio className="w-3.5 h-3.5" />
+                    <span>Auto Ingest</span>
+                  </button>
+
+                  <button
+                    type="button"
                     onClick={handleStartNewRun}
                     className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-[#182234] dark:hover:bg-[#233048] text-slate-700 dark:text-slate-200 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>New Run</span>
                   </button>
+
                 </div>
               </div>
 
@@ -4168,9 +4415,18 @@ export default function UniversalWorkflowRunner() {
                         </div>
                       </div>
                     )}
+
+                    {/* Embedded Natural-Language Central Memory Query Console */}
+                    <div className="pt-2 border-t border-slate-200/80 dark:border-[#1e2a3f]">
+                      <CentralMemoryQueryCard
+                        contactName={executionResult.centralMemory.contact_name}
+                        contactId={executionResult.centralMemory.contact_id}
+                      />
+                    </div>
                   </div>
                 </div>
               )}
+
 
               {/* Node 4: Action Generator Deliverable Card */}
               {executionResult.actions && (
@@ -4430,7 +4686,7 @@ export default function UniversalWorkflowRunner() {
               )}
 
               {/* NODE 5A: FOLLOW-UP EMAIL DRAFT & HUMAN REVIEW DELIVERABLE */}
-              {executionResult.followupDraft && (
+              {(executionResult.followupDraft || executionResult.actions) && (
                 <div className="p-4 rounded-xl bg-slate-50/70 dark:bg-[#0e1420]/70 border border-slate-200 dark:border-[#233048] space-y-4">
                   {/* Header */}
                   <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-[#233048] flex-wrap gap-2">
@@ -4442,7 +4698,11 @@ export default function UniversalWorkflowRunner() {
                         <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
                           <span>FOLLOW-UP EMAIL DRAFT (Node 5A)</span>
                           <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-semibold border ${
-                            executionResult.followupDraft.status === 'approved'
+                            executionResult.followupDraft.status === 'sent'
+                              ? 'bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700'
+                              : executionResult.followupDraft.status === 'connection_required'
+                              ? 'bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-700'
+                              : executionResult.followupDraft.status === 'approved'
                               ? 'bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700'
                               : executionResult.followupDraft.status === 'snoozed'
                               ? 'bg-purple-100 dark:bg-purple-900/60 text-purple-800 dark:text-purple-300 border-purple-300 dark:border-purple-700'
@@ -4450,8 +4710,12 @@ export default function UniversalWorkflowRunner() {
                               ? 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700'
                               : 'bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-700'
                           }`}>
-                            {executionResult.followupDraft.status === 'approved'
-                              ? 'Approved (Sending Deferred)'
+                            {executionResult.followupDraft.status === 'sent'
+                              ? 'Sent via Gmail'
+                              : executionResult.followupDraft.status === 'connection_required'
+                              ? 'Connection Required'
+                              : executionResult.followupDraft.status === 'approved'
+                              ? 'Approved & Sent'
                               : executionResult.followupDraft.status === 'snoozed'
                               ? `Snoozed (${executionResult.followupDraft.snoozed_until || 'later'})`
                               : executionResult.followupDraft.status === 'discarded'
@@ -4460,7 +4724,7 @@ export default function UniversalWorkflowRunner() {
                           </span>
                         </div>
                         <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                          Grounded in conversation commitments & relationship memory • Strictly no auto-send
+                          Grounded in conversation commitments & relationship memory • Explicit approval required to send
                         </div>
                       </div>
                     </div>
@@ -4485,6 +4749,58 @@ export default function UniversalWorkflowRunner() {
                     </div>
                   )}
 
+                  {/* Sent Confirmation Banner */}
+                  {executionResult.followupDraft.status === 'sent' && (
+                    <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-200 flex items-start gap-3">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600 mt-0.5 shrink-0" />
+                      <div className="space-y-1">
+                        <div className="font-bold flex items-center gap-2">
+                          <span>Follow-up Email Successfully Dispatched via Gmail</span>
+                          {executionResult.followupDraft.provider_message_id && (
+                            <span className="font-mono text-[10px] bg-emerald-100 dark:bg-emerald-900/80 px-2 py-0.5 rounded border border-emerald-300 dark:border-emerald-700">
+                              ID: {executionResult.followupDraft.provider_message_id}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-emerald-700 dark:text-emerald-300 flex items-center gap-3 flex-wrap">
+                          {executionResult.followupDraft.sent_to && (
+                            <span>Recipient: <strong className="font-mono">{executionResult.followupDraft.sent_to}</strong></span>
+                          )}
+                          {executionResult.followupDraft.sent_at && (
+                            <span>Sent at: {new Date(executionResult.followupDraft.sent_at).toLocaleString()}</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Connection Required Warning Banner */}
+                  {executionResult.followupDraft.status === 'connection_required' && (
+                    <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-xs text-amber-900 dark:text-amber-200 flex items-start gap-3">
+                      <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+                      <div className="space-y-1">
+                        <div className="font-bold">Google Workspace / Gmail Connection Required</div>
+                        <p className="text-[11px] text-amber-800 dark:text-amber-300">
+                          Email dispatch cannot proceed because no active Gmail or Google Workspace integration is connected for this organization.
+                          The draft is saved safely and remains retryable. Connect your account in <span className="font-semibold underline cursor-pointer" onClick={() => navigate('/settings')}>Settings &gt; Integrations</span>, then click Approve &amp; Send again.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Provider / Dispatch Error Banner */}
+                  {executionResult.followupDraft.error_message && (
+                    <div className="p-3 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-xs text-rose-800 dark:text-rose-200 flex items-start gap-2.5">
+                      <AlertTriangle className="w-4 h-4 text-rose-600 mt-0.5 shrink-0" />
+                      <div>
+                        <strong className="font-semibold">Provider / Dispatch Error:</strong>
+                        <p className="text-[11px] text-rose-700 dark:text-rose-300 mt-0.5">
+                          {executionResult.followupDraft.error_message} (Draft remains safely retryable)
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Recipient & Grounding Meta */}
                   <div className="p-3 rounded-lg bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#1e2a3f] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -4499,9 +4815,20 @@ export default function UniversalWorkflowRunner() {
                           &lt;{executionResult.followupDraft.recipient_email}&gt;
                         </span>
                       ) : (
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 font-semibold border border-amber-200 dark:border-amber-800">
-                          Recipient email not available
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 font-semibold border border-amber-200 dark:border-amber-800">
+                            Recipient email not available
+                          </span>
+                          {executionResult.followupDraft.status !== 'sent' && (
+                            <input
+                              type="email"
+                              placeholder="Enter email to send..."
+                              value={draftRecipientEdit}
+                              onChange={(e) => setDraftRecipientEdit(e.target.value)}
+                              className="px-2 py-0.5 text-xs bg-slate-50 dark:bg-[#0b0f17] border border-slate-200 dark:border-[#233048] rounded text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-hidden focus:border-blue-500 font-mono"
+                            />
+                          )}
+                        </div>
                       )}
                     </div>
 
@@ -4517,6 +4844,18 @@ export default function UniversalWorkflowRunner() {
                   {/* Subject and Body Area */}
                   {editingDraft ? (
                     <div className="space-y-3 p-4 rounded-xl bg-white dark:bg-[#121826] border border-blue-200 dark:border-blue-900/60 shadow-2xs">
+                      <div className="space-y-1">
+                        <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                          Recipient Email
+                        </label>
+                        <input
+                          type="email"
+                          placeholder="e.g. client@example.com"
+                          value={draftRecipientEdit}
+                          onChange={(e) => setDraftRecipientEdit(e.target.value)}
+                          className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-[#0b0f17] border border-slate-200 dark:border-[#233048] rounded-lg text-slate-900 dark:text-white focus:outline-hidden focus:border-blue-500 font-mono"
+                        />
+                      </div>
                       <div className="space-y-1">
                         <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                           Subject Line
@@ -4605,19 +4944,6 @@ export default function UniversalWorkflowRunner() {
                         </pre>
                       </div>
 
-                      {/* Approved Safe Banner */}
-                      {executionResult.followupDraft.status === 'approved' && (
-                        <div className="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-xs text-emerald-800 dark:text-emerald-200 flex items-start gap-2.5">
-                          <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
-                          <div>
-                            <strong className="font-semibold">Draft Approved (Deferred Sending):</strong>
-                            <p className="text-[11px] text-emerald-700 dark:text-emerald-300 mt-0.5">
-                              This follow-up draft has been verified and approved by the human operator. Email dispatch is preserved for a future sending phase. No email integration call was executed.
-                            </p>
-                          </div>
-                        </div>
-                      )}
-
                       {/* Snoozed Banner */}
                       {executionResult.followupDraft.status === 'snoozed' && (
                         <div className="p-3 rounded-lg bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/60 text-xs text-purple-800 dark:text-purple-200 flex items-start gap-2.5">
@@ -4632,114 +4958,780 @@ export default function UniversalWorkflowRunner() {
                       )}
 
                       {/* HITL Action Controls */}
-                      <div className="pt-2 flex items-center justify-between flex-wrap gap-2 border-t border-slate-100 dark:border-[#182234]">
-                        <div className="flex items-center gap-2">
+                      {executionResult.followupDraft.status === 'sent' ? (
+                        <div className="pt-2 flex items-center justify-between flex-wrap gap-2 border-t border-slate-100 dark:border-[#182234]">
+                          <div className="flex items-center gap-2 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                            <span>Dispatched via Gmail • Sent to {executionResult.followupDraft.sent_to || executionResult.followupDraft.recipient_email}</span>
+                          </div>
                           <button
                             type="button"
-                            disabled={draftActionLoading}
                             onClick={() => {
-                              setDraftSubjectEdit(executionResult.followupDraft.subject)
-                              setDraftBodyEdit(executionResult.followupDraft.body)
-                              setEditingDraft(true)
+                              navigator.clipboard.writeText(`Subject: ${executionResult.followupDraft.subject}\n\n${executionResult.followupDraft.body}`)
+                              setCopiedDraftBody(true)
+                              setTimeout(() => setCopiedDraftBody(false), 2000)
                             }}
-                            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-blue-50 hover:text-blue-600 dark:bg-[#182234] dark:hover:bg-blue-950/40 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#233048] transition-colors cursor-pointer flex items-center gap-1.5"
+                            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-[#182234] dark:hover:bg-[#233048] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#233048] transition-colors cursor-pointer"
                           >
-                            <Sliders className="w-3.5 h-3.5" />
-                            <span>Edit Draft</span>
+                            {copiedDraftBody ? 'Copied Full Email!' : 'Copy Email'}
                           </button>
-
-                          {/* Snooze Dropdown */}
-                          <div className="relative">
+                        </div>
+                      ) : (
+                        <div className="pt-2 flex items-center justify-between flex-wrap gap-2 border-t border-slate-100 dark:border-[#182234]">
+                          <div className="flex items-center gap-2">
                             <button
                               type="button"
                               disabled={draftActionLoading}
-                              onClick={() => setSnoozeOpen(!snoozeOpen)}
-                              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-purple-50 hover:text-purple-600 dark:bg-[#182234] dark:hover:bg-purple-950/40 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#233048] transition-colors cursor-pointer flex items-center gap-1.5"
+                              onClick={() => {
+                                setDraftSubjectEdit(executionResult.followupDraft.subject)
+                                setDraftBodyEdit(executionResult.followupDraft.body)
+                                setDraftRecipientEdit(executionResult.followupDraft.recipient_email || '')
+                                setEditingDraft(true)
+                              }}
+                              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-blue-50 hover:text-blue-600 dark:bg-[#182234] dark:hover:bg-blue-950/40 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#233048] transition-colors cursor-pointer flex items-center gap-1.5"
                             >
-                              <Clock className="w-3.5 h-3.5" />
-                              <span>Snooze</span>
+                              <Sliders className="w-3.5 h-3.5" />
+                              <span>Edit Draft</span>
                             </button>
-                            {snoozeOpen && (
-                              <div className="absolute left-0 bottom-full mb-1 z-20 w-48 p-1 rounded-xl bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] shadow-lg text-xs space-y-0.5">
+
+                            {/* Snooze Dropdown */}
+                            <div className="relative">
+                              <button
+                                type="button"
+                                disabled={draftActionLoading}
+                                onClick={() => setSnoozeOpen(!snoozeOpen)}
+                                className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-purple-50 hover:text-purple-600 dark:bg-[#182234] dark:hover:bg-purple-950/40 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#233048] transition-colors cursor-pointer flex items-center gap-1.5"
+                              >
+                                <Clock className="w-3.5 h-3.5" />
+                                <span>Snooze</span>
+                              </button>
+                              {snoozeOpen && (
+                                <div className="absolute left-0 bottom-full mb-1 z-20 w-48 p-1 rounded-xl bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] shadow-lg text-xs space-y-0.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleFollowupDraftAction('snooze', { snoozed_until: '1 Hour' })}
+                                    className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#182234] text-slate-700 dark:text-slate-300 cursor-pointer"
+                                  >
+                                    In 1 Hour
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleFollowupDraftAction('snooze', { snoozed_until: 'Tomorrow 9:00 AM' })}
+                                    className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#182234] text-slate-700 dark:text-slate-300 cursor-pointer"
+                                  >
+                                    Tomorrow 9:00 AM
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleFollowupDraftAction('snooze', { snoozed_until: 'Next Monday' })}
+                                    className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#182234] text-slate-700 dark:text-slate-300 cursor-pointer"
+                                  >
+                                    Next Monday
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+
+                            <button
+                              type="button"
+                              disabled={draftActionLoading}
+                              onClick={() => handleFollowupDraftAction('discard')}
+                              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-rose-50 hover:text-rose-600 dark:bg-[#182234] dark:hover:bg-rose-950/40 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#233048] transition-colors cursor-pointer"
+                            >
+                              Discard
+                            </button>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            {(!executionResult.followupDraft.recipient_email && !draftRecipientEdit?.trim()) && (
+                              <span className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">
+                                Recipient email required to send
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              disabled={draftActionLoading || (!executionResult.followupDraft.recipient_email && !draftRecipientEdit?.trim())}
+                              onClick={() => handleFollowupDraftAction('approve')}
+                              className="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white cursor-pointer shadow-xs flex items-center gap-1.5 transition-all"
+                            >
+                              {draftActionLoading ? (
+                                <>
+                                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                  <span>Sending via Gmail...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Send className="w-3.5 h-3.5" />
+                                  <span>Approve &amp; Send Follow-up Email</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Node 5B: MEETING PREP BRIEF + CALENDAR PREP BLOCK */}
+                  {(() => {
+                    const mp = executionResult.meetingPrep
+                    const brief = mp?.brief
+                    const prepBlock = mp?.prepBlock
+                    const prepStatus = prepBlock?.status || mp?.status
+
+                    // Status badge helpers
+                    const prepStatusLabel = prepStatus === 'scheduled' ? 'Scheduled'
+                      : prepStatus === 'conflict_review_required' ? 'Conflict — Review Required'
+                      : prepStatus === 'cancelled' ? 'Cancelled'
+                      : prepStatus === 'calendar_connection_required' ? 'Calendar Connection Required'
+                      : null
+
+                    const prepStatusClass = prepStatus === 'scheduled'
+                      ? 'bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700'
+                      : prepStatus === 'conflict_review_required'
+                      ? 'bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700'
+                      : prepStatus === 'cancelled'
+                      ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-300 dark:border-slate-600'
+                      : prepStatus === 'calendar_connection_required'
+                      ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800'
+                      : 'bg-slate-100 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+
+                    return (
+                      <div className="mt-4 p-4 rounded-xl bg-slate-50/70 dark:bg-[#0e1420]/70 border border-slate-200 dark:border-[#233048] space-y-4">
+                        {/* Header */}
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="w-4 h-4 text-blue-500 shrink-0" />
+                            <div>
+                              <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                <span>MEETING PREP BRIEF (Node 5B)</span>
+                                {prepStatusLabel && (
+                                  <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-semibold border ${prepStatusClass}`}>
+                                    {prepStatusLabel}
+                                  </span>
+                                )}
+                                {prepBlock?.is_private && (
+                                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-300 dark:border-slate-600 flex items-center gap-1">
+                                    <Lock className="w-2.5 h-2.5" />
+                                    PRIVATE
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                                AI-generated meeting preparation brief from Central Memory
+                              </div>
+                            </div>
+                          </div>
+                          {brief && (
+                            <button
+                              type="button"
+                              onClick={() => setMeetingPrepExpanded(v => !v)}
+                              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer transition-colors"
+                            >
+                              {meetingPrepExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Toast */}
+                        {meetingPrepToast && (
+                          <div className="p-2.5 rounded-lg bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-[11px] text-blue-800 dark:text-blue-200">
+                            {meetingPrepToast}
+                          </div>
+                        )}
+
+                        {/* UPCOMING MEETING INPUT FORM (shown when no prep yet, or always for reschedule) */}
+                        {!brief && (
+                          <div className="space-y-3">
+                            <div className="text-[11px] text-slate-500 dark:text-slate-400 italic">
+                              Provide the upcoming meeting details to generate the Meeting Prep Brief and schedule a private prep block.
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                              <div className="sm:col-span-2">
+                                <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400 mb-1">Upcoming Meeting Title *</label>
+                                <input
+                                  type="text"
+                                  value={meetingTitle}
+                                  onChange={e => setMeetingTitle(e.target.value)}
+                                  placeholder="e.g. Q4 Strategy Review with Rahul Sharma"
+                                  className="w-full px-3 py-2 text-xs bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400 mb-1">Meeting Start *</label>
+                                <input
+                                  type="datetime-local"
+                                  value={meetingStart}
+                                  onChange={e => setMeetingStart(e.target.value)}
+                                  className="w-full px-3 py-2 text-xs bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400 mb-1">Meeting End *</label>
+                                <input
+                                  type="datetime-local"
+                                  value={meetingEnd}
+                                  onChange={e => setMeetingEnd(e.target.value)}
+                                  className="w-full px-3 py-2 text-xs bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400 mb-1">Timezone</label>
+                                <input
+                                  type="text"
+                                  value={meetingTimezone}
+                                  onChange={e => setMeetingTimezone(e.target.value)}
+                                  placeholder="UTC"
+                                  className="w-full px-3 py-2 text-xs bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400 mb-1">Source Calendar Event ID <span className="font-normal text-slate-400">(optional)</span></label>
+                                <input
+                                  type="text"
+                                  value={meetingSourceEventId}
+                                  onChange={e => setMeetingSourceEventId(e.target.value)}
+                                  placeholder="Google/Outlook event ID if known"
+                                  className="w-full px-3 py-2 text-xs bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                />
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              disabled={meetingPrepLoading || !meetingTitle.trim() || !meetingStart.trim() || !meetingEnd.trim()}
+                              onClick={() => handleMeetingPrep('generate')}
+                              className="px-4 py-2 rounded-lg text-xs font-bold bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white cursor-pointer shadow-xs flex items-center gap-1.5 transition-all"
+                            >
+                              {meetingPrepLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Calendar className="w-3.5 h-3.5" />}
+                              <span>{meetingPrepLoading ? 'Generating...' : 'Generate Meeting Prep Brief'}</span>
+                            </button>
+                          </div>
+                        )}
+
+                        {/* BRIEF CONTENT (shown after generation) */}
+                        {brief && meetingPrepExpanded && (
+                          <div className="space-y-3">
+                            {/* Contact Summary */}
+                            <div className="p-3 rounded-lg bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#1e2a3f] space-y-1.5">
+                              <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Contact</div>
+                              <div className="flex items-center gap-2">
+                                <User className="w-4 h-4 text-blue-500 shrink-0" />
+                                <span className="text-sm font-bold text-slate-900 dark:text-white">{brief.contact_name}</span>
+                                {brief.contact_role && <span className="text-xs text-slate-500 dark:text-slate-400">— {brief.contact_role}</span>}
+                                {brief.contact_company && <span className="text-xs text-slate-500 dark:text-slate-400">at {brief.contact_company}</span>}
+                              </div>
+                              <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                                {brief.total_conversations} previous conversation{brief.total_conversations !== 1 ? 's' : ''}
+                                {brief.last_conversation_date && ` • Last: ${brief.last_conversation_date}`}
+                              </div>
+                            </div>
+
+                            {/* Recent Conversation */}
+                            {brief.recent_conversation_title && (
+                              <div className="p-3 rounded-lg bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#1e2a3f] space-y-1">
+                                <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Recent Conversation</div>
+                                <div className="text-xs font-semibold text-slate-800 dark:text-slate-200">{brief.recent_conversation_title}</div>
+                                {brief.recent_conversation_date && <div className="text-[10px] text-slate-400">{brief.recent_conversation_date}</div>}
+                                {brief.recent_conversation_summary && <div className="text-[11px] text-slate-600 dark:text-slate-300 mt-1">{brief.recent_conversation_summary}</div>}
+                              </div>
+                            )}
+
+                            {/* Relationship Snapshot */}
+                            {brief.relationship_snapshot && Object.values(brief.relationship_snapshot).some(v => v?.length > 0) && (
+                              <div className="p-3 rounded-lg bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#1e2a3f] space-y-2">
+                                <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Relationship Snapshot</div>
+                                {['facts', 'interests', 'needs', 'opportunities'].map(cat => {
+                                  const items = brief.relationship_snapshot[cat] || []
+                                  if (!items.length) return null
+                                  const labels = { facts: 'Key Facts', interests: 'Interests', needs: 'Needs / Pain Points', opportunities: 'Opportunities' }
+                                  return (
+                                    <div key={cat}>
+                                      <div className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 mb-1">{labels[cat]}</div>
+                                      <ul className="space-y-0.5">
+                                        {items.slice(0, 5).map((item, i) => (
+                                          <li key={i} className="text-[11px] text-slate-700 dark:text-slate-300 flex items-start gap-1.5">
+                                            <span className="text-blue-400 mt-0.5 shrink-0">•</span>
+                                            {item}
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            )}
+
+                            {/* Our Commitments */}
+                            {brief.our_outstanding_commitments?.length > 0 && (
+                              <div className="p-3 rounded-lg bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/50 space-y-1.5">
+                                <div className="text-[10px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider">Our Outstanding Commitments</div>
+                                {brief.our_outstanding_commitments.map((c, i) => (
+                                  <div key={i} className="text-[11px] text-slate-800 dark:text-slate-200 flex items-start gap-1.5">
+                                    <span className="text-amber-500 mt-0.5 shrink-0">→</span>
+                                    <span>{typeof c === 'string' ? c : (c.action || JSON.stringify(c))}{c.due_date_display ? ` (Due: ${c.due_date_display})` : ''}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Waiting on Contact */}
+                            {brief.waiting_on_contact?.length > 0 && (
+                              <div className="p-3 rounded-lg bg-blue-50/60 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/50 space-y-1.5">
+                                <div className="text-[10px] font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider">Waiting on Contact</div>
+                                {brief.waiting_on_contact.map((c, i) => (
+                                  <div key={i} className="text-[11px] text-slate-800 dark:text-slate-200 flex items-start gap-1.5">
+                                    <span className="text-blue-500 mt-0.5 shrink-0">→</span>
+                                    <span>{typeof c === 'string' ? c : (c.action || JSON.stringify(c))}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Open Questions */}
+                            {brief.open_questions?.length > 0 && (
+                              <div className="p-3 rounded-lg bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#1e2a3f] space-y-1.5">
+                                <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Open Questions</div>
+                                {brief.open_questions.map((q, i) => (
+                                  <div key={i} className="text-[11px] text-slate-700 dark:text-slate-300 flex items-start gap-1.5">
+                                    <span className="text-slate-400 mt-0.5 shrink-0">?</span>
+                                    {q}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* AI Suggested Discussion Topics — explicitly labelled */}
+                            {brief.ai_suggested_topics?.length > 0 && (
+                              <div className="p-3 rounded-lg bg-purple-50/60 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800/50 space-y-1.5">
+                                <div className="text-[10px] font-bold text-purple-700 dark:text-purple-400 uppercase tracking-wider flex items-center gap-1.5">
+                                  <Sparkles className="w-3 h-3" />
+                                  AI Suggested Discussion Topics
+                                </div>
+                                <div className="text-[10px] text-purple-600 dark:text-purple-400 italic mb-1">AI Suggested — Not Previously Agreed</div>
+                                {brief.ai_suggested_topics.map((t, i) => (
+                                  <div key={i} className="text-[11px] text-slate-800 dark:text-slate-200 flex items-start gap-1.5">
+                                    <span className="text-purple-400 mt-0.5 shrink-0">✦</span>
+                                    <div>
+                                      <span className="font-medium">{t.topic}</span>
+                                      {t.rationale && <span className="text-slate-500 dark:text-slate-400"> — {t.rationale}</span>}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* CALENDAR PREP BLOCK */}
+                        {prepBlock && (
+                          <div className="mt-2 p-3 rounded-lg bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#1e2a3f] space-y-2">
+                            <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                              <Calendar className="w-3.5 h-3.5" />
+                              Calendar Prep Block
+                              <span className={`ml-1 text-[10px] font-mono px-2 py-0.5 rounded-full font-semibold border ${prepStatusClass}`}>
+                                {prepStatusLabel || prepBlock.status}
+                              </span>
+                              {prepBlock.is_private && (
+                                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-300 dark:border-slate-600 flex items-center gap-1">
+                                  <Lock className="w-2 h-2" />
+                                  PRIVATE
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                              <div>
+                                <span className="text-slate-500 dark:text-slate-400 font-medium">Meeting: </span>
+                                <span className="text-slate-800 dark:text-slate-200">{prepBlock.meeting_start ? new Date(prepBlock.meeting_start).toLocaleString() : '—'}</span>
+                              </div>
+                              <div>
+                                <span className="text-slate-500 dark:text-slate-400 font-medium">Private Prep Block: </span>
+                                <span className="text-slate-800 dark:text-slate-200">
+                                  {prepBlock.prep_start ? new Date(prepBlock.prep_start).toLocaleString() : '—'}
+                                  {' → '}
+                                  {prepBlock.prep_end ? new Date(prepBlock.prep_end).toLocaleString() : '—'}
+                                </span>
+                              </div>
+                              {prepBlock.event_title && (
+                                <div>
+                                  <span className="text-slate-500 dark:text-slate-400 font-medium">Event: </span>
+                                  <span className="text-slate-800 dark:text-slate-200 font-semibold">{prepBlock.event_title}</span>
+                                </div>
+                              )}
+                              {prepBlock.timezone && (
+                                <div>
+                                  <span className="text-slate-500 dark:text-slate-400 font-medium">Timezone: </span>
+                                  <span className="text-slate-800 dark:text-slate-200">{prepBlock.timezone}</span>
+                                </div>
+                              )}
+                              {prepBlock.google_event_id && (
+                                <div className="sm:col-span-2">
+                                  <span className="text-slate-500 dark:text-slate-400 font-medium">Calendar Event ID: </span>
+                                  <span className="font-mono text-[10px] text-emerald-700 dark:text-emerald-400">{prepBlock.google_event_id}</span>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Status-specific banners */}
+                            {prepBlock.status === 'scheduled' && (
+                              <div className="p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 text-[11px] text-emerald-800 dark:text-emerald-200 flex items-start gap-2">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />
+                                Private prep block scheduled on Google Calendar. This event is visible only to you.
+                              </div>
+                            )}
+
+                            {prepBlock.status === 'calendar_connection_required' && (
+                              <div className="p-2.5 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/60 text-[11px] text-blue-800 dark:text-blue-200 flex items-start gap-2">
+                                <AlertTriangle className="w-3.5 h-3.5 text-blue-500 mt-0.5 shrink-0" />
+                                <span>
+                                  Prep block stored internally. Connect Google Calendar in{' '}
+                                  <button type="button" onClick={() => navigate('/setup/connections')} className="underline font-semibold cursor-pointer">
+                                    Integrations
+                                  </button>{' '}
+                                  to schedule the external prep event.
+                                </span>
+                              </div>
+                            )}
+
+                            {prepBlock.status === 'conflict_review_required' && (
+                              <div className="p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 text-[11px] text-amber-800 dark:text-amber-200 space-y-1">
+                                <div className="flex items-start gap-2">
+                                  <AlertTriangle className="w-3.5 h-3.5 text-amber-600 mt-0.5 shrink-0" />
+                                  <span className="font-semibold">Calendar conflict detected in the prep window. Prep block not scheduled automatically.</span>
+                                </div>
+                                {prepBlock.conflict_metadata?.conflicting_events?.map((ev, i) => (
+                                  <div key={i} className="ml-5 text-[10px] text-amber-700 dark:text-amber-300">
+                                    Conflict: <span className="font-medium">{ev.summary}</span> ({ev.start ? new Date(ev.start).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''} – {ev.end ? new Date(ev.end).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''})
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {prepBlock.status === 'cancelled' && (
+                              <div className="p-2.5 rounded-lg bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-[11px] text-slate-600 dark:text-slate-400">
+                                Prep block cancelled. Google Calendar event removed if it existed.
+                              </div>
+                            )}
+
+                            {/* Action buttons */}
+                            <div className="flex items-center gap-2 pt-1 flex-wrap">
+                              {prepBlock.status !== 'cancelled' && (
                                 <button
                                   type="button"
-                                  onClick={() => handleFollowupDraftAction('snooze', { snoozed_until: '1 Hour' })}
-                                  className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#182234] text-slate-700 dark:text-slate-300 cursor-pointer"
+                                  disabled={meetingPrepLoading}
+                                  onClick={() => handleCancelMeetingPrep()}
+                                  className="px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-white dark:bg-[#182234] hover:bg-rose-50 dark:hover:bg-rose-950/30 border border-slate-200 dark:border-[#233048] text-slate-600 dark:text-slate-300 hover:text-rose-700 dark:hover:text-rose-300 cursor-pointer transition-colors"
                                 >
-                                  In 1 Hour
+                                  Cancel Prep Block
                                 </button>
+                              )}
+                              {/* Reschedule: show form toggle */}
+                              {prepBlock.status !== 'cancelled' && (
                                 <button
                                   type="button"
-                                  onClick={() => handleFollowupDraftAction('snooze', { snoozed_until: 'Tomorrow 9:00 AM' })}
-                                  className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#182234] text-slate-700 dark:text-slate-300 cursor-pointer"
+                                  onClick={() => setMeetingPrepExpanded(true)}
+                                  className="px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-white dark:bg-[#182234] hover:bg-slate-100 dark:hover:bg-[#233048] border border-slate-200 dark:border-[#233048] text-slate-600 dark:text-slate-300 cursor-pointer transition-colors"
                                 >
-                                  Tomorrow 9:00 AM
+                                  Reschedule
                                 </button>
+                              )}
+                            </div>
+
+                            {/* Reschedule form (shown inline) */}
+                            {prepBlock.status !== 'cancelled' && meetingPrepExpanded && brief && (
+                              <div className="mt-2 pt-2 border-t border-slate-200 dark:border-[#1e2a3f] space-y-2">
+                                <div className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">Update meeting time to reschedule prep block:</div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                  <div>
+                                    <label className="block text-[10px] text-slate-500 dark:text-slate-400 mb-1">New Meeting Start</label>
+                                    <input type="datetime-local" value={meetingStart} onChange={e => setMeetingStart(e.target.value)}
+                                      className="w-full px-2.5 py-1.5 text-[11px] bg-white dark:bg-[#0b0f17] border border-slate-200 dark:border-[#233048] rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[10px] text-slate-500 dark:text-slate-400 mb-1">New Meeting End</label>
+                                    <input type="datetime-local" value={meetingEnd} onChange={e => setMeetingEnd(e.target.value)}
+                                      className="w-full px-2.5 py-1.5 text-[11px] bg-white dark:bg-[#0b0f17] border border-slate-200 dark:border-[#233048] rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                                  </div>
+                                </div>
                                 <button
                                   type="button"
-                                  onClick={() => handleFollowupDraftAction('snooze', { snoozed_until: 'Next Monday' })}
-                                  className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#182234] text-slate-700 dark:text-slate-300 cursor-pointer"
+                                  disabled={meetingPrepLoading || !meetingStart || !meetingEnd}
+                                  onClick={() => handleMeetingPrep('reschedule')}
+                                  className="px-3.5 py-1.5 rounded-lg text-[11px] font-bold bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white cursor-pointer flex items-center gap-1.5 transition-all"
                                 >
-                                  Next Monday
+                                  {meetingPrepLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Calendar className="w-3 h-3" />}
+                                  Reschedule Prep Block
                                 </button>
                               </div>
                             )}
                           </div>
-
-                          <button
-                            type="button"
-                            disabled={draftActionLoading}
-                            onClick={() => handleFollowupDraftAction('discard')}
-                            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-rose-50 hover:text-rose-600 dark:bg-[#182234] dark:hover:bg-rose-950/40 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#233048] transition-colors cursor-pointer"
-                          >
-                            Discard
-                          </button>
-                        </div>
-
-                        {executionResult.followupDraft.status !== 'approved' && (
-                          <button
-                            type="button"
-                            disabled={draftActionLoading}
-                            onClick={() => handleFollowupDraftAction('approve')}
-                            className="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer shadow-xs flex items-center gap-1.5 transition-all"
-                          >
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            <span>Approve Draft</span>
-                          </button>
                         )}
+
+                        {/* Node 5 Scope Status — updated for 5B */}
+                        <div className="p-3 rounded-lg bg-slate-100/80 dark:bg-[#182234]/80 border border-slate-200 dark:border-[#233048] text-xs space-y-1.5">
+                          <div className="font-bold text-[11px] text-slate-700 dark:text-slate-300 uppercase tracking-wide">
+                            Node 5 Delivery Status
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px]">
+                            <div className="p-2 rounded bg-white dark:bg-[#121826] border border-slate-200/60 dark:border-slate-800 flex items-center gap-2">
+                              <span className="text-emerald-500 font-bold">✓</span>
+                              <div>
+                                <div className="font-semibold text-slate-800 dark:text-slate-200">Follow-up Draft (5A)</div>
+                                <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">Ready & HITL Review Active</div>
+                              </div>
+                            </div>
+                            <div className={`p-2 rounded border flex items-center gap-2 ${brief ? 'bg-white dark:bg-[#121826] border-emerald-200 dark:border-emerald-800' : 'bg-white/60 dark:bg-[#121826]/60 border-slate-200/60 dark:border-slate-800 opacity-75'}`}>
+                              <span className={brief ? 'text-emerald-500 font-bold' : 'text-slate-400 font-mono'}>
+                                {brief ? '✓' : '⏳'}
+                              </span>
+                              <div>
+                                <div className="font-semibold text-slate-700 dark:text-slate-300">Meeting Prep Brief</div>
+                                <div className={`text-[10px] font-medium ${brief ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500'}`}>
+                                  {brief ? 'Generated from Central Memory' : 'Awaiting Meeting Details'}
+                                </div>
+                              </div>
+                            </div>
+                            <div className={`p-2 rounded border flex items-center gap-2 ${
+                              prepBlock?.status === 'scheduled' ? 'bg-white dark:bg-[#121826] border-emerald-200 dark:border-emerald-800'
+                              : prepBlock?.status === 'conflict_review_required' ? 'bg-amber-50/60 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800 opacity-90'
+                              : prepBlock?.status === 'cancelled' ? 'bg-slate-100/60 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700 opacity-60'
+                              : 'bg-white/60 dark:bg-[#121826]/60 border-slate-200/60 dark:border-slate-800 opacity-75'
+                            }`}>
+                              <span className={
+                                prepBlock?.status === 'scheduled' ? 'text-emerald-500 font-bold'
+                                : prepBlock?.status === 'conflict_review_required' ? 'text-amber-500 font-bold'
+                                : prepBlock?.status === 'cancelled' ? 'text-slate-400'
+                                : 'text-slate-400 font-mono'
+                              }>
+                                {prepBlock?.status === 'scheduled' ? '✓' : prepBlock?.status === 'conflict_review_required' ? '⚠' : prepBlock?.status === 'cancelled' ? '✕' : '⏳'}
+                              </span>
+                              <div>
+                                <div className="font-semibold text-slate-700 dark:text-slate-300">Calendar Prep Block</div>
+                                <div className={`text-[10px] font-medium ${
+                                  prepBlock?.status === 'scheduled' ? 'text-emerald-600 dark:text-emerald-400'
+                                  : prepBlock?.status === 'conflict_review_required' ? 'text-amber-600 dark:text-amber-400'
+                                  : prepBlock?.status === 'cancelled' ? 'text-slate-400'
+                                  : 'text-slate-500'
+                                }`}>
+                                  {prepBlock?.status === 'scheduled' ? 'Private Event Scheduled'
+                                    : prepBlock?.status === 'calendar_connection_required' ? 'Calendar Connection Required'
+                                    : prepBlock?.status === 'conflict_review_required' ? 'Conflict — Review Required'
+                                    : prepBlock?.status === 'cancelled' ? 'Cancelled'
+                                    : 'Awaiting Meeting Details'}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
+                    )
+                  })()}
+                </div>
+              )}
+
+              {/* CONTACT RESEARCH & ENRICHMENT */}
+              {executionResult.centralMemory && (
+                <div className="p-4 rounded-xl bg-slate-50/70 dark:bg-[#0e1420]/70 border border-slate-200 dark:border-[#233048] space-y-3">
+                  {/* Header */}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-lg bg-indigo-600 text-white flex items-center justify-center text-xs font-bold shadow-xs">
+                        <User className="w-3.5 h-3.5" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                          <span>CONTACT RESEARCH & ENRICHMENT</span>
+                          {executionResult.contactResearch && (
+                            <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-semibold border ${
+                              executionResult.contactResearch.status === 'completed'
+                                ? 'bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700'
+                                : executionResult.contactResearch.status === 'research_unavailable'
+                                ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-300 dark:border-slate-600'
+                                : executionResult.contactResearch.status === 'no_results'
+                                ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+                                : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800'
+                            }`}>
+                              {executionResult.contactResearch.status === 'completed' ? 'Research Ready'
+                                : executionResult.contactResearch.status === 'research_unavailable' ? 'Research Provider Required'
+                                : executionResult.contactResearch.status === 'no_results' ? 'No Results Found'
+                                : executionResult.contactResearch.status === 'idempotent_reused' ? 'Cached'
+                                : 'Error'}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                          Public professional web search • Sourced facts only • Never fabricated
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {executionResult.contactResearch && (
+                        <button
+                          type="button"
+                          onClick={() => setResearchExpanded(v => !v)}
+                          className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer transition-colors"
+                        >
+                          {researchExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Toast */}
+                  {researchToast && (
+                    <div className="p-2.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 text-[11px] text-indigo-800 dark:text-indigo-200">
+                      {researchToast}
                     </div>
                   )}
 
-                  {/* Node 5 Partial Implementation Status Breakdown */}
-                  <div className="p-3 rounded-lg bg-slate-100/80 dark:bg-[#182234]/80 border border-slate-200 dark:border-[#233048] text-xs space-y-1.5">
-                    <div className="font-bold text-[11px] text-slate-700 dark:text-slate-300 uppercase tracking-wide">
-                      Node 5 Scope & Delivery Status (Partial Implementation)
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px]">
-                      <div className="p-2 rounded bg-white dark:bg-[#121826] border border-slate-200/60 dark:border-slate-800 flex items-center gap-2">
-                        <span className="text-emerald-500 font-bold">✓</span>
-                        <div>
-                          <div className="font-semibold text-slate-800 dark:text-slate-200">Follow-up Draft (5A)</div>
-                          <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">Ready & HITL Review Active</div>
-                        </div>
-                      </div>
-                      <div className="p-2 rounded bg-white/60 dark:bg-[#121826]/60 border border-slate-200/60 dark:border-slate-800 flex items-center gap-2 opacity-75">
-                        <span className="text-slate-400 font-mono">⏳</span>
-                        <div>
-                          <div className="font-semibold text-slate-700 dark:text-slate-300">Meeting Prep Brief</div>
-                          <div className="text-[10px] text-slate-500">Pending Implementation</div>
-                        </div>
-                      </div>
-                      <div className="p-2 rounded bg-white/60 dark:bg-[#121826]/60 border border-slate-200/60 dark:border-slate-800 flex items-center gap-2 opacity-75">
-                        <span className="text-slate-400 font-mono">⏳</span>
-                        <div>
-                          <div className="font-semibold text-slate-700 dark:text-slate-300">Calendar Prep Block</div>
-                          <div className="text-[10px] text-slate-500">Pending Implementation</div>
-                        </div>
-                      </div>
-                    </div>
+                  {/* Run / Refresh button */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      type="button"
+                      disabled={researchLoading}
+                      onClick={() => handleContactResearch(false)}
+                      className="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white cursor-pointer shadow-xs flex items-center gap-1.5 transition-all"
+                    >
+                      {researchLoading
+                        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        : <Sparkles className="w-3.5 h-3.5" />}
+                      <span>{researchLoading ? 'Researching...' : (executionResult.contactResearch ? 'Re-run Research' : 'Research Contact')}</span>
+                    </button>
+                    {executionResult.contactResearch && (
+                      <button
+                        type="button"
+                        disabled={researchLoading}
+                        onClick={() => handleContactResearch(true)}
+                        className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white dark:bg-[#182234] hover:bg-slate-100 dark:hover:bg-[#233048] border border-slate-200 dark:border-[#233048] text-slate-600 dark:text-slate-300 cursor-pointer transition-colors"
+                      >
+                        Force Refresh
+                      </button>
+                    )}
+                    {executionResult.contactResearch?.retrieved_at && (
+                      <span className="text-[10px] text-slate-400">
+                        Last retrieved: {new Date(executionResult.contactResearch.retrieved_at).toLocaleString()}
+                      </span>
+                    )}
                   </div>
+
+                  {/* Results */}
+                  {executionResult.contactResearch && researchExpanded && (
+                    <div className="space-y-3">
+
+                      {/* Unavailable banner */}
+                      {executionResult.contactResearch.status === 'research_unavailable' && (
+                        <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-[11px] text-slate-600 dark:text-slate-300 flex items-start gap-2">
+                          <AlertTriangle className="w-3.5 h-3.5 text-slate-400 mt-0.5 shrink-0" />
+                          <div>
+                            <div className="font-semibold text-slate-700 dark:text-slate-200 mb-0.5">Research Provider Required</div>
+                            <div>Set <code className="font-mono bg-slate-200 dark:bg-slate-700 px-1 rounded">SERPER_API_KEY</code> in your environment to enable public contact research. No results are fabricated when the provider is unavailable.</div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* No results */}
+                      {executionResult.contactResearch.status === 'no_results' && (
+                        <div className="p-3 rounded-lg bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/50 text-[11px] text-amber-800 dark:text-amber-300">
+                          No public results found for <strong>{executionResult.contactResearch.contact_name}</strong>. Try adding company or role context in Central Memory.
+                        </div>
+                      )}
+
+                      {/* Error */}
+                      {executionResult.contactResearch.status === 'error' && (
+                        <div className="p-3 rounded-lg bg-rose-50/60 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-800/50 text-[11px] text-rose-800 dark:text-rose-300">
+                          Research error: {executionResult.contactResearch.error || 'Unknown error.'}
+                        </div>
+                      )}
+
+                      {/* Verified Facts */}
+                      {executionResult.contactResearch.verified_facts?.length > 0 && (
+                        <div className="p-3 rounded-lg bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#1e2a3f] space-y-2">
+                          <div className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                            <CheckCircle2 className="w-3 h-3" />
+                            Verified Public Facts ({executionResult.contactResearch.verified_facts.length})
+                          </div>
+                          <div className="space-y-2">
+                            {executionResult.contactResearch.verified_facts.map((fact, i) => (
+                              <div key={i} className="text-[11px] space-y-0.5">
+                                <div className="text-slate-800 dark:text-slate-200">{fact.content}</div>
+                                <div className="flex items-center gap-2 text-[10px] text-slate-400">
+                                  <a
+                                    href={fact.source_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-500 hover:underline flex items-center gap-1 cursor-pointer"
+                                  >
+                                    <ExternalLink className="w-2.5 h-2.5" />
+                                    {fact.source_name}
+                                  </a>
+                                  <span>•</span>
+                                  <span>{fact.retrieved_at ? new Date(fact.retrieved_at).toLocaleDateString() : ''}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Uncertain Matches */}
+                      {executionResult.contactResearch.uncertain_matches?.length > 0 && (
+                        <div className="p-3 rounded-lg bg-amber-50/40 dark:bg-amber-950/10 border border-amber-200/60 dark:border-amber-800/30 space-y-2">
+                          <div className="text-[10px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                            <AlertTriangle className="w-3 h-3" />
+                            Uncertain / Possible Matches ({executionResult.contactResearch.uncertain_matches.length})
+                          </div>
+                          <div className="text-[10px] text-amber-600 dark:text-amber-400 italic mb-1">These results may refer to a different person with the same name. Confirm before using.</div>
+                          <div className="space-y-2">
+                            {executionResult.contactResearch.uncertain_matches.map((m, i) => (
+                              <div key={i} className="text-[11px] space-y-0.5">
+                                <div className="text-slate-700 dark:text-slate-300">{m.content}</div>
+                                <div className="flex items-center gap-2 text-[10px] text-slate-400">
+                                  <a
+                                    href={m.source_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-400 hover:underline flex items-center gap-1 cursor-pointer"
+                                  >
+                                    <ExternalLink className="w-2.5 h-2.5" />
+                                    {m.source_name}
+                                  </a>
+                                  <span>•</span>
+                                  <span className="text-amber-500">{m.uncertainty_reason}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* AI Talking Points */}
+                      {executionResult.contactResearch.ai_talking_points?.length > 0 && (
+                        <div className="p-3 rounded-lg bg-purple-50/50 dark:bg-purple-950/15 border border-purple-200/60 dark:border-purple-800/30 space-y-1.5">
+                          <div className="text-[10px] font-bold text-purple-700 dark:text-purple-400 uppercase tracking-wider flex items-center gap-1.5">
+                            <Sparkles className="w-3 h-3" />
+                            AI Suggested Discussion Topics
+                          </div>
+                          <div className="text-[10px] text-purple-600 dark:text-purple-400 italic mb-1">AI Suggested — Not Previously Agreed. Grounded in researched facts.</div>
+                          {executionResult.contactResearch.ai_talking_points.map((t, i) => (
+                            <div key={i} className="text-[11px] flex items-start gap-1.5">
+                              <span className="text-purple-400 mt-0.5 shrink-0">✦</span>
+                              <div>
+                                <span className="font-medium text-slate-800 dark:text-slate-200">{t.topic}</span>
+                                {t.rationale && <span className="text-slate-500 dark:text-slate-400"> — {t.rationale}</span>}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Queries used (collapsed detail) */}
+                      {executionResult.contactResearch.queries_used?.length > 0 && (
+                        <div className="text-[10px] text-slate-400 dark:text-slate-500">
+                          Queries: {executionResult.contactResearch.queries_used.map(q => `"${q}"`).join(' • ')}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -5490,8 +6482,74 @@ export default function UniversalWorkflowRunner() {
         )
       )}
 
+      {/* ── Business Context Pack Modal ─────────────────────────────────── */}
+      {showBusinessContextModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-3xl max-w-3xl w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <button
+              type="button"
+              onClick={() => setShowBusinessContextModal(false)}
+              className="absolute right-5 top-5 w-8 h-8 rounded-full bg-slate-100 dark:bg-[#182234] text-slate-500 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+              title="Close"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <BusinessContextCard
+              inModal
+              onSaved={() => {}}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ── Central Memory Natural-Language Query Modal ─────────────────── */}
+      {showMemoryQueryModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-3xl max-w-3xl w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <button
+              type="button"
+              onClick={() => setShowMemoryQueryModal(false)}
+              className="absolute right-5 top-5 w-8 h-8 rounded-full bg-slate-100 dark:bg-[#182234] text-slate-500 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+              title="Close"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <CentralMemoryQueryCard
+              contactName={executionResult?.centralMemory?.contact_name}
+              contactId={executionResult?.centralMemory?.contact_id}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ── Automatic Conversation Ingestion & Capture Modal ────────────── */}
+      {showAutoIngestModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-3xl max-w-3xl w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <button
+              type="button"
+              onClick={() => setShowAutoIngestModal(false)}
+              className="absolute right-5 top-5 w-8 h-8 rounded-full bg-slate-100 dark:bg-[#182234] text-slate-500 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+              title="Close"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <AutomaticIngestionModal
+              onClose={() => setShowAutoIngestModal(false)}
+              onLoadRun={(instanceId) => {
+                setShowAutoIngestModal(false)
+                syncMeetingRun(instanceId).then(synced => {
+                  if (synced) applyMeetingRunState(synced)
+                })
+              }}
+            />
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
+
 
 

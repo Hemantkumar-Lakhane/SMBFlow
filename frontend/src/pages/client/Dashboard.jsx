@@ -18,6 +18,7 @@ import { LineChart, Line, ResponsiveContainer, Tooltip } from 'recharts'
 import { useAuth } from '../../contexts/AuthContext'
 import { useWebSocket } from '../../contexts/WSContext'
 import { fmtCost, timeAgo } from '../../utils/helpers'
+import DailyBriefingCard from './DailyBriefingCard'
 
 const POLL_MS = 5000
 
@@ -288,6 +289,9 @@ export default function Dashboard() {
           sub="Governor cost optimization"
         />
       </div>
+
+      {/* ── Daily Briefing Section ───────────────────────────────────────────── */}
+      <DailyBriefingCard />
 
       {/* ── Content Grid ────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">

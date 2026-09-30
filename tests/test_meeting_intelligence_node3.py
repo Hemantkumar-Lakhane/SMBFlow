@@ -28,6 +28,7 @@ from api.routers.meeting_intelligence import (
     CentralMemoryRequest,
     process_central_memory,
     get_contact_memory_history,
+    export_central_memory,
 )
 from db.models.core import (
     AgentRunRecord,
@@ -98,6 +99,7 @@ class CentralMemoryMockSession:
 
     async def execute(self, stmt):
         stmt_str = str(stmt).lower()
+        where_clause = stmt_str.split("where")[-1] if "where" in stmt_str else ""
         params = {}
         try:
             params = stmt.compile().params
@@ -111,7 +113,7 @@ class CentralMemoryMockSession:
         if "workflow_instances" in stmt_str:
             matched = list(self.workflow_instances.values())
             for wid, inst in self.workflow_instances.items():
-                if wid.lower() in param_vals or wid.lower() in stmt_str:
+                if wid.lower() in param_vals or wid.lower() in where_clause:
                     matched = [inst]
                     break
             mock_result.scalars = lambda: AsyncMock(
@@ -123,15 +125,20 @@ class CentralMemoryMockSession:
         # Query RelationshipConversation
         if "relationship_conversations" in stmt_str:
             matched = []
-            for conv in self.conversations.values():
-                # Filter by workflow_instance_id if present
-                if str(conv.workflow_instance_id).lower() in param_vals or str(conv.workflow_instance_id).lower() in stmt_str:
-                    matched.append(conv)
-                # Filter by contact_id if present
-                elif str(conv.contact_id).lower() in param_vals or str(conv.contact_id).lower() in stmt_str:
-                    matched.append(conv)
-                elif not params:
-                    matched.append(conv)
+            if "workflow_instance_id" in where_clause:
+                for conv in self.conversations.values():
+                    if str(conv.workflow_instance_id).lower() in param_vals:
+                        matched.append(conv)
+            elif "contact_id" in where_clause:
+                for conv in self.conversations.values():
+                    if str(conv.contact_id).lower() in param_vals:
+                        matched.append(conv)
+            elif "organization_id" in where_clause:
+                for conv in self.conversations.values():
+                    if str(conv.organization_id).lower() in param_vals:
+                        matched.append(conv)
+            else:
+                matched = list(self.conversations.values())
 
             matched.sort(key=lambda x: getattr(x, "created_at", datetime.min) or datetime.min, reverse=True)
             mock_result.scalars = lambda: AsyncMock(
@@ -143,15 +150,20 @@ class CentralMemoryMockSession:
         # Query RelationshipContact
         if "relationship_contacts" in stmt_str:
             matched = []
-            for contact in self.contacts.values():
-                if str(contact.id).lower() in param_vals or str(contact.id).lower() in stmt_str:
-                    matched = [contact]
-                    break
-                # Match normalized_name and organization_id
-                if (contact.normalized_name in param_vals or contact.normalized_name in stmt_str) and \
-                   (str(contact.organization_id).lower() in param_vals or str(contact.organization_id).lower() in stmt_str):
-                    matched = [contact]
-                    break
+            if "normalized_name" in where_clause:
+                for contact in self.contacts.values():
+                    if (contact.normalized_name.lower() in param_vals or contact.normalized_name.lower() in where_clause) and \
+                       (str(contact.organization_id).lower() in param_vals or str(contact.organization_id).lower() in where_clause):
+                        matched.append(contact)
+            elif "organization_id" in where_clause and "id" not in where_clause.replace("organization_id", ""):
+                for contact in self.contacts.values():
+                    if str(contact.organization_id).lower() in param_vals:
+                        matched.append(contact)
+            else:
+                for contact in self.contacts.values():
+                    if str(contact.id).lower() in param_vals or str(contact.id).lower() in where_clause:
+                        matched.append(contact)
+
             mock_result.scalars = lambda: AsyncMock(
                 first=lambda: matched[0] if matched else None,
                 all=lambda: matched,
@@ -161,9 +173,17 @@ class CentralMemoryMockSession:
         # Query RelationshipMemoryItem
         if "relationship_memory_items" in stmt_str:
             matched = []
-            for item in self.memory_items:
-                if str(item.contact_id).lower() in param_vals or str(item.contact_id).lower() in stmt_str:
-                    matched.append(item)
+            if "contact_id" in where_clause:
+                for item in self.memory_items:
+                    if str(item.contact_id).lower() in param_vals or str(item.contact_id).lower() in where_clause:
+                        matched.append(item)
+            elif "organization_id" in where_clause:
+                for item in self.memory_items:
+                    if str(item.organization_id).lower() in param_vals:
+                        matched.append(item)
+            else:
+                matched = list(self.memory_items)
+
             mock_result.scalars = lambda: AsyncMock(
                 first=lambda: matched[0] if matched else None,
                 all=lambda: matched,
@@ -495,3 +515,50 @@ async def test_contact_history_endpoint_and_cross_tenant_rejection():
         await get_contact_memory_history(contact_id=contact_id, db=session, current_user=USER_ORG_B)
 
     assert exc_info.value.status_code == 403
+
+
+# ── Test 8: Central Memory Export (Provider-Independent & Isolated) ───────────
+
+@pytest.mark.asyncio
+async def test_export_central_memory_provider_independent_and_tenant_isolated():
+    """Verify GET /central-memory/export returns full portable memory and enforces tenant isolation."""
+    session = CentralMemoryMockSession()
+
+    # Org A run
+    run_a = uuid.uuid4()
+    wf_a = _build_mock_workflow_instance(run_a, ORG_A, "Rahul Sharma", "Enterprise Contract Discussion", is_node2_done=True)
+    session.add(wf_a)
+    await process_central_memory(CentralMemoryRequest(instance_id=str(run_a)), db=session, current_user=USER_ORG_A)
+
+    # Org B run
+    run_b = uuid.uuid4()
+    wf_b = _build_mock_workflow_instance(run_b, ORG_B, "Dr. Elena Rostova", "Clinic Partnership", is_node2_done=True)
+    session.add(wf_b)
+    await process_central_memory(CentralMemoryRequest(instance_id=str(run_b)), db=session, current_user=USER_ORG_B)
+
+    # 1. Org A exports Central Memory
+    export_a = await export_central_memory(db=session, current_user=USER_ORG_A)
+    assert export_a["provider_independent"] is True
+    assert export_a["export_format"] == "smbflow_central_memory_v1"
+    assert export_a["organization_id"] == ORG_A
+    assert export_a["summary"]["total_contacts"] == 1
+    assert export_a["contacts"][0]["name"] == "Rahul Sharma"
+    assert export_a["conversations"][0]["title"] == "Enterprise Contract Discussion"
+    assert len(export_a["memory_items"]) > 0
+
+    # Verify Org A export contains ZERO Org B data
+    contact_names_a = [c["name"] for c in export_a["contacts"]]
+    assert "Dr. Elena Rostova" not in contact_names_a
+
+    # 2. Org B exports Central Memory
+    export_b = await export_central_memory(db=session, current_user=USER_ORG_B)
+    assert export_b["organization_id"] == ORG_B
+    assert export_b["summary"]["total_contacts"] == 1
+    assert export_b["contacts"][0]["name"] == "Dr. Elena Rostova"
+    contact_names_b = [c["name"] for c in export_b["contacts"]]
+    assert "Rahul Sharma" not in contact_names_b
+
+    # 3. Audit events were recorded for both exports
+    export_audits = [a for a in session.audit_events if a.action == "central_memory_exported"]
+    assert len(export_audits) == 2
+

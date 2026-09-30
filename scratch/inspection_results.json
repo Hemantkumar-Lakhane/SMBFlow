@@ -1,488 +1,2171 @@
 {
-  "schemas": {
-    "organizations": [
-      "id",
-      "name",
-      "industry",
-      "enabled_modules",
-      "profile_config",
-      "active",
-      "created_at",
-      "updated_at"
-    ],
-    "organization_users": [
-      "id",
-      "organization_id",
-      "user_id",
-      "email",
-      "full_name",
-      "role",
-      "created_at"
-    ],
-    "auth.users": [
-      "instance_id",
-      "id",
-      "aud",
-      "role",
-      "email",
-      "encrypted_password",
-      "email_confirmed_at",
-      "invited_at",
-      "confirmation_token",
-      "confirmation_sent_at",
-      "recovery_token",
-      "recovery_sent_at",
-      "email_change_token_new",
-      "email_change",
-      "email_change_sent_at",
-      "last_sign_in_at",
-      "raw_app_meta_data",
-      "raw_user_meta_data",
-      "is_super_admin",
-      "created_at",
-      "updated_at",
-      "phone",
-      "phone_confirmed_at",
-      "phone_change",
-      "phone_change_token",
-      "phone_change_sent_at",
-      "confirmed_at",
-      "email_change_token_current",
-      "email_change_confirm_status",
-      "banned_until",
-      "reauthentication_token",
-      "reauthentication_sent_at",
-      "is_sso_user",
-      "deleted_at",
-      "is_anonymous"
-    ]
-  },
-  "auth_users": [
+  "supabase_auth_users": [
     {
-      "id": "5b80d106-cac7-4711-b891-34d51548da10",
+      "user_id": "3af1bbcf-9daf-411f-b2c9-cf47c111095f",
+      "email": "demo18460@gmail.com",
+      "created_at": "2026-09-28 04:57:02.344888+00:00",
+      "last_sign_in_at": "2026-09-28 04:57:02.391849+00:00",
+      "provider": "google",
+      "full_name": "Demo4",
+      "confirmed": "Confirmed"
+    },
+    {
+      "user_id": "74dab2d1-f42c-427f-ba71-e1a3b8c591ce",
+      "email": "khushighumre64@gmail.com",
+      "created_at": "2026-09-27 09:29:21.802022+00:00",
+      "last_sign_in_at": "2026-09-27 09:29:21.820776+00:00",
+      "provider": "google",
+      "full_name": "Demo2",
+      "confirmed": "Confirmed"
+    },
+    {
+      "user_id": "e53f6626-308b-436b-9d7f-758c84107677",
+      "email": "gemini.connect.tech@gmail.com",
+      "created_at": "2026-09-26 17:02:05.389969+00:00",
+      "last_sign_in_at": "2026-09-27 08:39:58.038898+00:00",
+      "provider": "google",
+      "full_name": "Gemini",
+      "confirmed": "Confirmed"
+    },
+    {
+      "user_id": "989b65d6-e379-4319-8ab4-bd1f43f7acae",
+      "email": "khushighumre@gmail.com",
+      "created_at": "2026-09-26 06:54:43.999218+00:00",
+      "last_sign_in_at": "2026-09-28 10:03:40.749428+00:00",
+      "provider": "google",
+      "full_name": "Khushi Ghumre",
+      "confirmed": "Confirmed"
+    },
+    {
+      "user_id": "c56efb0f-591c-4a1f-8c85-2aa339eecc00",
+      "email": "aimlc3293@gmail.com",
+      "created_at": "2026-09-25 20:39:09.166898+00:00",
+      "last_sign_in_at": "2026-09-25 20:39:09.194943+00:00",
+      "provider": "google",
+      "full_name": "Aimlc",
+      "confirmed": "Confirmed"
+    },
+    {
+      "user_id": "0e9fc2df-66e1-4a17-a5b3-2f4eed035fcd",
+      "email": "aryankadam8778@gmail.com",
+      "created_at": "2026-09-25 11:57:21.335542+00:00",
+      "last_sign_in_at": "2026-09-25 11:57:21.386081+00:00",
+      "provider": "google",
+      "full_name": "Aryan Kadam",
+      "confirmed": "Confirmed"
+    },
+    {
+      "user_id": "825214f5-ff3c-41e9-a16d-9fbf0ae1acef",
+      "email": "dbmscp@gmail.com",
+      "created_at": "2026-09-25 11:50:34.139683+00:00",
+      "last_sign_in_at": "2026-09-25 12:58:27.427178+00:00",
+      "provider": "google",
+      "full_name": "dbms cp",
+      "confirmed": "Confirmed"
+    },
+    {
+      "user_id": "d04f8b45-77a4-45dc-8de1-68abdae84ec3",
+      "email": "aws634102@gmail.com",
+      "created_at": "2026-09-25 11:17:39.930487+00:00",
+      "last_sign_in_at": "2026-09-25 11:17:39.956156+00:00",
+      "provider": "google",
+      "full_name": "Aws",
+      "confirmed": "Confirmed"
+    },
+    {
+      "user_id": "225cb91c-fbec-4cea-83f7-50e1caf04949",
+      "email": "t95977512@gmail.com",
+      "created_at": "2026-09-25 11:01:48.623290+00:00",
+      "last_sign_in_at": "2026-09-26 05:41:37.087365+00:00",
+      "provider": "google",
+      "full_name": "Traffic",
+      "confirmed": "Confirmed"
+    },
+    {
+      "user_id": "2998b909-b4a2-4bcf-87a0-57a2f961807d",
+      "email": "rv421625@gmail.com",
+      "created_at": "2026-09-25 07:14:16.099093+00:00",
+      "last_sign_in_at": "2026-09-25 12:53:36.904999+00:00",
+      "provider": "email",
+      "full_name": "Rohit Verma",
+      "confirmed": "Confirmed"
+    },
+    {
+      "user_id": "f428c033-438c-4b27-97cf-dd5d62596d6c",
+      "email": "khushighumre311@gmail.com",
+      "created_at": "2026-09-24 07:19:12.402487+00:00",
+      "last_sign_in_at": "2026-09-24 09:55:22.502834+00:00",
+      "provider": "google",
+      "full_name": "Khushi Ghumre",
+      "confirmed": "Confirmed"
+    },
+    {
+      "user_id": "016d9d2b-a146-4701-9e8b-492dd9afd0b7",
+      "email": "hemantkumar.lakhane24@vit.edu",
+      "created_at": "2026-09-23 21:03:09.153037+00:00",
+      "last_sign_in_at": "2026-09-25 10:57:31.854023+00:00",
+      "provider": "email",
+      "full_name": "HEMANTKUMAR LAKHANE",
+      "confirmed": "Confirmed"
+    },
+    {
+      "user_id": "dc188b43-d503-4815-977a-dc590c495322",
+      "email": "demo83565@gmail.com",
+      "created_at": "2026-09-23 13:31:45.742092+00:00",
+      "last_sign_in_at": "-",
+      "provider": "email",
+      "full_name": "demo1",
+      "confirmed": "Unconfirmed"
+    },
+    {
+      "user_id": "1b981eba-2c1c-4674-9b32-c4b69ac81a9c",
+      "email": "gemni.connect.tech@gmail.com",
+      "created_at": "2026-09-23 09:21:44.595542+00:00",
+      "last_sign_in_at": "-",
+      "provider": "email",
+      "full_name": "demo",
+      "confirmed": "Unconfirmed"
+    },
+    {
+      "user_id": "a17e68b9-93f2-4fb6-b2df-945618c28bc6",
+      "email": "khushi.ghumre24@vit.edu",
+      "created_at": "2026-09-23 09:16:30.500139+00:00",
+      "last_sign_in_at": "2026-09-25 11:16:45.979309+00:00",
+      "provider": "google",
+      "full_name": "KHUSHI GHUMRE",
+      "confirmed": "Confirmed"
+    },
+    {
+      "user_id": "8815af9d-c994-42e6-bbd7-e617c3fdb8de",
+      "email": "tanmaykumbhare24@gmail.com",
+      "created_at": "2026-09-17 07:30:51.916403+00:00",
+      "last_sign_in_at": "2026-09-17 07:30:51.961903+00:00",
+      "provider": "google",
+      "full_name": "Tanmay Kumbhare",
+      "confirmed": "Confirmed"
+    },
+    {
+      "user_id": "41755c26-cb4f-40dd-a13f-007c44590240",
+      "email": "kumbharetanmay6@gmail.com",
+      "created_at": "2026-09-17 07:03:23.894108+00:00",
+      "last_sign_in_at": "2026-09-20 15:17:52.471448+00:00",
+      "provider": "google",
+      "full_name": "Tanmay Kumbhare",
+      "confirmed": "Confirmed"
+    },
+    {
+      "user_id": "879047d1-ba3c-4cbf-9186-70f471377cba",
+      "email": "hemantlakhane@gmail.com",
+      "created_at": "2026-09-09 14:08:56.325298+00:00",
+      "last_sign_in_at": "2026-09-29 10:15:37.994703+00:00",
+      "provider": "google",
+      "full_name": "hemant lakhane",
+      "confirmed": "Confirmed"
+    },
+    {
+      "user_id": "5b80d106-cac7-4711-b891-34d51548da10",
       "email": "lakhanehemant@gmail.com",
       "created_at": "2026-09-09 12:25:08.829660+00:00",
-      "last_sign_in_at": "2026-09-09 12:25:28.417768+00:00",
+      "last_sign_in_at": "2026-09-29 10:12:45.511151+00:00",
       "provider": "email",
-      "full_name": "hemant lakhane",
-      "email_confirmed_at": "2026-09-09 12:25:28.411669+00:00"
+      "full_name": "Hemant lakhane",
+      "confirmed": "Confirmed"
     },
     {
-      "id": "135ada77-bde0-4c0b-9d10-965f16a3b6b7",
+      "user_id": "135ada77-bde0-4c0b-9d10-965f16a3b6b7",
       "email": "invited_admin_349c46@example.com",
       "created_at": "2026-09-09 12:19:52.019968+00:00",
-      "last_sign_in_at": null,
+      "last_sign_in_at": "-",
       "provider": "email",
-      "full_name": null,
-      "email_confirmed_at": "2026-09-09 12:19:52.034218+00:00"
+      "full_name": "-",
+      "confirmed": "Confirmed"
     },
     {
-      "id": "5eb5cf90-cad5-44a2-872f-7f29ad9ba8a0",
+      "user_id": "5eb5cf90-cad5-44a2-872f-7f29ad9ba8a0",
       "email": "invited_admin_10358c@example.com",
       "created_at": "2026-09-09 12:11:13.261897+00:00",
-      "last_sign_in_at": null,
+      "last_sign_in_at": "-",
       "provider": "email",
-      "full_name": null,
-      "email_confirmed_at": "2026-09-09 12:11:13.269020+00:00"
+      "full_name": "-",
+      "confirmed": "Confirmed"
     },
     {
-      "id": "49fe0ce5-2932-4ebd-9971-275a4b91d92b",
+      "user_id": "49fe0ce5-2932-4ebd-9971-275a4b91d92b",
       "email": "invited_admin_504c17@example.com",
       "created_at": "2026-09-09 12:10:41.682219+00:00",
-      "last_sign_in_at": null,
+      "last_sign_in_at": "-",
       "provider": "email",
-      "full_name": null,
-      "email_confirmed_at": "2026-09-09 12:10:41.684830+00:00"
+      "full_name": "-",
+      "confirmed": "Confirmed"
     },
     {
-      "id": "83efc2bc-b2ad-4d1c-93aa-99e6c112195e",
+      "user_id": "83efc2bc-b2ad-4d1c-93aa-99e6c112195e",
       "email": "test_admin@example.com",
       "created_at": "2026-09-09 12:10:15.775582+00:00",
-      "last_sign_in_at": null,
+      "last_sign_in_at": "-",
       "provider": "email",
-      "full_name": null,
-      "email_confirmed_at": "2026-09-09 12:10:15.790629+00:00"
+      "full_name": "-",
+      "confirmed": "Confirmed"
     }
   ],
+  "local_users": [],
   "org_members": [
     {
-      "id": "445aa051-1f7c-416a-a56d-723b4b47a147",
-      "organization_id": "255d0248-3d55-4c2c-95d7-f32031890466",
+      "membership_id": "70225b1c-cace-4c9e-9a52-37ff6e75bbf9",
+      "user_id": "3af1bbcf-9daf-411f-b2c9-cf47c111095f",
+      "email": "demo18460@gmail.com",
+      "full_name": "Demo4",
+      "role": "org_user",
+      "organization_id": "8ede3aff-4df0-49d8-a63c-e62b0088c020",
+      "organization_name": "Pending Workspace Setup",
+      "onboarding_status": "Incomplete (Pending)",
+      "created_at": "2026-09-28 04:57:07.328337+00:00"
+    },
+    {
+      "membership_id": "121db600-e084-44b1-8537-f69a9c79df7d",
+      "user_id": "74dab2d1-f42c-427f-ba71-e1a3b8c591ce",
+      "email": "khushighumre64@gmail.com",
+      "full_name": "Demo2",
+      "role": "org_user",
+      "organization_id": "13748684-0f4f-4588-9eff-d919a74b11c9",
+      "organization_name": "Newcompanybykhushi",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-27 09:29:24.599758+00:00"
+    },
+    {
+      "membership_id": "76827617-e31d-4cf8-9389-ce20e90f04f6",
+      "user_id": "e53f6626-308b-436b-9d7f-758c84107677",
+      "email": "gemini.connect.tech@gmail.com",
+      "full_name": "Gemini",
+      "role": "org_user",
+      "organization_id": "51210ca1-5224-40eb-97a1-916dbe6bf0e6",
+      "organization_name": "Amazon",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-26 17:02:10.213130+00:00"
+    },
+    {
+      "membership_id": "d0e81549-913f-4a29-8b38-778c0c9232b5",
+      "user_id": "989b65d6-e379-4319-8ab4-bd1f43f7acae",
+      "email": "khushighumre@gmail.com",
+      "full_name": "Khushi Ghumre",
+      "role": "org_user",
+      "organization_id": "ff57d905-d0bd-47cd-8290-2bee5641c698",
+      "organization_name": "Amazon",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-26 06:55:14.251532+00:00"
+    },
+    {
+      "membership_id": "4b27989b-d33b-46fd-a487-adabaca75bf8",
+      "user_id": "c56efb0f-591c-4a1f-8c85-2aa339eecc00",
+      "email": "aimlc3293@gmail.com",
+      "full_name": "Aimlc",
+      "role": "org_user",
+      "organization_id": "690accac-8e4f-47b6-b515-190ff893962c",
+      "organization_name": "Khushighumre",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-25 20:40:00.751451+00:00"
+    },
+    {
+      "membership_id": "d96a2a44-25a7-45c4-943e-5270d35c5f90",
+      "user_id": "0e9fc2df-66e1-4a17-a5b3-2f4eed035fcd",
+      "email": "aryankadam8778@gmail.com",
+      "full_name": "Aryan Kadam",
+      "role": "org_user",
+      "organization_id": "e68142c1-1d4e-401f-a02c-cbb3ef25fc15",
+      "organization_name": "Opera",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-25 11:57:27.219026+00:00"
+    },
+    {
+      "membership_id": "ffaab851-f261-4dc9-b2e1-0a877f3ea842",
+      "user_id": "825214f5-ff3c-41e9-a16d-9fbf0ae1acef",
+      "email": "dbmscp@gmail.com",
+      "full_name": "dbms cp",
+      "role": "org_user",
+      "organization_id": "355d2282-32b6-4249-ac49-c515af5bb72e",
+      "organization_name": "cognizant",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-25 11:50:39.633965+00:00"
+    },
+    {
+      "membership_id": "909664b7-6d73-49ef-8b69-949b59e1f969",
+      "user_id": "d04f8b45-77a4-45dc-8de1-68abdae84ec3",
+      "email": "aws634102@gmail.com",
+      "full_name": "Aws",
+      "role": "org_user",
+      "organization_id": "e15777cb-cf06-4664-a55b-7cb10ce7c17d",
+      "organization_name": "vit",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-25 11:17:44.971286+00:00"
+    },
+    {
+      "membership_id": "ddef6c99-b126-478e-8d75-2b4a889819de",
+      "user_id": "2998b909-b4a2-4bcf-87a0-57a2f961807d",
+      "email": "rv421625@gmail.com",
+      "full_name": "Rohit Verma",
+      "role": "org_user",
+      "organization_id": "e0b9c265-6fe7-4949-b497-02de28a5af67",
+      "organization_name": "vit pune",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-25 07:14:25.915060+00:00"
+    },
+    {
+      "membership_id": "6c49f1a6-4e48-4e16-90b3-32b32382d1a6",
+      "user_id": "edcb6103-6e62-4e8e-a6a5-c119948e3fb4",
+      "email": "dhan@gmail.com",
+      "full_name": "Dhanashri khode",
+      "role": "org_user",
+      "organization_id": "6a1bbada-5725-4368-800c-04470287a1a1",
+      "organization_name": "My Demo Company",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-24 07:55:31.606502+00:00"
+    },
+    {
+      "membership_id": "8c913592-a98a-4ce1-8d66-2aecb9292c4d",
+      "user_id": "f428c033-438c-4b27-97cf-dd5d62596d6c",
+      "email": "khushighumre311@gmail.com",
+      "full_name": "Khushi Ghumre",
+      "role": "org_user",
+      "organization_id": "9f65f4fc-e518-4d3a-9850-f5f15791699f",
+      "organization_name": "vit",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-24 07:19:22.284535+00:00"
+    },
+    {
+      "membership_id": "78454e54-ccce-4e27-8406-d9d17a1be405",
+      "user_id": "016d9d2b-a146-4701-9e8b-492dd9afd0b7",
+      "email": "hemantkumar.lakhane24@vit.edu",
+      "full_name": "HEMANTKUMAR LAKHANE",
+      "role": "org_user",
+      "organization_id": "d13908c9-2db9-416d-bd80-eaa32656cf70",
+      "organization_name": "VIT PUNE",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-23 21:03:19.299000+00:00"
+    },
+    {
+      "membership_id": "db7774d3-1a73-4049-801a-1ad8efcd43ae",
+      "user_id": "3542d920-06ab-4018-ac5d-c5436899029c",
+      "email": "demo83565@gmail.com",
+      "full_name": "demo1",
+      "role": "org_user",
+      "organization_id": "ddfb02e7-a6f9-4e77-b00e-397ad10564c1",
+      "organization_name": "vit",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-23 13:31:53.319905+00:00"
+    },
+    {
+      "membership_id": "5d496a49-934e-4574-bb67-11ba6015077c",
+      "user_id": "b7b0d0f4-3c6e-4dfb-92fe-1bbba699b1e5",
+      "email": "gemni.connect.tech@gmail.com",
+      "full_name": "demo",
+      "role": "org_user",
+      "organization_id": "2be52944-1ce7-472a-8b5d-fd94bd0daa5a",
+      "organization_name": "vit",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-23 09:21:52.368437+00:00"
+    },
+    {
+      "membership_id": "559063a7-4863-4ab6-8463-2d12c7706a0e",
+      "user_id": "a17e68b9-93f2-4fb6-b2df-945618c28bc6",
+      "email": "khushi.ghumre24@vit.edu",
+      "full_name": "KHUSHI GHUMRE",
+      "role": "org_user",
+      "organization_id": "59814e60-cd5d-43b0-9287-7941a6706f6d",
+      "organization_name": "vit",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-23 09:16:35.033288+00:00"
+    },
+    {
+      "membership_id": "c73f4309-01be-49c0-827b-af36b2a3b553",
+      "user_id": "8815af9d-c994-42e6-bbd7-e617c3fdb8de",
+      "email": "tanmaykumbhare24@gmail.com",
+      "full_name": "Tanmay Kumbhare",
+      "role": "org_user",
+      "organization_id": "ef09e768-125e-4516-b5bb-f575b25fea3e",
+      "organization_name": "Just Use",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-17 07:30:54.821346+00:00"
+    },
+    {
+      "membership_id": "a13b1c11-3bee-4129-9f2f-01457faaef0f",
+      "user_id": "41755c26-cb4f-40dd-a13f-007c44590240",
+      "email": "kumbharetanmay6@gmail.com",
+      "full_name": "Tanmay Kumbhare",
+      "role": "org_user",
+      "organization_id": "48765d24-c530-4b27-99c1-46e10ca8ab40",
+      "organization_name": "epitome",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-17 07:05:13.514660+00:00"
+    },
+    {
+      "membership_id": "038246b5-1d03-43cd-ab44-84b98987ac1b",
+      "user_id": "67191917-9822-4e55-862d-d9c52e667471",
+      "email": "user_8c188c@example.com",
+      "full_name": "-",
+      "role": "org_admin",
+      "organization_id": "f9634b04-ea81-4dae-bae0-1bc152676bad",
+      "organization_name": "Gmail Reauth & Preview Test Org",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-15 18:35:36.457183+00:00"
+    },
+    {
+      "membership_id": "9eca6bef-c86a-4c8e-a027-0c9cdc181188",
+      "user_id": "68bdcbe0-1866-4e9d-b631-e0cb9681e1d8",
+      "email": "user_ad09b0@example.com",
+      "full_name": "-",
+      "role": "org_admin",
+      "organization_id": "f0b84d9d-61a1-4d90-8dfa-19aec992e46e",
+      "organization_name": "Gmail Reauth & Preview Test Org",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-15 18:34:48.877552+00:00"
+    },
+    {
+      "membership_id": "2e1df367-98d8-4012-b9e4-a81822df98b3",
+      "user_id": "9ea8b4fb-ffe7-4014-85db-949668fbeeed",
+      "email": "user_7b1cac@example.com",
+      "full_name": "-",
+      "role": "org_admin",
+      "organization_id": "43fb9504-848e-48e6-89ef-5f4d4090905b",
+      "organization_name": "Final Verification Org",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-15 18:16:16.510447+00:00"
+    },
+    {
+      "membership_id": "04882cd4-99bd-4d91-aed7-00e402cce149",
+      "user_id": "834062ca-8297-4885-a35a-a71e6cba8180",
+      "email": "user_8b5121@example.com",
+      "full_name": "-",
+      "role": "org_admin",
+      "organization_id": "0d93261b-efce-44d3-b262-e7a813f0455e",
+      "organization_name": "Final Verification Org",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-15 18:15:26.514400+00:00"
+    },
+    {
+      "membership_id": "cbac803f-4434-44b1-b09c-9d15b5c2cebe",
+      "user_id": "ddac6663-3af0-4c33-b900-ca7da919fc96",
+      "email": "user_8c6066@example.com",
+      "full_name": "-",
+      "role": "org_admin",
+      "organization_id": "b9e919e1-384b-4877-83e2-3b5c1d542dac",
+      "organization_name": "Final Verification Org",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-15 18:14:39.655493+00:00"
+    },
+    {
+      "membership_id": "98318eba-00ee-4464-a42c-4212f7828f1d",
+      "user_id": "f8ca9cdb-bcde-4e7b-9209-935d4893b7e7",
+      "email": "user_13514e@example.com",
+      "full_name": "-",
+      "role": "org_admin",
+      "organization_id": "c1d9834f-3add-403e-bd40-5c95831f5c42",
+      "organization_name": "Final Verification Org",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-15 18:13:47.518964+00:00"
+    },
+    {
+      "membership_id": "4b158507-0fa1-4249-8df9-2bbcf18b4f9c",
+      "user_id": "72440b65-db22-4d79-9858-0cc0f95cfca4",
+      "email": "user_534b72@example.com",
+      "full_name": "-",
+      "role": "org_admin",
+      "organization_id": "946e65f0-bda0-40f8-892e-9dedf635cedb",
+      "organization_name": "Final Verification Org",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-15 18:12:52.075470+00:00"
+    },
+    {
+      "membership_id": "a96dc78b-c8ce-4d5a-8a02-7bee943dbf3e",
+      "user_id": "69e939ea-31d8-483c-9940-68c0485513ec",
+      "email": "user_305a90@example.com",
+      "full_name": "-",
+      "role": "org_admin",
+      "organization_id": "6805336e-5f4a-4749-ba01-f9c4c2ee933a",
+      "organization_name": "Final Verification Org",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-15 18:11:07.290554+00:00"
+    },
+    {
+      "membership_id": "01130852-36f9-4e76-b009-ae0142babb66",
+      "user_id": "72389b71-0e06-4c53-ae15-255a1ce4b23e",
+      "email": "user_dfba94@example.com",
+      "full_name": "-",
+      "role": "org_admin",
+      "organization_id": "cdf90442-ac51-4f8c-bbb7-5605842d582c",
+      "organization_name": "Final Verification Org",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-15 18:09:26.885879+00:00"
+    },
+    {
+      "membership_id": "c83c2061-c5b3-4aa4-a8de-b6b8f2b8c259",
+      "user_id": "b913be6f-e7db-497a-8ebd-106a87b155ff",
+      "email": "user_4e16e4@example.com",
+      "full_name": "-",
+      "role": "org_admin",
+      "organization_id": "422b02a4-a1b9-419e-a195-60baecd1b74a",
+      "organization_name": "Final Verification Org",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-15 18:04:10.086949+00:00"
+    },
+    {
+      "membership_id": "d74e5a5b-b32f-4bdb-9aae-b4c8aa341de6",
+      "user_id": "72894af1-692f-4ab6-aed2-12bdf29c87f1",
+      "email": "user_72ee28@example.com",
+      "full_name": "-",
+      "role": "org_admin",
+      "organization_id": "e07a10e1-d754-419f-81ec-c5a5bf7b41dd",
+      "organization_name": "Final Verification Org",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-15 17:58:52.970581+00:00"
+    },
+    {
+      "membership_id": "9f9e4d59-e8e4-4b71-8acd-c27cff37cc23",
+      "user_id": "658fd757-7fd3-475c-8347-2bc4b0fb45b2",
+      "email": "user_07ee14@example.com",
+      "full_name": "-",
+      "role": "org_admin",
+      "organization_id": "dc1fa496-098e-4952-a6b7-70f1906fc747",
+      "organization_name": "Final Verification Org",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-15 17:55:43.703302+00:00"
+    },
+    {
+      "membership_id": "cc8ffe20-44fc-45e7-aab1-0a8bae682e68",
+      "user_id": "c652a944-ec09-4a43-9f35-802a0fe6d567",
+      "email": "user_7d176f@example.com",
+      "full_name": "-",
+      "role": "org_admin",
+      "organization_id": "57289fe9-b450-4b49-bce9-ace8473b824a",
+      "organization_name": "Final Verification Org",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-15 17:55:16.079191+00:00"
+    },
+    {
+      "membership_id": "08d121e0-4fdc-4c29-9752-21b7fec9ff87",
+      "user_id": "76e06a5e-7afe-43e2-9d47-028ada461d81",
+      "email": "user_4fed27@example.com",
+      "full_name": "-",
+      "role": "org_admin",
+      "organization_id": "700c2a10-13cb-46e3-8bd4-49c8b284e916",
+      "organization_name": "Final Verification Org",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-15 17:54:29.929206+00:00"
+    },
+    {
+      "membership_id": "f2d0dc76-d61f-4389-a8ec-549eb6e32182",
+      "user_id": "c67b1373-a9fd-4ee2-92c8-4269dd1f29e0",
+      "email": "user_310b32@example.com",
+      "full_name": "-",
+      "role": "org_admin",
+      "organization_id": "998e9581-58ee-4df9-a36a-125722bd7256",
+      "organization_name": "Final Verification Org",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-15 17:53:49.282787+00:00"
+    },
+    {
+      "membership_id": "ddbbd400-246c-4d2b-83c9-6921dbd87071",
+      "user_id": "a3368d1a-fa5a-439a-9422-334174e00147",
+      "email": "user_b080e0@example.com",
+      "full_name": "-",
+      "role": "org_admin",
+      "organization_id": "722a6f6c-660e-4bca-b88d-78e0c461a24f",
+      "organization_name": "Final Verification Org",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-15 17:52:50.328614+00:00"
+    },
+    {
+      "membership_id": "08ebe79a-a18b-4925-b994-45f9e438a3e3",
+      "user_id": "94196973-771b-4b6e-a1da-20d1512e09a4",
+      "email": "user_0f6671@example.com",
+      "full_name": "-",
+      "role": "org_admin",
+      "organization_id": "b3898250-8af1-49b1-9e75-48b9c4084fda",
+      "organization_name": "Auth Test Org",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-15 17:43:06.652209+00:00"
+    },
+    {
+      "membership_id": "a8da02b7-7eb0-4b87-bab3-3056a8f1fa96",
+      "user_id": "b8fe33e7-352e-453e-b864-222284f5d5f0",
+      "email": "user_f42ed2@example.com",
+      "full_name": "-",
+      "role": "org_admin",
+      "organization_id": "5aaadf87-41e0-4790-b06b-b5620aba133a",
+      "organization_name": "Auth Test Org",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-15 17:42:30.421512+00:00"
+    },
+    {
+      "membership_id": "3c704727-f701-429a-a047-17c2d8a67467",
+      "user_id": "8cfa9ac7-a1ff-4d1c-93f7-84d8616891f5",
+      "email": "khushi@gmail.com",
+      "full_name": "Khushi Shivkumar Ghumre",
+      "role": "org_user",
+      "organization_id": "809bed8c-66f0-472b-b591-0d064af98565",
+      "organization_name": "vit",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-12 09:55:26.215430+00:00"
+    },
+    {
+      "membership_id": "76a7ff8f-eefd-4d04-b035-7202bc6ae315",
+      "user_id": "225cb91c-fbec-4cea-83f7-50e1caf04949",
+      "email": "t95977512@gmail.com",
+      "full_name": "Traffic",
+      "role": "org_user",
+      "organization_id": "c4efe3c4-0f65-45dc-900a-eca101ecfa63",
+      "organization_name": "Opero technology",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-11 20:01:08.397022+00:00"
+    },
+    {
+      "membership_id": "093e2ba3-c683-43bd-a620-46734e08ec00",
+      "user_id": "f9922023-c49d-4344-9589-50c99ab6f310",
+      "email": "google_verified_2243bc@example.com",
+      "full_name": "Verified Google User",
+      "role": "org_user",
+      "organization_id": "79a3862b-1f3a-4ff6-bd95-e69e10abcd7a",
+      "organization_name": "Verified Workspace Inc",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-09 14:19:36.430286+00:00"
+    },
+    {
+      "membership_id": "d5641b05-1b84-408e-b37c-0dde3460fd9e",
+      "user_id": "879047d1-ba3c-4cbf-9186-70f471377cba",
+      "email": "hemantlakhane@gmail.com",
+      "full_name": "hemant lakhane",
+      "role": "org_user",
+      "organization_id": "09bd8123-591b-4432-81cd-1bddee1709c7",
+      "organization_name": "Edupluscampus",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-09 14:09:01.078412+00:00"
+    },
+    {
+      "membership_id": "445aa051-1f7c-416a-a56d-723b4b47a147",
       "user_id": "aac370b2-af01-4c2f-88ce-0970bdd3ed6b",
       "email": "google_verified_5b9aad@example.com",
       "full_name": "Verified Google User",
       "role": "org_user",
-      "created_at": "2026-09-09 13:21:07.780580+00:00",
-      "organization_name": "Verified Workspace Inc"
+      "organization_id": "255d0248-3d55-4c2c-95d7-f32031890466",
+      "organization_name": "Verified Workspace Inc",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-09 13:21:07.780580+00:00"
     },
     {
-      "id": "876c1271-3574-4220-a318-cda9ef7afbc5",
-      "organization_id": "ed8724fa-910b-4ec2-8103-aa0639d32507",
+      "membership_id": "876c1271-3574-4220-a318-cda9ef7afbc5",
       "user_id": "958a97c4-a9da-4432-937e-d1a0a8c25a63",
       "email": "existing_email_e7c7a9@example.com",
       "full_name": "Google Linked User",
       "role": "org_user",
-      "created_at": "2026-09-09 13:14:46.504692+00:00",
-      "organization_name": "Existing Email Org"
+      "organization_id": "ed8724fa-910b-4ec2-8103-aa0639d32507",
+      "organization_name": "Existing Email Org",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-09 13:14:46.504692+00:00"
     },
     {
-      "id": "b82958b1-91d9-4ad3-84f3-a707c7b81ae9",
-      "organization_id": "417e4d41-c754-4b07-9913-cacfdac3b39f",
+      "membership_id": "b82958b1-91d9-4ad3-84f3-a707c7b81ae9",
       "user_id": "7e37c0cd-9447-416c-9773-348d3494a383",
       "email": "test_google_10e24f@example.com",
       "full_name": "Google Test User",
       "role": "org_user",
-      "created_at": "2026-09-09 13:14:41.344252+00:00",
-      "organization_name": "Alpha Tech Inc"
+      "organization_id": "417e4d41-c754-4b07-9913-cacfdac3b39f",
+      "organization_name": "Alpha Tech Inc",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-09 13:14:41.344252+00:00"
     },
     {
-      "id": "10a92679-fe56-4f26-aa27-4996c341025a",
-      "organization_id": "dacddf68-803b-4d4b-b6e1-0ad28e3af6ca",
+      "membership_id": "10a92679-fe56-4f26-aa27-4996c341025a",
       "user_id": "ec372b89-1ec6-4a2d-9815-d4090475a32b",
       "email": "existing_email_95fc55@example.com",
       "full_name": "Google Linked User",
       "role": "org_user",
-      "created_at": "2026-09-09 13:05:27.276470+00:00",
-      "organization_name": "Existing Email Org"
+      "organization_id": "dacddf68-803b-4d4b-b6e1-0ad28e3af6ca",
+      "organization_name": "Existing Email Org",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-09 13:05:27.276470+00:00"
     },
     {
-      "id": "bf70139b-47e5-4a0f-8f22-dd93d3e40fce",
-      "organization_id": "99b29291-90e4-4ec6-a7d9-e72d475105e8",
+      "membership_id": "bf70139b-47e5-4a0f-8f22-dd93d3e40fce",
       "user_id": "21975591-4220-4cf5-bfc7-052ff3d61298",
       "email": "test_google_3f5d63@example.com",
       "full_name": "Google Test User",
       "role": "org_user",
-      "created_at": "2026-09-09 13:05:22.061903+00:00",
-      "organization_name": "Alpha Tech Inc"
+      "organization_id": "99b29291-90e4-4ec6-a7d9-e72d475105e8",
+      "organization_name": "Alpha Tech Inc",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-09 13:05:22.061903+00:00"
     },
     {
-      "id": "512dff8f-cc9c-4b03-8ccb-01c36c12c632",
-      "organization_id": "54b48b77-65f5-403b-bc99-f5eb3b6ba823",
-      "user_id": "529ac420-d525-4d20-b73c-3d257bf68e89",
+      "membership_id": "512dff8f-cc9c-4b03-8ccb-01c36c12c632",
+      "user_id": "5b80d106-cac7-4711-b891-34d51548da10",
       "email": "lakhanehemant@gmail.com",
-      "full_name": "hemant lakhane",
+      "full_name": "Hemant lakhane",
       "role": "org_user",
-      "created_at": "2026-09-09 12:25:19.011210+00:00",
-      "organization_name": "Deconstruct"
+      "organization_id": "54b48b77-65f5-403b-bc99-f5eb3b6ba823",
+      "organization_name": "Edupluscampus",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-09 12:25:19.011210+00:00"
     },
     {
-      "id": "7d66b3d4-ceed-4a91-87ae-8b288b848d60",
-      "organization_id": "cc1a70e1-f5c5-48f9-b868-f1767646aa3e",
+      "membership_id": "7d66b3d4-ceed-4a91-87ae-8b288b848d60",
       "user_id": "135ada77-bde0-4c0b-9d10-965f16a3b6b7",
       "email": "invited_admin_349c46@example.com",
       "full_name": "Invited Admin",
       "role": "platform_admin",
-      "created_at": "2026-09-09 12:19:55.744542+00:00",
-      "organization_name": "Hacker Org"
+      "organization_id": "cc1a70e1-f5c5-48f9-b868-f1767646aa3e",
+      "organization_name": "Hacker Org",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-09 12:19:55.744542+00:00"
     },
     {
-      "id": "261859c9-fcd8-441c-a620-e0c66d1af661",
-      "organization_id": "c7366992-f629-4350-adf5-d177b2c97d93",
+      "membership_id": "261859c9-fcd8-441c-a620-e0c66d1af661",
       "user_id": "39c0e953-8d87-40e9-97f9-85120fe5603b",
       "email": "normal_user_39c0e953@example.com",
       "full_name": "Hacker User",
       "role": "org_user",
-      "created_at": "2026-09-09 12:19:50.488220+00:00",
-      "organization_name": "Hacker Org"
+      "organization_id": "c7366992-f629-4350-adf5-d177b2c97d93",
+      "organization_name": "Hacker Org",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-09 12:19:50.488220+00:00"
     },
     {
-      "id": "2e1771c2-3201-4ecb-be50-7209ea1cd382",
-      "organization_id": "cc1a70e1-f5c5-48f9-b868-f1767646aa3e",
+      "membership_id": "2e1771c2-3201-4ecb-be50-7209ea1cd382",
       "user_id": "5eb5cf90-cad5-44a2-872f-7f29ad9ba8a0",
       "email": "invited_admin_10358c@example.com",
       "full_name": "Invited Admin",
       "role": "platform_admin",
-      "created_at": "2026-09-09 12:11:16.896703+00:00",
-      "organization_name": "Hacker Org"
+      "organization_id": "cc1a70e1-f5c5-48f9-b868-f1767646aa3e",
+      "organization_name": "Hacker Org",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-09 12:11:16.896703+00:00"
     },
     {
-      "id": "8f63450d-de74-4382-9f33-33764b176c0a",
-      "organization_id": "f3075720-b29c-4ada-b8e6-2a45d790c788",
+      "membership_id": "8f63450d-de74-4382-9f33-33764b176c0a",
       "user_id": "6b27f195-fca3-4a63-8914-94ac99ecf3f6",
       "email": "normal_user_6b27f195@example.com",
       "full_name": "Hacker User",
       "role": "org_user",
-      "created_at": "2026-09-09 12:11:11.829105+00:00",
-      "organization_name": "Hacker Org"
+      "organization_id": "f3075720-b29c-4ada-b8e6-2a45d790c788",
+      "organization_name": "Hacker Org",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-09 12:11:11.829105+00:00"
     },
     {
-      "id": "58269be6-9301-4789-bb31-732b647f4708",
-      "organization_id": "cc1a70e1-f5c5-48f9-b868-f1767646aa3e",
+      "membership_id": "58269be6-9301-4789-bb31-732b647f4708",
       "user_id": "49fe0ce5-2932-4ebd-9971-275a4b91d92b",
       "email": "invited_admin_504c17@example.com",
       "full_name": "Invited Admin",
       "role": "platform_admin",
-      "created_at": "2026-09-09 12:10:45.010677+00:00",
-      "organization_name": "Hacker Org"
+      "organization_id": "cc1a70e1-f5c5-48f9-b868-f1767646aa3e",
+      "organization_name": "Hacker Org",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-09 12:10:45.010677+00:00"
     },
     {
-      "id": "8c1b1d79-2c72-47a3-b4f4-2d3c112a67e1",
-      "organization_id": "cc1a70e1-f5c5-48f9-b868-f1767646aa3e",
+      "membership_id": "8c1b1d79-2c72-47a3-b4f4-2d3c112a67e1",
       "user_id": "76ac4a8d-b250-4429-9b8c-26150ee88332",
       "email": "normal_user_76ac4a8d@example.com",
       "full_name": "Hacker User",
       "role": "org_user",
-      "created_at": "2026-09-09 12:10:40.383953+00:00",
-      "organization_name": "Hacker Org"
+      "organization_id": "cc1a70e1-f5c5-48f9-b868-f1767646aa3e",
+      "organization_name": "Hacker Org",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-09 12:10:40.383953+00:00"
     },
     {
-      "id": "85cfb5c0-c213-497c-9ae0-035fb49e7d5f",
-      "organization_id": "cc1a70e1-f5c5-48f9-b868-f1767646aa3e",
+      "membership_id": "85cfb5c0-c213-497c-9ae0-035fb49e7d5f",
       "user_id": "83efc2bc-b2ad-4d1c-93aa-99e6c112195e",
       "email": "test_admin@example.com",
       "full_name": "Test Admin",
       "role": "platform_admin",
-      "created_at": "2026-09-09 12:10:23.940988+00:00",
-      "organization_name": "Hacker Org"
+      "organization_id": "cc1a70e1-f5c5-48f9-b868-f1767646aa3e",
+      "organization_name": "Hacker Org",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-09 12:10:23.940988+00:00"
     },
     {
-      "id": "968236ac-d7e4-4235-88fc-7280c705073e",
-      "organization_id": "cc1a70e1-f5c5-48f9-b868-f1767646aa3e",
+      "membership_id": "968236ac-d7e4-4235-88fc-7280c705073e",
       "user_id": "070a1ac9-a800-408f-98b3-866357235dff",
       "email": "normal_user_070a1ac9@example.com",
       "full_name": "Hacker User",
       "role": "org_user",
-      "created_at": "2026-09-09 12:09:40.353173+00:00",
-      "organization_name": "Hacker Org"
+      "organization_id": "cc1a70e1-f5c5-48f9-b868-f1767646aa3e",
+      "organization_name": "Hacker Org",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-09 12:09:40.353173+00:00"
     },
     {
-      "id": "033ac526-e45f-4a4a-8ff3-af3fdf6cc64e",
-      "organization_id": "cc1a70e1-f5c5-48f9-b868-f1767646aa3e",
+      "membership_id": "033ac526-e45f-4a4a-8ff3-af3fdf6cc64e",
       "user_id": "da4a6afa-9a7f-48fb-ae18-f5bd63c6d805",
       "email": "google_user_da4a6afa@example.com",
       "full_name": "Google Test User Updated",
       "role": "org_user",
-      "created_at": "2026-09-09 12:02:20.290992+00:00",
-      "organization_name": "Hacker Org"
+      "organization_id": "cc1a70e1-f5c5-48f9-b868-f1767646aa3e",
+      "organization_name": "Hacker Org",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-09 12:02:20.290992+00:00"
     },
     {
-      "id": "9815869f-09fa-4250-965c-696fa3df8506",
-      "organization_id": "cc1a70e1-f5c5-48f9-b868-f1767646aa3e",
+      "membership_id": "9815869f-09fa-4250-965c-696fa3df8506",
       "user_id": "54fd3470-32f6-42c5-ad99-9ab63d62ee9c",
       "email": "google_user_54fd3470@example.com",
       "full_name": "Google Test User",
       "role": "org_user",
-      "created_at": "2026-09-09 11:54:56.750489+00:00",
-      "organization_name": "Hacker Org"
+      "organization_id": "cc1a70e1-f5c5-48f9-b868-f1767646aa3e",
+      "organization_name": "Hacker Org",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-09 11:54:56.750489+00:00"
     },
     {
-      "id": "a1e18bac-5836-40ef-8c37-15763affd3fd",
-      "organization_id": "cc1a70e1-f5c5-48f9-b868-f1767646aa3e",
+      "membership_id": "a1e18bac-5836-40ef-8c37-15763affd3fd",
       "user_id": "9acef756-9dfc-4ff5-ba58-bb527aa44716",
       "email": "google_user_9acef756@example.com",
       "full_name": "Google Test User",
       "role": "org_user",
-      "created_at": "2026-09-09 11:54:32.507383+00:00",
-      "organization_name": "Hacker Org"
+      "organization_id": "cc1a70e1-f5c5-48f9-b868-f1767646aa3e",
+      "organization_name": "Hacker Org",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-09 11:54:32.507383+00:00"
     },
     {
-      "id": "93b2be02-fa74-4539-98fa-1810fc151f42",
-      "organization_id": "cc1a70e1-f5c5-48f9-b868-f1767646aa3e",
+      "membership_id": "93b2be02-fa74-4539-98fa-1810fc151f42",
       "user_id": "23642156-60ba-4e71-935f-09431dcdca38",
       "email": "google_user_23642156@example.com",
       "full_name": "Google Test User",
       "role": "org_user",
-      "created_at": "2026-09-09 11:53:50.936626+00:00",
-      "organization_name": "Hacker Org"
+      "organization_id": "cc1a70e1-f5c5-48f9-b868-f1767646aa3e",
+      "organization_name": "Hacker Org",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-09 11:53:50.936626+00:00"
     },
     {
-      "id": "b16fee3c-2d52-4df6-a8e6-2d62e55a4214",
-      "organization_id": "cc1a70e1-f5c5-48f9-b868-f1767646aa3e",
+      "membership_id": "b16fee3c-2d52-4df6-a8e6-2d62e55a4214",
       "user_id": "28026abd-a893-4b40-a684-264217d605fe",
       "email": "google_user_28026abd@example.com",
       "full_name": "Google Test User",
       "role": "org_user",
-      "created_at": "2026-09-09 11:53:11.087960+00:00",
-      "organization_name": "Hacker Org"
+      "organization_id": "cc1a70e1-f5c5-48f9-b868-f1767646aa3e",
+      "organization_name": "Hacker Org",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-09 11:53:11.087960+00:00"
     },
     {
-      "id": "a98345ee-9429-459a-b425-40279814ac44",
-      "organization_id": "cc1a70e1-f5c5-48f9-b868-f1767646aa3e",
+      "membership_id": "a98345ee-9429-459a-b425-40279814ac44",
       "user_id": "ef496974-d3ad-48b9-97ef-4216bf21b3c3",
       "email": "google_user_ef496974@example.com",
       "full_name": "Google Test User",
       "role": "org_user",
-      "created_at": "2026-09-09 11:52:34.457532+00:00",
-      "organization_name": "Hacker Org"
+      "organization_id": "cc1a70e1-f5c5-48f9-b868-f1767646aa3e",
+      "organization_name": "Hacker Org",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-09 11:52:34.457532+00:00"
     },
     {
-      "id": "05e18189-5506-40df-b4e6-5f5c68cd3de9",
-      "organization_id": "cc1a70e1-f5c5-48f9-b868-f1767646aa3e",
+      "membership_id": "05e18189-5506-40df-b4e6-5f5c68cd3de9",
       "user_id": "9ef9e61e-d86d-4cd7-b6de-0410f5280c47",
       "email": "google_user_9ef9e61e@example.com",
       "full_name": "Google Test User",
       "role": "org_user",
-      "created_at": "2026-09-09 11:52:08.542909+00:00",
-      "organization_name": "Hacker Org"
+      "organization_id": "cc1a70e1-f5c5-48f9-b868-f1767646aa3e",
+      "organization_name": "Hacker Org",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-09 11:52:08.542909+00:00"
     },
     {
-      "id": "736d1737-e9c2-465f-a085-458cab03a056",
-      "organization_id": "cc1a70e1-f5c5-48f9-b868-f1767646aa3e",
+      "membership_id": "736d1737-e9c2-465f-a085-458cab03a056",
       "user_id": "06810874-6616-40c8-aac0-70b1a5f917a3",
       "email": "google_user_06810874@example.com",
       "full_name": "Google Test User",
       "role": "org_user",
-      "created_at": "2026-09-09 11:51:32.072110+00:00",
-      "organization_name": "Hacker Org"
+      "organization_id": "cc1a70e1-f5c5-48f9-b868-f1767646aa3e",
+      "organization_name": "Hacker Org",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-09 11:51:32.072110+00:00"
     },
     {
-      "id": "c80d3c96-df00-448c-a607-372fd2113b79",
-      "organization_id": "ab17c472-46f5-4778-9df9-293cefa86e1c",
+      "membership_id": "c80d3c96-df00-448c-a607-372fd2113b79",
       "user_id": "8ec7e67b-12f0-4df9-802b-d3f9d8d21287",
       "email": "google_user_8ec7e67b@example.com",
       "full_name": "Google Test User",
       "role": "org_user",
-      "created_at": "2026-09-09 11:51:10.116278+00:00",
-      "organization_name": "SMBFlow Pilot Org"
+      "organization_id": "ab17c472-46f5-4778-9df9-293cefa86e1c",
+      "organization_name": "SMBFlow Pilot Org",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-09 11:51:10.116278+00:00"
     },
     {
-      "id": "c8613f5b-4207-4c18-a402-eea0384f6dc2",
-      "organization_id": "cc1a70e1-f5c5-48f9-b868-f1767646aa3e",
-      "user_id": "9f0b537e-41b7-4932-bb79-fbcafb619881",
+      "membership_id": "c8613f5b-4207-4c18-a402-eea0384f6dc2",
+      "user_id": "ebc682d1-d643-4fb3-bf2a-eefc3517cfe0",
       "email": "admin@smbflow.com",
       "full_name": "SMBFlow Admin",
       "role": "platform_admin",
-      "created_at": "2026-09-09 11:51:09.797645+00:00",
-      "organization_name": "Hacker Org"
+      "organization_id": "cc1a70e1-f5c5-48f9-b868-f1767646aa3e",
+      "organization_name": "Hacker Org",
+      "onboarding_status": "Complete",
+      "created_at": "2026-09-09 11:51:09.797645+00:00"
     }
   ],
-  "all_orgs": [
+  "organizations": [
     {
-      "id": "ab17c472-46f5-4778-9df9-293cefa86e1c",
-      "name": "SMBFlow Pilot Org",
-      "industry": "medical_tourism",
-      "enabled_modules": [
-        "medical_tourism"
-      ],
-      "profile_config": {},
-      "active": true,
-      "created_at": "2026-09-09 11:51:09.340682+00:00",
-      "updated_at": "2026-09-09 11:51:09.340691+00:00"
-    },
-    {
-      "id": "cc1a70e1-f5c5-48f9-b868-f1767646aa3e",
-      "name": "Hacker Org",
+      "organization_id": "8ede3aff-4df0-49d8-a63c-e62b0088c020",
+      "name": "Pending Workspace Setup",
       "industry": "saas",
-      "enabled_modules": [
-        "saas"
-      ],
-      "profile_config": {},
+      "requires_onboarding": true,
       "active": true,
-      "created_at": "2026-09-09 11:51:08.947196+00:00",
-      "updated_at": "2026-09-09 12:09:44.208420+00:00"
+      "created_at": "2026-09-28 04:57:06.656565+00:00"
     },
     {
-      "id": "f3075720-b29c-4ada-b8e6-2a45d790c788",
-      "name": "Hacker Org",
+      "organization_id": "13748684-0f4f-4588-9eff-d919a74b11c9",
+      "name": "Newcompanybykhushi",
       "industry": "saas",
-      "enabled_modules": [
-        "saas"
-      ],
-      "profile_config": {
-        "requires_onboarding": false
-      },
+      "requires_onboarding": false,
       "active": true,
-      "created_at": "2026-09-09 12:11:11.327261+00:00",
-      "updated_at": "2026-09-09 12:11:23.445905+00:00"
+      "created_at": "2026-09-27 09:29:24.182685+00:00"
     },
     {
-      "id": "c7366992-f629-4350-adf5-d177b2c97d93",
-      "name": "Hacker Org",
+      "organization_id": "51210ca1-5224-40eb-97a1-916dbe6bf0e6",
+      "name": "Amazon",
       "industry": "saas",
-      "enabled_modules": [
-        "saas"
-      ],
-      "profile_config": {
-        "requires_onboarding": false
-      },
+      "requires_onboarding": false,
       "active": true,
-      "created_at": "2026-09-09 12:19:50.037721+00:00",
-      "updated_at": "2026-09-09 12:20:01.507402+00:00"
+      "created_at": "2026-09-26 17:02:09.734198+00:00"
     },
     {
-      "id": "54b48b77-65f5-403b-bc99-f5eb3b6ba823",
-      "name": "Deconstruct",
+      "organization_id": "ff57d905-d0bd-47cd-8290-2bee5641c698",
+      "name": "Amazon",
+      "industry": "saas",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-26 06:55:13.142333+00:00"
+    },
+    {
+      "organization_id": "690accac-8e4f-47b6-b515-190ff893962c",
+      "name": "Khushighumre",
+      "industry": "saas",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-25 20:40:00.228253+00:00"
+    },
+    {
+      "organization_id": "e68142c1-1d4e-401f-a02c-cbb3ef25fc15",
+      "name": "Opera",
+      "industry": "saas",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-25 11:57:26.725313+00:00"
+    },
+    {
+      "organization_id": "355d2282-32b6-4249-ac49-c515af5bb72e",
+      "name": "cognizant",
+      "industry": "saas",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-25 11:50:39.177695+00:00"
+    },
+    {
+      "organization_id": "e15777cb-cf06-4664-a55b-7cb10ce7c17d",
+      "name": "vit",
       "industry": "healthcare",
-      "enabled_modules": [
-        "healthcare"
-      ],
-      "profile_config": {
-        "requires_onboarding": false
-      },
+      "requires_onboarding": false,
       "active": true,
-      "created_at": "2026-09-09 12:25:18.394580+00:00",
-      "updated_at": "2026-09-09 12:25:18.394587+00:00"
+      "created_at": "2026-09-25 11:17:44.371244+00:00"
     },
     {
-      "id": "99b29291-90e4-4ec6-a7d9-e72d475105e8",
-      "name": "Alpha Tech Inc",
+      "organization_id": "e0b9c265-6fe7-4949-b497-02de28a5af67",
+      "name": "vit pune",
       "industry": "saas",
-      "enabled_modules": [
-        "saas"
-      ],
-      "profile_config": {
-        "requires_onboarding": false
-      },
+      "requires_onboarding": false,
       "active": true,
-      "created_at": "2026-09-09 13:05:21.413761+00:00",
-      "updated_at": "2026-09-09 13:05:24.107853+00:00"
+      "created_at": "2026-09-25 07:14:25.403414+00:00"
     },
     {
-      "id": "dacddf68-803b-4d4b-b6e1-0ad28e3af6ca",
-      "name": "Existing Email Org",
-      "industry": "healthcare",
-      "enabled_modules": [
-        "healthcare"
-      ],
-      "profile_config": {
-        "requires_onboarding": false
-      },
-      "active": true,
-      "created_at": "2026-09-09 13:05:26.628194+00:00",
-      "updated_at": "2026-09-09 13:05:26.628199+00:00"
-    },
-    {
-      "id": "417e4d41-c754-4b07-9913-cacfdac3b39f",
-      "name": "Alpha Tech Inc",
+      "organization_id": "6a1bbada-5725-4368-800c-04470287a1a1",
+      "name": "My Demo Company",
       "industry": "saas",
-      "enabled_modules": [
-        "saas"
-      ],
-      "profile_config": {
-        "requires_onboarding": false
-      },
+      "requires_onboarding": false,
       "active": true,
-      "created_at": "2026-09-09 13:14:40.708016+00:00",
-      "updated_at": "2026-09-09 13:14:43.350948+00:00"
+      "created_at": "2026-09-24 07:55:30.634572+00:00"
     },
     {
-      "id": "ed8724fa-910b-4ec2-8103-aa0639d32507",
-      "name": "Existing Email Org",
+      "organization_id": "9f65f4fc-e518-4d3a-9850-f5f15791699f",
+      "name": "vit",
       "industry": "healthcare",
-      "enabled_modules": [
-        "healthcare"
-      ],
-      "profile_config": {
-        "requires_onboarding": false
-      },
+      "requires_onboarding": false,
       "active": true,
-      "created_at": "2026-09-09 13:14:45.699426+00:00",
-      "updated_at": "2026-09-09 13:14:45.699432+00:00"
+      "created_at": "2026-09-24 07:19:21.288535+00:00"
     },
     {
-      "id": "255d0248-3d55-4c2c-95d7-f32031890466",
+      "organization_id": "d13908c9-2db9-416d-bd80-eaa32656cf70",
+      "name": "VIT PUNE",
+      "industry": "saas",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-23 21:03:18.821400+00:00"
+    },
+    {
+      "organization_id": "ddfb02e7-a6f9-4e77-b00e-397ad10564c1",
+      "name": "vit",
+      "industry": "finance",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-23 13:31:52.908674+00:00"
+    },
+    {
+      "organization_id": "2be52944-1ce7-472a-8b5d-fd94bd0daa5a",
+      "name": "vit",
+      "industry": "finance",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-23 09:21:52.084934+00:00"
+    },
+    {
+      "organization_id": "59814e60-cd5d-43b0-9287-7941a6706f6d",
+      "name": "vit",
+      "industry": "healthcare",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-23 09:16:34.465798+00:00"
+    },
+    {
+      "organization_id": "ef09e768-125e-4516-b5bb-f575b25fea3e",
+      "name": "Just Use",
+      "industry": "saas",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-17 07:30:54.396681+00:00"
+    },
+    {
+      "organization_id": "48765d24-c530-4b27-99c1-46e10ca8ab40",
+      "name": "epitome",
+      "industry": "saas",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-17 07:05:13.000237+00:00"
+    },
+    {
+      "organization_id": "f9634b04-ea81-4dae-bae0-1bc152676bad",
+      "name": "Gmail Reauth & Preview Test Org",
+      "industry": "saas",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-15 18:35:35.968810+00:00"
+    },
+    {
+      "organization_id": "f0b84d9d-61a1-4d90-8dfa-19aec992e46e",
+      "name": "Gmail Reauth & Preview Test Org",
+      "industry": "saas",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-15 18:34:48.411074+00:00"
+    },
+    {
+      "organization_id": "43fb9504-848e-48e6-89ef-5f4d4090905b",
+      "name": "Final Verification Org",
+      "industry": "saas",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-15 18:16:15.163958+00:00"
+    },
+    {
+      "organization_id": "0d93261b-efce-44d3-b262-e7a813f0455e",
+      "name": "Final Verification Org",
+      "industry": "saas",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-15 18:15:26.044521+00:00"
+    },
+    {
+      "organization_id": "b9e919e1-384b-4877-83e2-3b5c1d542dac",
+      "name": "Final Verification Org",
+      "industry": "saas",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-15 18:14:39.121053+00:00"
+    },
+    {
+      "organization_id": "c1d9834f-3add-403e-bd40-5c95831f5c42",
+      "name": "Final Verification Org",
+      "industry": "saas",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-15 18:13:47.014960+00:00"
+    },
+    {
+      "organization_id": "946e65f0-bda0-40f8-892e-9dedf635cedb",
+      "name": "Final Verification Org",
+      "industry": "saas",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-15 18:12:51.614935+00:00"
+    },
+    {
+      "organization_id": "6805336e-5f4a-4749-ba01-f9c4c2ee933a",
+      "name": "Final Verification Org",
+      "industry": "saas",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-15 18:11:06.442491+00:00"
+    },
+    {
+      "organization_id": "cdf90442-ac51-4f8c-bbb7-5605842d582c",
+      "name": "Final Verification Org",
+      "industry": "saas",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-15 18:09:26.393110+00:00"
+    },
+    {
+      "organization_id": "422b02a4-a1b9-419e-a195-60baecd1b74a",
+      "name": "Final Verification Org",
+      "industry": "saas",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-15 18:04:09.545604+00:00"
+    },
+    {
+      "organization_id": "e07a10e1-d754-419f-81ec-c5a5bf7b41dd",
+      "name": "Final Verification Org",
+      "industry": "saas",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-15 17:58:52.331710+00:00"
+    },
+    {
+      "organization_id": "dc1fa496-098e-4952-a6b7-70f1906fc747",
+      "name": "Final Verification Org",
+      "industry": "saas",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-15 17:55:43.273025+00:00"
+    },
+    {
+      "organization_id": "57289fe9-b450-4b49-bce9-ace8473b824a",
+      "name": "Final Verification Org",
+      "industry": "saas",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-15 17:55:15.057431+00:00"
+    },
+    {
+      "organization_id": "700c2a10-13cb-46e3-8bd4-49c8b284e916",
+      "name": "Final Verification Org",
+      "industry": "saas",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-15 17:54:29.483649+00:00"
+    },
+    {
+      "organization_id": "998e9581-58ee-4df9-a36a-125722bd7256",
+      "name": "Final Verification Org",
+      "industry": "saas",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-15 17:53:48.748006+00:00"
+    },
+    {
+      "organization_id": "722a6f6c-660e-4bca-b88d-78e0c461a24f",
+      "name": "Final Verification Org",
+      "industry": "saas",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-15 17:52:49.870170+00:00"
+    },
+    {
+      "organization_id": "b3898250-8af1-49b1-9e75-48b9c4084fda",
+      "name": "Auth Test Org",
+      "industry": "saas",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-15 17:43:04.781103+00:00"
+    },
+    {
+      "organization_id": "5aaadf87-41e0-4790-b06b-b5620aba133a",
+      "name": "Auth Test Org",
+      "industry": "saas",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-15 17:42:28.880732+00:00"
+    },
+    {
+      "organization_id": "cbb46d76-9feb-46f1-8ed9-3226269f46da",
+      "name": "Isolation Test Org cbb46d",
+      "industry": "saas",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-15 17:20:46.756485+00:00"
+    },
+    {
+      "organization_id": "84e0e492-8587-4a8f-afac-0bb464e640c6",
+      "name": "Isolation Test Org 84e0e4",
+      "industry": "saas",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-15 17:20:13.277760+00:00"
+    },
+    {
+      "organization_id": "a85b9a09-27f5-4a2b-96b5-84693e3fef3c",
+      "name": "Isolation Test Org a85b9a",
+      "industry": "saas",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-15 17:19:52.700247+00:00"
+    },
+    {
+      "organization_id": "adee4208-eb94-4550-b80c-f8ef29bf6ebf",
+      "name": "Isolation Test Org adee42",
+      "industry": "saas",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-15 17:19:28.244873+00:00"
+    },
+    {
+      "organization_id": "2c0537eb-8c27-4f83-88f9-fc62ecbf1dea",
+      "name": "Isolation Test Org 2c0537",
+      "industry": "saas",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-15 17:18:26.769082+00:00"
+    },
+    {
+      "organization_id": "c0c11259-6a25-46c3-ace1-02d7ad4a0f41",
+      "name": "Isolation Test Org c0c112",
+      "industry": "saas",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-15 17:17:48.473072+00:00"
+    },
+    {
+      "organization_id": "7782f0dc-f16e-4d24-ab90-f54d83528f03",
+      "name": "Isolation Test Org 7782f0",
+      "industry": "saas",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-15 17:16:21.583562+00:00"
+    },
+    {
+      "organization_id": "9b11f8ec-9b32-44af-91b0-dba3d2edc5f8",
+      "name": "Isolation Test Org 9b11f8",
+      "industry": "saas",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-15 17:13:54.040465+00:00"
+    },
+    {
+      "organization_id": "9d48c400-f862-4e8b-a73d-b7bdacd090e7",
+      "name": "Isolation Test Org 9d48c4",
+      "industry": "saas",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-15 17:06:40.518600+00:00"
+    },
+    {
+      "organization_id": "69813106-958d-4d64-9a16-09fca9f2f46e",
+      "name": "Isolation Test Org 698131",
+      "industry": "saas",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-15 17:04:09.241319+00:00"
+    },
+    {
+      "organization_id": "f49986ee-fb92-4db1-ae9f-17beb95797ee",
+      "name": "SMBFlow Organization",
+      "industry": "saas",
+      "requires_onboarding": true,
+      "active": true,
+      "created_at": "2026-09-12 10:16:20.620889+00:00"
+    },
+    {
+      "organization_id": "809bed8c-66f0-472b-b591-0d064af98565",
+      "name": "vit",
+      "industry": "saas",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-12 09:55:24.691210+00:00"
+    },
+    {
+      "organization_id": "c4efe3c4-0f65-45dc-900a-eca101ecfa63",
+      "name": "Opero technology",
+      "industry": "healthcare",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-11 20:01:07.865036+00:00"
+    },
+    {
+      "organization_id": "79a3862b-1f3a-4ff6-bd95-e69e10abcd7a",
       "name": "Verified Workspace Inc",
       "industry": "finance",
-      "enabled_modules": [
-        "finance"
-      ],
-      "profile_config": {
-        "requires_onboarding": false
-      },
+      "requires_onboarding": false,
       "active": true,
-      "created_at": "2026-09-09 13:21:07.186277+00:00",
-      "updated_at": "2026-09-09 13:21:10.155257+00:00"
+      "created_at": "2026-09-09 14:19:35.403913+00:00"
+    },
+    {
+      "organization_id": "09bd8123-591b-4432-81cd-1bddee1709c7",
+      "name": "Edupluscampus",
+      "industry": "marketing",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-09 14:09:00.461514+00:00"
+    },
+    {
+      "organization_id": "255d0248-3d55-4c2c-95d7-f32031890466",
+      "name": "Verified Workspace Inc",
+      "industry": "finance",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-09 13:21:07.186277+00:00"
+    },
+    {
+      "organization_id": "ed8724fa-910b-4ec2-8103-aa0639d32507",
+      "name": "Existing Email Org",
+      "industry": "healthcare",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-09 13:14:45.699426+00:00"
+    },
+    {
+      "organization_id": "417e4d41-c754-4b07-9913-cacfdac3b39f",
+      "name": "Alpha Tech Inc",
+      "industry": "saas",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-09 13:14:40.708016+00:00"
+    },
+    {
+      "organization_id": "dacddf68-803b-4d4b-b6e1-0ad28e3af6ca",
+      "name": "Existing Email Org",
+      "industry": "healthcare",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-09 13:05:26.628194+00:00"
+    },
+    {
+      "organization_id": "99b29291-90e4-4ec6-a7d9-e72d475105e8",
+      "name": "Alpha Tech Inc",
+      "industry": "saas",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-09 13:05:21.413761+00:00"
+    },
+    {
+      "organization_id": "54b48b77-65f5-403b-bc99-f5eb3b6ba823",
+      "name": "Edupluscampus",
+      "industry": "saas",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-09 12:25:18.394580+00:00"
+    },
+    {
+      "organization_id": "c7366992-f629-4350-adf5-d177b2c97d93",
+      "name": "Hacker Org",
+      "industry": "saas",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-09 12:19:50.037721+00:00"
+    },
+    {
+      "organization_id": "f3075720-b29c-4ada-b8e6-2a45d790c788",
+      "name": "Hacker Org",
+      "industry": "saas",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-09 12:11:11.327261+00:00"
+    },
+    {
+      "organization_id": "ab17c472-46f5-4778-9df9-293cefa86e1c",
+      "name": "SMBFlow Pilot Org",
+      "industry": "medical_tourism",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-09 11:51:09.340682+00:00"
+    },
+    {
+      "organization_id": "cc1a70e1-f5c5-48f9-b868-f1767646aa3e",
+      "name": "Hacker Org",
+      "industry": "saas",
+      "requires_onboarding": false,
+      "active": true,
+      "created_at": "2026-09-09 11:51:08.947196+00:00"
     }
   ],
-  "total_orgs": 10
+  "reconciled": [
+    {
+      "email": "hemantkumar.lakhane24@vit.edu",
+      "user_id": "016d9d2b-a146-4701-9e8b-492dd9afd0b7",
+      "organization": "VIT PUNE",
+      "role": "org_user",
+      "provider": "email",
+      "onboarding": "Complete",
+      "created": "2026-09-23",
+      "auth_found": true,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "google_user_06810874@example.com",
+      "user_id": "06810874-6616-40c8-aac0-70b1a5f917a3",
+      "organization": "Hacker Org",
+      "role": "org_user",
+      "provider": "Unknown (Local/DB)",
+      "onboarding": "Complete",
+      "created": "2026-09-09",
+      "auth_found": false,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "normal_user_070a1ac9@example.com",
+      "user_id": "070a1ac9-a800-408f-98b3-866357235dff",
+      "organization": "Hacker Org",
+      "role": "org_user",
+      "provider": "Unknown (Local/DB)",
+      "onboarding": "Complete",
+      "created": "2026-09-09",
+      "auth_found": false,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "aryankadam8778@gmail.com",
+      "user_id": "0e9fc2df-66e1-4a17-a5b3-2f4eed035fcd",
+      "organization": "Opera",
+      "role": "org_user",
+      "provider": "google",
+      "onboarding": "Complete",
+      "created": "2026-09-25",
+      "auth_found": true,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "invited_admin_349c46@example.com",
+      "user_id": "135ada77-bde0-4c0b-9d10-965f16a3b6b7",
+      "organization": "Hacker Org",
+      "role": "platform_admin",
+      "provider": "email",
+      "onboarding": "Complete",
+      "created": "2026-09-09",
+      "auth_found": true,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "gemni.connect.tech@gmail.com",
+      "user_id": "1b981eba-2c1c-4674-9b32-c4b69ac81a9c",
+      "organization": "None (Unassigned)",
+      "role": "None",
+      "provider": "email",
+      "onboarding": "No Workspace",
+      "created": "2026-09-23",
+      "auth_found": true,
+      "has_org": false,
+      "requires_onboarding": true
+    },
+    {
+      "email": "test_google_3f5d63@example.com",
+      "user_id": "21975591-4220-4cf5-bfc7-052ff3d61298",
+      "organization": "Alpha Tech Inc",
+      "role": "org_user",
+      "provider": "Unknown (Local/DB)",
+      "onboarding": "Complete",
+      "created": "2026-09-09",
+      "auth_found": false,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "t95977512@gmail.com",
+      "user_id": "225cb91c-fbec-4cea-83f7-50e1caf04949",
+      "organization": "Opero technology",
+      "role": "org_user",
+      "provider": "google",
+      "onboarding": "Complete",
+      "created": "2026-09-25",
+      "auth_found": true,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "google_user_23642156@example.com",
+      "user_id": "23642156-60ba-4e71-935f-09431dcdca38",
+      "organization": "Hacker Org",
+      "role": "org_user",
+      "provider": "Unknown (Local/DB)",
+      "onboarding": "Complete",
+      "created": "2026-09-09",
+      "auth_found": false,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "google_user_28026abd@example.com",
+      "user_id": "28026abd-a893-4b40-a684-264217d605fe",
+      "organization": "Hacker Org",
+      "role": "org_user",
+      "provider": "Unknown (Local/DB)",
+      "onboarding": "Complete",
+      "created": "2026-09-09",
+      "auth_found": false,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "rv421625@gmail.com",
+      "user_id": "2998b909-b4a2-4bcf-87a0-57a2f961807d",
+      "organization": "vit pune",
+      "role": "org_user",
+      "provider": "email",
+      "onboarding": "Complete",
+      "created": "2026-09-25",
+      "auth_found": true,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "demo83565@gmail.com",
+      "user_id": "3542d920-06ab-4018-ac5d-c5436899029c",
+      "organization": "vit",
+      "role": "org_user",
+      "provider": "email",
+      "onboarding": "Complete",
+      "created": "2026-09-23",
+      "auth_found": true,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "normal_user_39c0e953@example.com",
+      "user_id": "39c0e953-8d87-40e9-97f9-85120fe5603b",
+      "organization": "Hacker Org",
+      "role": "org_user",
+      "provider": "Unknown (Local/DB)",
+      "onboarding": "Complete",
+      "created": "2026-09-09",
+      "auth_found": false,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "demo18460@gmail.com",
+      "user_id": "3af1bbcf-9daf-411f-b2c9-cf47c111095f",
+      "organization": "Pending Workspace Setup",
+      "role": "org_user",
+      "provider": "google",
+      "onboarding": "Incomplete (Pending)",
+      "created": "2026-09-28",
+      "auth_found": true,
+      "has_org": true,
+      "requires_onboarding": true
+    },
+    {
+      "email": "kumbharetanmay6@gmail.com",
+      "user_id": "41755c26-cb4f-40dd-a13f-007c44590240",
+      "organization": "epitome",
+      "role": "org_user",
+      "provider": "google",
+      "onboarding": "Complete",
+      "created": "2026-09-17",
+      "auth_found": true,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "invited_admin_504c17@example.com",
+      "user_id": "49fe0ce5-2932-4ebd-9971-275a4b91d92b",
+      "organization": "Hacker Org",
+      "role": "platform_admin",
+      "provider": "email",
+      "onboarding": "Complete",
+      "created": "2026-09-09",
+      "auth_found": true,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "google_user_54fd3470@example.com",
+      "user_id": "54fd3470-32f6-42c5-ad99-9ab63d62ee9c",
+      "organization": "Hacker Org",
+      "role": "org_user",
+      "provider": "Unknown (Local/DB)",
+      "onboarding": "Complete",
+      "created": "2026-09-09",
+      "auth_found": false,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "lakhanehemant@gmail.com",
+      "user_id": "5b80d106-cac7-4711-b891-34d51548da10",
+      "organization": "Edupluscampus",
+      "role": "org_user",
+      "provider": "email",
+      "onboarding": "Complete",
+      "created": "2026-09-09",
+      "auth_found": true,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "invited_admin_10358c@example.com",
+      "user_id": "5eb5cf90-cad5-44a2-872f-7f29ad9ba8a0",
+      "organization": "Hacker Org",
+      "role": "platform_admin",
+      "provider": "email",
+      "onboarding": "Complete",
+      "created": "2026-09-09",
+      "auth_found": true,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "user_07ee14@example.com",
+      "user_id": "658fd757-7fd3-475c-8347-2bc4b0fb45b2",
+      "organization": "Final Verification Org",
+      "role": "org_admin",
+      "provider": "Unknown (Local/DB)",
+      "onboarding": "Complete",
+      "created": "2026-09-15",
+      "auth_found": false,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "user_8c188c@example.com",
+      "user_id": "67191917-9822-4e55-862d-d9c52e667471",
+      "organization": "Gmail Reauth & Preview Test Org",
+      "role": "org_admin",
+      "provider": "Unknown (Local/DB)",
+      "onboarding": "Complete",
+      "created": "2026-09-15",
+      "auth_found": false,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "user_ad09b0@example.com",
+      "user_id": "68bdcbe0-1866-4e9d-b631-e0cb9681e1d8",
+      "organization": "Gmail Reauth & Preview Test Org",
+      "role": "org_admin",
+      "provider": "Unknown (Local/DB)",
+      "onboarding": "Complete",
+      "created": "2026-09-15",
+      "auth_found": false,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "user_305a90@example.com",
+      "user_id": "69e939ea-31d8-483c-9940-68c0485513ec",
+      "organization": "Final Verification Org",
+      "role": "org_admin",
+      "provider": "Unknown (Local/DB)",
+      "onboarding": "Complete",
+      "created": "2026-09-15",
+      "auth_found": false,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "normal_user_6b27f195@example.com",
+      "user_id": "6b27f195-fca3-4a63-8914-94ac99ecf3f6",
+      "organization": "Hacker Org",
+      "role": "org_user",
+      "provider": "Unknown (Local/DB)",
+      "onboarding": "Complete",
+      "created": "2026-09-09",
+      "auth_found": false,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "user_dfba94@example.com",
+      "user_id": "72389b71-0e06-4c53-ae15-255a1ce4b23e",
+      "organization": "Final Verification Org",
+      "role": "org_admin",
+      "provider": "Unknown (Local/DB)",
+      "onboarding": "Complete",
+      "created": "2026-09-15",
+      "auth_found": false,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "user_534b72@example.com",
+      "user_id": "72440b65-db22-4d79-9858-0cc0f95cfca4",
+      "organization": "Final Verification Org",
+      "role": "org_admin",
+      "provider": "Unknown (Local/DB)",
+      "onboarding": "Complete",
+      "created": "2026-09-15",
+      "auth_found": false,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "user_72ee28@example.com",
+      "user_id": "72894af1-692f-4ab6-aed2-12bdf29c87f1",
+      "organization": "Final Verification Org",
+      "role": "org_admin",
+      "provider": "Unknown (Local/DB)",
+      "onboarding": "Complete",
+      "created": "2026-09-15",
+      "auth_found": false,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "khushighumre64@gmail.com",
+      "user_id": "74dab2d1-f42c-427f-ba71-e1a3b8c591ce",
+      "organization": "Newcompanybykhushi",
+      "role": "org_user",
+      "provider": "google",
+      "onboarding": "Complete",
+      "created": "2026-09-27",
+      "auth_found": true,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "normal_user_76ac4a8d@example.com",
+      "user_id": "76ac4a8d-b250-4429-9b8c-26150ee88332",
+      "organization": "Hacker Org",
+      "role": "org_user",
+      "provider": "Unknown (Local/DB)",
+      "onboarding": "Complete",
+      "created": "2026-09-09",
+      "auth_found": false,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "user_4fed27@example.com",
+      "user_id": "76e06a5e-7afe-43e2-9d47-028ada461d81",
+      "organization": "Final Verification Org",
+      "role": "org_admin",
+      "provider": "Unknown (Local/DB)",
+      "onboarding": "Complete",
+      "created": "2026-09-15",
+      "auth_found": false,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "test_google_10e24f@example.com",
+      "user_id": "7e37c0cd-9447-416c-9773-348d3494a383",
+      "organization": "Alpha Tech Inc",
+      "role": "org_user",
+      "provider": "Unknown (Local/DB)",
+      "onboarding": "Complete",
+      "created": "2026-09-09",
+      "auth_found": false,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "dbmscp@gmail.com",
+      "user_id": "825214f5-ff3c-41e9-a16d-9fbf0ae1acef",
+      "organization": "cognizant",
+      "role": "org_user",
+      "provider": "google",
+      "onboarding": "Complete",
+      "created": "2026-09-25",
+      "auth_found": true,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "user_8b5121@example.com",
+      "user_id": "834062ca-8297-4885-a35a-a71e6cba8180",
+      "organization": "Final Verification Org",
+      "role": "org_admin",
+      "provider": "Unknown (Local/DB)",
+      "onboarding": "Complete",
+      "created": "2026-09-15",
+      "auth_found": false,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "test_admin@example.com",
+      "user_id": "83efc2bc-b2ad-4d1c-93aa-99e6c112195e",
+      "organization": "Hacker Org",
+      "role": "platform_admin",
+      "provider": "email",
+      "onboarding": "Complete",
+      "created": "2026-09-09",
+      "auth_found": true,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "hemantlakhane@gmail.com",
+      "user_id": "879047d1-ba3c-4cbf-9186-70f471377cba",
+      "organization": "Edupluscampus",
+      "role": "org_user",
+      "provider": "google",
+      "onboarding": "Complete",
+      "created": "2026-09-09",
+      "auth_found": true,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "tanmaykumbhare24@gmail.com",
+      "user_id": "8815af9d-c994-42e6-bbd7-e617c3fdb8de",
+      "organization": "Just Use",
+      "role": "org_user",
+      "provider": "google",
+      "onboarding": "Complete",
+      "created": "2026-09-17",
+      "auth_found": true,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "khushi@gmail.com",
+      "user_id": "8cfa9ac7-a1ff-4d1c-93f7-84d8616891f5",
+      "organization": "vit",
+      "role": "org_user",
+      "provider": "Unknown (Local/DB)",
+      "onboarding": "Complete",
+      "created": "2026-09-12",
+      "auth_found": false,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "google_user_8ec7e67b@example.com",
+      "user_id": "8ec7e67b-12f0-4df9-802b-d3f9d8d21287",
+      "organization": "SMBFlow Pilot Org",
+      "role": "org_user",
+      "provider": "Unknown (Local/DB)",
+      "onboarding": "Complete",
+      "created": "2026-09-09",
+      "auth_found": false,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "user_0f6671@example.com",
+      "user_id": "94196973-771b-4b6e-a1da-20d1512e09a4",
+      "organization": "Auth Test Org",
+      "role": "org_admin",
+      "provider": "Unknown (Local/DB)",
+      "onboarding": "Complete",
+      "created": "2026-09-15",
+      "auth_found": false,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "existing_email_e7c7a9@example.com",
+      "user_id": "958a97c4-a9da-4432-937e-d1a0a8c25a63",
+      "organization": "Existing Email Org",
+      "role": "org_user",
+      "provider": "Unknown (Local/DB)",
+      "onboarding": "Complete",
+      "created": "2026-09-09",
+      "auth_found": false,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "khushighumre@gmail.com",
+      "user_id": "989b65d6-e379-4319-8ab4-bd1f43f7acae",
+      "organization": "Amazon",
+      "role": "org_user",
+      "provider": "google",
+      "onboarding": "Complete",
+      "created": "2026-09-26",
+      "auth_found": true,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "google_user_9acef756@example.com",
+      "user_id": "9acef756-9dfc-4ff5-ba58-bb527aa44716",
+      "organization": "Hacker Org",
+      "role": "org_user",
+      "provider": "Unknown (Local/DB)",
+      "onboarding": "Complete",
+      "created": "2026-09-09",
+      "auth_found": false,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "user_7b1cac@example.com",
+      "user_id": "9ea8b4fb-ffe7-4014-85db-949668fbeeed",
+      "organization": "Final Verification Org",
+      "role": "org_admin",
+      "provider": "Unknown (Local/DB)",
+      "onboarding": "Complete",
+      "created": "2026-09-15",
+      "auth_found": false,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "google_user_9ef9e61e@example.com",
+      "user_id": "9ef9e61e-d86d-4cd7-b6de-0410f5280c47",
+      "organization": "Hacker Org",
+      "role": "org_user",
+      "provider": "Unknown (Local/DB)",
+      "onboarding": "Complete",
+      "created": "2026-09-09",
+      "auth_found": false,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "khushi.ghumre24@vit.edu",
+      "user_id": "a17e68b9-93f2-4fb6-b2df-945618c28bc6",
+      "organization": "vit",
+      "role": "org_user",
+      "provider": "google",
+      "onboarding": "Complete",
+      "created": "2026-09-23",
+      "auth_found": true,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "user_b080e0@example.com",
+      "user_id": "a3368d1a-fa5a-439a-9422-334174e00147",
+      "organization": "Final Verification Org",
+      "role": "org_admin",
+      "provider": "Unknown (Local/DB)",
+      "onboarding": "Complete",
+      "created": "2026-09-15",
+      "auth_found": false,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "google_verified_5b9aad@example.com",
+      "user_id": "aac370b2-af01-4c2f-88ce-0970bdd3ed6b",
+      "organization": "Verified Workspace Inc",
+      "role": "org_user",
+      "provider": "Unknown (Local/DB)",
+      "onboarding": "Complete",
+      "created": "2026-09-09",
+      "auth_found": false,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "gemni.connect.tech@gmail.com",
+      "user_id": "b7b0d0f4-3c6e-4dfb-92fe-1bbba699b1e5",
+      "organization": "vit",
+      "role": "org_user",
+      "provider": "email",
+      "onboarding": "Complete",
+      "created": "2026-09-23",
+      "auth_found": true,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "user_f42ed2@example.com",
+      "user_id": "b8fe33e7-352e-453e-b864-222284f5d5f0",
+      "organization": "Auth Test Org",
+      "role": "org_admin",
+      "provider": "Unknown (Local/DB)",
+      "onboarding": "Complete",
+      "created": "2026-09-15",
+      "auth_found": false,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "user_4e16e4@example.com",
+      "user_id": "b913be6f-e7db-497a-8ebd-106a87b155ff",
+      "organization": "Final Verification Org",
+      "role": "org_admin",
+      "provider": "Unknown (Local/DB)",
+      "onboarding": "Complete",
+      "created": "2026-09-15",
+      "auth_found": false,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "aimlc3293@gmail.com",
+      "user_id": "c56efb0f-591c-4a1f-8c85-2aa339eecc00",
+      "organization": "Khushighumre",
+      "role": "org_user",
+      "provider": "google",
+      "onboarding": "Complete",
+      "created": "2026-09-25",
+      "auth_found": true,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "user_7d176f@example.com",
+      "user_id": "c652a944-ec09-4a43-9f35-802a0fe6d567",
+      "organization": "Final Verification Org",
+      "role": "org_admin",
+      "provider": "Unknown (Local/DB)",
+      "onboarding": "Complete",
+      "created": "2026-09-15",
+      "auth_found": false,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "user_310b32@example.com",
+      "user_id": "c67b1373-a9fd-4ee2-92c8-4269dd1f29e0",
+      "organization": "Final Verification Org",
+      "role": "org_admin",
+      "provider": "Unknown (Local/DB)",
+      "onboarding": "Complete",
+      "created": "2026-09-15",
+      "auth_found": false,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "aws634102@gmail.com",
+      "user_id": "d04f8b45-77a4-45dc-8de1-68abdae84ec3",
+      "organization": "vit",
+      "role": "org_user",
+      "provider": "google",
+      "onboarding": "Complete",
+      "created": "2026-09-25",
+      "auth_found": true,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "google_user_da4a6afa@example.com",
+      "user_id": "da4a6afa-9a7f-48fb-ae18-f5bd63c6d805",
+      "organization": "Hacker Org",
+      "role": "org_user",
+      "provider": "Unknown (Local/DB)",
+      "onboarding": "Complete",
+      "created": "2026-09-09",
+      "auth_found": false,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "demo83565@gmail.com",
+      "user_id": "dc188b43-d503-4815-977a-dc590c495322",
+      "organization": "None (Unassigned)",
+      "role": "None",
+      "provider": "email",
+      "onboarding": "No Workspace",
+      "created": "2026-09-23",
+      "auth_found": true,
+      "has_org": false,
+      "requires_onboarding": true
+    },
+    {
+      "email": "user_8c6066@example.com",
+      "user_id": "ddac6663-3af0-4c33-b900-ca7da919fc96",
+      "organization": "Final Verification Org",
+      "role": "org_admin",
+      "provider": "Unknown (Local/DB)",
+      "onboarding": "Complete",
+      "created": "2026-09-15",
+      "auth_found": false,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "gemini.connect.tech@gmail.com",
+      "user_id": "e53f6626-308b-436b-9d7f-758c84107677",
+      "organization": "Amazon",
+      "role": "org_user",
+      "provider": "google",
+      "onboarding": "Complete",
+      "created": "2026-09-26",
+      "auth_found": true,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "admin@smbflow.com",
+      "user_id": "ebc682d1-d643-4fb3-bf2a-eefc3517cfe0",
+      "organization": "Hacker Org",
+      "role": "platform_admin",
+      "provider": "Unknown (Local/DB)",
+      "onboarding": "Complete",
+      "created": "2026-09-09",
+      "auth_found": false,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "existing_email_95fc55@example.com",
+      "user_id": "ec372b89-1ec6-4a2d-9815-d4090475a32b",
+      "organization": "Existing Email Org",
+      "role": "org_user",
+      "provider": "Unknown (Local/DB)",
+      "onboarding": "Complete",
+      "created": "2026-09-09",
+      "auth_found": false,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "dhan@gmail.com",
+      "user_id": "edcb6103-6e62-4e8e-a6a5-c119948e3fb4",
+      "organization": "My Demo Company",
+      "role": "org_user",
+      "provider": "Unknown (Local/DB)",
+      "onboarding": "Complete",
+      "created": "2026-09-24",
+      "auth_found": false,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "google_user_ef496974@example.com",
+      "user_id": "ef496974-d3ad-48b9-97ef-4216bf21b3c3",
+      "organization": "Hacker Org",
+      "role": "org_user",
+      "provider": "Unknown (Local/DB)",
+      "onboarding": "Complete",
+      "created": "2026-09-09",
+      "auth_found": false,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "khushighumre311@gmail.com",
+      "user_id": "f428c033-438c-4b27-97cf-dd5d62596d6c",
+      "organization": "vit",
+      "role": "org_user",
+      "provider": "google",
+      "onboarding": "Complete",
+      "created": "2026-09-24",
+      "auth_found": true,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "user_13514e@example.com",
+      "user_id": "f8ca9cdb-bcde-4e7b-9209-935d4893b7e7",
+      "organization": "Final Verification Org",
+      "role": "org_admin",
+      "provider": "Unknown (Local/DB)",
+      "onboarding": "Complete",
+      "created": "2026-09-15",
+      "auth_found": false,
+      "has_org": true,
+      "requires_onboarding": false
+    },
+    {
+      "email": "google_verified_2243bc@example.com",
+      "user_id": "f9922023-c49d-4344-9589-50c99ab6f310",
+      "organization": "Verified Workspace Inc",
+      "role": "org_user",
+      "provider": "Unknown (Local/DB)",
+      "onboarding": "Complete",
+      "created": "2026-09-09",
+      "auth_found": false,
+      "has_org": true,
+      "requires_onboarding": false
+    }
+  ]
 }

@@ -270,36 +270,43 @@ def decode_token(token: str) -> TokenData:
             full_name=full_name,
         )
 
+    try:
+        header = jwt.get_unverified_header(token)
+        token_alg = header.get("alg", "HS256")
+    except Exception:
+        token_alg = "HS256"
+
     key = get_supabase_jwt_secret()
 
-    # 2. Attempt signature verification using SUPABASE_JWT_SECRET
-    try:
-        payload = jwt.decode(token, key, algorithms=["HS256", "ES256", "RS256"], options={"verify_aud": False})
-        user_id = payload.get("sub") or payload.get("user_id")
-        email = payload.get("email", "user@smbflow.com")
-        role = payload.get("role") or payload.get("user_metadata", {}).get("role", "org_user")
-        if role == "super_admin":
-            role = "platform_admin"
-        elif role in ("tenant_user", "authenticated"):
-            role = "org_user"
-        org_id = payload.get("organization_id") or payload.get("tenant_id") or payload.get("user_metadata", {}).get("organization_id")
-        user_meta = payload.get("user_metadata") or {}
-        full_name = payload.get("full_name") or user_meta.get("full_name") or user_meta.get("name")
-        return TokenData(
-            user_id=str(user_id),
-            email=email,
-            role=role,
-            organization_id=str(org_id) if org_id else None,
-            tenant_id=str(org_id) if org_id else None,
-            full_name=full_name,
-        )
-    except JWTError:
-        pass
+    # 2. Attempt signature verification using SUPABASE_JWT_SECRET (HMAC-SHA256)
+    if token_alg == "HS256":
+        try:
+            payload = jwt.decode(token, key, algorithms=["HS256"], options={"verify_aud": False})
+            user_id = payload.get("sub") or payload.get("user_id")
+            email = payload.get("email", "user@smbflow.com")
+            role = payload.get("role") or payload.get("user_metadata", {}).get("role", "org_user")
+            if role == "super_admin":
+                role = "platform_admin"
+            elif role in ("tenant_user", "authenticated"):
+                role = "org_user"
+            org_id = payload.get("organization_id") or payload.get("tenant_id") or payload.get("user_metadata", {}).get("organization_id")
+            user_meta = payload.get("user_metadata") or {}
+            full_name = payload.get("full_name") or user_meta.get("full_name") or user_meta.get("name")
+            return TokenData(
+                user_id=str(user_id),
+                email=email,
+                role=role,
+                organization_id=str(org_id) if org_id else None,
+                tenant_id=str(org_id) if org_id else None,
+                full_name=full_name,
+            )
+        except Exception:
+            pass
 
     # 3. Attempt signature verification using local SECRET_KEY (if distinct from key)
-    if key != SECRET_KEY:
+    if key != SECRET_KEY and token_alg == "HS256":
         try:
-            payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256", "ES256", "RS256"], options={"verify_aud": False})
+            payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"], options={"verify_aud": False})
             role = payload.get("role", "org_user")
             if role == "super_admin":
                 role = "platform_admin"
@@ -314,7 +321,7 @@ def decode_token(token: str) -> TokenData:
                 tenant_id=str(org_id) if org_id else None,
                 full_name=full_name,
             )
-        except JWTError:
+        except Exception:
             pass
 
     # 4. Server-side online validation against Supabase Auth API (/auth/v1/user)
