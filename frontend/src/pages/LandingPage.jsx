@@ -39,10 +39,15 @@ import {
   ExternalLink,
   ChevronRight,
   Maximize2,
-  Minimize2
+  Minimize2,
+  Move,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw
 } from 'lucide-react'
 
 import ToolLogo from '../components/common/ToolLogo'
+import { GradientWave } from '@/components/ui/gradient-wave'
 
 // ── Interactive Canvas Pipeline Presets ────────────────────────────────────────
 const LANDING_WORKFLOWS = [
@@ -118,17 +123,67 @@ export default function LandingPage() {
     })
   }
 
-  // Interactive Canvas State
+  // Interactive Canvas State (Pan, Drag & Zoom)
   const [activeWorkflowId, setActiveWorkflowId] = useState('invoices')
   const currentWorkflow = LANDING_WORKFLOWS.find(w => w.id === activeWorkflowId) || LANDING_WORKFLOWS[0]
   const [selectedNode, setSelectedNode] = useState(currentWorkflow.nodes[0])
+  const [pan, setPan] = useState({ x: 0, y: 0 })
+  const [zoom, setZoom] = useState(1)
+  const [isPanning, setIsPanning] = useState(false)
+  const panStartRef = useRef({ x: 0, y: 0 })
+  const dragDistRef = useRef(0)
 
-  // Update selected node when workflow switches
+  // Compute bounding box for auto-centering current workflow
+  const minX = Math.min(...currentWorkflow.nodes.map(n => n.x))
+  const maxX = Math.max(...currentWorkflow.nodes.map(n => n.x + 150))
+  const minY = Math.min(...currentWorkflow.nodes.map(n => n.y))
+  const maxY = Math.max(...currentWorkflow.nodes.map(n => n.y + 52))
+  const graphCenterX = (minX + maxX) / 2
+  const graphCenterY = (minY + maxY) / 2
+
+  // Update selected node and reset view when workflow switches
   const handleSelectWorkflow = (wfId) => {
     setActiveWorkflowId(wfId)
     const wf = LANDING_WORKFLOWS.find(w => w.id === wfId) || LANDING_WORKFLOWS[0]
     setSelectedNode(wf.nodes[0])
+    setPan({ x: 0, y: 0 })
+    setZoom(1)
   }
+
+  // Mouse pan handlers: supports BOTH left-click drag AND right-click drag
+  const handleCanvasMouseDown = (e) => {
+    if (e.button === 0 || e.button === 2) {
+      setIsPanning(true)
+      panStartRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y }
+      dragDistRef.current = 0
+    }
+  }
+
+  const handleCanvasMouseMove = (e) => {
+    if (!isPanning) return
+    const newX = e.clientX - panStartRef.current.x
+    const newY = e.clientY - panStartRef.current.y
+    dragDistRef.current += Math.abs(e.movementX || 0) + Math.abs(e.movementY || 0)
+    setPan({ x: newX, y: newY })
+  }
+
+  const handleCanvasMouseUp = () => {
+    setIsPanning(false)
+  }
+
+  const handleCanvasWheel = (e) => {
+    e.preventDefault()
+    const delta = e.deltaY > 0 ? -0.08 : 0.08
+    setZoom(z => Math.min(1.8, Math.max(0.65, parseFloat((z + delta).toFixed(2)))))
+  }
+
+  const resetCanvas = () => {
+    setPan({ x: 0, y: 0 })
+    setZoom(1)
+  }
+
+  const zoomIn = () => setZoom(z => Math.min(1.8, parseFloat((z + 0.15).toFixed(2))))
+  const zoomOut = () => setZoom(z => Math.max(0.65, parseFloat((z - 0.15).toFixed(2))))
 
   // Pricing state
   const [billingCycle, setBillingCycle] = useState('monthly')
@@ -200,11 +255,6 @@ export default function LandingPage() {
               alt="Isolate" 
               className="h-8 w-auto max-w-[130px] object-contain dark:brightness-110"
             />
-            <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono font-semibold uppercase tracking-wider ${
-              isDark ? 'bg-[#182234] text-slate-300 border border-[#233048]' : 'bg-slate-100 text-slate-600 border border-slate-200'
-            }`}>
-              v3.0
-            </span>
           </Link>
 
           {/* Desktop Nav Links */}
@@ -256,16 +306,39 @@ export default function LandingPage() {
           onMouseMove={handleMouseMove}
           className={`relative pt-20 pb-20 md:pt-28 md:pb-28 overflow-hidden transition-colors border-b ${
             isDark
-              ? 'bg-[#0b0f17] border-[#233048] bg-dot-pattern'
-              : 'bg-white border-slate-200 bg-dot-pattern'
+              ? 'bg-[#080c14] border-[#233048]'
+              : 'bg-white border-slate-200'
           }`}
         >
-          {/* Subtle Spotlight */}
+          {/* Background: Animated GradientWave for light/default theme; Precision Grid Canvas for dark theme */}
+          {!isDark ? (
+            <GradientWave
+              colors={["#38bdf8", "#ffffff", "#818cf8", "#ffffff", "#38bdf8", "#ffffff"]}
+              className="opacity-75 pointer-events-none"
+            />
+          ) : (
+            <div className="absolute inset-0 pointer-events-none overflow-hidden">
+              {/* Precision Dark Orthogonal Grid (Matching User Reference) */}
+              <div 
+                className="absolute inset-0 opacity-[0.22]"
+                style={{
+                  backgroundImage: `linear-gradient(to right, #334155 1px, transparent 1px), linear-gradient(to bottom, #334155 1px, transparent 1px)`,
+                  backgroundSize: '3.5rem 3.5rem',
+                  maskImage: 'radial-gradient(ellipse 70% 60% at 50% 35%, #000 65%, transparent 100%)',
+                  WebkitMaskImage: 'radial-gradient(ellipse 70% 60% at 50% 35%, #000 65%, transparent 100%)'
+                }}
+              />
+              {/* Central Ambient Glow */}
+              <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[650px] h-[360px] bg-gradient-to-tr from-blue-600/20 via-indigo-500/10 to-transparent blur-3xl pointer-events-none rounded-full" />
+            </div>
+          )}
+
+          {/* Dynamic Spotlight */}
           <div
             className="absolute inset-0 pointer-events-none transition-all duration-100 ease-out"
             style={{
               background: isDark
-                ? `radial-gradient(550px circle at ${mousePos.x}px ${mousePos.y}px, rgba(37, 99, 235, 0.12) 0%, transparent 65%)`
+                ? `radial-gradient(550px circle at ${mousePos.x}px ${mousePos.y}px, rgba(56, 189, 248, 0.12) 0%, transparent 65%)`
                 : `radial-gradient(500px circle at ${mousePos.x}px ${mousePos.y}px, rgba(37, 99, 235, 0.08) 0%, transparent 60%)`
             }}
           />
@@ -399,77 +472,136 @@ export default function LandingPage() {
               </Link>
             </div>
 
-            {/* Live SVG Graph Canvas */}
-            <div className="p-6 md:p-8 bg-slate-50/40 dark:bg-[#0b0f17]/40 overflow-x-auto">
-              <div className="min-w-[760px] pb-4">
-                <svg className="w-full h-[180px] overflow-visible">
-                  {/* Connectors */}
-                  {currentWorkflow.edges.map((edge, idx) => {
-                    const fromNode = currentWorkflow.nodes.find(n => n.id === edge.from)
-                    const toNode = currentWorkflow.nodes.find(n => n.id === edge.to)
-                    if (!fromNode || !toNode) return null
+            {/* Live SVG Graph Canvas (Interactive, Auto-Centered, Pan & Zoom) */}
+            <div className="p-4 sm:p-6 bg-slate-50/40 dark:bg-[#0b0f17]/40">
+              <div
+                className={`relative w-full h-[280px] sm:h-[300px] rounded-xl border overflow-hidden select-none transition-colors ${
+                  isPanning ? 'cursor-grabbing' : 'cursor-grab'
+                } ${
+                  isDark ? 'bg-[#0b0f17] border-[#233048]' : 'bg-slate-50/70 border-slate-200'
+                }`}
+                onMouseDown={handleCanvasMouseDown}
+                onMouseMove={handleCanvasMouseMove}
+                onMouseUp={handleCanvasMouseUp}
+                onMouseLeave={handleCanvasMouseUp}
+                onContextMenu={(e) => e.preventDefault()}
+                onWheel={handleCanvasWheel}
+              >
+                {/* Floating Canvas Controls */}
+                <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-white/90 dark:bg-[#121826]/90 backdrop-blur border border-slate-200 dark:border-[#233048] p-1 rounded-xl shadow-xs z-20">
+                  <button
+                    onClick={zoomIn}
+                    title="Zoom In"
+                    className="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#182234] transition-colors cursor-pointer"
+                  >
+                    <ZoomIn className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={zoomOut}
+                    title="Zoom Out"
+                    className="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#182234] transition-colors cursor-pointer"
+                  >
+                    <ZoomOut className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={resetCanvas}
+                    title="Reset & Center"
+                    className="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#182234] transition-colors cursor-pointer"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                  </button>
+                </div>
 
-                    const startX = fromNode.x + 150
-                    const startY = fromNode.y + 26
-                    const endX = toNode.x
-                    const endY = toNode.y + 26
-                    const midX = (startX + endX) / 2
-                    const pathData = `M ${startX} ${startY} C ${midX} ${startY}, ${midX} ${endY}, ${endX} ${endY}`
+                {/* Interaction Hint Pill */}
+                <div className="absolute bottom-3 left-3 text-[11px] text-slate-500 dark:text-slate-400 bg-white/80 dark:bg-[#121826]/80 backdrop-blur px-2.5 py-1 rounded-lg border border-slate-200 dark:border-[#233048] flex items-center gap-1.5 shadow-2xs pointer-events-none z-20">
+                  <Move className="w-3 h-3 text-blue-500" />
+                  <span>Left or Right Click + Drag to pan · Scroll to zoom</span>
+                </div>
 
-                    return (
-                      <g key={idx}>
-                        <path d={pathData} fill="none" stroke="#3b82f6" strokeWidth="3" strokeOpacity="0.2" />
-                        <path d={pathData} fill="none" stroke="#64748b" strokeWidth="2" strokeDasharray="4 2" />
-                        <circle r="3" fill="#3b82f6">
-                          <animateMotion path={pathData} dur="2.8s" repeatCount="indefinite" />
-                        </circle>
-                        {edge.label && (
-                          <text x={midX} y={(startY + endY) / 2 - 6} fill="#64748b" fontSize="9" fontFamily="monospace" textAnchor="middle">
-                            {edge.label}
-                          </text>
-                        )}
-                      </g>
-                    )
-                  })}
+                <svg className="w-full h-full overflow-hidden" viewBox="0 0 1000 280">
+                  <defs>
+                    <pattern id="canvas-grid-pattern" width="24" height="24" patternUnits="userSpaceOnUse">
+                      <circle cx="2" cy="2" r="1" fill={isDark ? '#233048' : '#cbd5e1'} />
+                    </pattern>
+                  </defs>
+                  
+                  {/* Subtle Grid Canvas Layer */}
+                  <rect width="100%" height="100%" fill="url(#canvas-grid-pattern)" opacity="0.6" />
 
-                  {/* Render Node Rectangles */}
-                  {currentWorkflow.nodes.map((node) => {
-                    const isSelected = selectedNode?.id === node.id
+                  {/* Centered & Panned Graph Group */}
+                  <g transform={`translate(${500 + pan.x}, ${140 + pan.y}) scale(${zoom}) translate(${-graphCenterX}, ${-graphCenterY})`}>
+                    {/* Connectors */}
+                    {currentWorkflow.edges.map((edge, idx) => {
+                      const fromNode = currentWorkflow.nodes.find(n => n.id === edge.from)
+                      const toNode = currentWorkflow.nodes.find(n => n.id === edge.to)
+                      if (!fromNode || !toNode) return null
 
-                    return (
-                      <g
-                        key={node.id}
-                        transform={`translate(${node.x}, ${node.y})`}
-                        onClick={() => setSelectedNode(node)}
-                        className="cursor-pointer group"
-                      >
-                        <rect
-                          width="150"
-                          height="52"
-                          rx="10"
-                          fill={isDark ? '#121826' : '#ffffff'}
-                          stroke={isSelected ? '#3b82f6' : isDark ? '#233048' : '#e2e8f0'}
-                          strokeWidth={isSelected ? '2' : '1'}
-                          className="transition-all drop-shadow-xs group-hover:stroke-blue-400"
-                        />
-                        <foreignObject x="8" y="8" width="134" height="36">
-                          <div className="flex items-center gap-2 h-full">
-                            <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-[#182234] border border-slate-200 dark:border-[#233048] flex items-center justify-center shrink-0">
-                              <ToolLogo name={node.tool} className="w-3.5 h-3.5" />
+                      const startX = fromNode.x + 150
+                      const startY = fromNode.y + 26
+                      const endX = toNode.x
+                      const endY = toNode.y + 26
+                      const midX = (startX + endX) / 2
+                      const pathData = `M ${startX} ${startY} C ${midX} ${startY}, ${midX} ${endY}, ${endX} ${endY}`
+
+                      return (
+                        <g key={idx}>
+                          <path d={pathData} fill="none" stroke="#3b82f6" strokeWidth="3" strokeOpacity="0.25" />
+                          <path d={pathData} fill="none" stroke={isDark ? '#475569' : '#94a3b8'} strokeWidth="2" strokeDasharray="4 2" />
+                          <circle r="3" fill="#3b82f6">
+                            <animateMotion path={pathData} dur="2.8s" repeatCount="indefinite" />
+                          </circle>
+                          {edge.label && (
+                            <text x={midX} y={(startY + endY) / 2 - 6} fill={isDark ? '#94a3b8' : '#64748b'} fontSize="9" fontFamily="monospace" textAnchor="middle">
+                              {edge.label}
+                            </text>
+                          )}
+                        </g>
+                      )
+                    })}
+
+                    {/* Render Node Rectangles */}
+                    {currentWorkflow.nodes.map((node) => {
+                      const isSelected = selectedNode?.id === node.id
+
+                      return (
+                        <g
+                          key={node.id}
+                          transform={`translate(${node.x}, ${node.y})`}
+                          onClick={() => {
+                            if (dragDistRef.current < 6) {
+                              setSelectedNode(node)
+                            }
+                          }}
+                          className="cursor-pointer group"
+                        >
+                          <rect
+                            width="150"
+                            height="52"
+                            rx="10"
+                            fill={isDark ? '#121826' : '#ffffff'}
+                            stroke={isSelected ? '#3b82f6' : isDark ? '#233048' : '#e2e8f0'}
+                            strokeWidth={isSelected ? '2' : '1'}
+                            className="transition-all drop-shadow-xs group-hover:stroke-blue-400"
+                          />
+                          <foreignObject x="8" y="8" width="134" height="36">
+                            <div className="flex items-center gap-2 h-full">
+                              <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-[#182234] border border-slate-200 dark:border-[#233048] flex items-center justify-center shrink-0">
+                                <ToolLogo name={node.tool} className="w-3.5 h-3.5" />
+                              </div>
+                              <div className="min-w-0">
+                                <p className={`text-[11px] font-bold truncate leading-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                                  {node.title}
+                                </p>
+                                <span className="text-[9px] text-slate-500 dark:text-slate-400 truncate block">
+                                  {node.subtitle}
+                                </span>
+                              </div>
                             </div>
-                            <div className="min-w-0">
-                              <p className={`text-[11px] font-bold truncate leading-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                                {node.title}
-                              </p>
-                              <span className="text-[9px] text-slate-500 dark:text-slate-400 truncate block">
-                                {node.subtitle}
-                              </span>
-                            </div>
-                          </div>
-                        </foreignObject>
-                      </g>
-                    )
-                  })}
+                          </foreignObject>
+                        </g>
+                      )
+                    })}
+                  </g>
                 </svg>
               </div>
 
