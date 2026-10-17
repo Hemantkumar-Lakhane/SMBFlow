@@ -1,0 +1,32 @@
+{
+  "run_id": "a24f3d0a-bb67-419d-b921-6b5a3ce3a0a4",
+  "workflow_name": "product_launch_sprint",
+  "status": "completed",
+  "created_at": "2026-10-06T06:37:27.339703",
+  "total_cost_usd": 0.002653,
+  "total_tokens_in": 1058,
+  "total_tokens_out": 1762,
+  "outcome": {
+    "situation_summary": "AeroBook Pro enters market targeting small businesses. The campaign leads with Product: AeroBook Pro, a lightweight AI laptop designed for creators, students, developers, and professionals who need powerful performance without sacrificing portability. It features an integrated AI productivity assistant, on-device AI processing, a high-resolution 14.5-inch display, all-day battery optimization, studio-quality microphones, and intelligent performance management. AeroBook Pro will officially launch on February 10, 2027, with pre-orders beginning on February 1. The campaign targets students, software developers, content creators, designers, and business professionals. The campaign should tease the laptop\u2019s AI capabilities before launch, demonstrate how it improves everyday workflows, reveal the complete product on launch day, and encourage customers to pre-order through the official website. using 3 core visual assets across 4 platforms.",
+    "product_name": "AeroBook Pro",
+    "platforms": [
+      "LinkedIn",
+      "X / Twitter",
+      "Instagram",
+      "YouTube"
+    ],
+    "posts_count": 12,
+    "visuals_count": 3
+  },
+  "agent_runs": [
+    {
+      "node_id": "draft_assets",
+      "agent_type": "drafting_agent",
+      "status": "success",
+      "tokens_in": 1058,
+      "tokens_out": 1762,
+      "cost_usd": 0.002653,
+      "model_used": "groq/openai/gpt-oss-20b"
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 [
   {
-    "id": "6ec6167f-770c-4167-bffb-253699efa4af",
+    "id": "4d7b8b11-53b5-4d24-85c2-796433df4c34",
     "company_name": "ClearSolutions",
     "contact_email": "cto@clearsolutions.com",
     "contact_name": "Alex Park",
@@ -8,8 +8,8 @@
     "tier": "starter",
     "mrr": 292,
     "industry": "HR",
-    "renewal_date": "2027-08-24",
-    "contract_start": "2026-03-13",
+    "renewal_date": "2027-09-02",
+    "contract_start": "2026-03-22",
     "usage": {
       "dau_30d_avg": 387,
       "dau_current": 220,
@@ -27,18 +27,18 @@
     },
     "nps": {
       "score": 1,
-      "date": "2026-08-18",
+      "date": "2026-08-27",
       "verbatim": "Seriously considering switching to a competitor."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 3,
-      "next_billing": "2027-04-12"
+      "next_billing": "2027-04-21"
     },
     "_health_label": "critical"
   },
   {
-    "id": "3b80a7ad-fc79-4bc0-8504-2056d35d75cf",
+    "id": "8c38f3b7-bb5b-43e1-a763-d5a1bfe29a8d",
     "company_name": "FluxTech",
     "contact_email": "cto@fluxtech.com",
     "contact_name": "Taylor Smith",
@@ -46,8 +46,8 @@
     "tier": "growth",
     "mrr": 1218,
     "industry": "Legal",
-    "renewal_date": "2026-11-29",
-    "contract_start": "2025-06-13",
+    "renewal_date": "2026-12-08",
+    "contract_start": "2025-06-22",
     "usage": {
       "dau_30d_avg": 204,
       "dau_current": 191,
@@ -65,18 +65,18 @@
     },
     "nps": {
       "score": 9,
-      "date": "2026-07-11",
+      "date": "2026-07-20",
       "verbatim": "Great product, saves us hours every week."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2026-11-24"
+      "next_billing": "2026-12-03"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "9631bc6f-3b75-4bc0-86f3-3ff66fa1c972",
+    "id": "0ccb5ba6-c30c-419a-a8c6-8c9cad3e89a4",
     "company_name": "NovaConnect",
     "contact_email": "ops@novaconnect.com",
     "contact_name": "Sam Lee",
@@ -84,8 +84,8 @@
     "tier": "growth",
     "mrr": 1126,
     "industry": "Manufacturing",
-    "renewal_date": "2027-10-04",
-    "contract_start": "2026-01-26",
+    "renewal_date": "2027-10-13",
+    "contract_start": "2026-02-04",
     "usage": {
       "dau_30d_avg": 453,
       "dau_current": 426,
@@ -103,18 +103,18 @@
     },
     "nps": {
       "score": 9,
-      "date": "2026-09-02",
+      "date": "2026-09-11",
       "verbatim": "The team loves it, easy to use."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-05-02"
+      "next_billing": "2027-05-11"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "b15391aa-0894-497e-bd76-008c81fe50ad",
+    "id": "39a96a4d-df85-4bbf-a13d-a30b47c03866",
     "company_name": "FluxHub",
     "contact_email": "cto@fluxhub.com",
     "contact_name": "Jordan Smith",
@@ -122,8 +122,8 @@
     "tier": "starter",
     "mrr": 482,
     "industry": "Logistics",
-    "renewal_date": "2027-09-20",
-    "contract_start": "2024-11-14",
+    "renewal_date": "2027-09-29",
+    "contract_start": "2024-11-23",
     "usage": {
       "dau_30d_avg": 441,
       "dau_current": 290,
@@ -141,18 +141,18 @@
     },
     "nps": {
       "score": 6,
-      "date": "2026-08-22",
+      "date": "2026-08-31",
       "verbatim": "Support response times are slow."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-08-03"
+      "next_billing": "2027-08-12"
     },
     "_health_label": "at_risk"
   },
   {
-    "id": "2052ca3b-f2d5-4653-8cf2-342f4878e735",
+    "id": "ac13fb4f-23ef-4873-bf7a-8dd2d1fa30ce",
     "company_name": "FluxOps",
     "contact_email": "cto@fluxops.com",
     "contact_name": "Alex Kim",
@@ -160,8 +160,8 @@
     "tier": "growth",
     "mrr": 2435,
     "industry": "Retail",
-    "renewal_date": "2027-10-03",
-    "contract_start": "2025-02-01",
+    "renewal_date": "2027-10-12",
+    "contract_start": "2025-02-10",
     "usage": {
       "dau_30d_avg": 122,
       "dau_current": 158,
@@ -179,18 +179,18 @@
     },
     "nps": {
       "score": 10,
-      "date": "2026-07-17",
+      "date": "2026-07-26",
       "verbatim": "The team loves it, easy to use."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-07-30"
+      "next_billing": "2027-08-08"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "a4edc4dc-6dec-4d4d-854c-1eaf9bbd49a4",
+    "id": "28a39d10-0913-4255-922b-234f351fd797",
     "company_name": "ApexConnect",
     "contact_email": "ops@apexconnect.com",
     "contact_name": "Taylor Kim",
@@ -198,8 +198,8 @@
     "tier": "starter",
     "mrr": 423,
     "industry": "HR",
-    "renewal_date": "2027-01-19",
-    "contract_start": "2024-11-06",
+    "renewal_date": "2027-01-28",
+    "contract_start": "2024-11-15",
     "usage": {
       "dau_30d_avg": 403,
       "dau_current": 466,
@@ -217,18 +217,18 @@
     },
     "nps": {
       "score": 10,
-      "date": "2026-08-28",
+      "date": "2026-09-06",
       "verbatim": "Great product, saves us hours every week."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-04-29"
+      "next_billing": "2027-05-08"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "f0ba4b58-5007-44fa-9759-6ca740a4288b",
+    "id": "bdd5974f-21e3-4506-8eaa-bbd0574704d0",
     "company_name": "PeakAnalytics",
     "contact_email": "success@peakanalytics.com",
     "contact_name": "Alex Kim",
@@ -236,8 +236,8 @@
     "tier": "starter",
     "mrr": 763,
     "industry": "Finance",
-    "renewal_date": "2027-07-19",
-    "contract_start": "2025-12-02",
+    "renewal_date": "2027-07-28",
+    "contract_start": "2025-12-11",
     "usage": {
       "dau_30d_avg": 175,
       "dau_current": 127,
@@ -255,18 +255,18 @@
     },
     "nps": {
       "score": 5,
-      "date": "2026-08-20",
+      "date": "2026-08-29",
       "verbatim": "Support response times are slow."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-08-26"
+      "next_billing": "2027-09-04"
     },
     "_health_label": "at_risk"
   },
   {
-    "id": "a2e1b275-06b5-4228-8bea-ed485fdcb918",
+    "id": "e364020b-60b9-4986-9345-c23afb9c3961",
     "company_name": "WaveWorks",
     "contact_email": "success@waveworks.com",
     "contact_name": "Taylor Kim",
@@ -274,8 +274,8 @@
     "tier": "starter",
     "mrr": 469,
     "industry": "Logistics",
-    "renewal_date": "2026-11-21",
-    "contract_start": "2025-04-28",
+    "renewal_date": "2026-11-30",
+    "contract_start": "2025-05-07",
     "usage": {
       "dau_30d_avg": 214,
       "dau_current": 277,
@@ -293,18 +293,18 @@
     },
     "nps": {
       "score": 10,
-      "date": "2026-09-13",
+      "date": "2026-09-22",
       "verbatim": "Exactly what we needed for our workflow."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-09-08"
+      "next_billing": "2027-09-17"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "add98e00-a377-4252-afee-0166483307c8",
+    "id": "642e18b0-e484-4f93-9d60-f886b4f8d90b",
     "company_name": "NovaWorks",
     "contact_email": "ops@novaworks.com",
     "contact_name": "Taylor Chen",
@@ -312,8 +312,8 @@
     "tier": "enterprise",
     "mrr": 3514,
     "industry": "Finance",
-    "renewal_date": "2026-12-08",
-    "contract_start": "2025-01-23",
+    "renewal_date": "2026-12-17",
+    "contract_start": "2025-02-01",
     "usage": {
       "dau_30d_avg": 273,
       "dau_current": 144,
@@ -331,18 +331,18 @@
     },
     "nps": {
       "score": 4,
-      "date": "2026-09-16",
+      "date": "2026-09-25",
       "verbatim": "Doesn't integrate well with our existing tools."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-05-14"
+      "next_billing": "2027-05-23"
     },
     "_health_label": "critical"
   },
   {
-    "id": "8d6bc557-d9e1-4545-9379-edad92e258d3",
+    "id": "70624748-48d0-44a7-8256-cebda04dbdbf",
     "company_name": "GridSuite",
     "contact_email": "admin@gridsuite.com",
     "contact_name": "Morgan Kim",
@@ -350,8 +350,8 @@
     "tier": "starter",
     "mrr": 344,
     "industry": "HR",
-    "renewal_date": "2026-10-27",
-    "contract_start": "2026-01-04",
+    "renewal_date": "2026-11-05",
+    "contract_start": "2026-01-13",
     "usage": {
       "dau_30d_avg": 284,
       "dau_current": 209,
@@ -369,18 +369,18 @@
     },
     "nps": {
       "score": 4,
-      "date": "2026-07-23",
+      "date": "2026-08-01",
       "verbatim": "Seriously considering switching to a competitor."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-05-13"
+      "next_billing": "2027-05-22"
     },
     "_health_label": "at_risk"
   },
   {
-    "id": "78ae2051-6bf5-48a4-abe3-6a2930d49ede",
+    "id": "70e09289-8d79-4b89-81b3-879a2ab1dca4",
     "company_name": "NovaTech",
     "contact_email": "ops@novatech.com",
     "contact_name": "Jordan Lee",
@@ -388,8 +388,8 @@
     "tier": "growth",
     "mrr": 1886,
     "industry": "Healthcare",
-    "renewal_date": "2027-08-12",
-    "contract_start": "2026-02-06",
+    "renewal_date": "2027-08-21",
+    "contract_start": "2026-02-15",
     "usage": {
       "dau_30d_avg": 156,
       "dau_current": 166,
@@ -407,18 +407,18 @@
     },
     "nps": {
       "score": 10,
-      "date": "2026-07-20",
+      "date": "2026-07-29",
       "verbatim": "Exactly what we needed for our workflow."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-01-08"
+      "next_billing": "2027-01-17"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "f708c3a3-a3d0-419d-b7b1-5f9ba16d3089",
+    "id": "d7e62cc5-bfb1-4eaa-81e1-ee4ee855ba70",
     "company_name": "NovaAnalytics",
     "contact_email": "success@novaanalytics.com",
     "contact_name": "Jordan Smith",
@@ -426,8 +426,8 @@
     "tier": "enterprise",
     "mrr": 6044,
     "industry": "Education",
-    "renewal_date": "2026-11-30",
-    "contract_start": "2025-02-04",
+    "renewal_date": "2026-12-09",
+    "contract_start": "2025-02-13",
     "usage": {
       "dau_30d_avg": 44,
       "dau_current": 51,
@@ -445,18 +445,18 @@
     },
     "nps": {
       "score": 7,
-      "date": "2026-08-13",
+      "date": "2026-08-22",
       "verbatim": "Good but missing a few features we need."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-03-04"
+      "next_billing": "2027-03-13"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "f86a4836-1772-4274-bc81-d574b11a1e21",
+    "id": "e1967952-08ec-4641-86c8-cda2e666e33b",
     "company_name": "VoltTech",
     "contact_email": "success@volttech.com",
     "contact_name": "Jordan Smith",
@@ -464,8 +464,8 @@
     "tier": "starter",
     "mrr": 473,
     "industry": "Retail",
-    "renewal_date": "2027-04-16",
-    "contract_start": "2026-01-29",
+    "renewal_date": "2027-04-25",
+    "contract_start": "2026-02-07",
     "usage": {
       "dau_30d_avg": 485,
       "dau_current": 321,
@@ -483,18 +483,18 @@
     },
     "nps": {
       "score": 4,
-      "date": "2026-07-15",
+      "date": "2026-07-24",
       "verbatim": "Doesn't integrate well with our existing tools."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-03-23"
+      "next_billing": "2027-04-01"
     },
     "_health_label": "at_risk"
   },
   {
-    "id": "644fca92-64fa-4a43-8994-d26324a2f58b",
+    "id": "970afe09-b316-4b5e-a354-57a3a5239d02",
     "company_name": "ApexConnect",
     "contact_email": "team@apexconnect.com",
     "contact_name": "Sam Smith",
@@ -502,8 +502,8 @@
     "tier": "starter",
     "mrr": 287,
     "industry": "Real Estate",
-    "renewal_date": "2027-02-01",
-    "contract_start": "2025-07-13",
+    "renewal_date": "2027-02-10",
+    "contract_start": "2025-07-22",
     "usage": {
       "dau_30d_avg": 145,
       "dau_current": 137,
@@ -521,18 +521,18 @@
     },
     "nps": {
       "score": 8,
-      "date": "2026-09-16",
+      "date": "2026-09-25",
       "verbatim": "Good but missing a few features we need."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-09-09"
+      "next_billing": "2027-09-18"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "c4f45231-6652-4e9a-a133-f876cb5cb5e9",
+    "id": "65ddc8f7-0a30-48c3-b48a-1091c550e007",
     "company_name": "WaveDesk",
     "contact_email": "success@wavedesk.com",
     "contact_name": "Taylor Smith",
@@ -540,8 +540,8 @@
     "tier": "growth",
     "mrr": 2166,
     "industry": "Finance",
-    "renewal_date": "2026-11-27",
-    "contract_start": "2025-11-08",
+    "renewal_date": "2026-12-06",
+    "contract_start": "2025-11-17",
     "usage": {
       "dau_30d_avg": 336,
       "dau_current": 434,
@@ -559,18 +559,18 @@
     },
     "nps": {
       "score": 10,
-      "date": "2026-07-29",
+      "date": "2026-08-07",
       "verbatim": "Great product, saves us hours every week."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2026-11-10"
+      "next_billing": "2026-11-19"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "bab89fef-1b20-491f-b454-507ec255b1b9",
+    "id": "51b8db6e-63d9-4884-bfff-e693c3659809",
     "company_name": "MeshHQ",
     "contact_email": "ops@meshhq.com",
     "contact_name": "Jordan Chen",
@@ -578,8 +578,8 @@
     "tier": "starter",
     "mrr": 365,
     "industry": "Retail",
-    "renewal_date": "2027-04-08",
-    "contract_start": "2025-02-12",
+    "renewal_date": "2027-04-17",
+    "contract_start": "2025-02-21",
     "usage": {
       "dau_30d_avg": 359,
       "dau_current": 282,
@@ -597,18 +597,18 @@
     },
     "nps": {
       "score": 5,
-      "date": "2026-08-19",
+      "date": "2026-08-28",
       "verbatim": "Having trouble getting the team to adopt it."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2026-12-14"
+      "next_billing": "2026-12-23"
     },
     "_health_label": "at_risk"
   },
   {
-    "id": "e0d256ae-9fe8-405d-9816-c8495dd7eb71",
+    "id": "f5644d35-ea28-4e50-9cfe-9740d1770f3e",
     "company_name": "VoltDesk",
     "contact_email": "admin@voltdesk.com",
     "contact_name": "Sam Lee",
@@ -616,8 +616,8 @@
     "tier": "enterprise",
     "mrr": 10711,
     "industry": "Manufacturing",
-    "renewal_date": "2027-04-17",
-    "contract_start": "2024-11-04",
+    "renewal_date": "2027-04-26",
+    "contract_start": "2024-11-13",
     "usage": {
       "dau_30d_avg": 428,
       "dau_current": 138,
@@ -635,18 +635,18 @@
     },
     "nps": {
       "score": 2,
-      "date": "2026-09-08",
+      "date": "2026-09-17",
       "verbatim": "Too many bugs, not reliable enough."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 2,
-      "next_billing": "2026-11-08"
+      "next_billing": "2026-11-17"
     },
     "_health_label": "critical"
   },
   {
-    "id": "de2e46df-61e5-4351-a785-986d5419ff34",
+    "id": "c7ed64d7-4d19-48f8-ae1b-8c22074d0513",
     "company_name": "ClearPlatform",
     "contact_email": "team@clearplatform.com",
     "contact_name": "Alex Chen",
@@ -654,8 +654,8 @@
     "tier": "growth",
     "mrr": 2084,
     "industry": "HR",
-    "renewal_date": "2027-07-22",
-    "contract_start": "2025-09-20",
+    "renewal_date": "2027-07-31",
+    "contract_start": "2025-09-29",
     "usage": {
       "dau_30d_avg": 320,
       "dau_current": 413,
@@ -673,18 +673,18 @@
     },
     "nps": {
       "score": 8,
-      "date": "2026-08-11",
+      "date": "2026-08-20",
       "verbatim": "Works fine, not blown away."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-03-29"
+      "next_billing": "2027-04-07"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "ce91bbad-caf9-4662-865d-e4d1885ee86e",
+    "id": "d609a59e-477f-48e0-8b21-46402594c871",
     "company_name": "ClearOps",
     "contact_email": "ops@clearops.com",
     "contact_name": "Morgan Smith",
@@ -692,8 +692,8 @@
     "tier": "starter",
     "mrr": 568,
     "industry": "Legal",
-    "renewal_date": "2027-07-27",
-    "contract_start": "2026-04-09",
+    "renewal_date": "2027-08-05",
+    "contract_start": "2026-04-18",
     "usage": {
       "dau_30d_avg": 177,
       "dau_current": 132,
@@ -711,18 +711,18 @@
     },
     "nps": {
       "score": 7,
-      "date": "2026-08-12",
+      "date": "2026-08-21",
       "verbatim": "Decent product, could use better reporting."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-06-03"
+      "next_billing": "2027-06-12"
     },
     "_health_label": "at_risk"
   },
   {
-    "id": "737638bc-76b2-4237-b97c-d18a3c340659",
+    "id": "e6833fa1-23c7-483f-9b49-2bd4a606eb79",
     "company_name": "PrismConnect",
     "contact_email": "cto@prismconnect.com",
     "contact_name": "Jordan Lee",
@@ -730,8 +730,8 @@
     "tier": "growth",
     "mrr": 1495,
     "industry": "Logistics",
-    "renewal_date": "2027-01-03",
-    "contract_start": "2026-03-15",
+    "renewal_date": "2027-01-12",
+    "contract_start": "2026-03-24",
     "usage": {
       "dau_30d_avg": 155,
       "dau_current": 171,
@@ -749,18 +749,18 @@
     },
     "nps": {
       "score": 9,
-      "date": "2026-09-13",
+      "date": "2026-09-22",
       "verbatim": "The team loves it, easy to use."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-05-20"
+      "next_billing": "2027-05-29"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "cb758240-f96e-4745-adc2-06acaeb1098f",
+    "id": "437c6cf3-e334-4a68-9f8f-f5e9e5dcf513",
     "company_name": "BoldOps",
     "contact_email": "ops@boldops.com",
     "contact_name": "Jordan Smith",
@@ -768,8 +768,8 @@
     "tier": "starter",
     "mrr": 399,
     "industry": "Healthcare",
-    "renewal_date": "2027-08-01",
-    "contract_start": "2025-07-28",
+    "renewal_date": "2027-08-10",
+    "contract_start": "2025-08-06",
     "usage": {
       "dau_30d_avg": 85,
       "dau_current": 98,
@@ -787,18 +787,18 @@
     },
     "nps": {
       "score": 10,
-      "date": "2026-07-25",
+      "date": "2026-08-03",
       "verbatim": "Exactly what we needed for our workflow."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-07-18"
+      "next_billing": "2027-07-27"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "9e28a166-a792-40c6-bfda-a9531513b216",
+    "id": "4e4a7dd7-ca7f-4d90-9834-7759cb2954af",
     "company_name": "GridSuite",
     "contact_email": "ops@gridsuite.com",
     "contact_name": "Sam Smith",
@@ -806,8 +806,8 @@
     "tier": "starter",
     "mrr": 586,
     "industry": "Logistics",
-    "renewal_date": "2027-03-09",
-    "contract_start": "2025-01-14",
+    "renewal_date": "2027-03-18",
+    "contract_start": "2025-01-23",
     "usage": {
       "dau_30d_avg": 435,
       "dau_current": 271,
@@ -825,18 +825,18 @@
     },
     "nps": {
       "score": 6,
-      "date": "2026-08-13",
+      "date": "2026-08-22",
       "verbatim": "Support response times are slow."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2026-11-30"
+      "next_billing": "2026-12-09"
     },
     "_health_label": "at_risk"
   },
   {
-    "id": "ef417b75-b6a5-45b5-97fc-765d0382f8b6",
+    "id": "ede3e383-31aa-4c3b-b82f-690c5632749d",
     "company_name": "SwiftTech",
     "contact_email": "admin@swifttech.com",
     "contact_name": "Alex Park",
@@ -844,8 +844,8 @@
     "tier": "growth",
     "mrr": 1425,
     "industry": "Legal",
-    "renewal_date": "2027-08-15",
-    "contract_start": "2026-03-20",
+    "renewal_date": "2027-08-24",
+    "contract_start": "2026-03-29",
     "usage": {
       "dau_30d_avg": 42,
       "dau_current": 44,
@@ -863,18 +863,18 @@
     },
     "nps": {
       "score": 10,
-      "date": "2026-08-08",
+      "date": "2026-08-17",
       "verbatim": "The team loves it, easy to use."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-05-07"
+      "next_billing": "2027-05-16"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "f2f7a496-4fb2-458c-9b2b-0f81b7c6005b",
+    "id": "e023b8c7-0ee4-47f1-b4a2-c9b376f61f60",
     "company_name": "WaveAnalytics",
     "contact_email": "team@waveanalytics.com",
     "contact_name": "Taylor Park",
@@ -882,8 +882,8 @@
     "tier": "starter",
     "mrr": 649,
     "industry": "Retail",
-    "renewal_date": "2027-09-03",
-    "contract_start": "2024-10-10",
+    "renewal_date": "2027-09-12",
+    "contract_start": "2024-10-19",
     "usage": {
       "dau_30d_avg": 122,
       "dau_current": 123,
@@ -901,18 +901,18 @@
     },
     "nps": {
       "score": 10,
-      "date": "2026-07-30",
+      "date": "2026-08-08",
       "verbatim": "Great product, saves us hours every week."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-06-13"
+      "next_billing": "2027-06-22"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "444e244e-2b56-4789-aae6-99f140f1d903",
+    "id": "9ceb63e5-0c8a-4009-a1ff-11799a5d6ef6",
     "company_name": "PeakSolutions",
     "contact_email": "cto@peaksolutions.com",
     "contact_name": "Morgan Kim",
@@ -920,8 +920,8 @@
     "tier": "growth",
     "mrr": 1666,
     "industry": "Logistics",
-    "renewal_date": "2027-09-17",
-    "contract_start": "2026-01-29",
+    "renewal_date": "2027-09-26",
+    "contract_start": "2026-02-07",
     "usage": {
       "dau_30d_avg": 177,
       "dau_current": 88,
@@ -939,18 +939,18 @@
     },
     "nps": {
       "score": 4,
-      "date": "2026-08-28",
+      "date": "2026-09-06",
       "verbatim": "Seriously considering switching to a competitor."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 1,
-      "next_billing": "2026-12-23"
+      "next_billing": "2027-01-01"
     },
     "_health_label": "critical"
   },
   {
-    "id": "80a0f40a-c64c-4804-b3f8-5989d18812f1",
+    "id": "29754d87-19f2-4732-9d3e-64b112655b3b",
     "company_name": "NexusConnect",
     "contact_email": "ops@nexusconnect.com",
     "contact_name": "Sam Kim",
@@ -958,8 +958,8 @@
     "tier": "enterprise",
     "mrr": 6571,
     "industry": "Manufacturing",
-    "renewal_date": "2027-08-10",
-    "contract_start": "2025-03-21",
+    "renewal_date": "2027-08-19",
+    "contract_start": "2025-03-30",
     "usage": {
       "dau_30d_avg": 402,
       "dau_current": 421,
@@ -977,18 +977,18 @@
     },
     "nps": {
       "score": 7,
-      "date": "2026-08-22",
+      "date": "2026-08-31",
       "verbatim": "Good but missing a few features we need."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-03-23"
+      "next_billing": "2027-04-01"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "f2496dcb-db57-49c9-8ae0-b896e16a80d9",
+    "id": "c15341c6-a4c4-499c-8e73-bfda2aff2478",
     "company_name": "ClearSuite",
     "contact_email": "cto@clearsuite.com",
     "contact_name": "Taylor Chen",
@@ -996,8 +996,8 @@
     "tier": "starter",
     "mrr": 695,
     "industry": "Legal",
-    "renewal_date": "2027-04-23",
-    "contract_start": "2024-12-25",
+    "renewal_date": "2027-05-02",
+    "contract_start": "2025-01-03",
     "usage": {
       "dau_30d_avg": 229,
       "dau_current": 266,
@@ -1015,18 +1015,18 @@
     },
     "nps": {
       "score": 9,
-      "date": "2026-08-19",
+      "date": "2026-08-28",
       "verbatim": "Exactly what we needed for our workflow."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-07-22"
+      "next_billing": "2027-07-31"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "381410c6-06ef-473c-ab57-8624fe2b9df9",
+    "id": "221aa220-84be-4e89-9b82-dfd68290f826",
     "company_name": "NexusIO",
     "contact_email": "team@nexusio.com",
     "contact_name": "Alex Chen",
@@ -1034,8 +1034,8 @@
     "tier": "growth",
     "mrr": 1899,
     "industry": "Retail",
-    "renewal_date": "2027-06-26",
-    "contract_start": "2025-09-04",
+    "renewal_date": "2027-07-05",
+    "contract_start": "2025-09-13",
     "usage": {
       "dau_30d_avg": 446,
       "dau_current": 351,
@@ -1053,18 +1053,18 @@
     },
     "nps": {
       "score": 7,
-      "date": "2026-07-08",
+      "date": "2026-07-17",
       "verbatim": "Works fine, not blown away."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-03-10"
+      "next_billing": "2027-03-19"
     },
     "_health_label": "at_risk"
   },
   {
-    "id": "2d90c715-8905-4a88-b9c2-74e7f93b96c6",
+    "id": "09a86ce7-efb3-4eef-959d-69ded30b518b",
     "company_name": "ApexAnalytics",
     "contact_email": "admin@apexanalytics.com",
     "contact_name": "Taylor Kim",
@@ -1072,8 +1072,8 @@
     "tier": "starter",
     "mrr": 566,
     "industry": "Manufacturing",
-    "renewal_date": "2027-02-10",
-    "contract_start": "2025-02-19",
+    "renewal_date": "2027-02-19",
+    "contract_start": "2025-02-28",
     "usage": {
       "dau_30d_avg": 260,
       "dau_current": 291,
@@ -1091,18 +1091,18 @@
     },
     "nps": {
       "score": 10,
-      "date": "2026-07-24",
+      "date": "2026-08-02",
       "verbatim": "Exactly what we needed for our workflow."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-07-18"
+      "next_billing": "2027-07-27"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "49fcde1f-4cc3-4aaa-8841-3cac057264f4",
+    "id": "fe3354b9-3434-46c4-bd32-808905d27baf",
     "company_name": "SpanCloud",
     "contact_email": "cto@spancloud.com",
     "contact_name": "Jordan Lee",
@@ -1110,8 +1110,8 @@
     "tier": "starter",
     "mrr": 510,
     "industry": "HR",
-    "renewal_date": "2027-01-22",
-    "contract_start": "2025-09-25",
+    "renewal_date": "2027-01-31",
+    "contract_start": "2025-10-04",
     "usage": {
       "dau_30d_avg": 369,
       "dau_current": 399,
@@ -1129,18 +1129,18 @@
     },
     "nps": {
       "score": 8,
-      "date": "2026-07-17",
+      "date": "2026-07-26",
       "verbatim": "Works fine, not blown away."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-03-13"
+      "next_billing": "2027-03-22"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "89dd166a-9047-43bd-ba31-d4aed7c56320",
+    "id": "b6a2f4cd-7da7-4465-a7f3-e120a457b6d8",
     "company_name": "ClearDesk",
     "contact_email": "ops@cleardesk.com",
     "contact_name": "Taylor Kim",
@@ -1148,8 +1148,8 @@
     "tier": "enterprise",
     "mrr": 6727,
     "industry": "Education",
-    "renewal_date": "2027-03-14",
-    "contract_start": "2024-12-15",
+    "renewal_date": "2027-03-23",
+    "contract_start": "2024-12-24",
     "usage": {
       "dau_30d_avg": 164,
       "dau_current": 138,
@@ -1167,18 +1167,18 @@
     },
     "nps": {
       "score": 6,
-      "date": "2026-08-21",
+      "date": "2026-08-30",
       "verbatim": "The interface is confusing for new users."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2026-12-17"
+      "next_billing": "2026-12-26"
     },
     "_health_label": "at_risk"
   },
   {
-    "id": "e261fd91-56b4-49ab-9f30-0b3779753f09",
+    "id": "afb1ec27-80e7-4605-a6c6-ed131b4d5fa3",
     "company_name": "BrightCloud",
     "contact_email": "cto@brightcloud.com",
     "contact_name": "Morgan Chen",
@@ -1186,8 +1186,8 @@
     "tier": "growth",
     "mrr": 1019,
     "industry": "HR",
-    "renewal_date": "2027-05-02",
-    "contract_start": "2025-01-03",
+    "renewal_date": "2027-05-11",
+    "contract_start": "2025-01-12",
     "usage": {
       "dau_30d_avg": 86,
       "dau_current": 105,
@@ -1205,18 +1205,18 @@
     },
     "nps": {
       "score": 8,
-      "date": "2026-09-15",
+      "date": "2026-09-24",
       "verbatim": "Works fine, not blown away."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2026-12-09"
+      "next_billing": "2026-12-18"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "793ba68d-1899-4fe1-8297-834006275724",
+    "id": "9214c100-bc84-474d-a9fc-956b4f58a738",
     "company_name": "BoldConnect",
     "contact_email": "team@boldconnect.com",
     "contact_name": "Alex Park",
@@ -1224,8 +1224,8 @@
     "tier": "growth",
     "mrr": 1132,
     "industry": "Manufacturing",
-    "renewal_date": "2027-06-09",
-    "contract_start": "2026-01-27",
+    "renewal_date": "2027-06-18",
+    "contract_start": "2026-02-05",
     "usage": {
       "dau_30d_avg": 132,
       "dau_current": 72,
@@ -1243,18 +1243,18 @@
     },
     "nps": {
       "score": 4,
-      "date": "2026-07-09",
+      "date": "2026-07-18",
       "verbatim": "Doesn't integrate well with our existing tools."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 3,
-      "next_billing": "2026-12-17"
+      "next_billing": "2026-12-26"
     },
     "_health_label": "critical"
   },
   {
-    "id": "88ccfc90-f495-4509-8fd1-65bc539be7fd",
+    "id": "381db51c-b48d-46fa-bf0e-4d39a48c55a4",
     "company_name": "CoreConnect",
     "contact_email": "cto@coreconnect.com",
     "contact_name": "Taylor Lee",
@@ -1262,8 +1262,8 @@
     "tier": "enterprise",
     "mrr": 7352,
     "industry": "Manufacturing",
-    "renewal_date": "2027-07-03",
-    "contract_start": "2024-11-20",
+    "renewal_date": "2027-07-12",
+    "contract_start": "2024-11-29",
     "usage": {
       "dau_30d_avg": 40,
       "dau_current": 32,
@@ -1281,18 +1281,18 @@
     },
     "nps": {
       "score": 7,
-      "date": "2026-08-12",
+      "date": "2026-08-21",
       "verbatim": "Works fine, not blown away."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-02-25"
+      "next_billing": "2027-03-06"
     },
     "_health_label": "at_risk"
   },
   {
-    "id": "ffb36def-3557-479a-9bf6-854f3d3faa10",
+    "id": "26839d8d-cdc7-4dd6-a256-73b36817251a",
     "company_name": "ApexSystems",
     "contact_email": "team@apexsystems.com",
     "contact_name": "Jordan Smith",
@@ -1300,8 +1300,8 @@
     "tier": "growth",
     "mrr": 884,
     "industry": "Marketing",
-    "renewal_date": "2026-12-05",
-    "contract_start": "2024-12-14",
+    "renewal_date": "2026-12-14",
+    "contract_start": "2024-12-23",
     "usage": {
       "dau_30d_avg": 305,
       "dau_current": 279,
@@ -1319,18 +1319,18 @@
     },
     "nps": {
       "score": 10,
-      "date": "2026-09-02",
+      "date": "2026-09-11",
       "verbatim": "The team loves it, easy to use."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-05-18"
+      "next_billing": "2027-05-27"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "7e7d2170-0d42-4920-8c46-7d67f9fa6ed0",
+    "id": "87278fcd-fecf-4db3-8313-de1e0dd76893",
     "company_name": "NexusLabs",
     "contact_email": "success@nexuslabs.com",
     "contact_name": "Alex Smith",
@@ -1338,8 +1338,8 @@
     "tier": "starter",
     "mrr": 615,
     "industry": "Legal",
-    "renewal_date": "2026-11-16",
-    "contract_start": "2025-09-29",
+    "renewal_date": "2026-11-25",
+    "contract_start": "2025-10-08",
     "usage": {
       "dau_30d_avg": 55,
       "dau_current": 56,
@@ -1357,18 +1357,18 @@
     },
     "nps": {
       "score": 10,
-      "date": "2026-09-16",
+      "date": "2026-09-25",
       "verbatim": "Great product, saves us hours every week."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-03-05"
+      "next_billing": "2027-03-14"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "c1ef3b88-f474-4c65-bcb2-bb3ea1268221",
+    "id": "f8448ebe-6658-4ca7-8af1-24ad18da26d0",
     "company_name": "SwiftHub",
     "contact_email": "success@swifthub.com",
     "contact_name": "Alex Smith",
@@ -1376,8 +1376,8 @@
     "tier": "growth",
     "mrr": 2785,
     "industry": "Finance",
-    "renewal_date": "2027-02-12",
-    "contract_start": "2025-12-14",
+    "renewal_date": "2027-02-21",
+    "contract_start": "2025-12-23",
     "usage": {
       "dau_30d_avg": 24,
       "dau_current": 14,
@@ -1395,18 +1395,18 @@
     },
     "nps": {
       "score": 6,
-      "date": "2026-08-16",
+      "date": "2026-08-25",
       "verbatim": "Support response times are slow."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-03-08"
+      "next_billing": "2027-03-17"
     },
     "_health_label": "at_risk"
   },
   {
-    "id": "4aec003b-c1d0-473d-90d6-b305cd908d87",
+    "id": "1f7607ad-bebc-42fe-b144-b085f7b81204",
     "company_name": "WaveDesk",
     "contact_email": "cto@wavedesk.com",
     "contact_name": "Sam Chen",
@@ -1414,8 +1414,8 @@
     "tier": "growth",
     "mrr": 1798,
     "industry": "HR",
-    "renewal_date": "2027-03-05",
-    "contract_start": "2026-04-07",
+    "renewal_date": "2027-03-14",
+    "contract_start": "2026-04-16",
     "usage": {
       "dau_30d_avg": 292,
       "dau_current": 279,
@@ -1433,18 +1433,18 @@
     },
     "nps": {
       "score": 8,
-      "date": "2026-07-22",
+      "date": "2026-07-31",
       "verbatim": "Good but missing a few features we need."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-06-05"
+      "next_billing": "2027-06-14"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "4d48967e-5304-404c-87d8-f5f8060d418f",
+    "id": "ce323b62-9414-4494-a000-43cc046720e5",
     "company_name": "NexusHQ",
     "contact_email": "success@nexushq.com",
     "contact_name": "Taylor Park",
@@ -1452,8 +1452,8 @@
     "tier": "growth",
     "mrr": 2345,
     "industry": "Healthcare",
-    "renewal_date": "2027-03-31",
-    "contract_start": "2024-12-11",
+    "renewal_date": "2027-04-09",
+    "contract_start": "2024-12-20",
     "usage": {
       "dau_30d_avg": 487,
       "dau_current": 500,
@@ -1471,18 +1471,18 @@
     },
     "nps": {
       "score": 8,
-      "date": "2026-09-03",
+      "date": "2026-09-12",
       "verbatim": "Decent product, could use better reporting."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2026-11-07"
+      "next_billing": "2026-11-16"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "36a1ab24-75f4-4dc3-94d3-2870432e5cde",
+    "id": "4a846c44-bc7b-425c-aac5-b25196870003",
     "company_name": "SwiftAnalytics",
     "contact_email": "cto@swiftanalytics.com",
     "contact_name": "Taylor Lee",
@@ -1490,8 +1490,8 @@
     "tier": "starter",
     "mrr": 600,
     "industry": "Education",
-    "renewal_date": "2027-05-11",
-    "contract_start": "2026-01-17",
+    "renewal_date": "2027-05-20",
+    "contract_start": "2026-01-26",
     "usage": {
       "dau_30d_avg": 61,
       "dau_current": 43,
@@ -1509,18 +1509,18 @@
     },
     "nps": {
       "score": 5,
-      "date": "2026-07-22",
+      "date": "2026-07-31",
       "verbatim": "Support response times are slow."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2026-11-07"
+      "next_billing": "2026-11-16"
     },
     "_health_label": "at_risk"
   },
   {
-    "id": "6819b499-63f5-45ad-90f9-045f0419eceb",
+    "id": "3d039fbf-dc50-4e05-86ad-deb8a5b5ed27",
     "company_name": "BrightWorks",
     "contact_email": "cto@brightworks.com",
     "contact_name": "Alex Lee",
@@ -1528,8 +1528,8 @@
     "tier": "starter",
     "mrr": 242,
     "industry": "Manufacturing",
-    "renewal_date": "2027-04-21",
-    "contract_start": "2025-03-22",
+    "renewal_date": "2027-04-30",
+    "contract_start": "2025-03-31",
     "usage": {
       "dau_30d_avg": 232,
       "dau_current": 71,
@@ -1547,18 +1547,18 @@
     },
     "nps": {
       "score": 3,
-      "date": "2026-08-30",
+      "date": "2026-09-08",
       "verbatim": "Seriously considering switching to a competitor."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-08-28"
+      "next_billing": "2027-09-06"
     },
     "_health_label": "critical"
   },
   {
-    "id": "49be76ba-c5e9-4133-bdf1-bc547d0b19b7",
+    "id": "97d06831-f102-42d9-a3df-9266388b5d4e",
     "company_name": "VoltPlatform",
     "contact_email": "admin@voltplatform.com",
     "contact_name": "Sam Smith",
@@ -1566,8 +1566,8 @@
     "tier": "starter",
     "mrr": 387,
     "industry": "Finance",
-    "renewal_date": "2027-06-03",
-    "contract_start": "2025-04-21",
+    "renewal_date": "2027-06-12",
+    "contract_start": "2025-04-30",
     "usage": {
       "dau_30d_avg": 246,
       "dau_current": 284,
@@ -1585,18 +1585,18 @@
     },
     "nps": {
       "score": 7,
-      "date": "2026-08-15",
+      "date": "2026-08-24",
       "verbatim": "Good but missing a few features we need."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-05-04"
+      "next_billing": "2027-05-13"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "24f35cde-899d-4e5f-b710-e2c43728e06b",
+    "id": "8b205d2f-1211-46b1-be11-846b70254b44",
     "company_name": "NexusSystems",
     "contact_email": "success@nexussystems.com",
     "contact_name": "Alex Smith",
@@ -1604,8 +1604,8 @@
     "tier": "growth",
     "mrr": 2270,
     "industry": "Manufacturing",
-    "renewal_date": "2027-02-14",
-    "contract_start": "2025-04-14",
+    "renewal_date": "2027-02-23",
+    "contract_start": "2025-04-23",
     "usage": {
       "dau_30d_avg": 161,
       "dau_current": 96,
@@ -1623,18 +1623,18 @@
     },
     "nps": {
       "score": 4,
-      "date": "2026-09-05",
+      "date": "2026-09-14",
       "verbatim": "Doesn't integrate well with our existing tools."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2026-12-08"
+      "next_billing": "2026-12-17"
     },
     "_health_label": "at_risk"
   },
   {
-    "id": "acea8cf8-3fef-4f8d-9ea8-ead84497a71d",
+    "id": "16a1ced2-f0ef-4e88-9069-d01614c85ae2",
     "company_name": "NovaLabs",
     "contact_email": "ops@novalabs.com",
     "contact_name": "Jordan Park",
@@ -1642,8 +1642,8 @@
     "tier": "starter",
     "mrr": 284,
     "industry": "HR",
-    "renewal_date": "2027-07-03",
-    "contract_start": "2025-07-04",
+    "renewal_date": "2027-07-12",
+    "contract_start": "2025-07-13",
     "usage": {
       "dau_30d_avg": 56,
       "dau_current": 70,
@@ -1661,18 +1661,18 @@
     },
     "nps": {
       "score": 10,
-      "date": "2026-08-16",
+      "date": "2026-08-25",
       "verbatim": "Exactly what we needed for our workflow."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-04-11"
+      "next_billing": "2027-04-20"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "672cab64-7f3a-45ef-8a89-ce672fffd606",
+    "id": "00cd8372-a72c-4ee5-afd7-160413bd17b1",
     "company_name": "ClearIO",
     "contact_email": "cto@cleario.com",
     "contact_name": "Sam Smith",
@@ -1680,8 +1680,8 @@
     "tier": "starter",
     "mrr": 556,
     "industry": "Marketing",
-    "renewal_date": "2027-04-26",
-    "contract_start": "2025-07-15",
+    "renewal_date": "2027-05-05",
+    "contract_start": "2025-07-24",
     "usage": {
       "dau_30d_avg": 443,
       "dau_current": 541,
@@ -1699,18 +1699,18 @@
     },
     "nps": {
       "score": 10,
-      "date": "2026-08-24",
+      "date": "2026-09-02",
       "verbatim": "The team loves it, easy to use."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2026-11-01"
+      "next_billing": "2026-11-10"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "50d3fcec-c015-4005-bbaa-6ac1ffef0021",
+    "id": "361e7508-d972-4bd0-b444-7992821d2388",
     "company_name": "GridHub",
     "contact_email": "cto@gridhub.com",
     "contact_name": "Alex Lee",
@@ -1718,8 +1718,8 @@
     "tier": "starter",
     "mrr": 800,
     "industry": "Finance",
-    "renewal_date": "2026-12-08",
-    "contract_start": "2025-08-12",
+    "renewal_date": "2026-12-17",
+    "contract_start": "2025-08-21",
     "usage": {
       "dau_30d_avg": 431,
       "dau_current": 316,
@@ -1737,18 +1737,18 @@
     },
     "nps": {
       "score": 5,
-      "date": "2026-07-15",
+      "date": "2026-07-24",
       "verbatim": "The interface is confusing for new users."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-08-16"
+      "next_billing": "2027-08-25"
     },
     "_health_label": "at_risk"
   },
   {
-    "id": "b4aa6f55-34e3-492d-b04f-b45efd0f936f",
+    "id": "3de9e63c-f371-4203-8a1d-18d112c7fd18",
     "company_name": "SwiftHub",
     "contact_email": "ops@swifthub.com",
     "contact_name": "Taylor Chen",
@@ -1756,8 +1756,8 @@
     "tier": "growth",
     "mrr": 2804,
     "industry": "Real Estate",
-    "renewal_date": "2026-12-09",
-    "contract_start": "2025-03-29",
+    "renewal_date": "2026-12-18",
+    "contract_start": "2025-04-07",
     "usage": {
       "dau_30d_avg": 218,
       "dau_current": 278,
@@ -1775,18 +1775,18 @@
     },
     "nps": {
       "score": 9,
-      "date": "2026-08-18",
+      "date": "2026-08-27",
       "verbatim": "Great product, saves us hours every week."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2026-12-21"
+      "next_billing": "2026-12-30"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "d9d32bd3-4a1b-48aa-b7f6-a6f47c2e1026",
+    "id": "790bc984-1cd3-43f8-948a-16cb45a316cc",
     "company_name": "PrismSystems",
     "contact_email": "cto@prismsystems.com",
     "contact_name": "Morgan Park",
@@ -1794,8 +1794,8 @@
     "tier": "starter",
     "mrr": 201,
     "industry": "Logistics",
-    "renewal_date": "2027-04-06",
-    "contract_start": "2025-11-09",
+    "renewal_date": "2027-04-15",
+    "contract_start": "2025-11-18",
     "usage": {
       "dau_30d_avg": 412,
       "dau_current": 425,
@@ -1813,18 +1813,18 @@
     },
     "nps": {
       "score": 8,
-      "date": "2026-09-06",
+      "date": "2026-09-15",
       "verbatim": "Works fine, not blown away."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-02-25"
+      "next_billing": "2027-03-06"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "b162f3a6-038d-46b0-9dae-6b0142370339",
+    "id": "cb0b552a-1c76-4a1c-9ba1-95dc2c0e0b63",
     "company_name": "PeakSystems",
     "contact_email": "cto@peaksystems.com",
     "contact_name": "Jordan Chen",
@@ -1832,8 +1832,8 @@
     "tier": "starter",
     "mrr": 165,
     "industry": "Finance",
-    "renewal_date": "2027-06-20",
-    "contract_start": "2025-01-05",
+    "renewal_date": "2027-06-29",
+    "contract_start": "2025-01-14",
     "usage": {
       "dau_30d_avg": 193,
       "dau_current": 70,
@@ -1851,18 +1851,18 @@
     },
     "nps": {
       "score": 3,
-      "date": "2026-07-20",
+      "date": "2026-07-29",
       "verbatim": "Seriously considering switching to a competitor."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 2,
-      "next_billing": "2027-06-11"
+      "next_billing": "2027-06-20"
     },
     "_health_label": "critical"
   },
   {
-    "id": "04906e5b-853e-4540-8247-0c43783155ad",
+    "id": "e83682ea-b939-4516-82e9-7eb2a1d25878",
     "company_name": "ApexSolutions",
     "contact_email": "team@apexsolutions.com",
     "contact_name": "Morgan Park",
@@ -1870,8 +1870,8 @@
     "tier": "starter",
     "mrr": 260,
     "industry": "Retail",
-    "renewal_date": "2027-03-09",
-    "contract_start": "2025-05-12",
+    "renewal_date": "2027-03-18",
+    "contract_start": "2025-05-21",
     "usage": {
       "dau_30d_avg": 261,
       "dau_current": 309,
@@ -1889,18 +1889,18 @@
     },
     "nps": {
       "score": 7,
-      "date": "2026-07-29",
+      "date": "2026-08-07",
       "verbatim": "Good but missing a few features we need."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2026-12-17"
+      "next_billing": "2026-12-26"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "fbbf1789-de3e-448e-a956-b97f0d6bab90",
+    "id": "c8cebf0d-341d-49a0-9b0b-9188ec0604d8",
     "company_name": "BoldCloud",
     "contact_email": "team@boldcloud.com",
     "contact_name": "Taylor Lee",
@@ -1908,8 +1908,8 @@
     "tier": "growth",
     "mrr": 2494,
     "industry": "Real Estate",
-    "renewal_date": "2027-01-06",
-    "contract_start": "2024-12-10",
+    "renewal_date": "2027-01-15",
+    "contract_start": "2024-12-19",
     "usage": {
       "dau_30d_avg": 433,
       "dau_current": 468,
@@ -1927,18 +1927,18 @@
     },
     "nps": {
       "score": 7,
-      "date": "2026-08-06",
+      "date": "2026-08-15",
       "verbatim": "Good but missing a few features we need."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-07-31"
+      "next_billing": "2027-08-09"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "93a1be60-5012-4def-8f0b-efb0d190964e",
+    "id": "f7d0fdf4-f1ab-4b13-9f6f-11673023fa8c",
     "company_name": "NovaPlatform",
     "contact_email": "success@novaplatform.com",
     "contact_name": "Sam Lee",
@@ -1946,8 +1946,8 @@
     "tier": "starter",
     "mrr": 275,
     "industry": "Education",
-    "renewal_date": "2027-07-06",
-    "contract_start": "2025-09-04",
+    "renewal_date": "2027-07-15",
+    "contract_start": "2025-09-13",
     "usage": {
       "dau_30d_avg": 220,
       "dau_current": 167,
@@ -1965,18 +1965,18 @@
     },
     "nps": {
       "score": 6,
-      "date": "2026-08-09",
+      "date": "2026-08-18",
       "verbatim": "Support response times are slow."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-04-26"
+      "next_billing": "2027-05-05"
     },
     "_health_label": "at_risk"
   },
   {
-    "id": "3bc55d88-6c16-4421-b17b-33f37f613f87",
+    "id": "0c028cee-0c9e-4a5b-8055-2469f3d890b2",
     "company_name": "ClearSuite",
     "contact_email": "success@clearsuite.com",
     "contact_name": "Sam Kim",
@@ -1984,8 +1984,8 @@
     "tier": "growth",
     "mrr": 2557,
     "industry": "Manufacturing",
-    "renewal_date": "2027-03-27",
-    "contract_start": "2025-04-27",
+    "renewal_date": "2027-04-05",
+    "contract_start": "2025-05-06",
     "usage": {
       "dau_30d_avg": 402,
       "dau_current": 493,
@@ -2003,18 +2003,18 @@
     },
     "nps": {
       "score": 7,
-      "date": "2026-08-02",
+      "date": "2026-08-11",
       "verbatim": "Good but missing a few features we need."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2026-12-31"
+      "next_billing": "2027-01-09"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "4d039dd3-e4b1-43e2-8c63-7d6656835e7f",
+    "id": "82860799-fcfa-4d90-8ea0-b8ee98823bf4",
     "company_name": "ApexSystems",
     "contact_email": "success@apexsystems.com",
     "contact_name": "Morgan Kim",
@@ -2022,8 +2022,8 @@
     "tier": "starter",
     "mrr": 579,
     "industry": "Retail",
-    "renewal_date": "2027-01-08",
-    "contract_start": "2026-02-18",
+    "renewal_date": "2027-01-17",
+    "contract_start": "2026-02-27",
     "usage": {
       "dau_30d_avg": 242,
       "dau_current": 250,
@@ -2041,18 +2041,18 @@
     },
     "nps": {
       "score": 9,
-      "date": "2026-07-22",
+      "date": "2026-07-31",
       "verbatim": "Exactly what we needed for our workflow."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-06-03"
+      "next_billing": "2027-06-12"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "59c49f46-a4a1-4986-95dd-42ec543a196e",
+    "id": "69e4864c-dbe1-4d65-a59f-38806da3848b",
     "company_name": "WaveLabs",
     "contact_email": "ops@wavelabs.com",
     "contact_name": "Taylor Smith",
@@ -2060,8 +2060,8 @@
     "tier": "growth",
     "mrr": 1266,
     "industry": "Healthcare",
-    "renewal_date": "2027-02-01",
-    "contract_start": "2025-06-05",
+    "renewal_date": "2027-02-10",
+    "contract_start": "2025-06-14",
     "usage": {
       "dau_30d_avg": 230,
       "dau_current": 189,
@@ -2079,18 +2079,18 @@
     },
     "nps": {
       "score": 4,
-      "date": "2026-08-12",
+      "date": "2026-08-21",
       "verbatim": "Seriously considering switching to a competitor."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2026-10-23"
+      "next_billing": "2026-11-01"
     },
     "_health_label": "at_risk"
   },
   {
-    "id": "49ddcccd-ec3a-43ef-859d-0f60ca4bd271",
+    "id": "17f26ac3-31fa-413a-8a7d-66ab8da7f331",
     "company_name": "NexusOps",
     "contact_email": "cto@nexusops.com",
     "contact_name": "Taylor Kim",
@@ -2098,8 +2098,8 @@
     "tier": "growth",
     "mrr": 2357,
     "industry": "Healthcare",
-    "renewal_date": "2027-06-12",
-    "contract_start": "2026-01-20",
+    "renewal_date": "2027-06-21",
+    "contract_start": "2026-01-29",
     "usage": {
       "dau_30d_avg": 370,
       "dau_current": 367,
@@ -2117,18 +2117,18 @@
     },
     "nps": {
       "score": 9,
-      "date": "2026-07-31",
+      "date": "2026-08-09",
       "verbatim": "The team loves it, easy to use."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2026-12-17"
+      "next_billing": "2026-12-26"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "1a101dd8-731e-478a-80ca-5d23af9292e7",
+    "id": "64a6956a-1172-4e59-828b-754ddeb34fbf",
     "company_name": "VoltSolutions",
     "contact_email": "admin@voltsolutions.com",
     "contact_name": "Sam Lee",
@@ -2136,8 +2136,8 @@
     "tier": "starter",
     "mrr": 520,
     "industry": "Real Estate",
-    "renewal_date": "2027-01-14",
-    "contract_start": "2026-01-21",
+    "renewal_date": "2027-01-23",
+    "contract_start": "2026-01-30",
     "usage": {
       "dau_30d_avg": 55,
       "dau_current": 25,
@@ -2155,18 +2155,18 @@
     },
     "nps": {
       "score": 1,
-      "date": "2026-08-09",
+      "date": "2026-08-18",
       "verbatim": "Too many bugs, not reliable enough."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 1,
-      "next_billing": "2026-12-11"
+      "next_billing": "2026-12-20"
     },
     "_health_label": "critical"
   },
   {
-    "id": "b764d639-f407-4362-9975-9dc015ea9941",
+    "id": "6fd7ed1a-bd63-4e1e-bd38-d5b210885a79",
     "company_name": "SwiftLabs",
     "contact_email": "team@swiftlabs.com",
     "contact_name": "Jordan Chen",
@@ -2174,8 +2174,8 @@
     "tier": "enterprise",
     "mrr": 12869,
     "industry": "Marketing",
-    "renewal_date": "2027-06-03",
-    "contract_start": "2025-06-03",
+    "renewal_date": "2027-06-12",
+    "contract_start": "2025-06-12",
     "usage": {
       "dau_30d_avg": 100,
       "dau_current": 61,
@@ -2193,18 +2193,18 @@
     },
     "nps": {
       "score": 6,
-      "date": "2026-08-14",
+      "date": "2026-08-23",
       "verbatim": "The interface is confusing for new users."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-06-08"
+      "next_billing": "2027-06-17"
     },
     "_health_label": "at_risk"
   },
   {
-    "id": "86412c87-2cb1-432f-80b5-3435d6e27698",
+    "id": "b52b11db-6082-400a-92bc-0f57d6d167ea",
     "company_name": "NovaSolutions",
     "contact_email": "admin@novasolutions.com",
     "contact_name": "Morgan Park",
@@ -2212,8 +2212,8 @@
     "tier": "growth",
     "mrr": 1114,
     "industry": "Education",
-    "renewal_date": "2027-06-20",
-    "contract_start": "2024-11-12",
+    "renewal_date": "2027-06-29",
+    "contract_start": "2024-11-21",
     "usage": {
       "dau_30d_avg": 324,
       "dau_current": 368,
@@ -2231,18 +2231,18 @@
     },
     "nps": {
       "score": 7,
-      "date": "2026-08-10",
+      "date": "2026-08-19",
       "verbatim": "Works fine, not blown away."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2026-12-02"
+      "next_billing": "2026-12-11"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "a559946c-2b28-475d-b30b-b5c4cd5c2d9f",
+    "id": "162e9a58-d1f0-4ac2-a76a-2d2903c542e4",
     "company_name": "PeakSolutions",
     "contact_email": "admin@peaksolutions.com",
     "contact_name": "Taylor Lee",
@@ -2250,8 +2250,8 @@
     "tier": "growth",
     "mrr": 2599,
     "industry": "Real Estate",
-    "renewal_date": "2026-11-22",
-    "contract_start": "2025-05-07",
+    "renewal_date": "2026-12-01",
+    "contract_start": "2025-05-16",
     "usage": {
       "dau_30d_avg": 277,
       "dau_current": 316,
@@ -2269,18 +2269,18 @@
     },
     "nps": {
       "score": 9,
-      "date": "2026-09-03",
+      "date": "2026-09-12",
       "verbatim": "The team loves it, easy to use."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2026-11-30"
+      "next_billing": "2026-12-09"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "ca3f6c94-5fbe-4b78-86a5-6b8eb6f73bbd",
+    "id": "55d01df5-6746-41f7-ac26-d712603cedce",
     "company_name": "SwiftHub",
     "contact_email": "success@swifthub.com",
     "contact_name": "Alex Chen",
@@ -2288,8 +2288,8 @@
     "tier": "growth",
     "mrr": 2405,
     "industry": "Healthcare",
-    "renewal_date": "2027-04-23",
-    "contract_start": "2025-05-28",
+    "renewal_date": "2027-05-02",
+    "contract_start": "2025-06-06",
     "usage": {
       "dau_30d_avg": 314,
       "dau_current": 211,
@@ -2307,18 +2307,18 @@
     },
     "nps": {
       "score": 5,
-      "date": "2026-08-29",
+      "date": "2026-09-07",
       "verbatim": "Having trouble getting the team to adopt it."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2026-12-29"
+      "next_billing": "2027-01-07"
     },
     "_health_label": "at_risk"
   },
   {
-    "id": "923cbe45-bc8a-42c0-bbf2-ed5e9dbb0f7d",
+    "id": "6f2e8ce7-94e2-4118-a158-192d710bfa53",
     "company_name": "SwiftSystems",
     "contact_email": "success@swiftsystems.com",
     "contact_name": "Jordan Smith",
@@ -2326,8 +2326,8 @@
     "tier": "growth",
     "mrr": 2879,
     "industry": "Retail",
-    "renewal_date": "2027-01-11",
-    "contract_start": "2025-10-06",
+    "renewal_date": "2027-01-20",
+    "contract_start": "2025-10-15",
     "usage": {
       "dau_30d_avg": 437,
       "dau_current": 522,
@@ -2345,18 +2345,18 @@
     },
     "nps": {
       "score": 9,
-      "date": "2026-09-17",
+      "date": "2026-09-26",
       "verbatim": "The team loves it, easy to use."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-04-24"
+      "next_billing": "2027-05-03"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "e368344f-2b9f-46b8-9e27-6a776a6b8c44",
+    "id": "9a9fa815-e238-4e33-a49e-07e5289e16c5",
     "company_name": "CoreIO",
     "contact_email": "success@coreio.com",
     "contact_name": "Taylor Chen",
@@ -2364,8 +2364,8 @@
     "tier": "starter",
     "mrr": 696,
     "industry": "Legal",
-    "renewal_date": "2027-07-04",
-    "contract_start": "2024-10-16",
+    "renewal_date": "2027-07-13",
+    "contract_start": "2024-10-25",
     "usage": {
       "dau_30d_avg": 132,
       "dau_current": 135,
@@ -2383,18 +2383,18 @@
     },
     "nps": {
       "score": 9,
-      "date": "2026-09-05",
+      "date": "2026-09-14",
       "verbatim": "The team loves it, easy to use."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2026-11-15"
+      "next_billing": "2026-11-24"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "49dbf190-fabc-4c49-8274-75a0c2d28474",
+    "id": "9c8ee799-593e-41ad-8c6d-141cc43fd19f",
     "company_name": "NexusDesk",
     "contact_email": "cto@nexusdesk.com",
     "contact_name": "Jordan Chen",
@@ -2402,8 +2402,8 @@
     "tier": "growth",
     "mrr": 2913,
     "industry": "Healthcare",
-    "renewal_date": "2027-05-20",
-    "contract_start": "2026-02-14",
+    "renewal_date": "2027-05-29",
+    "contract_start": "2026-02-23",
     "usage": {
       "dau_30d_avg": 155,
       "dau_current": 128,
@@ -2421,18 +2421,18 @@
     },
     "nps": {
       "score": 7,
-      "date": "2026-08-06",
+      "date": "2026-08-15",
       "verbatim": "Good but missing a few features we need."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2026-11-03"
+      "next_billing": "2026-11-12"
     },
     "_health_label": "at_risk"
   },
   {
-    "id": "ad3a26ad-734c-4408-9b25-8cb2de06bd81",
+    "id": "ff7335f7-62be-4d72-9220-f03f1b8f1a3d",
     "company_name": "GridHub",
     "contact_email": "success@gridhub.com",
     "contact_name": "Alex Kim",
@@ -2440,8 +2440,8 @@
     "tier": "enterprise",
     "mrr": 14709,
     "industry": "Manufacturing",
-    "renewal_date": "2027-02-07",
-    "contract_start": "2025-11-07",
+    "renewal_date": "2027-02-16",
+    "contract_start": "2025-11-16",
     "usage": {
       "dau_30d_avg": 80,
       "dau_current": 47,
@@ -2459,18 +2459,18 @@
     },
     "nps": {
       "score": 4,
-      "date": "2026-08-17",
+      "date": "2026-08-26",
       "verbatim": "Seriously considering switching to a competitor."
     },
     "stripe": {
       "subscription_status": "past_due",
       "payment_failures_90d": 0,
-      "next_billing": "2026-11-13"
+      "next_billing": "2026-11-22"
     },
     "_health_label": "critical"
   },
   {
-    "id": "cde84f65-4ac4-48b9-ad0e-843a8f01d19b",
+    "id": "b0845bce-9364-4fd8-afe2-c25db700bb0d",
     "company_name": "CoreCloud",
     "contact_email": "success@corecloud.com",
     "contact_name": "Morgan Park",
@@ -2478,8 +2478,8 @@
     "tier": "starter",
     "mrr": 214,
     "industry": "Manufacturing",
-    "renewal_date": "2027-05-27",
-    "contract_start": "2026-04-08",
+    "renewal_date": "2027-06-05",
+    "contract_start": "2026-04-17",
     "usage": {
       "dau_30d_avg": 66,
       "dau_current": 81,
@@ -2497,18 +2497,18 @@
     },
     "nps": {
       "score": 7,
-      "date": "2026-09-12",
+      "date": "2026-09-21",
       "verbatim": "Works fine, not blown away."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-04-22"
+      "next_billing": "2027-05-01"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "752f514d-19a3-4bd2-a2e5-47d64411b5ea",
+    "id": "88fbad50-c04f-4c91-bc1b-818a77b5fc2e",
     "company_name": "BrightAnalytics",
     "contact_email": "cto@brightanalytics.com",
     "contact_name": "Sam Park",
@@ -2516,8 +2516,8 @@
     "tier": "growth",
     "mrr": 883,
     "industry": "Education",
-    "renewal_date": "2027-04-08",
-    "contract_start": "2025-11-24",
+    "renewal_date": "2027-04-17",
+    "contract_start": "2025-12-03",
     "usage": {
       "dau_30d_avg": 457,
       "dau_current": 334,
@@ -2535,18 +2535,18 @@
     },
     "nps": {
       "score": 6,
-      "date": "2026-08-31",
+      "date": "2026-09-09",
       "verbatim": "Support response times are slow."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-06-14"
+      "next_billing": "2027-06-23"
     },
     "_health_label": "at_risk"
   },
   {
-    "id": "f619242d-2318-40f0-9ee0-3f25ec511caf",
+    "id": "d297bf2f-fd1c-42ac-9c44-ee670f5246d2",
     "company_name": "NexusConnect",
     "contact_email": "team@nexusconnect.com",
     "contact_name": "Sam Smith",
@@ -2554,8 +2554,8 @@
     "tier": "enterprise",
     "mrr": 5209,
     "industry": "HR",
-    "renewal_date": "2027-06-19",
-    "contract_start": "2025-07-24",
+    "renewal_date": "2027-06-28",
+    "contract_start": "2025-08-02",
     "usage": {
       "dau_30d_avg": 28,
       "dau_current": 28,
@@ -2573,18 +2573,18 @@
     },
     "nps": {
       "score": 7,
-      "date": "2026-09-16",
+      "date": "2026-09-25",
       "verbatim": "Works fine, not blown away."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-04-07"
+      "next_billing": "2027-04-16"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "47b43ff7-5d13-44d2-8df6-b575452c790f",
+    "id": "a1dc7df9-32d2-4cbd-9b82-b04d4ee270e3",
     "company_name": "FluxSystems",
     "contact_email": "admin@fluxsystems.com",
     "contact_name": "Sam Smith",
@@ -2592,8 +2592,8 @@
     "tier": "starter",
     "mrr": 600,
     "industry": "Finance",
-    "renewal_date": "2027-05-25",
-    "contract_start": "2026-01-19",
+    "renewal_date": "2027-06-03",
+    "contract_start": "2026-01-28",
     "usage": {
       "dau_30d_avg": 468,
       "dau_current": 600,
@@ -2611,18 +2611,18 @@
     },
     "nps": {
       "score": 10,
-      "date": "2026-08-12",
+      "date": "2026-08-21",
       "verbatim": "Great product, saves us hours every week."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2026-11-29"
+      "next_billing": "2026-12-08"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "7f695dbe-b4cf-4697-827c-76d168ce4a6e",
+    "id": "906d7818-8227-4fea-99a1-a7ac53dd1d39",
     "company_name": "GridConnect",
     "contact_email": "cto@gridconnect.com",
     "contact_name": "Alex Chen",
@@ -2630,8 +2630,8 @@
     "tier": "growth",
     "mrr": 2545,
     "industry": "HR",
-    "renewal_date": "2027-10-02",
-    "contract_start": "2025-10-28",
+    "renewal_date": "2027-10-11",
+    "contract_start": "2025-11-06",
     "usage": {
       "dau_30d_avg": 363,
       "dau_current": 268,
@@ -2649,18 +2649,18 @@
     },
     "nps": {
       "score": 6,
-      "date": "2026-09-18",
+      "date": "2026-09-27",
       "verbatim": "Having trouble getting the team to adopt it."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2026-11-23"
+      "next_billing": "2026-12-02"
     },
     "_health_label": "at_risk"
   },
   {
-    "id": "49d66261-0dcd-44ee-baef-12b89bcb2b69",
+    "id": "251fee24-36ab-4713-a108-ddd4d62c40e3",
     "company_name": "CoreSuite",
     "contact_email": "team@coresuite.com",
     "contact_name": "Taylor Kim",
@@ -2668,8 +2668,8 @@
     "tier": "starter",
     "mrr": 730,
     "industry": "HR",
-    "renewal_date": "2027-04-25",
-    "contract_start": "2025-02-26",
+    "renewal_date": "2027-05-04",
+    "contract_start": "2025-03-07",
     "usage": {
       "dau_30d_avg": 26,
       "dau_current": 29,
@@ -2687,18 +2687,18 @@
     },
     "nps": {
       "score": 9,
-      "date": "2026-09-19",
+      "date": "2026-09-28",
       "verbatim": "Exactly what we needed for our workflow."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-01-23"
+      "next_billing": "2027-02-01"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "4fdef758-f9ef-4d61-8af8-a4d2cfd69691",
+    "id": "ed2574ba-4316-4160-9820-b71f977dba2b",
     "company_name": "NexusAnalytics",
     "contact_email": "admin@nexusanalytics.com",
     "contact_name": "Jordan Kim",
@@ -2706,8 +2706,8 @@
     "tier": "growth",
     "mrr": 1282,
     "industry": "Finance",
-    "renewal_date": "2027-06-08",
-    "contract_start": "2025-10-15",
+    "renewal_date": "2027-06-17",
+    "contract_start": "2025-10-24",
     "usage": {
       "dau_30d_avg": 406,
       "dau_current": 407,
@@ -2725,18 +2725,18 @@
     },
     "nps": {
       "score": 9,
-      "date": "2026-08-13",
+      "date": "2026-08-22",
       "verbatim": "Exactly what we needed for our workflow."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-04-15"
+      "next_billing": "2027-04-24"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "a0c2315d-affc-44b2-ade0-3b4fc8e9dbbf",
+    "id": "c80acd3c-15a1-4a4e-ad40-83fe29cc3c1c",
     "company_name": "BrightAnalytics",
     "contact_email": "admin@brightanalytics.com",
     "contact_name": "Alex Lee",
@@ -2744,8 +2744,8 @@
     "tier": "growth",
     "mrr": 1445,
     "industry": "Marketing",
-    "renewal_date": "2027-07-29",
-    "contract_start": "2025-11-28",
+    "renewal_date": "2027-08-07",
+    "contract_start": "2025-12-07",
     "usage": {
       "dau_30d_avg": 416,
       "dau_current": 204,
@@ -2763,18 +2763,18 @@
     },
     "nps": {
       "score": 2,
-      "date": "2026-07-23",
+      "date": "2026-08-01",
       "verbatim": "Doesn't integrate well with our existing tools."
     },
     "stripe": {
       "subscription_status": "past_due",
       "payment_failures_90d": 3,
-      "next_billing": "2027-08-10"
+      "next_billing": "2027-08-19"
     },
     "_health_label": "critical"
   },
   {
-    "id": "ff5e434a-9946-45a8-b089-8555452346dc",
+    "id": "c5a52dce-e302-41c4-a2bd-ea6ad29d4c5e",
     "company_name": "BrightTech",
     "contact_email": "ops@brighttech.com",
     "contact_name": "Taylor Smith",
@@ -2782,8 +2782,8 @@
     "tier": "starter",
     "mrr": 610,
     "industry": "Finance",
-    "renewal_date": "2027-07-12",
-    "contract_start": "2025-11-04",
+    "renewal_date": "2027-07-21",
+    "contract_start": "2025-11-13",
     "usage": {
       "dau_30d_avg": 248,
       "dau_current": 290,
@@ -2801,18 +2801,18 @@
     },
     "nps": {
       "score": 8,
-      "date": "2026-08-25",
+      "date": "2026-09-03",
       "verbatim": "Decent product, could use better reporting."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-07-12"
+      "next_billing": "2027-07-21"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "2fe6287d-8543-4859-9b0e-cc8f8a859f7a",
+    "id": "0c0921e8-0033-49fe-a86f-3d86f92849c3",
     "company_name": "MeshDesk",
     "contact_email": "success@meshdesk.com",
     "contact_name": "Morgan Park",
@@ -2820,8 +2820,8 @@
     "tier": "enterprise",
     "mrr": 6216,
     "industry": "Education",
-    "renewal_date": "2027-08-25",
-    "contract_start": "2025-04-29",
+    "renewal_date": "2027-09-03",
+    "contract_start": "2025-05-08",
     "usage": {
       "dau_30d_avg": 330,
       "dau_current": 336,
@@ -2839,18 +2839,18 @@
     },
     "nps": {
       "score": 8,
-      "date": "2026-09-19",
+      "date": "2026-09-28",
       "verbatim": "Good but missing a few features we need."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2026-11-12"
+      "next_billing": "2026-11-21"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "c52abe44-207a-4793-91cb-571fe4dc4469",
+    "id": "76c15002-9527-4066-9903-1575b31c9747",
     "company_name": "FluxConnect",
     "contact_email": "ops@fluxconnect.com",
     "contact_name": "Taylor Lee",
@@ -2858,8 +2858,8 @@
     "tier": "growth",
     "mrr": 2506,
     "industry": "Finance",
-    "renewal_date": "2026-11-19",
-    "contract_start": "2025-10-30",
+    "renewal_date": "2026-11-28",
+    "contract_start": "2025-11-08",
     "usage": {
       "dau_30d_avg": 337,
       "dau_current": 283,
@@ -2877,18 +2877,18 @@
     },
     "nps": {
       "score": 7,
-      "date": "2026-09-04",
+      "date": "2026-09-13",
       "verbatim": "Decent product, could use better reporting."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-04-01"
+      "next_billing": "2027-04-10"
     },
     "_health_label": "at_risk"
   },
   {
-    "id": "f68d0eda-53bc-486f-903c-aefe102a0cb1",
+    "id": "0960d7d2-1755-4a71-a7e3-349d774a5654",
     "company_name": "SpanCloud",
     "contact_email": "admin@spancloud.com",
     "contact_name": "Jordan Park",
@@ -2896,8 +2896,8 @@
     "tier": "enterprise",
     "mrr": 9070,
     "industry": "Healthcare",
-    "renewal_date": "2027-03-17",
-    "contract_start": "2025-03-12",
+    "renewal_date": "2027-03-26",
+    "contract_start": "2025-03-21",
     "usage": {
       "dau_30d_avg": 64,
       "dau_current": 65,
@@ -2915,18 +2915,18 @@
     },
     "nps": {
       "score": 9,
-      "date": "2026-09-02",
+      "date": "2026-09-11",
       "verbatim": "The team loves it, easy to use."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-08-11"
+      "next_billing": "2027-08-20"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "d73fdec5-aa0b-4c1d-9879-7792f3068182",
+    "id": "1c4850c4-9854-4f2b-93e1-0660f093c34f",
     "company_name": "GridWorks",
     "contact_email": "admin@gridworks.com",
     "contact_name": "Morgan Chen",
@@ -2934,8 +2934,8 @@
     "tier": "starter",
     "mrr": 628,
     "industry": "Logistics",
-    "renewal_date": "2027-08-14",
-    "contract_start": "2025-04-13",
+    "renewal_date": "2027-08-23",
+    "contract_start": "2025-04-22",
     "usage": {
       "dau_30d_avg": 265,
       "dau_current": 331,
@@ -2953,18 +2953,18 @@
     },
     "nps": {
       "score": 7,
-      "date": "2026-07-24",
+      "date": "2026-08-02",
       "verbatim": "Decent product, could use better reporting."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-07-21"
+      "next_billing": "2027-07-30"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "a857bcb6-e6f6-41dd-92de-5e7a72b497aa",
+    "id": "bc0515b3-366b-42b0-8713-8618f692759a",
     "company_name": "ApexDesk",
     "contact_email": "success@apexdesk.com",
     "contact_name": "Sam Kim",
@@ -2972,8 +2972,8 @@
     "tier": "enterprise",
     "mrr": 5194,
     "industry": "HR",
-    "renewal_date": "2027-06-07",
-    "contract_start": "2025-06-27",
+    "renewal_date": "2027-06-16",
+    "contract_start": "2025-07-06",
     "usage": {
       "dau_30d_avg": 401,
       "dau_current": 300,
@@ -2991,18 +2991,18 @@
     },
     "nps": {
       "score": 6,
-      "date": "2026-08-03",
+      "date": "2026-08-12",
       "verbatim": "The interface is confusing for new users."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-04-11"
+      "next_billing": "2027-04-20"
     },
     "_health_label": "at_risk"
   },
   {
-    "id": "2f1bf19c-7b34-40de-8c71-43568e214149",
+    "id": "84ea26c6-677b-41fd-adec-2bf4efdf81d3",
     "company_name": "SpanSuite",
     "contact_email": "admin@spansuite.com",
     "contact_name": "Morgan Chen",
@@ -3010,8 +3010,8 @@
     "tier": "enterprise",
     "mrr": 12870,
     "industry": "Education",
-    "renewal_date": "2027-07-10",
-    "contract_start": "2025-11-17",
+    "renewal_date": "2027-07-19",
+    "contract_start": "2025-11-26",
     "usage": {
       "dau_30d_avg": 266,
       "dau_current": 243,
@@ -3029,18 +3029,18 @@
     },
     "nps": {
       "score": 9,
-      "date": "2026-08-15",
+      "date": "2026-08-24",
       "verbatim": "Exactly what we needed for our workflow."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-04-10"
+      "next_billing": "2027-04-19"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "88c60960-f988-4cf4-bb9c-827cabbb882c",
+    "id": "3e848e43-66b0-4376-b4ce-934b73692189",
     "company_name": "NexusOps",
     "contact_email": "team@nexusops.com",
     "contact_name": "Morgan Smith",
@@ -3048,8 +3048,8 @@
     "tier": "growth",
     "mrr": 868,
     "industry": "Healthcare",
-    "renewal_date": "2027-08-14",
-    "contract_start": "2024-12-04",
+    "renewal_date": "2027-08-23",
+    "contract_start": "2024-12-13",
     "usage": {
       "dau_30d_avg": 179,
       "dau_current": 71,
@@ -3067,18 +3067,18 @@
     },
     "nps": {
       "score": 4,
-      "date": "2026-08-22",
+      "date": "2026-08-31",
       "verbatim": "Seriously considering switching to a competitor."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 1,
-      "next_billing": "2026-10-29"
+      "next_billing": "2026-11-07"
     },
     "_health_label": "critical"
   },
   {
-    "id": "12a65869-7596-4c6a-91b8-c9a396918642",
+    "id": "110ac2d7-885e-4330-8151-4f2091596557",
     "company_name": "PrismHQ",
     "contact_email": "success@prismhq.com",
     "contact_name": "Sam Chen",
@@ -3086,8 +3086,8 @@
     "tier": "growth",
     "mrr": 1635,
     "industry": "Real Estate",
-    "renewal_date": "2027-01-16",
-    "contract_start": "2024-12-25",
+    "renewal_date": "2027-01-25",
+    "contract_start": "2025-01-03",
     "usage": {
       "dau_30d_avg": 266,
       "dau_current": 174,
@@ -3105,18 +3105,18 @@
     },
     "nps": {
       "score": 5,
-      "date": "2026-08-20",
+      "date": "2026-08-29",
       "verbatim": "Support response times are slow."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-06-24"
+      "next_billing": "2027-07-03"
     },
     "_health_label": "at_risk"
   },
   {
-    "id": "fcd35ae6-6d3d-4bbc-b63c-b55a0f4f284c",
+    "id": "aed44cb1-a138-482a-955b-618856a7ed9f",
     "company_name": "BoldWorks",
     "contact_email": "team@boldworks.com",
     "contact_name": "Taylor Lee",
@@ -3124,8 +3124,8 @@
     "tier": "growth",
     "mrr": 1721,
     "industry": "Manufacturing",
-    "renewal_date": "2026-12-21",
-    "contract_start": "2025-03-17",
+    "renewal_date": "2026-12-30",
+    "contract_start": "2025-03-26",
     "usage": {
       "dau_30d_avg": 404,
       "dau_current": 410,
@@ -3143,18 +3143,18 @@
     },
     "nps": {
       "score": 10,
-      "date": "2026-09-04",
+      "date": "2026-09-13",
       "verbatim": "The team loves it, easy to use."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2026-11-10"
+      "next_billing": "2026-11-19"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "2040930d-382b-4e56-bad1-424c9bd7c540",
+    "id": "906ad82f-42ac-487d-97c7-414ac82adf77",
     "company_name": "MeshOps",
     "contact_email": "ops@meshops.com",
     "contact_name": "Alex Smith",
@@ -3162,8 +3162,8 @@
     "tier": "enterprise",
     "mrr": 10247,
     "industry": "Logistics",
-    "renewal_date": "2026-11-14",
-    "contract_start": "2024-10-13",
+    "renewal_date": "2026-11-23",
+    "contract_start": "2024-10-22",
     "usage": {
       "dau_30d_avg": 119,
       "dau_current": 116,
@@ -3181,18 +3181,18 @@
     },
     "nps": {
       "score": 9,
-      "date": "2026-08-11",
+      "date": "2026-08-20",
       "verbatim": "Exactly what we needed for our workflow."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-06-18"
+      "next_billing": "2027-06-27"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "f0df5ae9-5d0b-4249-89aa-4d2b0c577ec8",
+    "id": "414a7ef6-359a-446c-bb17-8cdcc9b251cf",
     "company_name": "ClearConnect",
     "contact_email": "team@clearconnect.com",
     "contact_name": "Alex Kim",
@@ -3200,8 +3200,8 @@
     "tier": "starter",
     "mrr": 566,
     "industry": "HR",
-    "renewal_date": "2026-11-08",
-    "contract_start": "2025-10-12",
+    "renewal_date": "2026-11-17",
+    "contract_start": "2025-10-21",
     "usage": {
       "dau_30d_avg": 344,
       "dau_current": 211,
@@ -3219,18 +3219,18 @@
     },
     "nps": {
       "score": 6,
-      "date": "2026-08-03",
+      "date": "2026-08-12",
       "verbatim": "The interface is confusing for new users."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-01-23"
+      "next_billing": "2027-02-01"
     },
     "_health_label": "at_risk"
   },
   {
-    "id": "0540685e-a98b-447c-ac00-0b9a5ef595ce",
+    "id": "c79e847d-0ad3-4715-99ef-e60b7b6526bb",
     "company_name": "MeshHub",
     "contact_email": "ops@meshhub.com",
     "contact_name": "Morgan Chen",
@@ -3238,8 +3238,8 @@
     "tier": "enterprise",
     "mrr": 7888,
     "industry": "Logistics",
-    "renewal_date": "2026-12-16",
-    "contract_start": "2025-05-06",
+    "renewal_date": "2026-12-25",
+    "contract_start": "2025-05-15",
     "usage": {
       "dau_30d_avg": 155,
       "dau_current": 167,
@@ -3257,18 +3257,18 @@
     },
     "nps": {
       "score": 10,
-      "date": "2026-08-30",
+      "date": "2026-09-08",
       "verbatim": "Great product, saves us hours every week."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-04-10"
+      "next_billing": "2027-04-19"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "bcf9d5fe-1aec-42c1-b651-03faae199082",
+    "id": "76893d59-2ddc-4de9-93ed-8e207c706284",
     "company_name": "MeshPlatform",
     "contact_email": "cto@meshplatform.com",
     "contact_name": "Taylor Kim",
@@ -3276,8 +3276,8 @@
     "tier": "starter",
     "mrr": 775,
     "industry": "Retail",
-    "renewal_date": "2027-06-21",
-    "contract_start": "2025-05-13",
+    "renewal_date": "2027-06-30",
+    "contract_start": "2025-05-22",
     "usage": {
       "dau_30d_avg": 448,
       "dau_current": 517,
@@ -3295,18 +3295,18 @@
     },
     "nps": {
       "score": 9,
-      "date": "2026-08-19",
+      "date": "2026-08-28",
       "verbatim": "The team loves it, easy to use."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-03-23"
+      "next_billing": "2027-04-01"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "a95a58f9-90c8-427c-b9c5-1c2b3fc76445",
+    "id": "2abb1141-1e22-407c-8cea-8d5dd2dd1f18",
     "company_name": "ApexLabs",
     "contact_email": "team@apexlabs.com",
     "contact_name": "Sam Smith",
@@ -3314,8 +3314,8 @@
     "tier": "starter",
     "mrr": 213,
     "industry": "Logistics",
-    "renewal_date": "2026-12-27",
-    "contract_start": "2024-12-06",
+    "renewal_date": "2027-01-05",
+    "contract_start": "2024-12-15",
     "usage": {
       "dau_30d_avg": 351,
       "dau_current": 287,
@@ -3333,18 +3333,18 @@
     },
     "nps": {
       "score": 4,
-      "date": "2026-07-24",
+      "date": "2026-08-02",
       "verbatim": "Doesn't integrate well with our existing tools."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-09-25"
+      "next_billing": "2027-10-04"
     },
     "_health_label": "at_risk"
   },
   {
-    "id": "c4c4fb73-f009-443a-9c38-945684d9c72c",
+    "id": "af1618de-f2a3-4289-a3ba-bf2a4d0fac64",
     "company_name": "BoldSuite",
     "contact_email": "success@boldsuite.com",
     "contact_name": "Morgan Park",
@@ -3352,8 +3352,8 @@
     "tier": "growth",
     "mrr": 1135,
     "industry": "Real Estate",
-    "renewal_date": "2027-07-13",
-    "contract_start": "2025-01-12",
+    "renewal_date": "2027-07-22",
+    "contract_start": "2025-01-21",
     "usage": {
       "dau_30d_avg": 238,
       "dau_current": 105,
@@ -3371,18 +3371,18 @@
     },
     "nps": {
       "score": 2,
-      "date": "2026-09-11",
+      "date": "2026-09-20",
       "verbatim": "Doesn't integrate well with our existing tools."
     },
     "stripe": {
       "subscription_status": "past_due",
       "payment_failures_90d": 0,
-      "next_billing": "2027-06-09"
+      "next_billing": "2027-06-18"
     },
     "_health_label": "critical"
   },
   {
-    "id": "6f5dff4c-dfc4-4d1b-828a-1f3f9ae12d2d",
+    "id": "63fbc2c0-5f61-42c1-bf1d-fb3c23a1d324",
     "company_name": "SwiftAnalytics",
     "contact_email": "admin@swiftanalytics.com",
     "contact_name": "Sam Kim",
@@ -3390,8 +3390,8 @@
     "tier": "growth",
     "mrr": 1036,
     "industry": "Education",
-    "renewal_date": "2026-11-26",
-    "contract_start": "2026-02-22",
+    "renewal_date": "2026-12-05",
+    "contract_start": "2026-03-03",
     "usage": {
       "dau_30d_avg": 246,
       "dau_current": 287,
@@ -3409,18 +3409,18 @@
     },
     "nps": {
       "score": 7,
-      "date": "2026-09-14",
+      "date": "2026-09-23",
       "verbatim": "Decent product, could use better reporting."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2026-11-05"
+      "next_billing": "2026-11-14"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "e5690a26-163d-4c00-9854-9a5a0dde8603",
+    "id": "fdf255e4-a2d8-4e52-979e-7b2365b2ed6b",
     "company_name": "MeshCloud",
     "contact_email": "cto@meshcloud.com",
     "contact_name": "Jordan Smith",
@@ -3428,8 +3428,8 @@
     "tier": "enterprise",
     "mrr": 5218,
     "industry": "HR",
-    "renewal_date": "2026-12-24",
-    "contract_start": "2025-08-24",
+    "renewal_date": "2027-01-02",
+    "contract_start": "2025-09-02",
     "usage": {
       "dau_30d_avg": 466,
       "dau_current": 351,
@@ -3447,18 +3447,18 @@
     },
     "nps": {
       "score": 6,
-      "date": "2026-07-15",
+      "date": "2026-07-24",
       "verbatim": "The interface is confusing for new users."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-07-19"
+      "next_billing": "2027-07-28"
     },
     "_health_label": "at_risk"
   },
   {
-    "id": "4d757329-b0b2-4878-a300-9c4dbdbcc532",
+    "id": "ee407b13-2c4b-4ba5-b06c-0ba6abe09185",
     "company_name": "VoltDesk",
     "contact_email": "admin@voltdesk.com",
     "contact_name": "Morgan Kim",
@@ -3466,8 +3466,8 @@
     "tier": "growth",
     "mrr": 2217,
     "industry": "Logistics",
-    "renewal_date": "2026-11-23",
-    "contract_start": "2025-12-27",
+    "renewal_date": "2026-12-02",
+    "contract_start": "2026-01-05",
     "usage": {
       "dau_30d_avg": 151,
       "dau_current": 147,
@@ -3485,18 +3485,18 @@
     },
     "nps": {
       "score": 7,
-      "date": "2026-09-16",
+      "date": "2026-09-25",
       "verbatim": "Good but missing a few features we need."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2026-11-11"
+      "next_billing": "2026-11-20"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "f07394e8-4c6e-4bef-8a69-3a572895dfa0",
+    "id": "a512070d-fd61-41d2-941d-46d1fec772a6",
     "company_name": "VoltIO",
     "contact_email": "success@voltio.com",
     "contact_name": "Morgan Lee",
@@ -3504,8 +3504,8 @@
     "tier": "growth",
     "mrr": 1031,
     "industry": "Manufacturing",
-    "renewal_date": "2027-01-01",
-    "contract_start": "2024-10-23",
+    "renewal_date": "2027-01-10",
+    "contract_start": "2024-11-01",
     "usage": {
       "dau_30d_avg": 267,
       "dau_current": 346,
@@ -3523,18 +3523,18 @@
     },
     "nps": {
       "score": 9,
-      "date": "2026-07-09",
+      "date": "2026-07-18",
       "verbatim": "Exactly what we needed for our workflow."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-01-17"
+      "next_billing": "2027-01-26"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "60faed91-3f3f-4a19-b3c6-9e13e09593a0",
+    "id": "27022740-fc93-4a3a-beb8-04560a7b199e",
     "company_name": "WaveAnalytics",
     "contact_email": "ops@waveanalytics.com",
     "contact_name": "Jordan Lee",
@@ -3542,8 +3542,8 @@
     "tier": "growth",
     "mrr": 2361,
     "industry": "Marketing",
-    "renewal_date": "2026-11-18",
-    "contract_start": "2025-02-11",
+    "renewal_date": "2026-11-27",
+    "contract_start": "2025-02-20",
     "usage": {
       "dau_30d_avg": 173,
       "dau_current": 116,
@@ -3561,18 +3561,18 @@
     },
     "nps": {
       "score": 7,
-      "date": "2026-08-21",
+      "date": "2026-08-30",
       "verbatim": "Good but missing a few features we need."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-04-07"
+      "next_billing": "2027-04-16"
     },
     "_health_label": "at_risk"
   },
   {
-    "id": "24facd8d-bcb5-4421-8ef9-b069e0fde498",
+    "id": "ff37b4b3-7d51-492b-b173-aa8a9af34431",
     "company_name": "BrightHub",
     "contact_email": "success@brighthub.com",
     "contact_name": "Morgan Kim",
@@ -3580,8 +3580,8 @@
     "tier": "growth",
     "mrr": 1178,
     "industry": "Logistics",
-    "renewal_date": "2027-08-16",
-    "contract_start": "2025-08-30",
+    "renewal_date": "2027-08-25",
+    "contract_start": "2025-09-08",
     "usage": {
       "dau_30d_avg": 380,
       "dau_current": 468,
@@ -3599,18 +3599,18 @@
     },
     "nps": {
       "score": 10,
-      "date": "2026-09-21",
+      "date": "2026-09-30",
       "verbatim": "Great product, saves us hours every week."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-01-25"
+      "next_billing": "2027-02-03"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "102dcd74-8cb4-4101-bb1b-928d0c04404e",
+    "id": "3fd6230d-f11d-40eb-af4b-6bca315b0705",
     "company_name": "ClearOps",
     "contact_email": "team@clearops.com",
     "contact_name": "Taylor Chen",
@@ -3618,8 +3618,8 @@
     "tier": "starter",
     "mrr": 768,
     "industry": "Manufacturing",
-    "renewal_date": "2027-03-02",
-    "contract_start": "2025-04-06",
+    "renewal_date": "2027-03-11",
+    "contract_start": "2025-04-15",
     "usage": {
       "dau_30d_avg": 370,
       "dau_current": 363,
@@ -3637,18 +3637,18 @@
     },
     "nps": {
       "score": 9,
-      "date": "2026-07-24",
+      "date": "2026-08-02",
       "verbatim": "The team loves it, easy to use."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-02-01"
+      "next_billing": "2027-02-10"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "1a91ca33-6096-497d-8c93-1cbe00ecaa8b",
+    "id": "c751e2d5-f05e-4b9a-9bca-f2d44af49c7d",
     "company_name": "SpanHQ",
     "contact_email": "ops@spanhq.com",
     "contact_name": "Sam Park",
@@ -3656,8 +3656,8 @@
     "tier": "growth",
     "mrr": 1706,
     "industry": "Education",
-    "renewal_date": "2027-02-22",
-    "contract_start": "2024-11-14",
+    "renewal_date": "2027-03-03",
+    "contract_start": "2024-11-23",
     "usage": {
       "dau_30d_avg": 18,
       "dau_current": 9,
@@ -3675,18 +3675,18 @@
     },
     "nps": {
       "score": 2,
-      "date": "2026-07-22",
+      "date": "2026-07-31",
       "verbatim": "Doesn't integrate well with our existing tools."
     },
     "stripe": {
       "subscription_status": "past_due",
       "payment_failures_90d": 3,
-      "next_billing": "2027-01-14"
+      "next_billing": "2027-01-23"
     },
     "_health_label": "critical"
   },
   {
-    "id": "6c991833-1d08-4a2d-88fa-350806d66a68",
+    "id": "17e0c315-7ca1-4e83-a828-6d851b57166f",
     "company_name": "SpanTech",
     "contact_email": "cto@spantech.com",
     "contact_name": "Alex Kim",
@@ -3694,8 +3694,8 @@
     "tier": "enterprise",
     "mrr": 11954,
     "industry": "Retail",
-    "renewal_date": "2027-09-07",
-    "contract_start": "2025-08-16",
+    "renewal_date": "2027-09-16",
+    "contract_start": "2025-08-25",
     "usage": {
       "dau_30d_avg": 479,
       "dau_current": 601,
@@ -3713,18 +3713,18 @@
     },
     "nps": {
       "score": 7,
-      "date": "2026-07-20",
+      "date": "2026-07-29",
       "verbatim": "Decent product, could use better reporting."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-04-29"
+      "next_billing": "2027-05-08"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "9aaaacf5-44bc-4187-a679-620d0ac1735e",
+    "id": "40651734-a4b5-4b0d-bc8a-c55f00c48b9d",
     "company_name": "NovaPlatform",
     "contact_email": "cto@novaplatform.com",
     "contact_name": "Morgan Lee",
@@ -3732,8 +3732,8 @@
     "tier": "starter",
     "mrr": 649,
     "industry": "Healthcare",
-    "renewal_date": "2027-07-04",
-    "contract_start": "2025-01-24",
+    "renewal_date": "2027-07-13",
+    "contract_start": "2025-02-02",
     "usage": {
       "dau_30d_avg": 18,
       "dau_current": 16,
@@ -3751,18 +3751,18 @@
     },
     "nps": {
       "score": 7,
-      "date": "2026-09-03",
+      "date": "2026-09-12",
       "verbatim": "Good but missing a few features we need."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-01-26"
+      "next_billing": "2027-02-04"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "fdfef26c-fcd0-4e39-9e52-9d5062908a4b",
+    "id": "0a302619-0c70-47e2-ba59-c78ebd381924",
     "company_name": "FluxDesk",
     "contact_email": "cto@fluxdesk.com",
     "contact_name": "Taylor Chen",
@@ -3770,8 +3770,8 @@
     "tier": "growth",
     "mrr": 1123,
     "industry": "HR",
-    "renewal_date": "2027-06-20",
-    "contract_start": "2026-02-11",
+    "renewal_date": "2027-06-29",
+    "contract_start": "2026-02-20",
     "usage": {
       "dau_30d_avg": 217,
       "dau_current": 159,
@@ -3789,18 +3789,18 @@
     },
     "nps": {
       "score": 4,
-      "date": "2026-07-29",
+      "date": "2026-08-07",
       "verbatim": "Doesn't integrate well with our existing tools."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-04-07"
+      "next_billing": "2027-04-16"
     },
     "_health_label": "at_risk"
   },
   {
-    "id": "e3ad4688-cc45-46ed-9b90-e5c5138889c9",
+    "id": "a6390914-f7ad-49a2-970f-1813bafe4060",
     "company_name": "ClearHub",
     "contact_email": "cto@clearhub.com",
     "contact_name": "Alex Lee",
@@ -3808,8 +3808,8 @@
     "tier": "growth",
     "mrr": 1741,
     "industry": "Retail",
-    "renewal_date": "2027-03-30",
-    "contract_start": "2026-03-24",
+    "renewal_date": "2027-04-08",
+    "contract_start": "2026-04-02",
     "usage": {
       "dau_30d_avg": 471,
       "dau_current": 587,
@@ -3827,18 +3827,18 @@
     },
     "nps": {
       "score": 9,
-      "date": "2026-08-03",
+      "date": "2026-08-12",
       "verbatim": "Great product, saves us hours every week."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-03-22"
+      "next_billing": "2027-03-31"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "f17ad103-4141-4e7e-acc4-8dbe5ada2588",
+    "id": "1476e66f-2e20-478a-bd0c-1f9d2a985afd",
     "company_name": "PeakPlatform",
     "contact_email": "success@peakplatform.com",
     "contact_name": "Sam Kim",
@@ -3846,8 +3846,8 @@
     "tier": "growth",
     "mrr": 2158,
     "industry": "Legal",
-    "renewal_date": "2027-02-15",
-    "contract_start": "2026-01-22",
+    "renewal_date": "2027-02-24",
+    "contract_start": "2026-01-31",
     "usage": {
       "dau_30d_avg": 396,
       "dau_current": 473,
@@ -3865,18 +3865,18 @@
     },
     "nps": {
       "score": 7,
-      "date": "2026-08-12",
+      "date": "2026-08-21",
       "verbatim": "Good but missing a few features we need."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-09-09"
+      "next_billing": "2027-09-18"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "a3f5e5fa-9d3e-4506-8863-a1cd814cb098",
+    "id": "7a359389-a528-4bd7-97d1-7fb926c663c6",
     "company_name": "FluxSuite",
     "contact_email": "success@fluxsuite.com",
     "contact_name": "Sam Park",
@@ -3884,8 +3884,8 @@
     "tier": "starter",
     "mrr": 514,
     "industry": "Finance",
-    "renewal_date": "2027-03-06",
-    "contract_start": "2025-11-03",
+    "renewal_date": "2027-03-15",
+    "contract_start": "2025-11-12",
     "usage": {
       "dau_30d_avg": 293,
       "dau_current": 180,
@@ -3903,18 +3903,18 @@
     },
     "nps": {
       "score": 4,
-      "date": "2026-08-07",
+      "date": "2026-08-16",
       "verbatim": "Seriously considering switching to a competitor."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2026-12-05"
+      "next_billing": "2026-12-14"
     },
     "_health_label": "at_risk"
   },
   {
-    "id": "60d0c04f-7524-4445-b748-ba71b98efabb",
+    "id": "cc887b7c-1e9e-40eb-8e44-d21800d5d73c",
     "company_name": "ApexLabs",
     "contact_email": "cto@apexlabs.com",
     "contact_name": "Alex Kim",
@@ -3922,8 +3922,8 @@
     "tier": "growth",
     "mrr": 1218,
     "industry": "HR",
-    "renewal_date": "2026-12-06",
-    "contract_start": "2025-05-12",
+    "renewal_date": "2026-12-15",
+    "contract_start": "2025-05-21",
     "usage": {
       "dau_30d_avg": 54,
       "dau_current": 52,
@@ -3941,18 +3941,18 @@
     },
     "nps": {
       "score": 10,
-      "date": "2026-09-12",
+      "date": "2026-09-21",
       "verbatim": "Exactly what we needed for our workflow."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-08-02"
+      "next_billing": "2027-08-11"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "b4e3f1f3-c334-48cd-8990-dd0f74ba758d",
+    "id": "a54d0b3e-a83d-439d-a963-b608621fecfc",
     "company_name": "CorePlatform",
     "contact_email": "team@coreplatform.com",
     "contact_name": "Taylor Lee",
@@ -3960,8 +3960,8 @@
     "tier": "growth",
     "mrr": 2359,
     "industry": "Finance",
-    "renewal_date": "2027-04-22",
-    "contract_start": "2025-07-26",
+    "renewal_date": "2027-05-01",
+    "contract_start": "2025-08-04",
     "usage": {
       "dau_30d_avg": 81,
       "dau_current": 42,
@@ -3979,18 +3979,18 @@
     },
     "nps": {
       "score": 4,
-      "date": "2026-07-26",
+      "date": "2026-08-04",
       "verbatim": "Seriously considering switching to a competitor."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 2,
-      "next_billing": "2026-10-23"
+      "next_billing": "2026-11-01"
     },
     "_health_label": "critical"
   },
   {
-    "id": "8abdc2ac-bf03-42fc-8547-0189366c7fb3",
+    "id": "9e3cb02e-825c-428c-b9fd-9114fd23c282",
     "company_name": "VoltHQ",
     "contact_email": "admin@volthq.com",
     "contact_name": "Sam Park",
@@ -3998,8 +3998,8 @@
     "tier": "starter",
     "mrr": 600,
     "industry": "Real Estate",
-    "renewal_date": "2027-03-18",
-    "contract_start": "2024-11-23",
+    "renewal_date": "2027-03-27",
+    "contract_start": "2024-12-02",
     "usage": {
       "dau_30d_avg": 181,
       "dau_current": 134,
@@ -4017,18 +4017,18 @@
     },
     "nps": {
       "score": 5,
-      "date": "2026-08-03",
+      "date": "2026-08-12",
       "verbatim": "The interface is confusing for new users."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2026-12-17"
+      "next_billing": "2026-12-26"
     },
     "_health_label": "at_risk"
   },
   {
-    "id": "2f7ab2c6-e7ee-4cd5-905d-c6cf3a6b2e01",
+    "id": "1138357b-027a-4c3e-bff3-913838c3b8ac",
     "company_name": "BoldPlatform",
     "contact_email": "admin@boldplatform.com",
     "contact_name": "Taylor Park",
@@ -4036,8 +4036,8 @@
     "tier": "starter",
     "mrr": 622,
     "industry": "Logistics",
-    "renewal_date": "2027-02-26",
-    "contract_start": "2025-11-03",
+    "renewal_date": "2027-03-07",
+    "contract_start": "2025-11-12",
     "usage": {
       "dau_30d_avg": 492,
       "dau_current": 582,
@@ -4055,18 +4055,18 @@
     },
     "nps": {
       "score": 7,
-      "date": "2026-07-23",
+      "date": "2026-08-01",
       "verbatim": "Works fine, not blown away."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-05-13"
+      "next_billing": "2027-05-22"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "e2282058-81e2-445c-9161-1a86d3b4f286",
+    "id": "5ae07e80-6c17-480e-a696-b210b7ba434c",
     "company_name": "WaveAnalytics",
     "contact_email": "ops@waveanalytics.com",
     "contact_name": "Morgan Kim",
@@ -4074,8 +4074,8 @@
     "tier": "enterprise",
     "mrr": 8890,
     "industry": "Real Estate",
-    "renewal_date": "2027-05-28",
-    "contract_start": "2025-12-22",
+    "renewal_date": "2027-06-06",
+    "contract_start": "2025-12-31",
     "usage": {
       "dau_30d_avg": 336,
       "dau_current": 425,
@@ -4093,18 +4093,18 @@
     },
     "nps": {
       "score": 9,
-      "date": "2026-07-18",
+      "date": "2026-07-27",
       "verbatim": "Exactly what we needed for our workflow."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-08-13"
+      "next_billing": "2027-08-22"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "73daa8b7-e4b8-45b4-be22-6fac407447f1",
+    "id": "5dcbee61-4ee9-491d-af1c-498aa6624ba8",
     "company_name": "CoreIO",
     "contact_email": "ops@coreio.com",
     "contact_name": "Sam Lee",
@@ -4112,8 +4112,8 @@
     "tier": "growth",
     "mrr": 2849,
     "industry": "Marketing",
-    "renewal_date": "2027-02-02",
-    "contract_start": "2024-10-23",
+    "renewal_date": "2027-02-11",
+    "contract_start": "2024-11-01",
     "usage": {
       "dau_30d_avg": 186,
       "dau_current": 111,
@@ -4131,18 +4131,18 @@
     },
     "nps": {
       "score": 4,
-      "date": "2026-07-27",
+      "date": "2026-08-05",
       "verbatim": "Too many bugs, not reliable enough."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2026-11-23"
+      "next_billing": "2026-12-02"
     },
     "_health_label": "at_risk"
   },
   {
-    "id": "5aa74a27-a411-44c8-9697-285bcdf4b968",
+    "id": "fa7cfca3-bd82-4df0-8891-d79b949bf7ac",
     "company_name": "MeshSolutions",
     "contact_email": "success@meshsolutions.com",
     "contact_name": "Jordan Smith",
@@ -4150,8 +4150,8 @@
     "tier": "starter",
     "mrr": 501,
     "industry": "Real Estate",
-    "renewal_date": "2027-08-02",
-    "contract_start": "2025-01-28",
+    "renewal_date": "2027-08-11",
+    "contract_start": "2025-02-06",
     "usage": {
       "dau_30d_avg": 341,
       "dau_current": 321,
@@ -4169,18 +4169,18 @@
     },
     "nps": {
       "score": 8,
-      "date": "2026-07-29",
+      "date": "2026-08-07",
       "verbatim": "Decent product, could use better reporting."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2026-11-03"
+      "next_billing": "2026-11-12"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "55abc2f0-0e07-4f0c-add0-d40153dadd6c",
+    "id": "4ea18082-a0ab-4c4a-a1af-683b784fb9e9",
     "company_name": "BoldIO",
     "contact_email": "success@boldio.com",
     "contact_name": "Jordan Lee",
@@ -4188,8 +4188,8 @@
     "tier": "growth",
     "mrr": 818,
     "industry": "Logistics",
-    "renewal_date": "2027-06-11",
-    "contract_start": "2025-12-14",
+    "renewal_date": "2027-06-20",
+    "contract_start": "2025-12-23",
     "usage": {
       "dau_30d_avg": 115,
       "dau_current": 116,
@@ -4207,18 +4207,18 @@
     },
     "nps": {
       "score": 7,
-      "date": "2026-08-13",
+      "date": "2026-08-22",
       "verbatim": "Works fine, not blown away."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-05-06"
+      "next_billing": "2027-05-15"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "2acb1ef3-23f9-4cec-920f-c965998d6cca",
+    "id": "53bf1734-3c87-4b84-ab7d-a6d28b4c7287",
     "company_name": "VoltPlatform",
     "contact_email": "team@voltplatform.com",
     "contact_name": "Alex Park",
@@ -4226,8 +4226,8 @@
     "tier": "enterprise",
     "mrr": 8766,
     "industry": "Finance",
-    "renewal_date": "2027-01-21",
-    "contract_start": "2025-03-23",
+    "renewal_date": "2027-01-30",
+    "contract_start": "2025-04-01",
     "usage": {
       "dau_30d_avg": 98,
       "dau_current": 63,
@@ -4245,18 +4245,18 @@
     },
     "nps": {
       "score": 5,
-      "date": "2026-07-11",
+      "date": "2026-07-20",
       "verbatim": "The interface is confusing for new users."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-05-24"
+      "next_billing": "2027-06-02"
     },
     "_health_label": "at_risk"
   },
   {
-    "id": "3b24b45e-f40a-41f1-9eaa-03a806f9d9c6",
+    "id": "fb8cad1e-ca0f-41eb-acee-1f3477bdda15",
     "company_name": "PeakIO",
     "contact_email": "team@peakio.com",
     "contact_name": "Alex Chen",
@@ -4264,8 +4264,8 @@
     "tier": "starter",
     "mrr": 718,
     "industry": "Logistics",
-    "renewal_date": "2027-05-04",
-    "contract_start": "2024-11-08",
+    "renewal_date": "2027-05-13",
+    "contract_start": "2024-11-17",
     "usage": {
       "dau_30d_avg": 95,
       "dau_current": 43,
@@ -4283,18 +4283,18 @@
     },
     "nps": {
       "score": 1,
-      "date": "2026-07-28",
+      "date": "2026-08-06",
       "verbatim": "Too many bugs, not reliable enough."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-08-05"
+      "next_billing": "2027-08-14"
     },
     "_health_label": "critical"
   },
   {
-    "id": "10cca7ca-5dd8-4f36-be6a-a16ed3bf3366",
+    "id": "9e3e45d8-045c-4e74-b958-ed6dfa7b38f9",
     "company_name": "ApexSuite",
     "contact_email": "success@apexsuite.com",
     "contact_name": "Morgan Kim",
@@ -4302,8 +4302,8 @@
     "tier": "starter",
     "mrr": 431,
     "industry": "Manufacturing",
-    "renewal_date": "2027-07-25",
-    "contract_start": "2025-03-30",
+    "renewal_date": "2027-08-03",
+    "contract_start": "2025-04-08",
     "usage": {
       "dau_30d_avg": 125,
       "dau_current": 139,
@@ -4321,18 +4321,18 @@
     },
     "nps": {
       "score": 10,
-      "date": "2026-07-15",
+      "date": "2026-07-24",
       "verbatim": "Great product, saves us hours every week."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-05-25"
+      "next_billing": "2027-06-03"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "56fc1920-1066-42d0-b107-883e7032bbea",
+    "id": "d17f68ae-1d9c-4409-ba2d-011ac2b76dcb",
     "company_name": "ClearOps",
     "contact_email": "success@clearops.com",
     "contact_name": "Taylor Park",
@@ -4340,8 +4340,8 @@
     "tier": "starter",
     "mrr": 183,
     "industry": "Logistics",
-    "renewal_date": "2027-02-02",
-    "contract_start": "2026-02-08",
+    "renewal_date": "2027-02-11",
+    "contract_start": "2026-02-17",
     "usage": {
       "dau_30d_avg": 240,
       "dau_current": 188,
@@ -4359,18 +4359,18 @@
     },
     "nps": {
       "score": 6,
-      "date": "2026-09-01",
+      "date": "2026-09-10",
       "verbatim": "The interface is confusing for new users."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-03-18"
+      "next_billing": "2027-03-27"
     },
     "_health_label": "at_risk"
   },
   {
-    "id": "2b11b32b-0f98-48d4-8352-4a8cf584dfb3",
+    "id": "aecd88bf-4d32-4456-bc86-1cc0bcdd9750",
     "company_name": "MeshPlatform",
     "contact_email": "ops@meshplatform.com",
     "contact_name": "Jordan Park",
@@ -4378,8 +4378,8 @@
     "tier": "growth",
     "mrr": 1190,
     "industry": "Logistics",
-    "renewal_date": "2027-10-01",
-    "contract_start": "2025-03-03",
+    "renewal_date": "2027-10-10",
+    "contract_start": "2025-03-12",
     "usage": {
       "dau_30d_avg": 394,
       "dau_current": 478,
@@ -4397,18 +4397,18 @@
     },
     "nps": {
       "score": 8,
-      "date": "2026-07-27",
+      "date": "2026-08-05",
       "verbatim": "Good but missing a few features we need."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-09-09"
+      "next_billing": "2027-09-18"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "a67c82ef-1eb2-498f-99e1-5ad393f2524d",
+    "id": "32e24db2-e3ad-4ab3-b074-7092bacb3401",
     "company_name": "BrightCloud",
     "contact_email": "admin@brightcloud.com",
     "contact_name": "Sam Kim",
@@ -4416,8 +4416,8 @@
     "tier": "growth",
     "mrr": 2311,
     "industry": "Logistics",
-    "renewal_date": "2027-05-27",
-    "contract_start": "2025-09-05",
+    "renewal_date": "2027-06-05",
+    "contract_start": "2025-09-14",
     "usage": {
       "dau_30d_avg": 496,
       "dau_current": 543,
@@ -4435,18 +4435,18 @@
     },
     "nps": {
       "score": 7,
-      "date": "2026-08-10",
+      "date": "2026-08-19",
       "verbatim": "Works fine, not blown away."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-08-11"
+      "next_billing": "2027-08-20"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "18a09599-3007-4a13-bd2d-774f2f68ae06",
+    "id": "86a3cfee-57a3-426b-8dbe-3a9982266f76",
     "company_name": "SwiftPlatform",
     "contact_email": "cto@swiftplatform.com",
     "contact_name": "Taylor Park",
@@ -4454,8 +4454,8 @@
     "tier": "starter",
     "mrr": 197,
     "industry": "Manufacturing",
-    "renewal_date": "2027-01-09",
-    "contract_start": "2025-07-03",
+    "renewal_date": "2027-01-18",
+    "contract_start": "2025-07-12",
     "usage": {
       "dau_30d_avg": 60,
       "dau_current": 41,
@@ -4473,18 +4473,18 @@
     },
     "nps": {
       "score": 7,
-      "date": "2026-09-01",
+      "date": "2026-09-10",
       "verbatim": "Good but missing a few features we need."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-05-10"
+      "next_billing": "2027-05-19"
     },
     "_health_label": "at_risk"
   },
   {
-    "id": "92a28c04-b550-490c-be88-5f8688f19d20",
+    "id": "2569adf5-3dc1-4411-9a74-395566d035c1",
     "company_name": "MeshOps",
     "contact_email": "ops@meshops.com",
     "contact_name": "Morgan Park",
@@ -4492,8 +4492,8 @@
     "tier": "starter",
     "mrr": 243,
     "industry": "Healthcare",
-    "renewal_date": "2026-10-24",
-    "contract_start": "2025-04-23",
+    "renewal_date": "2026-11-02",
+    "contract_start": "2025-05-02",
     "usage": {
       "dau_30d_avg": 370,
       "dau_current": 347,
@@ -4511,18 +4511,18 @@
     },
     "nps": {
       "score": 7,
-      "date": "2026-09-13",
+      "date": "2026-09-22",
       "verbatim": "Good but missing a few features we need."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-05-04"
+      "next_billing": "2027-05-13"
     },
     "_health_label": "healthy"
   },
   {
-    "id": "f9924986-5d32-4587-87e5-f70f1ad97430",
+    "id": "a6174a92-7cd4-4ee8-9e4a-c7331c4c5c49",
     "company_name": "BrightOps",
     "contact_email": "cto@brightops.com",
     "contact_name": "Morgan Smith",
@@ -4530,8 +4530,8 @@
     "tier": "starter",
     "mrr": 526,
     "industry": "Education",
-    "renewal_date": "2027-09-17",
-    "contract_start": "2025-10-23",
+    "renewal_date": "2027-09-26",
+    "contract_start": "2025-11-01",
     "usage": {
       "dau_30d_avg": 461,
       "dau_current": 470,
@@ -4549,13 +4549,13 @@
     },
     "nps": {
       "score": 8,
-      "date": "2026-09-03",
+      "date": "2026-09-12",
       "verbatim": "Decent product, could use better reporting."
     },
     "stripe": {
       "subscription_status": "active",
       "payment_failures_90d": 0,
-      "next_billing": "2027-08-31"
+      "next_billing": "2027-09-09"
     },
     "_health_label": "healthy"
   }
