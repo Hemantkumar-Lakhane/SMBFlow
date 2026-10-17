@@ -142,27 +142,30 @@ OUTPUT SCHEMA (strict JSON, no markdown)
 ═══════════════════════════════════════
 RULES
 ═══════════════════════════════════════
-1. ONLY include nodes that are necessary for the described workflow.
-   Do NOT add research_agent, verification_agent, or execution_agent unless
-   the prompt explicitly or clearly implies them.
+1. If the user prompt provides a numbered or itemized list of steps/nodes,
+   faithfully synthesize corresponding connected nodes for EVERY step in the list.
+   Map each step to the appropriate agentType (e.g., audio/text input -> trigger_webhook or code_transform,
+   transcription & conversation analysis -> reasoning_agent, memory storage -> tool_postgres,
+   tasks & contact memory -> tool_hubspot, email drafting -> drafting_agent or tool_gmail,
+   calendar blocks -> tool_calendar, verification -> logic_approval_gate or verification_agent).
 
-2. For IF/ELSE logic: use logic_condition. Connect it to TWO outgoing edges,
+2. ONLY include nodes that are necessary for the described workflow.
+   Do NOT add unrelated marketing or sales nodes unless requested.
+
+3. For IF/ELSE logic: use logic_condition. Connect it to TWO outgoing edges,
    each with a condition string (e.g. "approved" / "rejected", "> $10,000" / "<= $10,000").
 
-3. For human review / approval: use logic_approval_gate.
+4. For human review / approval: use logic_approval_gate.
 
-4. Every workflow must start with exactly one trigger node.
+5. Every workflow must start with exactly one trigger node (e.g. trigger_webhook, trigger_email, trigger_schedule, or trigger_manual).
 
-5. Node IDs must be unique snake_case strings (e.g. "validate_customer_info").
+6. Node IDs must be unique snake_case strings (e.g. "validate_customer_info", "transcribe_audio").
 
-6. Every edge source and target must reference a node ID that exists in nodes[].
+7. Every edge source and target must reference a node ID that exists in nodes[].
 
-7. Produce a valid DAG — no cycles.
+8. Produce a valid DAG — no cycles. Connect nodes sequentially or with parallel branches that merge logically.
 
-8. Do NOT invent agentType values. Use only the listed types.
-
-9. If the prompt asks for something the available nodes cannot represent,
-   use the closest available node and note the limitation in the explanation.
+9. Do NOT invent agentType values. Use only the listed types.
 
 10. Return ONLY the JSON object. No markdown fences. No prose outside the JSON.
 """
@@ -421,15 +424,19 @@ async def _call_llm_for_dag(prompt: str, industry: Optional[str]) -> dict:
     """
     from litellm import acompletion  # local import — avoids module-level cost
 
-    # Model preference order — cheaper/faster first, fall back to heavier
-    models_to_try = []
-
-    mini_model  = os.getenv("LLM_MINI_MODEL",  "anthropic/claude-haiku-4-5-20251001")
-    fast_model  = os.getenv("LLM_FAST_MODEL",  "groq/llama-3.1-8b-instant")
-    heavy_model = os.getenv("LLM_HEAVY_MODEL", "anthropic/claude-sonnet-4-20250514")
-
-    # Prefer Haiku (reliable JSON) → heavy as final resort
-    models_to_try = [mini_model, heavy_model]
+    # Model preference order — prioritize working fast verified models
+    models_to_try = [
+        os.getenv("LLM_FAST_MODEL", "groq/openai/gpt-oss-120b"),
+        "groq/openai/gpt-oss-20b",
+        "gemini/gemini-3.8-flash",
+    ]
+    # Add optional configured models as fallback if set in env
+    env_mini = os.getenv("LLM_MINI_MODEL")
+    if env_mini and env_mini not in models_to_try:
+        models_to_try.append(env_mini)
+    env_heavy = os.getenv("LLM_HEAVY_MODEL")
+    if env_heavy and env_heavy not in models_to_try:
+        models_to_try.append(env_heavy)
 
     user_message = (
         f"Convert the following workflow description into the required JSON DAG.\n\n"
@@ -451,17 +458,16 @@ async def _call_llm_for_dag(prompt: str, industry: Optional[str]) -> dict:
                     {"role": "system", "content": system_text},
                     {"role": "user",   "content": user_message},
                 ],
-                "temperature": 0.2,
-                "max_tokens":  4096,
                 "timeout":     60,
             }
+            if "gemini" not in model:
+                kwargs["temperature"] = 0.2
+                kwargs["max_tokens"] = 4096
 
-            # Anthropic and OpenAI support JSON mode — enable where available
-            if "anthropic" in model or "openai" in model or "gpt" in model:
-                # Use json_object response format only for OpenAI-compatible models
-                # Anthropic doesn't use response_format but is reliable with the prompt
-                if "openai" in model or "gpt" in model:
-                    kwargs["response_format"] = {"type": "json_object"}
+            # OpenAI / Groq openai/* support JSON mode where supported
+            if "json" in model.lower() or "gpt-4" in model or "gpt-oss" in model:
+                # Keep flexible extraction via prompt and _extract_json
+                pass
 
             response = await acompletion(**kwargs)
             raw_text = response.choices[0].message.content or ""
@@ -660,66 +666,191 @@ async def _keyword_based_generator(
         },
     })
 
-    requires_research  = True
-    requires_reasoning = True
-    requires_approval  = any(k in p_lower for k in ("approval", "human", "review", "manager", "gate", "sme", "high risk", "confirm", "approve", "dispute", "refund"))
-    requires_drafting  = any(k in p_lower for k in ("draft", "write", "generate", "create email", "compose", "post", "summary", "report", "message", "alert"))
-    requires_execution = True
+    is_football = any(k in p_lower for k in ("football", "soccer", "fifa", "transfermarkt", "agent os", "scout"))
+    is_legal_injury = any(k in p_lower for k in ("injury", "lawyer", "personal injury", "settlement", "damages", "attorney"))
+    is_meeting_intel = any(k in p_lower for k in ("meeting", "recording", "call recording", "conversation", "transcript"))
 
     step_sequence = []
 
-    if requires_research:
-        step_sequence.append({
-            "id":        "node_res_01",
-            "agent":     "research_agent",
-            "name":      f"{inferred_category.title()} Data Gatherer",
-            "directive": f"Extract all relevant entities, historical records, and context regarding {prompt[:80]}.",
-            "tools":     ["tool_db_mutation"],
-        })
+    if is_football:
+        name = "Football Agent AI Operating System"
+        key = "football_agent_os"
+        step_sequence = [
+            {
+                "id": "node_res_01",
+                "agent": "research_agent",
+                "name": "Contract Expiry & Valuation Matrix",
+                "directive": "Ingest player contract details, calculate transfer value, salary expectation, and target market eligibility.",
+                "tools": ["tool_postgres"],
+            },
+            {
+                "id": "node_reason_01",
+                "agent": "reasoning_agent",
+                "name": "Club Squad Need & Foreign Quota Matcher",
+                "directive": "Cross-reference target club vacancies, manager tactical system, and foreign player quotas across Asia & Europe.",
+                "tools": [],
+            },
+            {
+                "id": "node_draft_01",
+                "agent": "drafting_agent",
+                "name": "Claude 3.5 Scouting Dossier & WhatsApp Pitch",
+                "directive": "Generate high-impact scouting presentation dossier and executive WhatsApp message for Sporting Directors.",
+                "tools": ["tool_slack"],
+            },
+            {
+                "id": "node_gate_01",
+                "agent": "approval_gate",
+                "name": "FIFA Licensed Agent Approval Gate",
+                "directive": "Hold outreach until licensed intermediary approves tailored club pitch and deal parameters.",
+                "tools": [],
+            },
+            {
+                "id": "node_exec_01",
+                "agent": "execution_agent",
+                "name": "Director WhatsApp & Email Dispatch",
+                "directive": "Automate personalized outreach dispatch via WhatsApp Business API and email to sporting directors.",
+                "tools": ["tool_webhook", "tool_email_dispatch"],
+            },
+        ]
+    elif is_legal_injury:
+        name = "Personal Injury Legal Ops & Settlement Suite"
+        key = "legal_personal_injury"
+        step_sequence = [
+            {
+                "id": "node_res_01",
+                "agent": "research_agent",
+                "name": "Medical Records Chronology Parser",
+                "directive": "Parse provider bills, emergency radiology, and physical therapy notes into an itemized treatment timeline.",
+                "tools": ["tool_postgres"],
+            },
+            {
+                "id": "node_code_01",
+                "agent": "code_transform",
+                "name": "Itemized Special Damages Ledger",
+                "directive": "Aggregate medical expenses and lost wages; compute general damages using standard trial multipliers.",
+                "tools": [],
+            },
+            {
+                "id": "node_draft_01",
+                "agent": "drafting_agent",
+                "name": "Settlement Brochure & Demand Letter",
+                "directive": "Generate formal settlement brochure, liability narrative, and structured exhibit index (Exhibits A–D).",
+                "tools": ["tool_email_dispatch"],
+            },
+            {
+                "id": "node_gate_01",
+                "agent": "approval_gate",
+                "name": "Senior Attorney Sign-Off Gate",
+                "directive": "HITL attorney review gate to verify liability facts and sign off before insurer dispatch.",
+                "tools": [],
+            },
+            {
+                "id": "node_exec_01",
+                "agent": "execution_agent",
+                "name": "Insurance Adjuster Packet Dispatch",
+                "directive": "Transmit certified demand letter and indexed exhibit bundle to adverse insurance claims department.",
+                "tools": ["tool_email_dispatch", "tool_calendar"],
+            },
+        ]
+    elif is_meeting_intel:
+        name = "Meeting Intelligence & Call Recording Automation"
+        key = "meeting_intelligence_followup"
+        step_sequence = [
+            {
+                "id": "node_res_01",
+                "agent": "research_agent",
+                "name": "Audio Transcription & Entity Ingest",
+                "directive": "Extract speech-to-text transcripts, participants, and timeline context from recorded meeting sessions.",
+                "tools": ["tool_db_mutation"],
+            },
+            {
+                "id": "node_reason_01",
+                "agent": "reasoning_agent",
+                "name": "Central Memory & Commitments Engine",
+                "directive": "Strictly separate explicit agreed commitments from AI suggestions; update PostgreSQL memory vector ledger.",
+                "tools": ["tool_postgres"],
+            },
+            {
+                "id": "node_draft_01",
+                "agent": "drafting_agent",
+                "name": "Executive Follow-up Draft & Briefing",
+                "directive": "Draft natural, humanized follow-up email in Gmail and generate next meeting briefing note.",
+                "tools": ["tool_email_dispatch"],
+            },
+            {
+                "id": "node_gate_01",
+                "agent": "approval_gate",
+                "name": "Action Center Review & Snooze Gate",
+                "directive": "Allow operator to approve draft, edit wording, or snooze follow-up before email dispatch.",
+                "tools": [],
+            },
+            {
+                "id": "node_exec_01",
+                "agent": "execution_agent",
+                "name": "Gmail Dispatch & Calendar Prep Block",
+                "directive": "Send verified follow-up email via Gmail API and place automated preparation block on Google Calendar.",
+                "tools": ["tool_email_dispatch", "tool_calendar"],
+            },
+        ]
+    else:
+        requires_research  = True
+        requires_reasoning = True
+        requires_approval  = any(k in p_lower for k in ("approval", "human", "review", "manager", "gate", "sme", "high risk", "confirm", "approve", "dispute", "refund"))
+        requires_drafting  = any(k in p_lower for k in ("draft", "write", "generate", "create email", "compose", "post", "summary", "report", "message", "alert"))
+        requires_execution = True
 
-    if requires_reasoning:
+        if requires_research:
+            step_sequence.append({
+                "id":        "node_res_01",
+                "agent":     "research_agent",
+                "name":      f"{inferred_category.title()} Data Gatherer",
+                "directive": f"Extract all relevant entities, historical records, and context regarding {prompt[:80]}.",
+                "tools":     ["tool_db_mutation"],
+            })
+
+        if requires_reasoning:
+            step_sequence.append({
+                "id":        "node_reason_01",
+                "agent":     "reasoning_agent",
+                "name":      f"{inferred_category.title()} Logic & Risk Assessor",
+                "directive": "Analyze gathered context, evaluate decision policies, classify priority score, and check constraints.",
+                "tools":     [],
+            })
+
+        if requires_drafting or (not requires_approval and not requires_drafting):
+            step_sequence.append({
+                "id":        "node_draft_01",
+                "agent":     "drafting_agent",
+                "name":      "Action Plan & Response Drafter",
+                "directive": "Generate structured output payload, client communication draft, or decision report.",
+                "tools":     ["tool_email_dispatch"],
+            })
+
+        if requires_approval:
+            step_sequence.append({
+                "id":        "node_gate_01",
+                "agent":     "approval_gate",
+                "name":      "SME Human Approval Gate",
+                "directive": "Pauses execution and alerts human operator if confidence < 0.85 or risk score is elevated.",
+                "tools":     [],
+            })
+
         step_sequence.append({
-            "id":        "node_reason_01",
-            "agent":     "reasoning_agent",
-            "name":      f"{inferred_category.title()} Logic & Risk Assessor",
-            "directive": "Analyze gathered context, evaluate decision policies, classify priority score, and check constraints.",
+            "id":        "node_verify_01",
+            "agent":     "verification_agent",
+            "name":      "Deterministic Safety & Policy Guard",
+            "directive": "Enforce strict schema validation, tenant budget caps, and regulatory compliance rules.",
             "tools":     [],
         })
 
-    if requires_drafting or (not requires_approval and not requires_drafting):
-        step_sequence.append({
-            "id":        "node_draft_01",
-            "agent":     "drafting_agent",
-            "name":      "Action Plan & Response Drafter",
-            "directive": "Generate structured output payload, client communication draft, or decision report.",
-            "tools":     ["tool_email_dispatch"],
-        })
-
-    if requires_approval:
-        step_sequence.append({
-            "id":        "node_gate_01",
-            "agent":     "approval_gate",
-            "name":      "SME Human Approval Gate",
-            "directive": "Pauses execution and alerts human operator if confidence < 0.85 or risk score is elevated.",
-            "tools":     [],
-        })
-
-    step_sequence.append({
-        "id":        "node_verify_01",
-        "agent":     "verification_agent",
-        "name":      "Deterministic Safety & Policy Guard",
-        "directive": "Enforce strict schema validation, tenant budget caps, and regulatory compliance rules.",
-        "tools":     [],
-    })
-
-    if requires_execution:
-        step_sequence.append({
-            "id":        "node_exec_01",
-            "agent":     "execution_agent",
-            "name":      "Integration & Dispatch Executor",
-            "directive": "Execute finalized actions, dispatch notifications, and commit atomic state changes to external systems.",
-            "tools":     ["tool_http_webhook", "tool_email_dispatch", "tool_db_mutation"],
-        })
+        if requires_execution:
+            step_sequence.append({
+                "id":        "node_exec_01",
+                "agent":     "execution_agent",
+                "name":      "Integration & Dispatch Executor",
+                "directive": "Execute finalized actions, dispatch notifications, and commit atomic state changes to external systems.",
+                "tools":     ["tool_http_webhook", "tool_email_dispatch", "tool_db_mutation"],
+            })
 
     prev_id = trig_id
     for idx, step in enumerate(step_sequence):

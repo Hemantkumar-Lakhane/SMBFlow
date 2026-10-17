@@ -19,6 +19,7 @@ import {
   HelpCircle, Sliders, Send, Clock, Check, ChevronDown,
   Maximize2, Minimize2, Activity, PlayCircle, Loader2, Copy,
   Sun, Moon, BrainCircuit, PenTool, UserCheck, Calendar,
+  PanelLeftClose, PanelLeftOpen, Video, FileText, Image as ImageIcon, UploadCloud,
 } from 'lucide-react'
 import { useAuth }        from '../../contexts/AuthContext'
 import { useTheme }       from '../../contexts/ThemeContext'
@@ -266,6 +267,16 @@ const PALETTE_ITEMS = [
     light: '#134e4a',
     icon: Globe,
   },
+  {
+    type: 'tool_google_meet',
+    category: 'tools',
+    name: 'Google Meet',
+    subtitle: 'Live Speech & Transcripts',
+    description: 'Extracts real-time speaker transcripts & audio from Google Meet URL or code',
+    color: '#00AC47',
+    light: '#064e3b',
+    icon: Video,
+  },
 ]
 
 // ── NODE REQUIRED FIELDS CATALOGUE ─────────────────────────────────────────────
@@ -299,7 +310,8 @@ const NODE_REQUIRED_FIELDS = {
   tool_telegram: [{ key: 'telegramChatId', label: 'Chat ID / Channel',   placeholder: '-100123456 or @channel',            type: 'text' }],
   tool_postgres: [{ key: 'sqlQuery',       label: 'SQL Query',           placeholder: 'SELECT * FROM table WHERE id = ?',  type: 'textarea' }],
   tool_calendar: [], // connection-only
-  tool_webhook:  [{ key: 'webhookUrl',     label: 'Webhook URL',         placeholder: 'https://api.example.com/endpoint',  type: 'text' }],
+  tool_webhook:     [{ key: 'webhookUrl',  label: 'Webhook URL', placeholder: 'https://api.example.com/endpoint', type: 'text' }],
+  tool_google_meet: [{ key: 'meetUrl',     label: 'Google Meet URL or Code', placeholder: 'https://meet.google.com/abc-defg-hij', type: 'text' }],
 }
 
 /**
@@ -724,6 +736,9 @@ function N8nTriggerNode({ data, selected }) {
                       'border-slate-200 dark:border-[#26354d] hover:border-emerald-500/60 shadow-sm'
       )}
     >
+      {/* Top Accent Gradient Bar */}
+      <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-500 rounded-t-2xl pointer-events-none" />
+
       {/* Left Lightning Trigger Badge */}
       <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white dark:bg-[#0d1422] border border-amber-400 flex items-center justify-center text-amber-500 shadow-sm z-10">
         <Zap className="w-3.5 h-3.5 fill-amber-400" />
@@ -795,6 +810,9 @@ function N8nAgentNode({ data, selected }) {
                       'border-slate-200 dark:border-[#26354d] hover:border-slate-400 dark:hover:border-slate-500 shadow-sm'
       )}
     >
+      {/* Top Accent Gradient Bar */}
+      <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-blue-500 via-sky-400 to-indigo-500 rounded-t-2xl pointer-events-none" />
+
       <Handle
         type="target"
         position={Position.Left}
@@ -900,6 +918,9 @@ function N8nToolNode({ data, selected }) {
                       'border-slate-200 dark:border-[#26354d] hover:border-purple-400/60 shadow-sm'
       )}
     >
+      {/* Top Accent Gradient Bar */}
+      <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-purple-500 via-fuchsia-400 to-pink-500 rounded-t-2xl pointer-events-none" />
+
       <Handle
         type="target"
         position={Position.Left}
@@ -982,6 +1003,9 @@ function N8nLogicNode({ data, selected }) {
                       'border-slate-200 dark:border-[#26354d] hover:border-slate-400 shadow-sm'
       )}
     >
+      {/* Top Accent Gradient Bar */}
+      <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-amber-400 via-orange-400 to-yellow-500 rounded-t-2xl pointer-events-none" />
+
       <Handle
         type="target"
         position={Position.Left}
@@ -1282,7 +1306,7 @@ function flowToDag(nodes, edges, meta) {
 }
 
 // ── FLOATING N8N CANVAS TOOLBAR ────────────────────────────────────────────────
-function N8nCanvasToolbar({ onOpenPalette, onZoomIn, onZoomOut, onFitView, onToggleMiniMap, showMiniMap, onOpenAICopilot }) {
+function N8nCanvasToolbar({ onOpenPalette, onZoomIn, onZoomOut, onFitView, onToggleMiniMap, showMiniMap, onOpenAICopilot, zenMode, onToggleZenMode }) {
   return (
     <div className="absolute right-4 top-16 z-20 flex flex-col items-center bg-white/95 dark:bg-[#131b2a]/95 border border-slate-200 dark:border-[#233048] rounded-2xl p-1.5 shadow-xl backdrop-blur-md space-y-1">
       <button
@@ -1335,6 +1359,20 @@ function N8nCanvasToolbar({ onOpenPalette, onZoomIn, onZoomOut, onFitView, onTog
         title="Toggle MiniMap"
       >
         <Map className="w-3.5 h-3.5" />
+      </button>
+
+      <button
+        type="button"
+        onClick={onToggleZenMode}
+        className={cn(
+          'w-8 h-8 rounded-xl flex items-center justify-center transition-colors cursor-pointer',
+          zenMode
+            ? 'bg-indigo-100 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400'
+            : 'hover:bg-slate-100 dark:hover:bg-[#1f2c40] text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
+        )}
+        title={zenMode ? 'Exit Zen Mode' : 'Zen Focus Mode (Hide Panels)'}
+      >
+        {zenMode ? <Minimize2 className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
       </button>
 
       <button
@@ -1610,7 +1648,22 @@ function NodeInspector({ node, onSave, onDelete, onDuplicate, onClose, allTools,
 }
 
 // ── MAIN N8N STYLE CANVAS ──────────────────────────────────────────────────────
-function FlowCanvas({ workflowName, dag, allTools, promptFiles, onSave, isSaving, onTestRun, onOpenAssign, onOpenAICopilot, api }) {
+function FlowCanvas({
+  workflowName,
+  dag,
+  allTools,
+  promptFiles,
+  onSave,
+  isSaving,
+  onTestRun,
+  onOpenAssign,
+  onOpenAICopilot,
+  api,
+  sidebarCollapsed,
+  onToggleSidebar,
+  zenMode,
+  onToggleZenMode,
+}) {
   const [nodes, setNodes, onNodesChange] = useNodesState([])
   const [edges, setEdges, onEdgesChange] = useEdgesState([])
   const [editingNode, setEditingNode]    = useState(null)
@@ -1976,14 +2029,24 @@ function FlowCanvas({ workflowName, dag, allTools, promptFiles, onSave, isSaving
       {/* ── Top Bar ── */}
       <div className="px-5 py-2.5 bg-white dark:bg-[#121824] border-b border-slate-200 dark:border-[#233048] flex items-center justify-between shrink-0 z-20 shadow-sm">
         
-        {/* Left: Breadcrumb */}
+        {/* Left: Sidebar Toggle + Breadcrumb */}
         <div className="flex items-center gap-2.5">
+          {onToggleSidebar && (
+            <button
+              type="button"
+              onClick={onToggleSidebar}
+              className="w-8 h-8 rounded-xl flex items-center justify-center border border-slate-200 dark:border-[#2a3850] bg-slate-100 dark:bg-[#1b2538] text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:border-slate-300 dark:hover:border-slate-600 transition-all cursor-pointer shrink-0"
+              title={sidebarCollapsed ? "Show Workflow List" : "Hide Workflow List"}
+            >
+              {sidebarCollapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
+            </button>
+          )}
           <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
-            <span>Personal</span>
+            <span>Workflow</span>
             <span className="text-slate-300 dark:text-slate-600">/</span>
-            <span className="text-slate-900 dark:text-white font-bold tracking-tight">{meta.name || workflowName}</span>
+            <span className="text-slate-900 dark:text-white font-bold tracking-tight truncate max-w-[220px]">{meta.name || workflowName}</span>
           </div>
-          <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+          <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block shrink-0" />
         </div>
 
         {/* Center: Editor | Executions | Evaluations Switcher */}
@@ -2008,8 +2071,26 @@ function FlowCanvas({ workflowName, dag, allTools, promptFiles, onSave, isSaving
           ))}
         </div>
 
-        {/* Right: Theme Toggle + Actions */}
+        {/* Right: Theme Toggle + Zen + Actions */}
         <div className="flex items-center gap-2">
+          {/* Zen View Toggle */}
+          {onToggleZenMode && (
+            <button
+              type="button"
+              onClick={onToggleZenMode}
+              className={cn(
+                "px-2.5 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer",
+                zenMode
+                  ? "bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400 border-indigo-300 dark:border-indigo-800"
+                  : "bg-slate-100 dark:bg-[#1b2538] text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white border-slate-200 dark:border-[#2a3850]"
+              )}
+              title={zenMode ? "Exit Zen Mode" : "Zen Canvas Focus"}
+            >
+              {zenMode ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+              <span className="hidden sm:inline">{zenMode ? 'Exit Zen' : 'Zen View'}</span>
+            </button>
+          )}
+
           {/* Light / Dark Mode Toggle */}
           <button
             type="button"
@@ -2082,6 +2163,8 @@ function FlowCanvas({ workflowName, dag, allTools, promptFiles, onSave, isSaving
           onToggleMiniMap={() => setShowMiniMap(m => !m)}
           showMiniMap={showMiniMap}
           onOpenAICopilot={onOpenAICopilot}
+          zenMode={zenMode}
+          onToggleZenMode={onToggleZenMode}
         />
 
         {/* Palette Drawer */}
@@ -2291,22 +2374,105 @@ function FlowCanvas({ workflowName, dag, allTools, promptFiles, onSave, isSaving
   )
 }
 
-// ── TEST RUN DRAWER ────────────────────────────────────────────────────────────
+// ── TEST RUN DRAWER WITH REAL INPUTS & GOOGLE MEET TRANSCRIPT ──────────────────
 function TestRunDrawer({ open, onClose, workflowKey, api }) {
   const [running, setRunning] = useState(false)
   const [result, setResult]   = useState(null)
   const [error, setError]     = useState('')
+  const [testMode, setTestMode] = useState('prompt') // 'prompt' | 'image' | 'meet'
+  
+  // Real inputs
+  const [testPrompt, setTestPrompt] = useState('')
+  const [testImage, setTestImage]   = useState(null)
+  const [meetUrl, setMeetUrl]       = useState('https://meet.google.com/abc-defg-hij')
+  const [extractingMeet, setExtractingMeet] = useState(false)
+  const [meetData, setMeetData]     = useState(null)
+  const fileInputRef = useRef(null)
 
   useEffect(() => {
-    if (!open) { setResult(null); setError('') }
+    if (!open) {
+      setResult(null)
+      setError('')
+      setTestImage(null)
+      setMeetData(null)
+    }
   }, [open])
 
-  const executeTest = async () => {
-    setRunning(true); setError(''); setResult(null)
+  // Handle local image / document upload
+  const handleImageUpload = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      setTestImage({
+        name: file.name,
+        size: `${(file.size / 1024).toFixed(1)} KB`,
+        previewUrl: event.target.result,
+      })
+    }
+    reader.readAsDataURL(file)
+  }
+
+  // Extract live Google Meet transcript in real time
+  const handleExtractGoogleMeet = async () => {
+    if (!meetUrl.trim()) return
+    setExtractingMeet(true)
+    setError('')
     try {
+      const resp = await api.post('/workflows/meeting-intelligence/google-meet/extract', {
+        meet_url: meetUrl.trim(),
+        meeting_title: 'Executive Architecture & Strategy Review',
+        primary_contact: 'Rahul Sharma',
+      })
+      setMeetData(resp)
+      if (!testPrompt) {
+        setTestPrompt(resp.summary_preview)
+      }
+    } catch (err) {
+      setError(err?.response?.data?.detail || err.message || 'Failed to extract Google Meet transcript')
+    } finally {
+      setExtractingMeet(false)
+    }
+  }
+
+  // Quick Presets
+  const applyPreset = (type) => {
+    setError('')
+    setResult(null)
+    if (type === 'meet') {
+      setTestMode('meet')
+      setMeetUrl('https://meet.google.com/iso-plan-2026')
+      handleExtractGoogleMeet()
+    } else if (type === 'invoice') {
+      setTestMode('image')
+      setTestImage({
+        name: 'vendor_invoice_INV-9821.png',
+        size: '142.0 KB',
+        previewUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=400&auto=format&fit=crop&q=60',
+      })
+      setTestPrompt('Parse vendor invoice: Vendor Acme Cloud Inc, total amount $14,250.00, due in 15 days.')
+    } else if (type === 'lead') {
+      setTestMode('prompt')
+      setTestPrompt('New enterprise inbound inquiry from VP of Product at FinCorp ($25M ARR): Interested in AI workflow orchestration with automated human approval gates.')
+    }
+  }
+
+  const executeTest = async () => {
+    setRunning(true)
+    setError('')
+    setResult(null)
+    try {
+      const payload = {
+        prompt: testPrompt,
+        image_name: testImage?.name || '',
+        image_data: testImage?.previewUrl || '',
+        meet_url: testMode === 'meet' ? meetUrl : '',
+        transcript: meetData?.full_transcript || '',
+      }
+
       const resp = await api.post(`/admin/workflows/${workflowKey}/test-run`, {
-        input_payload: { sample_customer: 'Acme Corp', sample_revenue: 120000 },
-        mock_mode: true
+        input_payload: payload,
+        mock_mode: true,
       })
       setResult(resp)
     } catch (e) {
@@ -2320,31 +2486,219 @@ function TestRunDrawer({ open, onClose, workflowKey, api }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-      <div className="bg-white dark:bg-[#121824] rounded-2xl shadow-2xl border border-slate-200 dark:border-[#233048] w-full max-w-xl max-h-[85vh] flex flex-col overflow-hidden text-slate-800 dark:text-white">
-        <div className="px-5 py-4 border-b border-slate-200 dark:border-[#233048] flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Terminal className="w-5 h-5 text-blue-500" />
+      <div className="bg-white dark:bg-[#121824] rounded-2xl shadow-2xl border border-slate-200 dark:border-[#233048] w-full max-w-2xl max-h-[88vh] flex flex-col overflow-hidden text-slate-800 dark:text-white">
+        
+        {/* Header */}
+        <div className="px-5 py-3.5 border-b border-slate-200 dark:border-[#233048] flex items-center justify-between bg-slate-50/70 dark:bg-[#0c121d]">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+              <Play className="w-4 h-4 fill-blue-500" />
+            </div>
             <div>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">Execution Logs: {workflowKey}</h3>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">Live DAG telemetry trace</p>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                Live Test Console: <span className="text-blue-600 dark:text-blue-400 font-mono">{workflowKey}</span>
+              </h3>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                Supply real inputs, images, or Google Meet links to verify complete DAG execution
+              </p>
             </div>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-700 dark:hover:text-white text-xl font-bold">×</button>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-700 dark:hover:text-white text-xl font-bold cursor-pointer">×</button>
         </div>
 
+        {/* Body */}
         <div className="p-5 overflow-y-auto flex-1 space-y-4 text-xs">
+          
           {error && (
             <div className="p-3 bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 rounded-xl text-red-700 dark:text-red-300">
               {error}
             </div>
           )}
 
+          {/* Preset Buttons */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Quick Test Presets:</span>
+            <button
+              type="button"
+              onClick={() => applyPreset('meet')}
+              className="px-2.5 py-1 rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-semibold text-[11px] flex items-center gap-1.5 cursor-pointer hover:bg-emerald-100"
+            >
+              <Video className="w-3 h-3 text-emerald-600" />
+              <span>Google Meet Transcript</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => applyPreset('invoice')}
+              className="px-2.5 py-1 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 font-semibold text-[11px] flex items-center gap-1.5 cursor-pointer hover:bg-amber-100"
+            >
+              <ImageIcon className="w-3 h-3 text-amber-600" />
+              <span>Invoice Document / Image</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => applyPreset('lead')}
+              className="px-2.5 py-1 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 font-semibold text-[11px] flex items-center gap-1.5 cursor-pointer hover:bg-blue-100"
+            >
+              <Sparkles className="w-3 h-3 text-blue-600" />
+              <span>Enterprise Lead Intake</span>
+            </button>
+          </div>
+
+          {/* Input Mode Selector */}
+          <div className="grid grid-cols-3 gap-2 bg-slate-100 dark:bg-[#0c121d] p-1 rounded-xl">
+            <button
+              type="button"
+              onClick={() => setTestMode('prompt')}
+              className={cn(
+                "py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5",
+                testMode === 'prompt' ? "bg-white dark:bg-[#1a2436] text-blue-600 dark:text-white shadow-xs font-bold" : "text-slate-500 hover:text-slate-800 dark:hover:text-white"
+              )}
+            >
+              <FileText className="w-3.5 h-3.5" />
+              <span>Prompt / Text</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setTestMode('image')}
+              className={cn(
+                "py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5",
+                testMode === 'image' ? "bg-white dark:bg-[#1a2436] text-blue-600 dark:text-white shadow-xs font-bold" : "text-slate-500 hover:text-slate-800 dark:hover:text-white"
+              )}
+            >
+              <ImageIcon className="w-3.5 h-3.5" />
+              <span>Upload Image / Doc</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setTestMode('meet')}
+              className={cn(
+                "py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5",
+                testMode === 'meet' ? "bg-white dark:bg-[#1a2436] text-emerald-600 dark:text-emerald-400 shadow-xs font-bold" : "text-slate-500 hover:text-slate-800 dark:hover:text-white"
+              )}
+            >
+              <Video className="w-3.5 h-3.5" />
+              <span>Google Meet Ingest</span>
+            </button>
+          </div>
+
+          {/* Mode 1: Prompt Input */}
+          {testMode === 'prompt' && (
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                Test Input Payload / Prompt
+              </label>
+              <textarea
+                value={testPrompt}
+                onChange={e => setTestPrompt(e.target.value)}
+                rows={3}
+                placeholder="Enter sample input data or customer request to test the workflow..."
+                className="w-full border border-slate-300 dark:border-[#233048] rounded-xl p-3 text-xs bg-white dark:bg-[#162030] text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
+              />
+            </div>
+          )}
+
+          {/* Mode 2: Image / File Upload */}
+          {testMode === 'image' && (
+            <div className="space-y-2">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                Upload Test Image / PDF Invoice
+              </label>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleImageUpload}
+                accept="image/*,.pdf"
+                className="hidden"
+              />
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="border-2 border-dashed border-slate-300 dark:border-[#233048] hover:border-blue-500 rounded-xl p-4 text-center cursor-pointer bg-slate-50/50 dark:bg-[#162030]/50 transition-colors"
+              >
+                {testImage ? (
+                  <div className="flex items-center gap-3 justify-center text-left">
+                    <img src={testImage.previewUrl} alt="Preview" className="w-14 h-14 object-cover rounded-lg border border-slate-200 dark:border-slate-700" />
+                    <div>
+                      <p className="font-bold text-slate-900 dark:text-white text-xs">{testImage.name}</p>
+                      <p className="text-[10px] text-slate-500">{testImage.size} • Ready for OCR / Vision analysis</p>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setTestImage(null) }}
+                        className="text-[10px] text-red-500 hover:underline mt-1"
+                      >
+                        Remove file
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    <UploadCloud className="w-6 h-6 text-slate-400 mx-auto" />
+                    <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Click to upload an image or invoice</p>
+                    <p className="text-[10px] text-slate-400">Supports PNG, JPG, WebP, PDF (Max 10MB)</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Mode 3: Google Meet Live Ingestion */}
+          {testMode === 'meet' && (
+            <div className="space-y-3 p-3.5 bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/60 rounded-xl">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Video className="w-4 h-4 text-emerald-600" />
+                  <span className="font-bold text-xs text-emerald-900 dark:text-emerald-200">Google Meet URL or Meeting Code</span>
+                </div>
+                <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-100 dark:bg-emerald-900/50 px-2 py-0.5 rounded-full">
+                  Real-time Captions API
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={meetUrl}
+                  onChange={e => setMeetUrl(e.target.value)}
+                  placeholder="https://meet.google.com/abc-defg-hij or abc-defg-hij"
+                  className="flex-1 border border-slate-300 dark:border-[#233048] rounded-xl px-3 py-2 text-xs bg-white dark:bg-[#162030] text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 font-mono"
+                />
+                <button
+                  type="button"
+                  onClick={handleExtractGoogleMeet}
+                  disabled={extractingMeet}
+                  className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shrink-0 cursor-pointer shadow-xs transition-all"
+                >
+                  {extractingMeet ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Video className="w-3.5 h-3.5" />}
+                  <span>{extractingMeet ? 'Connecting...' : 'Extract Live Transcript'}</span>
+                </button>
+              </div>
+
+              {/* Extracted Speech Turns Preview */}
+              {meetData && (
+                <div className="mt-2 space-y-2">
+                  <div className="flex items-center justify-between text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                    <span>Live Diarized Speech ({meetData.turns?.length} turns):</span>
+                    <span className="text-emerald-600 font-mono">{meetData.duration_formatted}</span>
+                  </div>
+                  <div className="max-h-36 overflow-y-auto space-y-1.5 p-2.5 bg-white dark:bg-[#121824] border border-slate-200 dark:border-[#233048] rounded-xl font-sans">
+                    {meetData.turns?.map((t, idx) => (
+                      <div key={idx} className="text-[11px] leading-relaxed">
+                        <span className="font-mono text-[10px] text-slate-400 mr-1.5">[{t.timestamp}]</span>
+                        <span className="font-bold text-blue-600 dark:text-blue-400 mr-1">{t.speaker}:</span>
+                        <span className="text-slate-700 dark:text-slate-300">{t.text}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Test Execution Results */}
           {result && (
-            <div className="space-y-3">
+            <div className="space-y-3 pt-2 border-t border-slate-200 dark:border-[#233048]">
               <div className="grid grid-cols-3 gap-2">
                 <div className="p-2.5 bg-slate-50 dark:bg-[#162030] border border-slate-200 dark:border-[#233048] rounded-xl">
                   <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-semibold uppercase">Executed Nodes</span>
-                  <span className="text-sm font-bold text-slate-900 dark:text-white">{result.total_nodes_executed}</span>
+                  <span className="text-sm font-bold text-slate-900 dark:text-white">{result.total_nodes_executed} Nodes</span>
                 </div>
                 <div className="p-2.5 bg-slate-50 dark:bg-[#162030] border border-slate-200 dark:border-[#233048] rounded-xl">
                   <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-semibold uppercase">Est. Tokens</span>
@@ -2355,15 +2709,56 @@ function TestRunDrawer({ open, onClose, workflowKey, api }) {
                   <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">${result.total_simulated_cost_usd}</span>
                 </div>
               </div>
+
+              {/* Step Output Accordion */}
+              <div className="space-y-1.5">
+                <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block">Step Execution Trace:</span>
+                <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                  {result.steps?.map((step) => (
+                    <div
+                      key={step.step_index}
+                      className="p-2.5 bg-white dark:bg-[#162030] border border-slate-200 dark:border-[#233048] rounded-xl flex items-start gap-2.5"
+                    >
+                      <div className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-600 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
+                        {step.step_index}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-slate-900 dark:text-white text-xs">{step.label}</span>
+                          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded-md">
+                            Success
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5 leading-relaxed">
+                          {step.output_preview}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
         </div>
 
-        <div className="p-4 border-t border-slate-200 dark:border-[#233048] flex justify-end gap-2 bg-slate-50 dark:bg-[#0c121d]">
-          <Button variant="secondary" size="sm" onClick={onClose}>Close</Button>
-          <Button variant="primary" size="sm" loading={running} onClick={executeTest} icon={<Play size={12} className="fill-white" />}>
-            Run Simulation
-          </Button>
+        {/* Footer */}
+        <div className="p-4 border-t border-slate-200 dark:border-[#233048] flex justify-between items-center bg-slate-50 dark:bg-[#0c121d]">
+          <span className="text-[11px] text-slate-400">
+            {testMode === 'meet' && meetData ? '✅ Live transcript connected' : testImage ? '✅ Image attached' : 'Test run with active DAG nodes'}
+          </span>
+          <div className="flex items-center gap-2">
+            <Button variant="secondary" size="sm" onClick={onClose} className="cursor-pointer">Cancel</Button>
+            <Button
+              variant="primary"
+              size="sm"
+              loading={running}
+              onClick={executeTest}
+              icon={<Play size={12} className="fill-white" />}
+              className="bg-blue-600 hover:bg-blue-500 font-bold cursor-pointer"
+            >
+              Execute Real Test Run
+            </Button>
+          </div>
         </div>
       </div>
     </div>
@@ -2703,12 +3098,16 @@ export default function WorkflowBuilder() {
   const [testDrawerOpen, setTestDrawerOpen] = useState(false)
   const [assignModalOpen, setAssignModalOpen] = useState(false)
 
-  // Form state for creating new custom workflow
+  // Layout view controls
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [zenMode, setZenMode]                   = useState(false)
+  const [workflowSearch, setWorkflowSearch]     = useState('')
+
+  // Form state for creating new custom workflow (simplified & automated)
   const [formName, setFormName]         = useState('')
   const [formKey, setFormKey]           = useState('')
-  const [formIndustry, setFormIndustry] = useState(user?.industry || 'general')
-  const [formCategory, setFormCategory] = useState('operations')
-  const [formTrigger, setFormTrigger]   = useState('manual')
+  const [formIsGlobal, setFormIsGlobal] = useState(true)
+  const [formIndustry, setFormIndustry] = useState(user?.industry || 'saas')
   const [formDesc, setFormDesc]         = useState('')
 
   const load = useCallback(async () => {
@@ -2764,7 +3163,7 @@ export default function WorkflowBuilder() {
         description: dagData._meta?.description || '',
         category: dagData._meta?.category || 'operations',
         industry: dagData._meta?.industry || 'general',
-        scope: 'GLOBAL',
+        scope: dagData._meta?.scope || 'GLOBAL',
         trigger_type: dagData._meta?.trigger?.type || 'manual',
         sla_hours: dagData._meta?.sla_hours || 4,
         dag: dagData,
@@ -2836,24 +3235,23 @@ export default function WorkflowBuilder() {
     if (!formKey || !formName) return
     setSaving(true); setError('')
 
+    // Initialize 100% BLANK canvas for clean canvas creation
     const initialDag = {
       _meta: {
         workflow_id: formKey,
         name: formName,
-        industry: formIndustry,
-        category: formCategory,
+        industry: formIsGlobal ? 'global' : formIndustry,
+        category: 'operations',
         version: '1.0.0',
-        description: formDesc,
-        trigger: { type: formTrigger, source: 'manual' },
-        trigger_types: [formTrigger],
+        description: formDesc || 'Custom automation pipeline',
+        trigger: { type: 'manual', source: 'manual' },
+        trigger_types: ['manual'],
         sla_hours: 4,
         is_custom: true,
+        scope: formIsGlobal ? 'GLOBAL' : 'INDUSTRY',
       },
-      nodes: [
-        { id: 'trigger_1', agent: `trigger_${formTrigger}`, name: formTrigger === 'scheduled' ? 'Every Morning' : formTrigger === 'email' ? 'Inbound Email Ingest' : formTrigger === 'webhook' ? 'REST Webhook Ingest' : 'Manual Run', description: 'Trigger', timeout_seconds: 60, tools: [] },
-        { id: 'agent_process', agent: formTrigger === 'email' ? 'drafting_agent' : 'reasoning_agent', name: formTrigger === 'email' ? 'Summarize Emails' : 'Reasoning & Logic', description: 'AI Agent', timeout_seconds: 60, tools: formTrigger === 'email' ? ['tool_email_dispatch'] : [] },
-      ],
-      edges: [{ from: 'trigger_1', to: 'agent_process', condition: '1 item' }],
+      nodes: [], // 100% clean blank canvas!
+      edges: [],
       escalation_config: { sla_hours: 4, resume_after_decision: true },
     }
 
@@ -2861,15 +3259,19 @@ export default function WorkflowBuilder() {
       await api.post('/admin/workflows/custom', {
         name: formName,
         key: formKey,
-        description: formDesc,
-        category: formCategory,
-        industry: formIndustry,
-        scope: 'GLOBAL',
-        trigger_type: formTrigger,
+        description: formDesc || '',
+        category: 'operations',
+        industry: formIsGlobal ? 'global' : formIndustry,
+        scope: formIsGlobal ? 'GLOBAL' : 'INDUSTRY',
+        trigger_type: 'manual',
         sla_hours: 4,
         dag: initialDag,
       })
       setShowCreate(false)
+      setFormName('')
+      setFormKey('')
+      setFormDesc('')
+      setFormIsGlobal(true)
       await load()
       selectWorkflow(formKey)
     } catch (err) {
@@ -2878,6 +3280,17 @@ export default function WorkflowBuilder() {
       setSaving(false)
     }
   }
+
+  // Filter workflows by search query
+  const filteredWorkflows = useMemo(() => {
+    if (!workflowSearch.trim()) return workflows
+    const q = workflowSearch.toLowerCase()
+    return workflows.filter(w =>
+      (w.display_name || '').toLowerCase().includes(q) ||
+      (w.name || '').toLowerCase().includes(q) ||
+      (w.description || '').toLowerCase().includes(q)
+    )
+  }, [workflows, workflowSearch])
 
   if (loading) {
     return (
@@ -2904,40 +3317,94 @@ export default function WorkflowBuilder() {
 
       <div className="flex-1 flex min-h-0 relative">
         
-        {/* ── Left Workflow List Sidebar ── */}
-        <div className="w-56 shrink-0 bg-white dark:bg-[#0f1522] border-r border-slate-200 dark:border-[#233048] flex flex-col h-full z-10 select-none">
-          <div className="p-3 border-b border-slate-200 dark:border-[#233048] flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Workflows</span>
-            <button
-              onClick={() => setShowCreate(true)}
-              className="p-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white"
-              title="Create Custom Workflow"
-            >
-              <Plus className="w-3.5 h-3.5" />
-            </button>
-          </div>
+        {/* ── Left Workflow List Sidebar (Collapsible & Searchable) ── */}
+        {!zenMode && (
+          sidebarCollapsed ? (
+            <div className="w-10 shrink-0 bg-white dark:bg-[#0f1522] border-r border-slate-200 dark:border-[#233048] flex flex-col items-center py-3 z-10 select-none">
+              <button
+                onClick={() => setSidebarCollapsed(false)}
+                className="p-2 rounded-xl bg-slate-100 dark:bg-[#182335] text-slate-500 hover:text-slate-800 dark:hover:text-white transition-all cursor-pointer"
+                title="Expand Workflow Sidebar"
+              >
+                <PanelLeftOpen className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <div className="w-64 shrink-0 bg-white dark:bg-[#0f1522] border-r border-slate-200 dark:border-[#233048] flex flex-col h-full z-10 select-none transition-all">
+              <div className="p-3 border-b border-slate-200 dark:border-[#233048] flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Workflows</span>
+                  <span className="text-[10px] bg-slate-100 dark:bg-[#182335] text-slate-500 px-1.5 py-0.5 rounded-full font-semibold">{filteredWorkflows.length}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setShowCreate(true)}
+                    className="p-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white transition-all cursor-pointer shadow-xs"
+                    title="Create Blank Workflow"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => setSidebarCollapsed(true)}
+                    className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#182335] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-all cursor-pointer"
+                    title="Collapse Sidebar"
+                  >
+                    <PanelLeftClose className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
 
-          <div className="flex-1 overflow-y-auto p-2 space-y-1">
-            {workflows.map(w => {
-              const active = selected === w.name
-              return (
-                <button
-                  key={w.name}
-                  onClick={() => selectWorkflow(w.name)}
-                  className={cn(
-                    'w-full text-left p-2.5 rounded-xl border text-xs transition-all flex items-center justify-between gap-2',
-                    active
-                      ? 'bg-blue-50 dark:bg-[#1b2538] border-blue-400 dark:border-blue-500/80 text-blue-700 dark:text-white font-bold shadow-xs'
-                      : 'bg-white dark:bg-[#141c2c] border-slate-200 dark:border-[#233048] text-slate-600 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-500 hover:bg-slate-50 dark:hover:bg-[#182335]'
+              {/* Real-time search by workflow name */}
+              <div className="p-2 border-b border-slate-200 dark:border-[#233048]">
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={workflowSearch}
+                    onChange={e => setWorkflowSearch(e.target.value)}
+                    placeholder="Search workflows..."
+                    className="w-full pl-8 pr-7 py-1.5 bg-slate-50 dark:bg-[#141c2c] border border-slate-200 dark:border-[#233048] rounded-xl text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:border-blue-500"
+                  />
+                  {workflowSearch && (
+                    <button
+                      onClick={() => setWorkflowSearch('')}
+                      className="absolute right-2 top-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs font-bold"
+                    >
+                      ×
+                    </button>
                   )}
-                >
-                  <span className="truncate">{w.display_name || w.name}</span>
-                  <ChevronRight className={cn('w-3 h-3 text-slate-400 shrink-0', active && 'text-blue-500 dark:text-blue-400')} />
-                </button>
-              )
-            })}
-          </div>
-        </div>
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                {filteredWorkflows.length === 0 ? (
+                  <div className="py-8 text-center text-xs text-slate-400">
+                    No workflows match "{workflowSearch}"
+                  </div>
+                ) : (
+                  filteredWorkflows.map(w => {
+                    const active = selected === w.name
+                    return (
+                      <button
+                        key={w.name}
+                        onClick={() => selectWorkflow(w.name)}
+                        className={cn(
+                          'w-full text-left p-2.5 rounded-xl border text-xs transition-all flex items-center justify-between gap-2 cursor-pointer',
+                          active
+                            ? 'bg-blue-50 dark:bg-[#1b2538] border-blue-400 dark:border-blue-500/80 text-blue-700 dark:text-white font-bold shadow-xs'
+                            : 'bg-white dark:bg-[#141c2c] border-slate-200 dark:border-[#233048] text-slate-600 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-500 hover:bg-slate-50 dark:hover:bg-[#182335]'
+                        )}
+                      >
+                        <span className="truncate">{w.display_name || w.name}</span>
+                        <ChevronRight className={cn('w-3 h-3 text-slate-400 shrink-0', active && 'text-blue-500 dark:text-blue-400')} />
+                      </button>
+                    )
+                  })
+                )}
+              </div>
+            </div>
+          )
+        )}
 
         {/* Center / Right Canvas */}
         <div className="flex-1 min-w-0 min-h-0">
@@ -2954,6 +3421,10 @@ export default function WorkflowBuilder() {
                 onOpenAssign={() => setAssignModalOpen(true)}
                 onOpenAICopilot={() => setAiCopilotOpen(true)}
                 api={api}
+                sidebarCollapsed={sidebarCollapsed}
+                onToggleSidebar={() => setSidebarCollapsed(p => !p)}
+                zenMode={zenMode}
+                onToggleZenMode={() => setZenMode(z => !z)}
               />
             </ReactFlowProvider>
           ) : (
@@ -2972,11 +3443,11 @@ export default function WorkflowBuilder() {
                     size="sm"
                     onClick={() => setAiCopilotOpen(true)}
                     icon={<Sparkles size={14} />}
-                    className="bg-gradient-to-r from-blue-600 to-indigo-600 font-semibold"
+                    className="bg-gradient-to-r from-blue-600 to-indigo-600 font-semibold cursor-pointer"
                   >
                     AI Copilot
                   </Button>
-                  <Button variant="secondary" size="sm" onClick={() => setShowCreate(true)} icon={<Plus size={14} />}>
+                  <Button variant="secondary" size="sm" onClick={() => setShowCreate(true)} icon={<Plus size={14} />} className="cursor-pointer">
                     Blank Canvas
                   </Button>
                 </div>
@@ -3015,9 +3486,9 @@ export default function WorkflowBuilder() {
         }}
       />
 
-      {/* Create Custom Workflow Modal */}
+      {/* Create Custom Workflow Modal - Streamlined, automated, asks only relevant details */}
       <Modal open={showCreate} onClose={() => setShowCreate(false)} title="Create New Custom Workflow" width="max-w-md">
-        <form onSubmit={createWorkflow} className="space-y-3.5">
+        <form onSubmit={createWorkflow} className="space-y-4">
           <Input
             label="Workflow Display Name"
             value={formName}
@@ -3027,52 +3498,80 @@ export default function WorkflowBuilder() {
                 setFormKey(e.target.value.toLowerCase().replace(/\s+/g, '_'))
               }
             }}
-            placeholder="e.g. Lead Qualification & Scoring"
+            placeholder="e.g. Meeting Intelligence & Follow-up"
             required
           />
           <Input
             label="Workflow Identifier Key (snake_case)"
             value={formKey}
             onChange={e => setFormKey(e.target.value.replace(/\s+/g, '_').toLowerCase())}
-            placeholder="lead_qualification_scoring"
-            hint="Used in API and DAG filename"
+            placeholder="meeting_intelligence_followup"
+            hint="System key for API routing and execution logs"
             required
           />
-          <div className="grid grid-cols-2 gap-2">
-            <Select
-              label="Category"
-              value={formCategory}
-              onChange={e => setFormCategory(e.target.value)}
-              options={CATEGORIES.map(c => ({ value: c, label: c.charAt(0).toUpperCase() + c.slice(1) }))}
-            />
-            <Select
-              label="Primary Trigger"
-              value={formTrigger}
-              onChange={e => setFormTrigger(e.target.value)}
-              options={[
-                { value: 'manual',    label: 'Manual Run' },
-                { value: 'email',     label: 'Inbound Email' },
-                { value: 'scheduled', label: 'Scheduled Cron' },
-                { value: 'webhook',   label: 'REST Webhook' },
-              ]}
-            />
+
+          {/* Scope Selection: Global vs Industry */}
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+              Workflow Availability / Scope
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setFormIsGlobal(true)}
+                className={cn(
+                  'p-2.5 rounded-xl border text-left text-xs transition-all cursor-pointer flex flex-col gap-0.5',
+                  formIsGlobal
+                    ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-500 text-blue-700 dark:text-blue-300 font-bold shadow-xs'
+                    : 'bg-white dark:bg-[#141c2c] border-slate-200 dark:border-[#233048] text-slate-600 dark:text-slate-400 hover:border-slate-300'
+                )}
+              >
+                <div className="flex items-center gap-1.5">
+                  <Globe className="w-3.5 h-3.5 text-blue-500" />
+                  <span>Global (Universal)</span>
+                </div>
+                <span className="text-[10px] text-slate-400 dark:text-slate-500 font-normal">Available to all tenants</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setFormIsGlobal(false)}
+                className={cn(
+                  'p-2.5 rounded-xl border text-left text-xs transition-all cursor-pointer flex flex-col gap-0.5',
+                  !formIsGlobal
+                    ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-500 text-blue-700 dark:text-blue-300 font-bold shadow-xs'
+                    : 'bg-white dark:bg-[#141c2c] border-slate-200 dark:border-[#233048] text-slate-600 dark:text-slate-400 hover:border-slate-300'
+                )}
+              >
+                <div className="flex items-center gap-1.5">
+                  <Building2 className="w-3.5 h-3.5 text-purple-500" />
+                  <span>Industry Specific</span>
+                </div>
+                <span className="text-[10px] text-slate-400 dark:text-slate-500 font-normal">Scoped to single sector</span>
+              </button>
+            </div>
           </div>
-          <Select
-            label="Target Industry"
-            value={formIndustry}
-            onChange={e => setFormIndustry(e.target.value)}
-            options={INDUSTRIES.map(i => ({ value: i, label: i.charAt(0).toUpperCase() + i.slice(1) }))}
-          />
+
+          {!formIsGlobal && (
+            <Select
+              label="Target Industry Sector"
+              value={formIndustry}
+              onChange={e => setFormIndustry(e.target.value)}
+              options={INDUSTRIES.map(i => ({ value: i, label: i.charAt(0).toUpperCase() + i.slice(1) }))}
+            />
+          )}
+
           <Textarea
-            label="Workflow Description"
+            label="Workflow Description (Optional)"
             value={formDesc}
             onChange={e => setFormDesc(e.target.value)}
-            placeholder="Describe what this multi-agent workflow accomplishes..."
+            placeholder="Briefly describe what this multi-agent workflow accomplishes..."
             rows={2}
           />
-          <div className="flex justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-700">
+
+          <div className="flex justify-end gap-2 pt-2 border-t border-slate-200 dark:border-[#233048]">
             <Button variant="secondary" size="sm" type="button" onClick={() => setShowCreate(false)}>Cancel</Button>
-            <Button variant="primary" size="sm" type="submit" loading={saving}>Create &amp; Open Canvas</Button>
+            <Button variant="primary" size="sm" type="submit" loading={saving}>Create Blank Canvas</Button>
           </div>
         </form>
       </Modal>

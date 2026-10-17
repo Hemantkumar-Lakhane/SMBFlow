@@ -1,0 +1,32 @@
+{
+  "run_id": "ad628d24-1cd8-47b0-be34-042100cfbbac",
+  "workflow_name": "product_launch_sprint",
+  "status": "completed",
+  "created_at": "2026-10-17T20:36:41.972536",
+  "total_cost_usd": 0.001882,
+  "total_tokens_in": 720,
+  "total_tokens_out": 1634,
+  "outcome": {
+    "situation_summary": "bottle enters market targeting small businesses. The campaign leads with customised bottle like lensecart add images to the bottle checks the temperature show reminder to the mobile phone connected dashbord to the phone as well using 3 core visual assets across 4 platforms.",
+    "product_name": "bottle",
+    "platforms": [
+      "LinkedIn",
+      "X / Twitter",
+      "Instagram",
+      "YouTube"
+    ],
+    "posts_count": 12,
+    "visuals_count": 3
+  },
+  "agent_runs": [
+    {
+      "node_id": "draft_assets",
+      "agent_type": "drafting_agent",
+      "status": "success",
+      "tokens_in": 720,
+      "tokens_out": 1634,
+      "cost_usd": 0.001882,
+      "model_used": "groq/openai/gpt-oss-20b"
+    }
+  ]
+}

@@ -13,7 +13,8 @@ import { useNavigate } from 'react-router-dom'
 import {
   Inbox, CheckCircle2, XCircle, AlertTriangle, ArrowRight,
   Sparkles, Mail, Rocket, RefreshCw, Layers, ShieldCheck,
-  Calendar, ExternalLink, Sliders, Clock, Play
+  Calendar, ExternalLink, Sliders, Clock, Play, ShieldAlert,
+  Plus, Send, Check, X
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useWebSocket } from '../../contexts/WSContext'
@@ -31,9 +32,17 @@ export default function EscalationsPage() {
   const [dbItems, setDbItems] = useState([])
   const [resolvedItems, setResolvedItems] = useState([])
   const [a2aItems, setA2aItems] = useState([])
+  const [assignedWorkflows, setAssignedWorkflows] = useState([])
+  const [accessRequests, setAccessRequests] = useState([])
   const [loading, setLoading] = useState(true)
   const [decidingItem, setDecidingItem] = useState(null)
   const [toastMsg, setToastMsg] = useState(null)
+
+  // Workflow Access Request Modal
+  const [requestModalOpen, setRequestModalOpen] = useState(false)
+  const [requestWorkflowKey, setRequestWorkflowKey] = useState('')
+  const [requestReason, setRequestReason] = useState('')
+  const [submittingRequest, setSubmittingRequest] = useState(false)
 
   // Node 5A Follow-up Draft Review Modal State
   const [reviewingDraft, setReviewingDraft] = useState(null)
@@ -78,17 +87,22 @@ export default function EscalationsPage() {
     }
   }
 
-  // Load backend escalations, approvals, and a2a requests
+  // Load backend escalations, approvals, assigned workflows, and access requests
   const loadActionItems = useCallback(async () => {
     try {
-      const [pEscs, rEscs, a2aList] = await Promise.all([
+      const [pEscs, rEscs, a2aList, assignedList, notifList] = await Promise.all([
         api.get('/escalations?status=pending').catch(() => []),
         api.get('/escalations?status=resolved').catch(() => []),
         api.get('/a2a/requests').catch(() => []),
+        api.get('/catalog/assigned').catch(() => []),
+        api.get('/notifications?scope=personal').catch(() => []),
       ])
       setDbItems(Array.isArray(pEscs) ? pEscs : [])
       setResolvedItems(Array.isArray(rEscs) ? rEscs : [])
       setA2aItems(Array.isArray(a2aList) ? a2aList : [])
+      setAssignedWorkflows(Array.isArray(assignedList) ? assignedList.filter(w => w.is_assigned || w.scope === 'GLOBAL') : [])
+      const reqItems = (Array.isArray(notifList) ? notifList : []).filter(n => n.type === 'access_request')
+      setAccessRequests(reqItems)
     } finally {
       setLoading(false)
     }
@@ -109,9 +123,44 @@ export default function EscalationsPage() {
       subscribe('a2a_permission_requested', loadActionItems),
       subscribe('a2a_decided', loadActionItems),
       subscribe('workflow_completed', loadActionItems),
+      subscribe('workflow.access_approved', (evt) => {
+        setToastMsg(`Workflow access approved for '${evt.workflow_name || evt.workflow_key}'! Now active in your workspace.`)
+        loadActionItems()
+        setTimeout(() => setToastMsg(null), 4500)
+      }),
+      subscribe('workflow.access_rejected', (evt) => {
+        setToastMsg(`Access request for '${evt.workflow_name || evt.workflow_key}' was declined by Admin.`)
+        loadActionItems()
+        setTimeout(() => setToastMsg(null), 4500)
+      }),
+      subscribe('workflow.access_requested', loadActionItems),
+      subscribe('workflow.assigned', loadActionItems),
     ]
     return () => unsubs.forEach(fn => fn())
   }, [subscribe, loadActionItems])
+
+  async function handleRequestWorkflowAccess(e) {
+    e.preventDefault()
+    if (!requestWorkflowKey) return
+    setSubmittingRequest(true)
+    try {
+      await api.post('/catalog/request-access', {
+        workflow_key: requestWorkflowKey,
+        reason: requestReason || 'Requesting workflow assignment for workspace operations.',
+      })
+      setToastMsg(`Access request for '${requestWorkflowKey}' routed to Admin in real time.`)
+      setRequestModalOpen(false)
+      setRequestWorkflowKey('')
+      setRequestReason('')
+      loadActionItems()
+      setTimeout(() => setToastMsg(null), 4000)
+    } catch (err) {
+      setToastMsg(err?.response?.data?.detail || err.message || 'Request failed')
+      setTimeout(() => setToastMsg(null), 4000)
+    } finally {
+      setSubmittingRequest(false)
+    }
+  }
 
   // Combine DB tasks with any local staged workflow runs from Runner
   const allStagedActions = useMemo(() => {
@@ -448,11 +497,169 @@ export default function EscalationsPage() {
             >
               All History
             </button>
+            <button
+              onClick={() => setFilterStatus('assigned_workflows')}
+              className={`px-2.5 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${
+                filterStatus === 'assigned_workflows'
+                  ? 'bg-blue-600 text-white shadow-2xs font-bold'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>Assigned Workflows ({assignedWorkflows.length})</span>
+            </button>
           </div>
         </div>
 
-        {/* ── Main Action Items List ──────────────────────────────────────── */}
-        <div className="space-y-3">
+        {/* ── Assigned Workflows & Access Requests View ────────────────── */}
+        {filterStatus === 'assigned_workflows' ? (
+          <div className="space-y-6">
+            {/* Top Workspace Action Header */}
+            <div className="bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-2xl p-5 shadow-2xs flex items-center justify-between flex-wrap gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Layers className="text-blue-500 w-5 h-5" />
+                  <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                    Workflows Assigned to Workspace
+                  </h2>
+                  <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                    {assignedWorkflows.length} Active Automation Pipelines
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Autonomous pipelines entitlement & assignment managed for your organization.
+                </p>
+              </div>
+
+              <button
+                onClick={() => setRequestModalOpen(true)}
+                className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Request Workflow Assignment</span>
+              </button>
+            </div>
+
+            {/* Outstanding Access Requests */}
+            {accessRequests.length > 0 && (
+              <div className="bg-white dark:bg-[#121826] border border-amber-200 dark:border-amber-900/40 rounded-2xl p-5 shadow-2xs space-y-3">
+                <div className="flex items-center gap-2">
+                  <ShieldAlert className="text-amber-500 w-4 h-4 shrink-0" />
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
+                    Workflow Access Requests ({accessRequests.length})
+                  </h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {accessRequests.map((req) => {
+                    const meta = req.meta || {}
+                    const isPending = meta.status === 'pending'
+                    const isApproved = meta.status === 'approved'
+                    return (
+                      <div
+                        key={req.id}
+                        className="p-3.5 rounded-xl border border-slate-200 dark:border-[#233048] bg-slate-50/70 dark:bg-[#162030]/60 space-y-2 text-xs"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-bold text-slate-900 dark:text-white truncate">
+                            {meta.workflow_name || req.title}
+                          </span>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                            isPending
+                              ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 animate-pulse'
+                              : isApproved
+                              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                              : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                          }`}>
+                            {isPending ? 'Pending Admin Review' : isApproved ? 'Approved & Ready' : 'Declined'}
+                          </span>
+                        </div>
+                        <p className="text-slate-500 dark:text-slate-400 text-[11px] leading-relaxed">
+                          {req.message || meta.reason || 'Access request under review by platform administrator.'}
+                        </p>
+                        <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-200/60 dark:border-[#1e2a3f]">
+                          <span>Submitted: {timeAgo(req.timestamp)}</span>
+                          {isApproved && (
+                            <button
+                              onClick={() => navigate(`/workflows/${meta.workflow_key || 'runner'}`)}
+                              className="text-blue-500 hover:underline font-bold flex items-center gap-1 cursor-pointer"
+                            >
+                              <span>Launch Pipeline</span>
+                              <ArrowRight className="w-2.5 h-2.5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Assigned Workflows List Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {assignedWorkflows.length === 0 ? (
+                <div className="col-span-full p-12 text-center bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-2xl">
+                  <Layers className="w-10 h-10 text-slate-400 mx-auto mb-2" />
+                  <p className="text-xs text-slate-500">No assigned workflows found for this workspace.</p>
+                </div>
+              ) : (
+                assignedWorkflows.map((wf) => {
+                  const isGlobal = wf.scope === 'GLOBAL'
+                  return (
+                    <div
+                      key={wf.id || wf.key}
+                      className="p-4 rounded-2xl bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] shadow-2xs hover:border-blue-500/40 hover:shadow-sm transition-all flex flex-col justify-between space-y-3"
+                    >
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                            isGlobal
+                              ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20'
+                              : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                          }`}>
+                            {isGlobal ? 'Global Access' : 'Assigned to Org'}
+                          </span>
+                          <span className="text-[10px] uppercase font-bold text-slate-400">
+                            {wf.category || 'Operations'}
+                          </span>
+                        </div>
+
+                        <div>
+                          <h4 className="text-sm font-bold text-slate-900 dark:text-white leading-snug">
+                            {wf.display_name || wf.name || wf.key}
+                          </h4>
+                          <p className="text-[10px] font-mono text-slate-400 mt-0.5">{wf.key}</p>
+                        </div>
+
+                        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-2">
+                          {wf.description || 'Enterprise autonomous execution pipeline with verifiable state.'}
+                        </p>
+                      </div>
+
+                      <div className="pt-3 border-t border-slate-100 dark:border-[#1e2a3f] flex items-center justify-between gap-2">
+                        <div className="text-[11px] text-slate-400 space-y-0.5">
+                          <p>{wf.run_count ? `${wf.run_count} runs` : 'Ready to run'}</p>
+                          {wf.last_run_at && <p className="text-[10px]">Ran {timeAgo(wf.last_run_at)}</p>}
+                        </div>
+
+                        <button
+                          onClick={() => navigate(`/workflows/${wf.key}`)}
+                          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer shrink-0"
+                        >
+                          <Play className="w-3 h-3 fill-white" />
+                          <span>Launch</span>
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })
+              )}
+            </div>
+          </div>
+        ) : (
+          /* ── Main Action Items List ──────────────────────────────────────── */
+          <div className="space-y-3">
+
           {filteredItems.length === 0 ? (
             <div className="p-12 text-center bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-2xl">
               <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-3" />
@@ -639,6 +846,7 @@ export default function EscalationsPage() {
             })
           )}
         </div>
+        )}
 
         {/* ── Node 5A: Follow-up Email Draft Human Review Modal ─────────── */}
         {reviewingDraft && (
@@ -781,6 +989,91 @@ export default function EscalationsPage() {
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Workflow Access Request Modal ─────────────────────────────── */}
+        {requestModalOpen && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-2xl w-full max-w-lg shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+              <div className="p-5 border-b border-slate-200 dark:border-[#233048] flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 flex items-center justify-center text-blue-600">
+                    <ShieldAlert className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                      Request Workflow Assignment
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Submit real-time workflow request to platform administrators.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setRequestModalOpen(false)}
+                  className="p-1 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <form onSubmit={handleRequestWorkflowAccess} className="p-5 space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Select Workflow Pipeline
+                  </label>
+                  <select
+                    value={requestWorkflowKey}
+                    onChange={(e) => setRequestWorkflowKey(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 text-xs bg-white dark:bg-[#182234] border border-slate-200 dark:border-[#233048] rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  >
+                    <option value="">-- Choose workflow pipeline --</option>
+                    <option value="football_agent_os">Football Agent AI Operating System (football_agent_os)</option>
+                    <option value="legal_personal_injury">Personal Injury Legal Ops & Settlement Suite (legal_personal_injury)</option>
+                    <option value="meeting_intelligence_followup">Meeting Intelligence & Call Recording Automation (meeting_intelligence_followup)</option>
+                    <option value="product_launch_sprint">Product Launch Sprint (product_launch_sprint)</option>
+                    <option value="email_summarizer">Gmail Inbox Triage & Summarizer (email_summarizer)</option>
+                    <option value="saas_churn_prevention">SaaS Churn Prevention & Retention (saas_churn_prevention)</option>
+                    <option value="finance_expense_monitoring">Finance Expense Monitoring (finance_expense_monitoring)</option>
+                    <option value="re_listing_health_monitor">Real Estate Listing Monitor (re_listing_health_monitor)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Business Justification / Stated Objective
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={requestReason}
+                    onChange={(e) => setRequestReason(e.target.value)}
+                    placeholder="Describe how your organization plans to deploy this workflow pipeline..."
+                    className="w-full p-2.5 text-xs bg-white dark:bg-[#182234] border border-slate-200 dark:border-[#233048] rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none"
+                  />
+                </div>
+
+                <div className="pt-2 flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setRequestModalOpen(false)}
+                    className="px-3 py-1.5 text-xs text-slate-500 hover:text-slate-700 dark:hover:text-white cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submittingRequest || !requestWorkflowKey}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    <span>{submittingRequest ? 'Routing…' : 'Submit Access Request'}</span>
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}

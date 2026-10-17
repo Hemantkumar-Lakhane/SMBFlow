@@ -31,8 +31,8 @@ export function normalizeToolKey(name) {
   if (s.includes('imagerouter') || s.includes('flux') || s.includes('image_gen')) return 'imagerouter'
   if (s.includes('action_center') || s.includes('action center') || s.includes('escalat') || s.includes('hitl') || s.includes('approval')) return 'action_center'
   if (s.includes('switch') || s.includes('filter') || s.includes('classifier') || s.includes('router') || s.includes('branch')) return 'switch'
-  if (s.includes('spec') || s.includes('brief') || s.includes('doc')) return 'spec'
   if (s.includes('webhook') || s.includes('api') || s.includes('http') || s.includes('rest')) return 'webhook'
+  if (s.includes('meet') || s.includes('google_meet') || s.includes('google meet')) return 'google_meet'
   if (s.includes('clearbit')) return 'clearbit'
   if (s.includes('quickbooks')) return 'quickbooks'
 
@@ -114,6 +114,13 @@ export default function ToolLogo({ name, className = 'w-4 h-4' }) {
         <path d="M16 2V6M8 2V6M3 9H21" stroke="#4285F4" strokeWidth="1.6" strokeLinecap="round" />
         <rect x="7" y="12" width="3" height="3" rx="0.5" fill="#4285F4" />
         <rect x="14" y="12" width="3" height="3" rx="0.5" fill="#4285F4" />
+      </svg>
+    ),
+    google_meet: (
+      <svg className={className} viewBox="0 0 24 24" fill="none" aria-label="Google Meet">
+        <rect x="2" y="5" width="13" height="14" rx="3" fill="#00AC47" />
+        <path d="M15 9.5L21 5.5V18.5L15 14.5V9.5Z" fill="#1A73E8" />
+        <circle cx="8.5" cy="12" r="3.2" fill="#FFFFFF" fillOpacity="0.95" />
       </svg>
     ),
     gmail: (

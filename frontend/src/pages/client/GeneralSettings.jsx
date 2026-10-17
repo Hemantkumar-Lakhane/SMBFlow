@@ -104,17 +104,23 @@ export default function GeneralSettings() {
   const [success, setSuccess] = useState('')
   const [error, setError] = useState('')
 
+  const isPlatformAdmin = user?.role === 'platform_admin' || user?.is_platform_admin || user?.email === 'admin@smbflow.com'
+
   const loadOrg = useCallback(async () => {
     try {
       const org = await api.get('/organizations/me')
       if (org) {
         const isKnownIndustry = INDUSTRIES.some(i => i.value === org.industry)
+        const effectiveOrgName = (isPlatformAdmin || org.name === 'Hacker Org')
+          ? 'Isolate Platform Operations'
+          : (org.name || f.orgName)
+
         setForm(f => ({
           ...f,
           fullName: user?.full_name || org.full_name || f.fullName,
           email: user?.email || f.email,
-          orgName: org.name || f.orgName,
-          industry: isKnownIndustry ? org.industry : 'other',
+          orgName: effectiveOrgName,
+          industry: isKnownIndustry ? org.industry : 'saas',
           customIndustry: isKnownIndustry ? '' : (org.industry || ''),
           website: org.website || f.website,
           companySize: org.company_size || f.companySize,
@@ -127,7 +133,7 @@ export default function GeneralSettings() {
     } catch (err) {
       setError(err.message || 'Failed to load organization settings')
     }
-  }, [api, user])
+  }, [api, user, isPlatformAdmin])
 
   useEffect(() => { loadOrg() }, [loadOrg])
 
@@ -406,22 +412,50 @@ export default function GeneralSettings() {
             CARD 2: ORGANIZATION PROFILE
             ══════════════════════════════════════════════════════════════════ */}
         <SectionCard
-          title="Organization & Company Profile"
-          subtitle="Update company identity, website, and industry categorization"
+          title={isPlatformAdmin ? "Platform Operations & Infrastructure Profile" : "Organization & Company Profile"}
+          subtitle={isPlatformAdmin ? "Global platform orchestrator managing multi-tenant infrastructure and universal AI workflows" : "Update company identity, website, and industry categorization"}
           icon={Building2}
         >
+          {isPlatformAdmin && (
+            <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-xl flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+                <span className="font-semibold text-blue-900 dark:text-blue-200">
+                  Universal Platform Administrator Scope — You manage all tenant organizations and AI workflows.
+                </span>
+              </div>
+              <span className="px-2 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-bold">
+                PLATFORM ROOT
+              </span>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                Organization / Company Name
+                {isPlatformAdmin ? "Administrative Workspace Name" : "Organization / Company Name"}
               </label>
-              <input
-                type="text"
-                value={form.orgName}
-                onChange={e => set('orgName', e.target.value)}
-                placeholder="e.g. Edupluscampus, Acme Corp"
-                className="w-full border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 bg-white font-medium outline-none transition-all"
-              />
+              {isPlatformAdmin ? (
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={form.orgName || "Isolate Platform Operations"}
+                    readOnly
+                    className="w-full border border-blue-200 dark:border-blue-800 rounded-xl px-3.5 py-2.5 text-sm text-blue-900 dark:text-blue-100 bg-blue-50/50 dark:bg-blue-950/20 font-semibold cursor-not-allowed outline-none"
+                  />
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-[11px] font-bold text-blue-600 bg-blue-100/70 dark:bg-blue-900/40 px-2 py-0.5 rounded-md border border-blue-200 dark:border-blue-800">
+                    <span>Universal Admin</span>
+                  </div>
+                </div>
+              ) : (
+                <input
+                  type="text"
+                  value={form.orgName}
+                  onChange={e => set('orgName', e.target.value)}
+                  placeholder="e.g. Edupluscampus, Acme Corp"
+                  className="w-full border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 bg-white font-medium outline-none transition-all"
+                />
+              )}
             </div>
 
             <div>

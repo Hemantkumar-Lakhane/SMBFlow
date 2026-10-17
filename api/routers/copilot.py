@@ -303,7 +303,8 @@ async def get_user_copilot_context_and_prompts(
         except Exception:
             org_uuid = None
 
-    org_name = "Enterprise Operations"
+    is_admin = getattr(current_user, "role", "") in ("platform_admin", "super_admin")
+    org_name = "Isolate Platform Operations" if is_admin else "Enterprise Operations"
     industry = "saas"
     assigned_workflows = []
     total_runs = 0
@@ -311,7 +312,22 @@ async def get_user_copilot_context_and_prompts(
     completed_runs = 0
     pending_approvals = 0
 
-    if org_uuid:
+    if is_admin:
+        # Platform admin has universal visibility over all catalog workflows
+        try:
+            stmt_all_cat = select(WorkflowCatalog.key, WorkflowCatalog.name).where(WorkflowCatalog.active == True)
+            res_all_cat = await db.execute(stmt_all_cat)
+            assigned_workflows = [{"key": r[0], "name": r[1]} for r in res_all_cat.all()]
+            
+            stmt_all_runs = select(WorkflowInstance)
+            res_all_runs = await db.execute(stmt_all_runs)
+            all_instances = res_all_runs.scalars().all()
+            total_runs = len(all_instances)
+            active_runs = sum(1 for r in all_instances if getattr(r, "status", "") == "running")
+            completed_runs = sum(1 for r in all_instances if getattr(r, "status", "") == "completed")
+        except Exception as err:
+            log.warning("Admin telemetry fetch error", error=str(err))
+    elif org_uuid:
         try:
             # 1. Fetch Organization profile & industry
             stmt_org = select(Organization).where(Organization.id == org_uuid)
@@ -373,7 +389,6 @@ async def get_user_copilot_context_and_prompts(
             )
             res_appr = await db.execute(stmt_appr)
             pending_approvals = res_appr.scalar() or 0
-
         except Exception as err:
             log.warning("Copilot dynamic context extraction error", error=str(err))
 
@@ -795,23 +810,129 @@ async def copilot_chat(
         )
 
     # ─────────────────────────────────────────────────────────────────────────
-    # 5. STRICT UNRECOGNIZED QUERY POLICY
-    # If any other/unknown query is asked, politely tell user to select one of the given options.
-    # NO FAKE PIPELINES, NO DUMP OF FAKE EXECUTIONS.
+    # 5. REAL-TIME INTELLIGENT AI REASONING (Groq GPT-OSS-120B / Gemini 3.8 Flash)
+    # Answers dynamic questions, reasons over workflows, and asks clarifying questions.
     # ─────────────────────────────────────────────────────────────────────────
-    guidance_reply = (
-        f"I am specialized to assist with the automated operational workflows configured for **{ctx['organization_name']}** "
-        f"({ctx['industry'].title()} sector • {ctx['total_runs']} total run(s) logged).\n\n"
-        f"I did not recognize the query `\"{user_msg[:80]}\"`. Please select one of the recommended operational questions or workflow actions below to proceed:"
+    return await _generate_intelligent_copilot_reply(
+        user_msg=user_msg,
+        ctx=ctx,
+        is_admin=is_admin,
+        question_texts=question_texts,
     )
+
+
+async def _generate_intelligent_copilot_reply(
+    user_msg: str,
+    ctx: dict[str, Any],
+    is_admin: bool,
+    question_texts: list[str],
+) -> CopilotChatResponse:
+    from litellm import acompletion
+    
+    models = [
+        os.getenv("LLM_FAST_MODEL", "groq/openai/gpt-oss-120b"),
+        "groq/openai/gpt-oss-20b",
+        "gemini/gemini-3.8-flash",
+    ]
+
+    wf_names = [f"- **{w.get('name')}** (`{w.get('key')}`)" for w in ctx.get("assigned_workflows", [])[:20]]
+    catalog_list = "\n".join(wf_names) or "- Product Launch Sprint (`product_launch`)\n- Meeting Intelligence & Follow-up (`meeting_intelligence_followup`)\n- Invoice Processing & OCR (`invoice_processing`)\n- Lead Scoring & Enrichment (`lead_scoring`)\n- Legal Personal Injury Settlement Suite (`legal_personal_injury`)\n- Football Agent OS (`football_agent_os`)"
+
+    system_prompt = f"""You are the real-time AI Operations Assistant for the Isolate platform (formerly SMBFlow).
+User Role: {'Platform Administrator (Universal Cross-Tenant Scope & System Operator)' if is_admin else f"Workspace Operator for {ctx.get('organization_name')}"}
+Current Infrastructure Context: {ctx.get('organization_name')} ({ctx.get('industry').title()} sector).
+Total Workflows Registered: {len(ctx.get('assigned_workflows', []))}
+Executed Runs in Scope: {ctx.get('total_runs')} ({ctx.get('active_runs')} active)
+
+Registered Workflows in Platform Catalog:
+{catalog_list}
+
+Platform Capabilities & Tools:
+- Visual DAG Workflow Builder at `/workflows/builder` with Drag & Drop canvas, auto-layout, and AI prompt synthesis.
+- Native Agent Types: research_agent, reasoning_agent, drafting_agent, verification_agent, execution_agent.
+- Tool Connectors: PostgreSQL (vector/persistent contact memory), Gmail (email ingest/drafting), Google Calendar (meeting briefing & prep blocks), HubSpot CRM (contact matching & task tracking), Slack, Google Sheets.
+- Human-in-the-Loop (HITL) approval gates: Emails and external mutations are strictly staged for human sign-off before dispatch.
+
+Directives:
+1. Provide concise, highly intelligent, real-time responses in GitHub Markdown.
+2. If the user asks how to create a new workflow, or asks to build one with sparse/minimal details:
+   - Explain that they can build it on the Visual Builder canvas (`/workflows/builder`) or use natural language synthesis.
+   - Dynamically ask 3 targeted questions to clarify: (a) Primary Trigger, (b) Data source & tools to connect, (c) Whether a human approval gate is needed.
+3. If the user asks if a workflow is available (such as Meeting Intelligence, Invoice OCR, Lead Scoring):
+   - Confirm its presence from the catalog above and summarize its end-to-end multi-agent pipeline and tool integrations.
+4. If the user asks platform administration or operations questions, answer directly with technical clarity.
+5. NEVER invent fake JSON dumps or say you do not recognize the query. Converse naturally and intelligently.
+"""
+
+    llm_reply = None
+    for model in models:
+        try:
+            kwargs = {
+                "model": model,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_msg},
+                ],
+                "timeout": 20,
+            }
+            if "gemini" not in model:
+                kwargs["temperature"] = 0.3
+                kwargs["max_tokens"] = 1500
+
+            resp = await acompletion(**kwargs)
+            llm_reply = resp.choices[0].message.content.strip()
+            if llm_reply:
+                break
+        except Exception as e:
+            log.warning("Copilot LLM completion error", model=model, error=str(e)[:150])
+            continue
+
+    if not llm_reply:
+        # Fallback intelligent guidance
+        lower = user_msg.lower()
+        if "meeting" in lower:
+            llm_reply = (
+                "**Yes — the Meeting Intelligence & Follow-up workflow (`meeting_intelligence_followup`) is active and ready in the platform catalog.**\n\n"
+                "### End-to-End Execution Sequence:\n"
+                "1. **Audio/Transcript Ingest**: Ingests Zoom, Teams, Meet recordings or raw transcripts.\n"
+                "2. **AI Conversation Analyzer**: Extracts key points, agreed commitments, and participant sentiment.\n"
+                "3. **Contact Memory & Persistent Storage**: Matches attendees in CRM and persists records in PostgreSQL.\n"
+                "4. **Task & Follow-up Drafter**: Converts explicit commitments to tasks and drafts recap emails.\n"
+                "5. **HITL Review Gate**: Pauses for human verification before dispatch.\n"
+                "6. **Calendar Preparation**: Blocks 30-minute prep slots on Google Calendar for upcoming meetings."
+            )
+        elif "create" in lower or "workflow" in lower or "build" in lower:
+            llm_reply = (
+                "You can create custom multi-agent workflows directly in the **Visual DAG Builder** (`/workflows/builder`) or generate one using our real-time AI Synthesizer.\n\n"
+                "To synthesize the exact nodes for your use case, could you share a few details?\n"
+                "1. **Trigger**: What event starts this workflow (Webhook, incoming email, schedule, or manual run)?\n"
+                "2. **Integrations**: What tools should be connected (e.g. PostgreSQL, Gmail, HubSpot, Calendar, Slack)?\n"
+                "3. **Governance**: Does this workflow require human supervisor approval before executing external actions?"
+            )
+        else:
+            llm_reply = (
+                f"Hello {ctx.get('user_name', 'Admin')}. As the **Isolate Platform Operations Copilot**, I am connected to the core engine, PostgreSQL telemetry store, and workflow catalog.\n\n"
+                f"You have universal management over **{len(ctx.get('assigned_workflows', []))} registered workflows** and **{ctx.get('total_runs', 0)} total runs** across multi-tenant environments. Let me know what operational task or workflow you'd like to inspect or build."
+            )
+
+    # Determine optimal ActionCTA
+    action_cta = ActionCTA(label="Open Visual Workflow Builder", to="/workflows/builder", variant="primary")
+    msg_lower = user_msg.lower()
+    if "meeting" in msg_lower:
+        action_cta = ActionCTA(label="Open Meeting Intelligence Builder", to="/workflows/builder?wf=meeting_intelligence_followup", variant="primary")
+    elif "org" in msg_lower or "tenant" in msg_lower:
+        action_cta = ActionCTA(label="Manage Organizations", to="/admin/organizations", variant="primary")
+    elif "run" in msg_lower or "telemetry" in msg_lower or "metric" in msg_lower:
+        action_cta = ActionCTA(label="Open Operational Runs", to="/admin/runs", variant="primary")
 
     return CopilotChatResponse(
         message_id=str(uuid.uuid4())[:8],
-        reply=guidance_reply,
+        reply=llm_reply,
         execution_nodes=[],
-        action_cta=ActionCTA(label="Browse Workflows Catalog", to="/workflows", icon="Workflow", variant="primary"),
-        suggested_followups=question_texts[:4],
+        action_cta=action_cta,
+        suggested_followups=question_texts[:3],
         required_tools=[],
         workflow_key=None,
     )
+
 

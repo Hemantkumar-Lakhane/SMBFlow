@@ -1122,15 +1122,26 @@ async def ensure_user_organization_provisioned(
         org = org_res.scalar_one_or_none()
 
         updated = False
-        if is_bootstrap_admin and org_user.role != "platform_admin":
+        is_admin = is_bootstrap_admin or org_user.role in ("platform_admin", "super_admin")
+        if is_admin and org_user.role != "platform_admin":
             org_user.role = "platform_admin"
             updated = True
 
         if org:
-            if workspace_name and org.name != workspace_name:
+            # If platform admin, ensure organization name is never a tenant like Hacker Org
+            if is_admin and (not org.name or org.name.lower() in ("hacker org", "pending workspace setup", "test org")):
+                org.name = "Isolate Platform Operations"
+                org.industry = "saas"
+                org.enabled_modules = ["saas", "operations", "platform"]
+                cfg = dict(org.profile_config or {})
+                cfg["is_platform_admin"] = True
+                cfg["requires_onboarding"] = False
+                org.profile_config = cfg
+                updated = True
+            elif workspace_name and org.name != workspace_name and not is_admin:
                 org.name = workspace_name
                 updated = True
-            if industry and org.industry != industry:
+            if industry and org.industry != industry and not is_admin:
                 org.industry = industry
                 org.enabled_modules = [industry]
                 updated = True
@@ -1141,12 +1152,13 @@ async def ensure_user_organization_provisioned(
                     org.profile_config = cfg
                     updated = True
         else:
+            default_org_name = "Isolate Platform Operations" if is_admin else (workspace_name or "Pending Workspace Setup")
             org = Organization(
                 id=org_user.organization_id,
-                name=workspace_name or "Pending Workspace Setup",
+                name=default_org_name,
                 industry=industry or "saas",
                 enabled_modules=[industry] if industry else ["saas"],
-                profile_config={"requires_onboarding": False if workspace_name else True},
+                profile_config={"requires_onboarding": False if (workspace_name or is_admin) else True, "is_platform_admin": is_admin},
                 active=True,
             )
             db.add(org)

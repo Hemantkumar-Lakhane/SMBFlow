@@ -1,0 +1,82 @@
+{
+  "_meta": {
+    "workflow_id": "football_agent_os",
+    "name": "Football Agent AI Operating System",
+    "industry": "sports_and_entertainment",
+    "category": "sports_operations",
+    "version": "1.0.0",
+    "description": "Centralized FIFA football agency hub: tracks player contracts, matches club squad needs across Asian and European transfer markets, generates tactical scouting dossiers, and automates club pitch outreach.",
+    "trigger_types": [
+      "manual",
+      "webhook",
+      "schedule"
+    ],
+    "trigger": {
+      "type": "manual",
+      "enabled": true,
+      "source": "player_or_club_intake"
+    },
+    "sla_hours": 2,
+    "estimated_duration_minutes": 3,
+    "is_custom": false,
+    "requires_explicit_assignment": true
+  },
+  "nodes": [
+    {
+      "id": "node_scout_ingest",
+      "agent": "triggerNode",
+      "name": "Player & Market Ingest",
+      "subtitle": "Transfermarkt & Scouting Ingest",
+      "description": "Ingests player profile, tactical metrics, current club contract, and agent representation data.",
+      "tools": ["tool_http_webhook"],
+      "timeout_seconds": 60,
+      "position": { "x": 60, "y": 140 }
+    },
+    {
+      "id": "node_contract_analysis",
+      "agent": "reasoning_agent",
+      "name": "Contract & Salary Matrix",
+      "subtitle": "Expiry & Compensation Valuation",
+      "description": "Evaluates expiration timeline, wage expectations across Asian markets (Indonesia, Malaysia, Vietnam, Thailand, India) vs Europe/Spain, and agent commissions.",
+      "tools": [],
+      "timeout_seconds": 90,
+      "position": { "x": 280, "y": 140 }
+    },
+    {
+      "id": "node_club_matcher",
+      "agent": "research_agent",
+      "name": "Club Squad Need Matcher",
+      "subtitle": "Tactical & Budget Matching Engine",
+      "description": "Matches player's tactical profile and salary demands against target clubs' open squad requirements, coach preferences, and foreign quota limits.",
+      "tools": ["database_query"],
+      "timeout_seconds": 90,
+      "position": { "x": 500, "y": 140 }
+    },
+    {
+      "id": "node_dossier_synthesis",
+      "agent": "drafting_agent",
+      "name": "Dossier & Pitch Generator",
+      "subtitle": "Claude Executive Dossier & Outreach",
+      "description": "Generates professional player presentation dossiers, club pitch emails, and personalized WhatsApp messages for sporting directors.",
+      "tools": ["llm_claude"],
+      "timeout_seconds": 120,
+      "position": { "x": 720, "y": 140 }
+    },
+    {
+      "id": "node_action_dispatch",
+      "agent": "execution_agent",
+      "name": "Action Center Sign-Off",
+      "subtitle": "FIFA Agent Approval Gate",
+      "description": "Stages deal outreach in Action Center for agent one-click sign-off before dispatching to sporting directors.",
+      "tools": ["tool_email_dispatch", "tool_webhook"],
+      "timeout_seconds": 60,
+      "position": { "x": 940, "y": 140 }
+    }
+  ],
+  "edges": [
+    { "from": "node_scout_ingest", "to": "node_contract_analysis" },
+    { "from": "node_contract_analysis", "to": "node_club_matcher" },
+    { "from": "node_club_matcher", "to": "node_dossier_synthesis" },
+    { "from": "node_dossier_synthesis", "to": "node_action_dispatch" }
+  ]
+}

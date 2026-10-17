@@ -236,7 +236,7 @@ async def lifespan(app: FastAPI):
     log.info("SMBFlow API stopped")
 
 
-from api.routers import connections, reviews, medical_tourism, product_launch, copilot, meeting_intelligence, notifications
+from api.routers import connections, reviews, medical_tourism, product_launch, copilot, meeting_intelligence, notifications, industry_workflows
 from api.routers import admin as admin_router
 
 app = FastAPI(
@@ -254,6 +254,7 @@ app.include_router(product_launch.router)
 app.include_router(meeting_intelligence.router)
 app.include_router(copilot.router)
 app.include_router(notifications.router)
+app.include_router(industry_workflows.router)
 
 
 app.add_middleware(
@@ -786,14 +787,21 @@ async def get_my_organization(
     )
     if not org:
         raise HTTPException(status_code=404, detail="Organization not found")
+
+    is_admin = current_user.role in ("platform_admin", "super_admin") or (org_user and org_user.role in ("platform_admin", "super_admin"))
+    org_display_name = "Isolate Platform Operations" if is_admin else org.name
+    if is_admin and org.name != "Isolate Platform Operations":
+        org.name = "Isolate Platform Operations"
+        await db.commit()
+
     profile = org.profile_config or {}
     return {
         "id":               str(org.id),
-        "name":             org.name,
-        "industry":         org.industry,
-        "website":          profile.get("website"),
-        "company_size":     profile.get("company_size"),
-        "enabled_modules":  org.enabled_modules or [],
+        "name":             org_display_name,
+        "industry":         "saas" if is_admin else org.industry,
+        "website":          "https://isolate.network" if is_admin else profile.get("website"),
+        "company_size":     "Platform Infrastructure" if is_admin else profile.get("company_size"),
+        "enabled_modules":  ["saas", "operations", "platform"] if is_admin else (org.enabled_modules or []),
         "active":           org.active,
         "created_at":       org.created_at.isoformat() if org.created_at else None,
         "config": {
@@ -801,8 +809,9 @@ async def get_my_organization(
             "notifications": profile.get("notifications", {}),
             "retention":     profile.get("retention", {}),
         },
-        "role":             org_user.role if org_user else "org_user",
+        "role":             "platform_admin" if is_admin else (org_user.role if org_user else "org_user"),
         "full_name":        org_user.full_name if org_user else current_user.full_name,
+        "is_platform_admin": is_admin,
     }
 
 

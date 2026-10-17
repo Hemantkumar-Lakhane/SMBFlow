@@ -106,21 +106,24 @@ const LANDING_WORKFLOWS = [
   }
 ]
 
+const HERO_WAVE_COLORS = ["#38bdf8", "#ffffff", "#818cf8", "#ffffff", "#38bdf8", "#ffffff"]
+
 export default function LandingPage() {
   const navigate = useNavigate()
   const { theme, toggle: toggleTheme, isDark } = useTheme()
 
-  // Mouse spotlight coordinates
-  const [mousePos, setMousePos] = useState({ x: -1000, y: -1000 })
+  // Direct DOM ref for spotlight: ZERO re-renders on mouse movement
   const heroRef = useRef(null)
+  const spotlightRef = useRef(null)
 
   const handleMouseMove = (e) => {
-    if (!heroRef.current) return
+    if (!heroRef.current || !spotlightRef.current) return
     const rect = heroRef.current.getBoundingClientRect()
-    setMousePos({
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top
-    })
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+    spotlightRef.current.style.background = isDark
+      ? `radial-gradient(550px circle at ${x}px ${y}px, rgba(56, 189, 248, 0.12) 0%, transparent 65%)`
+      : `radial-gradient(500px circle at ${x}px ${y}px, rgba(37, 99, 235, 0.08) 0%, transparent 60%)`
   }
 
   // Interactive Canvas State (Pan, Drag & Zoom)
@@ -313,7 +316,7 @@ export default function LandingPage() {
           {/* Background: Animated GradientWave for light/default theme; Precision Grid Canvas for dark theme */}
           {!isDark ? (
             <GradientWave
-              colors={["#38bdf8", "#ffffff", "#818cf8", "#ffffff", "#38bdf8", "#ffffff"]}
+              colors={HERO_WAVE_COLORS}
               className="opacity-75 pointer-events-none"
             />
           ) : (
@@ -335,11 +338,12 @@ export default function LandingPage() {
 
           {/* Dynamic Spotlight */}
           <div
+            ref={spotlightRef}
             className="absolute inset-0 pointer-events-none transition-all duration-100 ease-out"
             style={{
               background: isDark
-                ? `radial-gradient(550px circle at ${mousePos.x}px ${mousePos.y}px, rgba(56, 189, 248, 0.12) 0%, transparent 65%)`
-                : `radial-gradient(500px circle at ${mousePos.x}px ${mousePos.y}px, rgba(37, 99, 235, 0.08) 0%, transparent 60%)`
+                ? `radial-gradient(550px circle at 50% 30%, rgba(56, 189, 248, 0.12) 0%, transparent 65%)`
+                : `radial-gradient(500px circle at 50% 30%, rgba(37, 99, 235, 0.08) 0%, transparent 60%)`
             }}
           />
 

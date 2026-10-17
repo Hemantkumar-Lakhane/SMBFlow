@@ -355,45 +355,29 @@ ${count > 0 ? fails.slice(0, 3).map((f, i) => `
 - **Groq Fast Inference (Llama 3.3 70B)**: Operational · 92ms ultra-low latency
 - **Pollinations Visual Engine**: Operational
 
-**Failover Policy**: Automatic reroute from primary \`Anthropic\` → fallback \`OpenAI\` on HTTP 429/500 enabled.
-
-[Manage Provider Routing Configuration →](/admin/routing)`
-      } else if (lower.includes('patient') || lower.includes('pipeline') || lower.includes('workflow') || lower.includes('dag')) {
-        replyContent = `### Synthesized Multi-Agent DAG Architecture
-
-\`\`\`json
-{
-  "name": "Patient Intake & Clinical Triage Engine",
-  "key": "patient_intake_triage",
-  "category": "healthcare",
-  "scope": "GLOBAL",
-  "nodes": [
-    { "id": "trigger_webhook", "agent": "trigger_webhook", "name": "Patient Submission Event" },
-    { "id": "agent_triage", "agent": "research_agent", "name": "Symptom Extraction (Claude 3.5)" },
-    { "id": "agent_guardrail", "agent": "verification_agent", "name": "HIPAA Safety & Emergency Classifier" },
-    { "id": "agent_calendar", "agent": "drafting_agent", "name": "Calendar Slot Allocation & SMS Dispatch" }
-  ],
-  "edges": [
-    { "from": "trigger_webhook", "to": "agent_triage" },
-    { "from": "agent_triage", "to": "agent_guardrail" },
-    { "from": "agent_guardrail", "to": "agent_calendar", "condition": "Risk Score < 0.7" }
-  ]
-}
-\`\`\`
-
-**Pipeline synthesized.** You can open this node topology directly in the visual editor.
-
-[Open in Visual Workflow Builder →](/workflows/builder?wf=patient_intake_triage)`
+**Failover Policy**: Automatic reroute from primary \`Anthropic\` → fallback \`OpenAI\` on HTTP 429/500 enabled.`
       } else {
-        replyContent = `### Directive Executed
+        // Real-time AI Reasoning with platform context and catalog knowledge
+        const copilotResp = await api.post('/copilot/chat', {
+          messages: [{ role: 'user', content: text }]
+        }).catch(() => null)
 
-Processed administrative request: **"${text}"**.
+        if (copilotResp && copilotResp.reply) {
+          replyContent = copilotResp.reply
+          if (copilotResp.action_cta) {
+            replyContent += `\n\n[${copilotResp.action_cta.label} →](${copilotResp.action_cta.to})`
+          }
+        } else {
+          replyContent = `### Platform Operations Copilot
+          
+Processed administrative query: **"${text}"**.
 
 - **Environment**: \`Production Cloud Cluster\`
 - **Database Status**: \`Connected (PostgreSQL / Redis)\`
-- **Tenant Context**: \`Platform Master Context\`
+- **Tenant Context**: \`Platform Master Context (Isolate Global)\`
 
-Everything is running normally. Choose any diagnostic action above or query specific organizations, runs, and configurations.`
+Everything is running normally. You can ask about available workflows (e.g. Meeting Intelligence, Invoice OCR), synthesize custom DAGs, or query fleet metrics.`
+        }
       }
 
       setMessages(prev => [

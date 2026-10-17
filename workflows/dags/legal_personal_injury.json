@@ -1,0 +1,82 @@
+{
+  "_meta": {
+    "workflow_id": "legal_personal_injury",
+    "name": "Personal Injury Legal Ops & Settlement Suite",
+    "industry": "legal",
+    "category": "legal_operations",
+    "version": "1.0.0",
+    "description": "End-to-end personal injury automation: multilingual AI intake (English, Spanish, Haitian Creole), medical billing and treatment chronology extractor, damage calculator, and automated settlement brochure preparation with attorney sign-off.",
+    "trigger_types": [
+      "manual",
+      "webhook",
+      "email"
+    ],
+    "trigger": {
+      "type": "manual",
+      "enabled": true,
+      "source": "client_intake_or_medical_records"
+    },
+    "sla_hours": 4,
+    "estimated_duration_minutes": 3,
+    "is_custom": false,
+    "requires_explicit_assignment": true
+  },
+  "nodes": [
+    {
+      "id": "node_multilingual_intake",
+      "agent": "triggerNode",
+      "name": "Multilingual Intake",
+      "subtitle": "EN / ES / HT Voice & Form Intake",
+      "description": "Captures accident report, liability details, and initial caller narrative with automatic language detection (English, Spanish, Haitian Creole).",
+      "tools": ["tool_http_webhook"],
+      "timeout_seconds": 60,
+      "position": { "x": 60, "y": 140 }
+    },
+    {
+      "id": "node_med_records_extract",
+      "agent": "reasoning_agent",
+      "name": "Medical Records Parser",
+      "subtitle": "Treatment Chronology & Diagnostics",
+      "description": "Parses medical documents, builds chronological treatment timeline, categorizes providers, and flags documentation gaps.",
+      "tools": [],
+      "timeout_seconds": 90,
+      "position": { "x": 280, "y": 140 }
+    },
+    {
+      "id": "node_damages_ledger",
+      "agent": "research_agent",
+      "name": "Special Damages Ledger",
+      "subtitle": "Medical Expenses & Billing Audit",
+      "description": "Extracts medical bills, itemizes expenses per hospital/provider, calculates special damages totals, and links supporting billing invoices.",
+      "tools": ["database_query"],
+      "timeout_seconds": 90,
+      "position": { "x": 500, "y": 140 }
+    },
+    {
+      "id": "node_settlement_brochure",
+      "agent": "drafting_agent",
+      "name": "Settlement Brochure Package",
+      "subtitle": "AI Demand Letter & Exhibit Index",
+      "description": "Drafts structured settlement brochure, demand letter to insurer, and organized exhibit index without hallucinating unverified injuries.",
+      "tools": ["llm_claude"],
+      "timeout_seconds": 120,
+      "position": { "x": 720, "y": 140 }
+    },
+    {
+      "id": "node_attorney_approval",
+      "agent": "execution_agent",
+      "name": "Attorney Approval Gate",
+      "subtitle": "Human Sign-off & Insurer Dispatch",
+      "description": "Stages complete demand package in Action Center for attorney review and one-click authorization before dispatch to insurance adjusters.",
+      "tools": ["tool_email_dispatch", "tool_pdf_export"],
+      "timeout_seconds": 60,
+      "position": { "x": 940, "y": 140 }
+    }
+  ],
+  "edges": [
+    { "from": "node_multilingual_intake", "to": "node_med_records_extract" },
+    { "from": "node_med_records_extract", "to": "node_damages_ledger" },
+    { "from": "node_damages_ledger", "to": "node_settlement_brochure" },
+    { "from": "node_settlement_brochure", "to": "node_attorney_approval" }
+  ]
+}

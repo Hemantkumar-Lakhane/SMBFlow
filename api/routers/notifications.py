@@ -35,6 +35,8 @@ from db.models.core import (
 )
 
 log = structlog.get_logger()
+# In-memory persistent tracking of read notification IDs per user
+READ_NOTIFICATION_IDS: Dict[str, set] = {}
 router = APIRouter(prefix="/api/v1/notifications", tags=["Notifications & Access Requests"])
 
 
@@ -276,42 +278,12 @@ async def list_notifications(
         except Exception:
             pass
 
-    # 4. GLOBAL: System Announcements & Feature Releases
-    items.append(NotificationItem(
-        id="global_product_launch_studio",
-        type="system",
-        scope="global",
-        title="Global Announcement: Product Launch Studio",
-        message="Multi-platform campaign synthesis, automated image generation, and Google Calendar sync are active.",
-        timestamp=datetime.utcnow().isoformat(),
-        read=False,
-        actionable=False,
-        meta={"badge": "New Feature", "url": "/workflows/product_launch"}
-    ))
-
-    items.append(NotificationItem(
-        id="global_meeting_intel_v2",
-        type="whats_new",
-        scope="global",
-        title="What's New: Live Meeting Connector & Audio Formats",
-        message="Meeting Intelligence supports .mp3, .wav, .m4a, and .webm direct uploads with instant speaker transcription.",
-        timestamp=datetime.utcnow().isoformat(),
-        read=False,
-        actionable=False,
-        meta={"badge": "New Feature", "url": "/workflows/meeting_intelligence_followup"}
-    ))
-
-    items.append(NotificationItem(
-        id="global_cross_org_workflows",
-        type="whats_new",
-        scope="global",
-        title="What's New: Global Workflows & Cross-Org Access",
-        message="Workflows marked as GLOBAL are instantly available to all organizations across the platform.",
-        timestamp=datetime.utcnow().isoformat(),
-        read=False,
-        actionable=False,
-        meta={"badge": "Platform Update", "url": "/workflow-library"}
-    ))
+    # Apply user-specific persistent read tracking
+    user_key = current_user.email or current_user.sub or "default_user"
+    user_read_ids = READ_NOTIFICATION_IDS.get(user_key, set())
+    for item in items:
+        if item.id in user_read_ids:
+            item.read = True
 
     # Scope filter
     if scope:
@@ -327,15 +299,28 @@ async def mark_notification_read(
     notification_id: str,
     current_user: TokenData = Depends(require_any_auth),
 ):
-    """Mark a specific notification as read."""
+    """Mark a specific notification as read persistently."""
+    user_key = current_user.email or current_user.sub or "default_user"
+    if user_key not in READ_NOTIFICATION_IDS:
+        READ_NOTIFICATION_IDS[user_key] = set()
+    READ_NOTIFICATION_IDS[user_key].add(notification_id)
     return {"status": "success", "id": notification_id, "read": True}
 
 
 @router.post("/mark-all-read")
 async def mark_all_notifications_read(
     current_user: TokenData = Depends(require_any_auth),
+    db: AsyncSession = Depends(get_db),
 ):
-    """Mark all notifications as read."""
+    """Mark all current notifications as read persistently."""
+    user_key = current_user.email or current_user.sub or "default_user"
+    if user_key not in READ_NOTIFICATION_IDS:
+        READ_NOTIFICATION_IDS[user_key] = set()
+
+    # Mark all items as read for this user
+    all_current = await list_notifications(scope=None, current_user=current_user, db=db)
+    for it in all_current:
+        READ_NOTIFICATION_IDS[user_key].add(it.id)
     return {"status": "success", "read_all": True}
 
 

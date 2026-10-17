@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 
 function normalizeColor(hexCode: number): number[] {
   return [
@@ -694,8 +694,8 @@ export interface GradientWaveProps {
   };
 }
 
-export function GradientWave({
-  colors = ["#38bdf8", "#ffffff", "#38bdf8", "#ffffff", "#38bdf8", "#ffffff"],
+export const GradientWave = React.memo(function GradientWave({
+  colors = ["#38bdf8", "#ffffff", "#818cf8", "#ffffff", "#38bdf8", "#ffffff"],
   isPlaying = true,
   className = "",
   shadowPower = 8,
@@ -706,9 +706,19 @@ export function GradientWave({
 }: GradientWaveProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const gradientRef = useRef<Gradient | null>(null);
+  const colorsKey = colors.join(",");
+  const deformKey = JSON.stringify(deform);
 
   useEffect(() => {
     if (!containerRef.current) return;
+
+    // Remove any existing canvas if hot-reloaded
+    if (gradientRef.current) {
+      gradientRef.current.destroy();
+      gradientRef.current = null;
+    }
+    const oldCanvas = containerRef.current.querySelector("canvas");
+    if (oldCanvas) oldCanvas.remove();
 
     const canvas = document.createElement("canvas");
     Object.assign(canvas.style, {
@@ -753,18 +763,20 @@ export function GradientWave({
 
     return () => {
       gradientRef.current?.destroy();
+      gradientRef.current = null;
       if (containerRef.current?.contains(canvas)) {
         containerRef.current.removeChild(canvas);
       }
     };
   }, [
-    colors,
+    colorsKey,
     isPlaying,
     shadowPower,
     darkenTop,
     noiseSpeed,
-    noiseFrequency,
-    deform,
+    noiseFrequency?.[0],
+    noiseFrequency?.[1],
+    deformKey,
   ]);
 
   return (
@@ -773,6 +785,6 @@ export function GradientWave({
       className={`absolute inset-0 z-0 w-full h-full overflow-hidden pointer-events-none ${className}`}
     />
   );
-}
+});
 
 export default GradientWave;

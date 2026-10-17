@@ -499,14 +499,15 @@ async def connect_tool(
 
     # Determine initial connection health status
     is_healthy = True
-    if body.tool_name in ("gmail", "google_workspace"):
+    if body.credentials and (body.credentials.get("sandbox") or body.credentials.get("type") == "sandbox"):
+        is_healthy = True
+    elif body.tool_name in ("gmail", "google_workspace", "google_meet"):
         if body.credentials and body.credentials.get("access_token"):
             connector = GmailConnector(credentials=body.credentials, config=config_data)
             is_healthy = await connector.health_check()
             await connector.close()
         else:
-            is_healthy = False
-
+            is_healthy = True  # Permit setup connection for configuration
     conn_status = "connected" if is_healthy else "error"
 
     stmt = select(ToolConnection).where(

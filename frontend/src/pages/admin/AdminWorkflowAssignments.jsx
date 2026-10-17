@@ -4,10 +4,12 @@ import { useNavigate } from 'react-router-dom'
 import {
   RefreshCw, XCircle, Search, CheckCircle2, Globe,
   Plus, Minus, Building2, Layers, AlertCircle, ChevronRight,
-  LayoutGrid, List,
+  LayoutGrid, List, ShieldAlert, Check, X, Clock, UserCheck
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
+import { useWebSocket } from '../../contexts/WSContext'
 import { EmptyState } from '../../components/ui'
+import { timeAgo } from '../../utils/helpers'
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 const INDUSTRY_LABELS = {
@@ -307,32 +309,190 @@ function MatrixView({ catalog, orgs, assignmentMap, catalogStats, filteredOrgs, 
   )
 }
 
+// ── Real-time Access Requests view ──────────────────────────────────────────
+function AccessRequestsView({ requests, loading, onApprove, onReject, actionBusyId, navigate }) {
+  const [filter, setFilter] = useState('pending') // 'pending' | 'all' | 'decided'
+  
+  const pendingCount = requests.filter(r => r.status === 'pending').length
+
+  const filtered = useMemo(() => {
+    if (filter === 'pending') return requests.filter(r => r.status === 'pending')
+    if (filter === 'decided') return requests.filter(r => r.status !== 'pending')
+    return requests
+  }, [requests, filter])
+
+  return (
+    <div className="bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-2xl overflow-hidden shadow-2xs">
+      <div className="p-4 border-b border-slate-100 dark:border-[#1e2a3f] flex items-center justify-between flex-wrap gap-3 bg-slate-50/50 dark:bg-[#162030]/50">
+        <div className="flex items-center gap-2">
+          <ShieldAlert className="text-amber-500 w-4 h-4 shrink-0" />
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
+            Workspace Workflow Access Requests
+          </h3>
+          <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+            {pendingCount} Pending Review
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5 text-xs bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] p-0.5 rounded-lg shadow-2xs">
+          <button
+            onClick={() => setFilter('pending')}
+            className={`px-2.5 py-1 rounded-md font-semibold transition-all cursor-pointer ${filter === 'pending' ? 'bg-blue-600 text-white shadow-2xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
+          >
+            Pending ({pendingCount})
+          </button>
+          <button
+            onClick={() => setFilter('all')}
+            className={`px-2.5 py-1 rounded-md font-semibold transition-all cursor-pointer ${filter === 'all' ? 'bg-blue-600 text-white shadow-2xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
+          >
+            All Requests ({requests.length})
+          </button>
+          <button
+            onClick={() => setFilter('decided')}
+            className={`px-2.5 py-1 rounded-md font-semibold transition-all cursor-pointer ${filter === 'decided' ? 'bg-blue-600 text-white shadow-2xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
+          >
+            Resolved ({requests.length - pendingCount})
+          </button>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="p-12 text-center text-xs text-slate-400 flex items-center justify-center gap-2">
+          <RefreshCw className="w-4 h-4 animate-spin text-blue-500" />
+          <span>Synchronizing access requests…</span>
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="p-12 text-center text-xs text-slate-400">
+          {filter === 'pending' ? 'No pending workflow access requests. All tenant requests are resolved.' : 'No access requests recorded.'}
+        </div>
+      ) : (
+        <div className="divide-y divide-slate-100 dark:divide-[#1e2a3f]">
+          {filtered.map(req => {
+            const isPending = req.status === 'pending'
+            const isApproved = req.status === 'approved'
+            const isRejected = req.status === 'rejected'
+            const isBusy = actionBusyId === req.id
+
+            return (
+              <div key={req.id} className="p-4 hover:bg-slate-50/50 dark:hover:bg-[#162030]/50 transition-colors flex items-start justify-between flex-wrap gap-4">
+                <div className="space-y-1.5 flex-1 min-w-[280px]">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-bold text-slate-900 dark:text-white">
+                      {req.workflow_name || req.workflow_key}
+                    </span>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-100 dark:bg-[#1e2a3f] text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-[#2a3850]">
+                      {req.workflow_key}
+                    </span>
+                    {isPending && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                        Pending Admin Review
+                      </span>
+                    )}
+                    {isApproved && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                        Approved & Assigned
+                      </span>
+                    )}
+                    {isRejected && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                        Request Declined
+                      </span>
+                    )}
+                  </div>
+
+                  <p className="text-xs text-slate-600 dark:text-slate-300">
+                    <span className="font-semibold text-slate-800 dark:text-slate-200">{req.org_name || 'Workspace'}</span>
+                    {' · '}
+                    <span className="text-slate-500">{req.user_name || req.user_email}</span>
+                    {req.user_name && req.user_email && <span className="text-slate-400 text-[11px]"> ({req.user_email})</span>}
+                  </p>
+
+                  {req.reason && (
+                    <p className="text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-[#182234] p-2 rounded-lg border border-slate-100 dark:border-[#233048]">
+                      <span className="font-medium text-slate-700 dark:text-slate-300">Stated Objective:</span> {req.reason}
+                    </p>
+                  )}
+
+                  <div className="flex items-center gap-3 text-[11px] text-slate-400">
+                    <span className="flex items-center gap-1">
+                      <Clock size={11} /> {timeAgo(req.created_at)}
+                    </span>
+                    {req.decided_by && (
+                      <span>Decided by: {req.decided_by}</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0 pt-1">
+                  {isPending ? (
+                    <>
+                      <button
+                        onClick={() => onApprove(req)}
+                        disabled={isBusy}
+                        className="px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer disabled:opacity-50"
+                      >
+                        <Check size={13} />
+                        <span>{isBusy ? 'Assigning…' : 'Approve & Assign'}</span>
+                      </button>
+                      <button
+                        onClick={() => onReject(req)}
+                        disabled={isBusy}
+                        className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white dark:bg-[#162030] hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-slate-200 dark:border-[#2a3850] text-rose-600 dark:text-rose-400 flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+                      >
+                        <X size={13} />
+                        <span>Reject</span>
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => req.org_id && navigate(`/admin/organizations/${req.org_id}`)}
+                      className="px-2.5 py-1 text-xs text-slate-500 hover:text-blue-500 border border-slate-200 dark:border-[#2a3850] rounded-lg transition-colors cursor-pointer"
+                    >
+                      View Org →
+                    </button>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Main component ─────────────────────────────────────────────────────────────
 export default function AdminWorkflowAssignments() {
   const { api } = useAuth()
+  const { subscribe } = useWebSocket()
   const navigate = useNavigate()
 
-  const [catalog,     setCatalog]     = useState([])
-  const [orgs,        setOrgs]        = useState([])
-  const [assignments, setAssignments] = useState([])
-  const [loading,     setLoading]     = useState(true)
-  const [error,       setError]       = useState(null)
-  const [search,      setSearch]      = useState('')
-  const [pendingCells,setPending]     = useState(new Set())
-  const [viewMode,    setViewMode]    = useState('org')    // 'org' | 'matrix'
-  const [selectedOrg, setSelectedOrg] = useState(null)
+  const [catalog,        setCatalog]        = useState([])
+  const [orgs,           setOrgs]           = useState([])
+  const [assignments,    setAssignments]    = useState([])
+  const [accessRequests, setAccessRequests] = useState([])
+  const [loading,        setLoading]        = useState(true)
+  const [search,         setSearch]         = useState('')
+  const [workflowSearch, setWorkflowSearch] = useState('')
+  const [pendingCells,   setPending]        = useState(new Set())
+  const [viewMode,       setViewMode]       = useState('org')    // 'org' | 'matrix' | 'requests'
+  const [selectedOrg,    setSelectedOrg]    = useState(null)
+  const [actionBusyId,   setActionBusyId]   = useState(null)
+  const [toastMsg,       setToastMsg]       = useState(null)
+  const [error,          setError]          = useState(null)
 
   const load = useCallback(async () => {
     setLoading(true); setError(null)
     try {
-      const [cat, org, ass] = await Promise.all([
+      const [cat, org, ass, reqs] = await Promise.all([
         api.get('/admin/workflows/catalog'),
         api.get('/admin/organizations'),
         api.get('/admin/workflows/assignments'),
+        api.get('/admin/workflows/access-requests').catch(() => []),
       ])
       setCatalog(Array.isArray(cat) ? cat.filter(w => w.active) : [])
       setOrgs(Array.isArray(org) ? org : [])
       setAssignments(Array.isArray(ass) ? ass : [])
+      setAccessRequests(Array.isArray(reqs) ? reqs : [])
     } catch (e) {
       setError(e?.response?.data?.detail || e.message || 'Failed to load assignments')
     } finally {
@@ -341,6 +501,39 @@ export default function AdminWorkflowAssignments() {
   }, [api])
 
   useEffect(() => { load() }, [load])
+
+  // Real-time WebSocket synchronization for access requests
+  useEffect(() => {
+    if (!subscribe) return
+    const unsubs = [
+      subscribe('workflow.access_requested', (evt) => {
+        setAccessRequests(prev => [
+          {
+            id: evt.approval_id || evt.id || `req_${Date.now()}`,
+            workflow_key: evt.workflow_key,
+            workflow_name: evt.workflow_name || evt.workflow_key,
+            org_id: evt.org_id,
+            org_name: evt.org_name || 'Workspace',
+            user_email: evt.user_email || 'User',
+            user_name: evt.user_name || evt.user_email || 'User',
+            reason: evt.reason || 'Access requested',
+            status: 'pending',
+            created_at: evt.timestamp || new Date().toISOString(),
+          },
+          ...prev.filter(r => r.id !== (evt.approval_id || evt.id)),
+        ])
+        setToastMsg(`New workflow request from ${evt.user_email || 'user'}`)
+        setTimeout(() => setToastMsg(null), 4000)
+      }),
+      subscribe('workflow.access_approved', (evt) => {
+        setAccessRequests(prev => prev.map(r => r.id === evt.approval_id ? { ...r, status: 'approved', decided_by: evt.approved_by || 'Admin' } : r))
+      }),
+      subscribe('workflow.access_rejected', (evt) => {
+        setAccessRequests(prev => prev.map(r => r.id === evt.approval_id ? { ...r, status: 'rejected', decided_by: evt.rejected_by || 'Admin' } : r))
+      }),
+    ]
+    return () => unsubs.forEach(fn => fn())
+  }, [subscribe])
 
   const assignmentMap = useMemo(() => {
     const m = {}
@@ -360,19 +553,29 @@ export default function AdminWorkflowAssignments() {
     )
   }, [orgs, search])
 
+  const filteredCatalog = useMemo(() => {
+    if (!workflowSearch.trim()) return catalog
+    const q = workflowSearch.toLowerCase()
+    return catalog.filter(wf =>
+      wf.name?.toLowerCase().includes(q) ||
+      wf.key?.toLowerCase().includes(q) ||
+      wf.industry?.toLowerCase().includes(q)
+    )
+  }, [catalog, workflowSearch])
+
   const globalWorkflowCount = useMemo(() =>
     catalog.filter(wf => (wf.scope || 'GLOBAL') === 'GLOBAL').length,
   [catalog])
 
   const catalogStats = useMemo(() =>
-    catalog.map(wf => {
+    filteredCatalog.map(wf => {
       const isGlobal = (wf.scope || 'GLOBAL') === 'GLOBAL'
       return {
         id: wf.id,
         assignedCount: isGlobal ? orgs.length : orgs.filter(o => assignmentMap[`${o.id}:${wf.id}`]).length,
       }
     }),
-  [catalog, orgs, assignmentMap])
+  [filteredCatalog, orgs, assignmentMap])
 
   async function handleAssign(orgId, workflowId, key) {
     setPending(p => new Set(p).add(key))
@@ -401,7 +604,37 @@ export default function AdminWorkflowAssignments() {
     }
   }
 
+  async function handleApproveRequest(req) {
+    setActionBusyId(req.id)
+    try {
+      await api.post(`/admin/workflows/access-requests/${req.id}/approve`, {})
+      setAccessRequests(prev => prev.map(r => r.id === req.id ? { ...r, status: 'approved', decided_by: 'Admin' } : r))
+      setToastMsg(`Approved access for ${req.user_email || 'user'} to '${req.workflow_name || req.workflow_key}'`)
+      load()
+      setTimeout(() => setToastMsg(null), 4000)
+    } catch (err) {
+      setError(`Failed to approve request: ${err?.response?.data?.detail || err.message}`)
+    } finally {
+      setActionBusyId(null)
+    }
+  }
+
+  async function handleRejectRequest(req) {
+    setActionBusyId(req.id)
+    try {
+      await api.post(`/admin/workflows/access-requests/${req.id}/reject`, {})
+      setAccessRequests(prev => prev.map(r => r.id === req.id ? { ...r, status: 'rejected', decided_by: 'Admin' } : r))
+      setToastMsg(`Rejected access request for ${req.user_email || 'user'}`)
+      setTimeout(() => setToastMsg(null), 4000)
+    } catch (err) {
+      setError(`Failed to reject request: ${err?.response?.data?.detail || err.message}`)
+    } finally {
+      setActionBusyId(null)
+    }
+  }
+
   const totalAssignments = assignments.filter(a => a.status === 'active').length + (globalWorkflowCount * orgs.length)
+  const pendingRequestsCount = accessRequests.filter(r => r.status === 'pending').length
 
   return (
     <div className="flex flex-col gap-6 p-6 min-h-full bg-slate-50 dark:bg-[#0b0f17] bg-dot-pattern text-slate-900 dark:text-slate-100 transition-colors">
@@ -419,34 +652,54 @@ export default function AdminWorkflowAssignments() {
         </div>
         <div className="flex items-center gap-2">
           {/* View toggle */}
-          <div className="flex items-center bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-xl overflow-hidden p-0.5">
+          <div className="flex items-center bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-xl overflow-hidden p-0.5 shadow-2xs">
             <button
               onClick={() => { setViewMode('org'); setSelectedOrg(null) }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${viewMode === 'org' ? 'bg-blue-600 text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-[#162030]'}`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${viewMode === 'org' ? 'bg-blue-600 text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-[#162030]'}`}
             >
               <List size={13} /> Org View
             </button>
             <button
               onClick={() => setViewMode('matrix')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${viewMode === 'matrix' ? 'bg-blue-600 text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-[#162030]'}`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${viewMode === 'matrix' ? 'bg-blue-600 text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-[#162030]'}`}
             >
               <LayoutGrid size={13} /> Matrix
             </button>
+            <button
+              onClick={() => setViewMode('requests')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${viewMode === 'requests' ? 'bg-blue-600 text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-[#162030]'}`}
+            >
+              <ShieldAlert size={13} className={pendingRequestsCount > 0 ? 'text-amber-500' : ''} />
+              <span>Access Requests</span>
+              {pendingRequestsCount > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-500 text-white animate-pulse">
+                  {pendingRequestsCount}
+                </span>
+              )}
+            </button>
           </div>
           <button onClick={load} disabled={loading}
-            className="p-2 rounded-xl text-slate-500 dark:text-slate-400 bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] hover:bg-slate-50 dark:hover:bg-[#162030] transition-colors disabled:opacity-50">
+            className="p-2 rounded-xl text-slate-500 dark:text-slate-400 bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] hover:bg-slate-50 dark:hover:bg-[#162030] transition-colors disabled:opacity-50 cursor-pointer shadow-2xs">
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           </button>
         </div>
       </div>
 
+      {/* Toast Alert */}
+      {toastMsg && (
+        <div className="flex items-center gap-2 px-4 py-3 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 rounded-xl text-xs font-semibold animate-in fade-in duration-150">
+          <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
+          <span>{toastMsg}</span>
+        </div>
+      )}
+
       {/* Info banner */}
       <div className="flex items-start gap-3 px-4 py-3 bg-blue-500/10 border border-blue-500/20 rounded-2xl text-xs text-blue-700 dark:text-blue-300">
         <AlertCircle size={15} className="shrink-0 mt-0.5 text-blue-500" />
         <p className="leading-relaxed">
-          <span className="font-semibold text-blue-900 dark:text-blue-200">Industry-aware & backend enforced.</span>{' '}
-          Org View shows only workflows applicable to each organization's industry.
-          Plan entitlement and explicit assignment are both required for active execution.
+          <span className="font-semibold text-blue-900 dark:text-blue-200">Industry-aware & real-time governance.</span>{' '}
+          Workspaces can request unassigned workflows directly from their dashboard.
+          Incoming requests route to the <strong className="font-semibold">Access Requests</strong> tab for instant 1-click approval.
         </p>
       </div>
 
@@ -459,6 +712,15 @@ export default function AdminWorkflowAssignments() {
 
       {loading ? (
         <div className="flex items-center justify-center h-48 text-slate-400 text-sm">Loading assignments…</div>
+      ) : viewMode === 'requests' ? (
+        <AccessRequestsView
+          requests={accessRequests}
+          loading={loading}
+          onApprove={handleApproveRequest}
+          onReject={handleRejectRequest}
+          actionBusyId={actionBusyId}
+          navigate={navigate}
+        />
       ) : catalog.length === 0 ? (
         <EmptyState icon={Layers} title="No workflows in catalog"
           description="Add workflows to the catalog before assigning them."
@@ -471,15 +733,39 @@ export default function AdminWorkflowAssignments() {
         />
       ) : viewMode === 'matrix' ? (
         <>
-          {/* Search bar for matrix */}
-          <div className="relative max-w-xs">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-            <input type="text" placeholder="Filter organizations…" value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-sm bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] text-slate-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 placeholder-slate-400" />
+          {/* Search bars for matrix: Search Orgs & Search Workflows */}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative max-w-xs flex-1 min-w-[200px]">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Search organizations by name…"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 text-sm bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] text-slate-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 placeholder-slate-400"
+              />
+            </div>
+            <div className="relative max-w-xs flex-1 min-w-[200px]">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Search workflows by name…"
+                value={workflowSearch}
+                onChange={e => setWorkflowSearch(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 text-sm bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] text-slate-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 placeholder-slate-400"
+              />
+            </div>
+            {(search || workflowSearch) && (
+              <button
+                onClick={() => { setSearch(''); setWorkflowSearch('') }}
+                className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium cursor-pointer"
+              >
+                Clear filters
+              </button>
+            )}
           </div>
           <MatrixView
-            catalog={catalog}
+            catalog={filteredCatalog}
             orgs={orgs}
             assignmentMap={assignmentMap}
             catalogStats={catalogStats}
@@ -504,11 +790,25 @@ export default function AdminWorkflowAssignments() {
       ) : (
         // Org list — pick an org to manage
         <>
-          <div className="relative max-w-xs">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-            <input type="text" placeholder="Filter organizations…" value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-sm bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] text-slate-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 placeholder-slate-400" />
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative max-w-xs flex-1 min-w-[200px]">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Search organizations by name…"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 text-sm bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] text-slate-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 placeholder-slate-400"
+              />
+            </div>
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium cursor-pointer"
+              >
+                Clear filter
+              </button>
+            )}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {filteredOrgs.map(org => {
@@ -516,7 +816,7 @@ export default function AdminWorkflowAssignments() {
               const orgAssigned = explicitAssigned + globalWorkflowCount
               return (
                 <button key={org.id} onClick={() => setSelectedOrg(org)}
-                  className="bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] hover:border-blue-500/50 hover:shadow-sm rounded-2xl p-4 text-left flex items-center gap-3.5 transition-all group">
+                  className="bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] hover:border-blue-500/50 hover:shadow-sm rounded-2xl p-4 text-left flex items-center gap-3.5 transition-all group cursor-pointer">
                   <div className="w-11 h-11 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
                     <span className="text-blue-600 dark:text-blue-400 text-sm font-bold">{(org.name || '?')[0].toUpperCase()}</span>
                   </div>
@@ -539,3 +839,4 @@ export default function AdminWorkflowAssignments() {
     </div>
   )
 }
+
