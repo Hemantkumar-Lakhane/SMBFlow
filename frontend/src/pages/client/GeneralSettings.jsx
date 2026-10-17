@@ -111,24 +111,26 @@ export default function GeneralSettings() {
       const org = await api.get('/organizations/me')
       if (org) {
         const isKnownIndustry = INDUSTRIES.some(i => i.value === org.industry)
-        const effectiveOrgName = (isPlatformAdmin || org.name === 'Hacker Org')
-          ? 'Isolate Platform Operations'
-          : (org.name || f.orgName)
+        setForm(f => {
+          const effectiveOrgName = (isPlatformAdmin || org.name === 'Hacker Org')
+            ? 'Isolate Platform Operations'
+            : (org.name || f.orgName)
 
-        setForm(f => ({
-          ...f,
-          fullName: user?.full_name || org.full_name || f.fullName,
-          email: user?.email || f.email,
-          orgName: effectiveOrgName,
-          industry: isKnownIndustry ? org.industry : 'saas',
-          customIndustry: isKnownIndustry ? '' : (org.industry || ''),
-          website: org.website || f.website,
-          companySize: org.company_size || f.companySize,
-          timezone: org.config?.timezone || f.timezone,
-          emailNotif: org.config?.notifications?.email ?? f.emailNotif,
-          slackNotif: org.config?.notifications?.slack ?? f.slackNotif,
-          approvalAlerts: org.config?.notifications?.approvals ?? f.approvalAlerts,
-        }))
+          return {
+            ...f,
+            fullName: user?.full_name || org.full_name || f.fullName,
+            email: user?.email || f.email,
+            orgName: effectiveOrgName,
+            industry: isKnownIndustry ? org.industry : 'saas',
+            customIndustry: isKnownIndustry ? '' : (org.industry || ''),
+            website: org.website || f.website,
+            companySize: org.company_size || f.companySize,
+            timezone: org.config?.timezone || f.timezone,
+            emailNotif: org.config?.notifications?.email ?? f.emailNotif,
+            slackNotif: org.config?.notifications?.slack ?? f.slackNotif,
+            approvalAlerts: org.config?.notifications?.approvals ?? f.approvalAlerts,
+          }
+        })
       }
     } catch (err) {
       setError(err.message || 'Failed to load organization settings')

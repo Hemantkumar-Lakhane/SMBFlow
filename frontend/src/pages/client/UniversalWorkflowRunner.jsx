@@ -11,7 +11,7 @@
 //   • Zero raw asterisks, zero emojis, clean enterprise styling
 // ─────────────────────────────────────────────────────────────────────────────
 
-import React, { useState, useEffect, useRef, useMemo } from 'react'
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import {
@@ -23,7 +23,7 @@ import {
   ChevronDown, Eye, CheckCircle, AlertCircle, MessageSquare, Link2, Lock,
   CreditCard, UserCheck, AlertTriangle, GitFork, RotateCcw, BrainCircuit,
   Image as ImageIcon, Loader2, Database, GitBranch, Activity, User, Star, TrendingUp,
-  Inbox, CheckSquare, Mail, Palette, Wand2, Plug
+  Inbox, CheckSquare, Mail, Palette, Wand2, Plug, Video
 } from 'lucide-react'
 
 // ── Visual Style Presets for Prompt Enhancer ──────────────────────────────────
