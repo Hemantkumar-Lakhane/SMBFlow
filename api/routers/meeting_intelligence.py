@@ -760,7 +760,7 @@ async def capture_conversation(
             "implemented_nodes": ["n1"],
             "pending_nodes": ["n2", "n3", "n4", "n5"],
         },
-        started_at=datetime.now(timezone.utc),
+        started_at=datetime.utcnow(),
     )
     db.add(workflow_inst)
 
@@ -773,7 +773,7 @@ async def capture_conversation(
         status="completed",
         duration_ms=45,
         tools_used=["transcript_ingest"] if input_mode == "paste_transcript" else ["audio_storage"],
-        completed_at=datetime.now(timezone.utc),
+        completed_at=datetime.utcnow(),
     )
     db.add(node1_run)
 
@@ -1499,7 +1499,7 @@ async def process_conversation(
                 agent_capability="conversation_processing",
                 status="failed",
                 error="Google Workspace connection required to retrieve Google Meet transcripts. Please connect your Google account in Integrations.",
-                completed_at=datetime.now(timezone.utc),
+                completed_at=datetime.utcnow(),
             )
             db.add(fail_run)
             await db.commit()
@@ -1526,7 +1526,7 @@ async def process_conversation(
                 agent_capability="conversation_processing",
                 status="failed",
                 error=err_msg,
-                completed_at=datetime.now(timezone.utc),
+                completed_at=datetime.utcnow(),
             )
             db.add(fail_run)
             await db.commit()
@@ -1543,7 +1543,7 @@ async def process_conversation(
                 agent_capability="conversation_processing",
                 status="failed",
                 error="Missing audio recording reference in workflow instance.",
-                completed_at=datetime.now(timezone.utc),
+                completed_at=datetime.utcnow(),
             )
             db.add(fail_run)
             await db.commit()
@@ -1561,7 +1561,7 @@ async def process_conversation(
                 agent_capability="conversation_processing",
                 status="failed",
                 error="Audio file path traversal violation.",
-                completed_at=datetime.now(timezone.utc),
+                completed_at=datetime.utcnow(),
             )
             db.add(fail_run)
             await db.commit()
@@ -1579,7 +1579,7 @@ async def process_conversation(
                 agent_capability="conversation_processing",
                 status="failed",
                 error=f"Audio file '{audio_file_path.name}' not found on disk.",
-                completed_at=datetime.now(timezone.utc),
+                completed_at=datetime.utcnow(),
             )
             db.add(fail_run)
             await db.commit()
@@ -1600,7 +1600,7 @@ async def process_conversation(
                 agent_capability="conversation_processing",
                 status="failed",
                 error=stt_http_err.detail,
-                completed_at=datetime.now(timezone.utc),
+                completed_at=datetime.utcnow(),
             )
             db.add(fail_run)
             await db.commit()
@@ -1614,7 +1614,7 @@ async def process_conversation(
                 agent_capability="conversation_processing",
                 status="failed",
                 error=str(stt_generic_err),
-                completed_at=datetime.now(timezone.utc),
+                completed_at=datetime.utcnow(),
             )
             db.add(fail_run)
             await db.commit()

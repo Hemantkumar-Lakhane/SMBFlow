@@ -418,10 +418,10 @@ async def exchange_code_and_store_connection(
         existing_conn.granted_scopes = granted_scopes
         existing_conn.capabilities = active_capabilities
         existing_conn.expires_at = datetime.fromtimestamp(credentials_dict["expires_at"], tz=timezone.utc)
-        existing_conn.last_tested_at = datetime.now(timezone.utc)
+        existing_conn.last_tested_at = datetime.utcnow()
         existing_conn.last_error_code = None
         existing_conn.last_error_message = None
-        existing_conn.updated_at = datetime.now(timezone.utc)
+        existing_conn.updated_at = datetime.utcnow()
         conn_record = existing_conn
     else:
         conn_record = ToolConnection(
@@ -439,9 +439,9 @@ async def exchange_code_and_store_connection(
             granted_scopes=granted_scopes,
             capabilities=active_capabilities,
             expires_at=datetime.fromtimestamp(credentials_dict["expires_at"], tz=timezone.utc),
-            last_tested_at=datetime.now(timezone.utc),
-            created_at=datetime.now(timezone.utc),
-            updated_at=datetime.now(timezone.utc),
+            last_tested_at=datetime.utcnow(),
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
         )
         db.add(conn_record)
 

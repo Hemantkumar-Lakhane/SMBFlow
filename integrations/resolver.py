@@ -184,7 +184,7 @@ class ConnectionResolver:
                     matched_conn.status = "reauth_required"
                     matched_conn.last_error_code = "TOKEN_REFRESH_FAILED"
                     matched_conn.last_error_message = "Automated token refresh failed. Please reconnect."
-                    matched_conn.updated_at = datetime.now(timezone.utc)
+                    matched_conn.updated_at = datetime.utcnow()
                     await db.commit()
 
                     await record_audit_event(
@@ -302,7 +302,7 @@ class ConnectionResolver:
 
                     conn.encrypted_credentials = encrypt_credentials(creds)
                     conn.expires_at = datetime.fromtimestamp(creds["expires_at"], tz=timezone.utc)
-                    conn.updated_at = datetime.now(timezone.utc)
+                    conn.updated_at = datetime.utcnow()
                     await db.commit()
 
                     log.info("Successfully refreshed OAuth access token via ConnectionResolver", tool_name=provider.tool_name)

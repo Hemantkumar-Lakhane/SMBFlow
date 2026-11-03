@@ -104,7 +104,7 @@ async def record_audit_event(
                 status="approved" if success else "rejected",
                 required_signatures=0,
                 signatures=[],
-                created_at=datetime.now(timezone.utc),
+                created_at=datetime.utcnow(),
             )
             db.add(item)
             await db.commit()

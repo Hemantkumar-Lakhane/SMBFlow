@@ -522,12 +522,12 @@ function MeetingIntelligenceInputModes({ formData, onChange, api, synthesizing, 
 
     const ext = '.' + file.name.split('.').pop().toLowerCase()
     if (!allowedExtensions.includes(ext)) {
-      setErrorMsg(`Invalid file type "${ext}". Supported audio formats: .mp3, .wav, .m4a, .webm`)
+      setErrorMsg(`Invalid file type "${ext}". Supported: .mp3, .wav, .m4a, .webm`)
       return
     }
 
     if (file.size > maxSizeBytes) {
-      setErrorMsg(`File exceeds maximum size limit (50 MB). Selected file: ${(file.size / (1024 * 1024)).toFixed(1)} MB`)
+      setErrorMsg(`File exceeds 50 MB limit (${(file.size / (1024 * 1024)).toFixed(1)} MB).`)
       return
     }
 
@@ -552,7 +552,7 @@ function MeetingIntelligenceInputModes({ formData, onChange, api, synthesizing, 
       }
     } catch (err) {
       console.error('Audio upload error:', err)
-      setErrorMsg(err.message || 'Failed to upload audio file. Please try again.')
+      setErrorMsg(err.message || 'Failed to upload audio file.')
     } finally {
       setIsUploading(false)
     }
@@ -562,7 +562,7 @@ function MeetingIntelligenceInputModes({ formData, onChange, api, synthesizing, 
   async function handleResolveMeet() {
     const rawUrl = (formData.meet_url || '').trim()
     if (!rawUrl || rawUrl.length < 3) {
-      setErrorMsg('Please enter a valid Google Meet link or meeting code (e.g. abc-defg-hij)')
+      setErrorMsg('Please enter a valid Google Meet link or meeting code')
       return
     }
     setErrorMsg('')
@@ -595,7 +595,6 @@ function MeetingIntelligenceInputModes({ formData, onChange, api, synthesizing, 
     } catch (err) {
       console.warn('Backend OAuth endpoint returned error, routing to direct Google OAuth...', err)
     }
-    // Direct Google OAuth route with Meet, Calendar & Drive scopes using configured Google Client ID
     const redirectUri = encodeURIComponent(window.location.origin + window.location.pathname)
     const realClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
     window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${realClientId}&redirect_uri=${redirectUri}&response_type=code&scope=https://www.googleapis.com/auth/meetings.space.readonly%20https://www.googleapis.com/auth/calendar.readonly%20https://www.googleapis.com/auth/drive.readonly%20https://www.googleapis.com/auth/userinfo.email&access_type=offline&prompt=consent`
@@ -603,13 +602,13 @@ function MeetingIntelligenceInputModes({ formData, onChange, api, synthesizing, 
 
   function handleInsertSampleTranscript() {
     const sample = `[00:00] Elena (Product Lead): Welcome team. Today we are reviewing the Q4 release roadmap, API latency SLA targets, and client deliverables.
-[00:08] Marcus (Engineering): On the latency SLA, our benchmark tests show we can commit to sub-150ms p95 by next Friday. I will publish the latency report by Oct 24.
-[00:19] Elena: That aligns with enterprise client expectations. Sophia, what about the customer migration documentation?
-[00:26] Sophia (Customer Success): I commit to completing the client migration checklist and onboarding guide by Wednesday Oct 22.
-[00:35] Elena: Perfect. I will coordinate with DevOps on staging environment deployment and notify the executive stakeholders.`
+[00:05] Marcus (Engineering): The distributed caching layer has reduced p99 latency to 18ms. However, we need approval on the Redis cluster upgrade before Friday.
+[00:15] Sophia (Operations): Budget approval for Redis is confirmed. I will sign off in the finance portal by 3:00 PM today.
+[00:22] Elena: Action item for Marcus: finalize the security migration checklist. Sophia: update the billing escalation schedule.`
+
     onChange('transcript', sample)
     if (!formData.conversation_title) {
-      onChange('conversation_title', 'Q4 Product Roadmap & Architecture Alignment')
+      onChange('conversation_title', 'Q4 Roadmap & API Latency Sync')
     }
     if (!formData.contact_name) {
       onChange('contact_name', 'Elena Rostova, Marcus Chen, Sophia Williams')
@@ -618,9 +617,6 @@ function MeetingIntelligenceInputModes({ formData, onChange, api, synthesizing, 
 
   const transcriptText = formData.transcript || ''
   const charCount = transcriptText.length
-  const wordCount = transcriptText.trim() ? transcriptText.trim().split(/\s+/).length : 0
-  const lineCount = transcriptText ? transcriptText.split('\n').length : 0
-  const isTranscriptValid = charCount >= 10
 
   const audioRec = formData.recording
   const hasAudio = Boolean(audioRec && (audioRec.stored_path || audioRec.filename))
@@ -629,79 +625,65 @@ function MeetingIntelligenceInputModes({ formData, onChange, api, synthesizing, 
   return (
     <div className="space-y-4">
       {/* 3 Input Mode Tabs */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 p-1.5 bg-slate-100 dark:bg-[#0c121d] rounded-2xl text-xs font-semibold">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 p-1 bg-slate-100 dark:bg-[#0c121d] rounded-xl text-xs font-medium">
         <button
           type="button"
           onClick={() => handleModeChange('paste_transcript')}
-          className={`py-2.5 px-3 rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer ${
+          className={`py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
             activeMode === 'paste_transcript'
-              ? 'bg-white dark:bg-[#1a2436] text-purple-600 dark:text-purple-400 font-bold shadow-xs ring-1 ring-purple-500/20'
+              ? 'bg-white dark:bg-[#1a2436] text-slate-900 dark:text-white font-semibold shadow-xs'
               : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
           }`}
         >
-          <FileText className="w-4 h-4" />
+          <FileText className="w-3.5 h-3.5" />
           <span>Paste Transcript</span>
         </button>
 
         <button
           type="button"
           onClick={() => handleModeChange('audio_upload')}
-          className={`py-2.5 px-3 rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer ${
+          className={`py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
             activeMode === 'audio_upload'
-              ? 'bg-white dark:bg-[#1a2436] text-blue-600 dark:text-blue-400 font-bold shadow-xs ring-1 ring-blue-500/20'
+              ? 'bg-white dark:bg-[#1a2436] text-slate-900 dark:text-white font-semibold shadow-xs'
               : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
           }`}
         >
-          <Mic className="w-4 h-4" />
+          <Mic className="w-3.5 h-3.5" />
           <span>Upload Audio File</span>
         </button>
 
         <button
           type="button"
           onClick={() => handleModeChange('google_meet')}
-          className={`py-2.5 px-3 rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer ${
+          className={`py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
             activeMode === 'google_meet'
-              ? 'bg-white dark:bg-[#1a2436] text-emerald-600 dark:text-emerald-400 font-bold shadow-xs ring-1 ring-emerald-500/20'
+              ? 'bg-white dark:bg-[#1a2436] text-slate-900 dark:text-white font-semibold shadow-xs'
               : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
           }`}
         >
-          <Video className="w-4 h-4" />
-          <span>Google Meet & Calendar</span>
+          <Video className="w-3.5 h-3.5" />
+          <span>Google Meet</span>
         </button>
       </div>
 
       {/* Mode A: Paste Transcript */}
       {activeMode === 'paste_transcript' && (
-        <div className="space-y-3 p-4 rounded-xl bg-purple-50/20 dark:bg-purple-950/10 border border-purple-200/80 dark:border-purple-900/40">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <div>
-              <span className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
-                <FileText className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                <span>Meeting Transcript Editor</span>
-              </span>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                Paste raw speaker notes or transcript text. No audio file or Google Meet URL required.
-              </p>
-            </div>
-            <div className="flex items-center gap-2 text-[11px] font-mono flex-wrap">
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-semibold text-slate-700 dark:text-slate-300">
+              Meeting Transcript
+            </span>
+            <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={handleInsertSampleTranscript}
-                className="px-2.5 py-1 rounded-lg bg-purple-100 hover:bg-purple-200 dark:bg-purple-950/80 dark:hover:bg-purple-900 text-purple-700 dark:text-purple-300 font-semibold transition-colors cursor-pointer text-[10px]"
-                title="Fill with realistic sample multi-speaker transcript"
+                className="text-[11px] font-medium text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
               >
-                + Insert Sample Transcript
+                + Insert Sample
               </button>
-              <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-[#182234] text-slate-600 dark:text-slate-300">
-                {charCount.toLocaleString()} chars • {wordCount} words • {lineCount} lines
-              </span>
-              {isTranscriptValid ? (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 font-semibold">
-                  <CheckCircle className="w-3 h-3 text-emerald-600" /> Ready
-                </span>
-              ) : (
-                <span className="px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 font-medium">
-                  Min 10 chars
+              {charCount > 0 && (
+                <span className="text-[11px] text-slate-400 font-mono">
+                  {charCount.toLocaleString()} chars
                 </span>
               )}
             </div>
@@ -711,15 +693,15 @@ function MeetingIntelligenceInputModes({ formData, onChange, api, synthesizing, 
             rows={8}
             value={transcriptText}
             onChange={(e) => onChange('transcript', e.target.value)}
-            placeholder="Paste your meeting transcript here...&#10;&#10;Example:&#10;[00:00] Alex: Thanks for joining today's roadmap review. Let's cover commitments and release dates.&#10;[00:04] Sarah: I will deliver the customer migration checklist by Friday Oct 24.&#10;[00:09] Alex: Great, I will coordinate with DevOps on the deployment window."
-            className="w-full bg-white dark:bg-[#101622] border border-slate-200 dark:border-[#233048] focus:border-purple-500 rounded-xl p-3 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-hidden font-mono leading-relaxed"
+            placeholder="Paste your meeting notes or conversation transcript here..."
+            className="w-full bg-slate-50/60 dark:bg-[#0b0f17] border border-slate-200 dark:border-[#233048] focus:border-blue-500 rounded-xl p-3 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-hidden font-mono leading-relaxed"
           />
         </div>
       )}
 
       {/* Mode B: Upload Audio */}
       {activeMode === 'audio_upload' && (
-        <div className="space-y-3 p-4 rounded-xl bg-blue-50/20 dark:bg-blue-950/10 border border-blue-200/80 dark:border-blue-900/40">
+        <div className="space-y-2">
           <input
             ref={fileInputRef}
             type="file"
@@ -733,54 +715,43 @@ function MeetingIntelligenceInputModes({ formData, onChange, api, synthesizing, 
             }}
           />
 
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
-                <Mic className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                <span>Audio Recording Upload</span>
-              </span>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                Upload real audio file for automated Whisper speech-to-text transcription.
-              </p>
-            </div>
-            <span className="text-[10px] font-mono px-2 py-0.5 bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 rounded-full font-semibold">
-              Max 50MB
-            </span>
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-semibold text-slate-700 dark:text-slate-300">Audio Recording</span>
+            <span className="text-[11px] text-slate-400 font-mono">Max 50MB</span>
           </div>
 
           {hasAudio ? (
-            <div className="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-[#121826] border border-blue-200 dark:border-blue-900/50 shadow-xs">
+            <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-[#121826] border border-slate-200 dark:border-[#233048]">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-9 h-9 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
                   <Mic className="w-4 h-4" />
                 </div>
                 <div className="min-w-0">
-                  <div className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                  <div className="text-xs font-semibold text-slate-900 dark:text-white truncate">
                     {audioRec.filename}
                   </div>
-                  <div className="flex items-center gap-2 text-[10px] text-slate-500 dark:text-slate-400 font-mono mt-0.5">
-                    {audioRec.size_bytes && <span>{formatBytes(audioRec.size_bytes)}</span>}
-                    <span className="text-emerald-600 dark:text-emerald-400 font-semibold inline-flex items-center gap-1">
-                      <CheckCircle className="w-2.5 h-2.5" /> Preserved in uploads/audio/
-                    </span>
-                  </div>
+                  {audioRec.size_bytes && (
+                    <div className="text-[10px] text-slate-400 font-mono">
+                      {formatBytes(audioRec.size_bytes)}
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="px-2.5 py-1 text-xs text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-lg font-semibold transition-colors cursor-pointer"
+                  className="px-2 py-1 text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium cursor-pointer"
                 >
                   Change
                 </button>
                 <button
                   type="button"
                   onClick={() => onChange('recording', null)}
-                  className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors cursor-pointer"
+                  className="p-1 text-slate-400 hover:text-red-500 rounded-md cursor-pointer"
                   title="Remove"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
@@ -796,27 +767,25 @@ function MeetingIntelligenceInputModes({ formData, onChange, api, synthesizing, 
                 }
               }}
               onClick={() => !isUploading && fileInputRef.current?.click()}
-              className={`p-6 border-2 border-dashed rounded-xl text-center cursor-pointer transition-all ${
+              className={`p-6 border border-dashed rounded-xl text-center cursor-pointer transition-all ${
                 dragOver
-                  ? 'border-blue-500 bg-blue-50/60 dark:bg-blue-950/40'
-                  : 'border-slate-300 dark:border-[#233048] hover:border-blue-400 dark:hover:border-blue-700 bg-white/50 dark:bg-[#101622]/50'
+                  ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-950/30'
+                  : 'border-slate-300 dark:border-[#233048] hover:border-slate-400 bg-slate-50/30 dark:bg-[#101622]/30'
               }`}
             >
               {isUploading ? (
-                <div className="flex flex-col items-center justify-center gap-2 py-2">
-                  <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
-                  <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">Uploading and validating audio file...</span>
+                <div className="flex items-center justify-center gap-2 py-2">
+                  <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+                  <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">Uploading audio...</span>
                 </div>
               ) : (
-                <div className="flex flex-col items-center justify-center gap-2 py-2">
-                  <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-500 flex items-center justify-center">
-                    <Mic className="w-5 h-5" />
-                  </div>
-                  <div className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                    <span className="text-blue-600 dark:text-blue-400 underline">Click to choose audio file</span> or drag & drop here
+                <div className="flex flex-col items-center justify-center gap-1.5 py-2">
+                  <Mic className="w-5 h-5 text-slate-400" />
+                  <div className="text-xs text-slate-700 dark:text-slate-300">
+                    <span className="text-blue-600 dark:text-blue-400 font-medium underline">Choose audio file</span> or drag & drop here
                   </div>
                   <div className="text-[11px] text-slate-400 font-mono">
-                    Supported: WAV, MP3, M4A, WebM (Up to 50 MB)
+                    MP3, WAV, M4A, WebM (up to 50MB)
                   </div>
                 </div>
               )}
@@ -825,176 +794,100 @@ function MeetingIntelligenceInputModes({ formData, onChange, api, synthesizing, 
         </div>
       )}
 
-      {/* Mode C: Google Meet & Calendar */}
+      {/* Mode C: Google Meet */}
       {activeMode === 'google_meet' && (
-        <div className="space-y-3 p-4 rounded-xl bg-emerald-50/20 dark:bg-emerald-950/10 border border-emerald-200/80 dark:border-emerald-900/40">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <div>
-              <span className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
-                <Video className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                <span>Google Meet & Calendar Integration</span>
-              </span>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                Stream real-time Google Meet transcripts, resolve participant lists, and sync follow-up actions to Google Calendar.
-              </p>
-            </div>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-semibold text-slate-700 dark:text-slate-300">Google Meet</span>
             {googleStatus.connected ? (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 rounded-full text-[10px] font-semibold">
-                <CheckCircle className="w-3 h-3 text-emerald-600" /> Google Connected
+              <span className="text-emerald-600 dark:text-emerald-400 text-[11px] font-medium flex items-center gap-1">
+                <CheckCircle className="w-3 h-3" /> Connected
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 rounded-full text-[10px] font-semibold">
-                OAuth Required
-              </span>
-            )}
-          </div>
-
-          {!googleStatus.connected ? (
-            <div className="p-3.5 rounded-xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 space-y-2 text-xs">
-              <div className="font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
-                <AlertCircle className="w-4 h-4 text-amber-600" />
-                <span>Google Account Authorization Required</span>
-              </div>
-              <p className="text-[11px] text-amber-800 dark:text-amber-300/90 leading-relaxed">
-                To retrieve Google Meet transcripts and schedule calendar follow-ups, authorize the required scopes:
-              </p>
-              <ul className="text-[10px] font-mono text-amber-900 dark:text-amber-300 space-y-1 ml-4 list-disc">
-                <li><code>https://www.googleapis.com/auth/meetings.space.readonly</code> (Google Meet session & speaker transcripts)</li>
-                <li><code>https://www.googleapis.com/auth/calendar.events</code> (Google Calendar meeting prep & commitment blocks)</li>
-                <li><code>https://www.googleapis.com/auth/drive.readonly</code> (Google Drive cloud recorded transcript files)</li>
-              </ul>
-              <div className="pt-2 flex items-center gap-2 flex-wrap">
-                <button
-                  type="button"
-                  onClick={handleConnectGoogle}
-                  className="px-3.5 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  <span>Connect Google Meet & Calendar (OAuth 2.0)</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setGoogleStatus({ connected: true, displayName: 'Google Workspace (Connected)', scopes: ['meetings.space.readonly', 'calendar.events'], loading: false })}
-                  className="px-3 py-1.5 bg-white dark:bg-[#182234] border border-slate-200 dark:border-[#233048] hover:bg-slate-50 text-slate-700 dark:text-slate-300 font-semibold rounded-lg text-xs cursor-pointer transition-colors"
-                >
-                  Use Connected Sandbox
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="p-3 bg-white dark:bg-[#121826] border border-emerald-200 dark:border-emerald-900/60 rounded-xl text-xs flex items-center justify-between">
-              <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300 font-medium">
-                <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>Google Meet & Calendar API Connected ({googleStatus.displayName || 'Google Workspace'})</span>
-              </div>
               <button
                 type="button"
                 onClick={handleConnectGoogle}
-                className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 hover:underline cursor-pointer"
+                className="text-blue-600 dark:text-blue-400 text-[11px] font-medium hover:underline flex items-center gap-1 cursor-pointer"
               >
-                Re-authenticate
+                <ExternalLink className="w-3 h-3" /> Connect Google Account
               </button>
-            </div>
-          )}
+            )}
+          </div>
 
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                Google Meet URL or Meeting Code:
-              </label>
-              <button
-                type="button"
-                onClick={() => onChange('meet_url', 'https://meet.google.com/abc-defg-hij')}
-                className="text-[11px] text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
-              >
-                Use sample Meet URL
-              </button>
-            </div>
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                value={formData.meet_url || ''}
-                onChange={(e) => onChange('meet_url', e.target.value)}
-                placeholder="https://meet.google.com/abc-defg-hij or abc-defg-hij"
-                className="flex-1 bg-white dark:bg-[#101622] border border-slate-200 dark:border-[#233048] focus:border-emerald-500 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 font-mono focus:outline-hidden"
-              />
-              <button
-                type="button"
-                onClick={handleResolveMeet}
-                disabled={isResolvingMeet || !meetUrlVal}
-                className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shrink-0 cursor-pointer shadow-xs transition-colors"
-              >
-                {isResolvingMeet ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Video className="w-3.5 h-3.5" />}
-                <span>{isResolvingMeet ? 'Verifying...' : 'Verify Meet'}</span>
-              </button>
-            </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={formData.meet_url || ''}
+              onChange={(e) => onChange('meet_url', e.target.value)}
+              placeholder="Paste Google Meet link or code (e.g. meet.google.com/abc-defg-hij)"
+              className="flex-1 bg-slate-50/60 dark:bg-[#101622] border border-slate-200 dark:border-[#233048] focus:border-blue-500 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 font-mono focus:outline-hidden"
+            />
+            <button
+              type="button"
+              onClick={handleResolveMeet}
+              disabled={isResolvingMeet || !meetUrlVal}
+              className="px-3.5 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 disabled:opacity-40 font-medium rounded-xl text-xs flex items-center gap-1.5 shrink-0 cursor-pointer transition-colors"
+            >
+              {isResolvingMeet ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+              <span>{isResolvingMeet ? 'Verifying...' : 'Verify'}</span>
+            </button>
           </div>
 
           {meetResolveResult && (
-            <div className="p-3 bg-white dark:bg-[#101622] border border-slate-200 dark:border-[#233048] rounded-xl text-xs space-y-1">
-              <div className="font-bold flex items-center gap-1.5">
-                <span className={meetResolveResult.status === 'ready' ? 'text-emerald-600' : 'text-amber-600'}>
-                  Status: {meetResolveResult.status}
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
-                {meetResolveResult.message}
-              </p>
-              {meetResolveResult.participants && meetResolveResult.participants.length > 0 && (
-                <div className="text-[11px] text-slate-500 font-mono pt-1">
-                  Identified Speakers: {meetResolveResult.participants.join(', ')}
-                </div>
-              )}
+            <div className="p-2.5 bg-slate-50 dark:bg-[#101622] border border-slate-200 dark:border-[#233048] rounded-xl text-xs">
+              <span className={meetResolveResult.status === 'ready' ? 'text-emerald-600 font-medium' : 'text-amber-600 font-medium'}>
+                {meetResolveResult.message || `Status: ${meetResolveResult.status}`}
+              </span>
             </div>
           )}
         </div>
       )}
 
-      {/* Optional Metadata Accordion (Title, Attendees, Date, Language) */}
+      {/* Optional Metadata Accordion */}
       <div className="border border-slate-200 dark:border-[#1e2a3f] rounded-xl overflow-hidden">
         <button
           type="button"
           onClick={() => setShowMetadata(prev => !prev)}
-          className="w-full flex items-center justify-between p-3 bg-slate-50 dark:bg-[#0f1523] text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#151c2e] transition-colors cursor-pointer"
+          className="w-full flex items-center justify-between p-2.5 bg-slate-50 dark:bg-[#0f1523] text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-[#151c2e] transition-colors cursor-pointer"
         >
-          <span className="flex items-center gap-2">
-            <Sliders className="w-3.5 h-3.5 text-slate-400" />
-            <span>Optional Meeting Metadata & Settings</span>
+          <span className="flex items-center gap-1.5">
+            <Sliders className="w-3 h-3 text-slate-400" />
+            <span>Meeting Details (Optional)</span>
           </span>
           <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${showMetadata ? 'rotate-180' : ''}`} />
         </button>
 
         {showMetadata && (
-          <div className="p-3.5 bg-white dark:bg-[#121826] grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs border-t border-slate-200 dark:border-[#1e2a3f]">
+          <div className="p-3 bg-white dark:bg-[#121826] grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs border-t border-slate-200 dark:border-[#1e2a3f]">
             <div>
-              <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 block mb-1">
-                Conversation Title
+              <label className="text-[11px] font-medium text-slate-500 block mb-1">
+                Meeting Title
               </label>
               <input
                 type="text"
                 value={formData.conversation_title || ''}
                 onChange={(e) => onChange('conversation_title', e.target.value)}
-                placeholder="Meeting Review"
+                placeholder="Product Roadmap Sync"
                 className="w-full bg-slate-50 dark:bg-[#0b0f17] border border-slate-200 dark:border-[#233048] rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-hidden"
               />
             </div>
 
             <div>
-              <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 block mb-1">
-                Primary Contact / Attendees
+              <label className="text-[11px] font-medium text-slate-500 block mb-1">
+                Attendees
               </label>
               <input
                 type="text"
                 value={formData.contact_name || ''}
                 onChange={(e) => onChange('contact_name', e.target.value)}
-                placeholder="Meeting Attendees"
+                placeholder="Sarah, Alex, Elena"
                 className="w-full bg-slate-50 dark:bg-[#0b0f17] border border-slate-200 dark:border-[#233048] rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-hidden"
               />
             </div>
 
             <div>
-              <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 block mb-1">
-                Conversation Date
+              <label className="text-[11px] font-medium text-slate-500 block mb-1">
+                Date
               </label>
               <input
                 type="date"
@@ -1006,8 +899,8 @@ function MeetingIntelligenceInputModes({ formData, onChange, api, synthesizing, 
 
             {activeMode === 'audio_upload' && (
               <div>
-                <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 block mb-1">
-                  Spoken Language
+                <label className="text-[11px] font-medium text-slate-500 block mb-1">
+                  Language
                 </label>
                 <select
                   value={formData.language || 'Auto Detect'}
@@ -1017,7 +910,6 @@ function MeetingIntelligenceInputModes({ formData, onChange, api, synthesizing, 
                   <option value="Auto Detect">Auto Detect</option>
                   <option value="English">English</option>
                   <option value="Spanish">Spanish</option>
-                  <option value="Mixed English / Spanish">Mixed English / Spanish</option>
                 </select>
               </div>
             )}
@@ -1027,50 +919,10 @@ function MeetingIntelligenceInputModes({ formData, onChange, api, synthesizing, 
 
       {errorMsg && (
         <div className="flex items-center gap-2 p-2.5 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 text-xs text-red-600 dark:text-red-400">
-          <AlertCircle className="w-4 h-4 shrink-0" />
+          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
           <span>{errorMsg}</span>
         </div>
       )}
-
-      {/* Primary Action Button */}
-      <div className="pt-2 flex items-center justify-between flex-wrap gap-3 border-t border-slate-100 dark:border-[#1a2336]">
-        <div className="text-xs text-slate-500 dark:text-slate-400">
-          {activeMode === 'paste_transcript' && (
-            isTranscriptValid 
-              ? <span className="text-emerald-600 dark:text-emerald-400 font-medium">Transcript ready for analysis ({charCount} characters)</span>
-              : <span>Please paste at least 10 characters to enable summarization.</span>
-          )}
-          {activeMode === 'audio_upload' && (
-            hasAudio
-              ? <span className="text-emerald-600 dark:text-emerald-400 font-medium">Audio preserved: {audioRec.filename}</span>
-              : <span>Select or drag & drop an audio file (.mp3, .wav, .m4a, .webm).</span>
-          )}
-          {activeMode === 'google_meet' && (
-            meetUrlVal
-              ? <span className="text-emerald-600 dark:text-emerald-400 font-medium">Session URL configured</span>
-              : <span>Enter Google Meet URL or code to resolve transcript.</span>
-          )}
-        </div>
-
-        <button
-          type="button"
-          onClick={onExecute}
-          disabled={synthesizing || !((activeMode === 'paste_transcript' && isTranscriptValid) || (activeMode === 'audio_upload' && hasAudio) || (activeMode === 'google_meet' && meetUrlVal.length >= 3))}
-          className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-xs rounded-xl shadow-md flex items-center gap-2 transition-all cursor-pointer hover:scale-[1.01] active:scale-[0.99]"
-        >
-          {synthesizing ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin text-white" />
-              <span>Analyzing & Extracting Intelligence...</span>
-            </>
-          ) : (
-            <>
-              <Play className="w-3.5 h-3.5 fill-white" />
-              <span>Summarize meeting</span>
-            </>
-          )}
-        </button>
-      </div>
     </div>
   )
 }
@@ -5783,10 +5635,19 @@ export default function UniversalWorkflowRunner() {
                 type="button"
                 onClick={() => executeActivePipeline()}
                 disabled={synthesizing || !isFormValid}
-                className="px-5 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center gap-2"
+                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl text-xs font-semibold shadow-sm hover:shadow transition-all cursor-pointer flex items-center gap-2"
               >
-                <Play className="w-3.5 h-3.5 fill-white" />
-                <span>{isMeetingIntelligence ? 'Summarize meeting →' : 'Run Active Pipeline →'}</span>
+                {synthesizing ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                    <span>Analyzing Meeting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-3.5 h-3.5 fill-white" />
+                    <span>{isMeetingIntelligence ? 'Summarize Meeting' : 'Run Active Pipeline'}</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
