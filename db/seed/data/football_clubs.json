@@ -1,0 +1,263 @@
+[
+  {
+    "_data_classification": "SYNTHETIC_MOCK_FIXTURE_FOR_DEVELOPMENT_ONLY",
+    "_is_mock": true,
+    "_disclaimer": "This is synthetic demonstration data. Real club names are used for contextual simulation only; all budgets, contacts, squad needs, and staff assignments are fictional simulation fixtures.",
+    "id": "club_persib_bandung",
+    "club_name": "Persib Bandung",
+    "league": "Indonesia Liga 1",
+    "country": "Indonesia",
+    "stadium": "Gelora Bandung Lautan Api",
+    "tier": "Tier 1 - Title Contender",
+    "president": "Glenn Sugita (Simulated)",
+    "sporting_director": {
+      "name": "Teddy Tjahjono",
+      "role": "Director of Sporting Operations",
+      "email": "teddy.director.mock@persib.co.id",
+      "whatsapp": "+62-811-MOCK-PERSIB",
+      "communication_preference": "WhatsApp direct message with video link and contract terms"
+    },
+    "head_coach_id": "coach_bojan_hodak",
+    "squad_needs": [
+      {
+        "position": "Striker (CF)",
+        "priority": "Critical",
+        "description": "High-intensity physical target striker with European professional background. Must press aggressively."
+      },
+      {
+        "position": "Center Back (CB)",
+        "priority": "High",
+        "description": "Tall, dominant aerial defender who can lead the back four."
+      }
+    ],
+    "financials": {
+      "monthly_wage_budget_cap_eur": 25000,
+      "annual_wage_budget_cap_eur": 300000,
+      "transfer_fee_budget_eur": 100000,
+      "currency_preference": "EUR"
+    },
+    "foreign_player_quota": {
+      "total_allowed": 8,
+      "currently_registered": 7,
+      "open_slots_available": 1,
+      "is_quota_open": true,
+      "quota_restriction_note": "Open slot available for any foreign nationality."
+    },
+    "transfer_window": {
+      "name": "Pre-Season / Mid-Season Transfer Window",
+      "is_window_open": true,
+      "window_close_date": "2026-08-15"
+    },
+    "relationship_history": {
+      "previous_collaborations": 2,
+      "relationship_strength": "Warm Partner - Direct executive line with Sporting Director"
+    }
+  },
+  {
+    "_data_classification": "SYNTHETIC_MOCK_FIXTURE_FOR_DEVELOPMENT_ONLY",
+    "_is_mock": true,
+    "_disclaimer": "This is synthetic demonstration data. Real club names are used for contextual simulation only; all budgets, contacts, squad needs, and staff assignments are fictional simulation fixtures.",
+    "id": "club_jdt_malaysia",
+    "club_name": "Johor Darul Ta'zim (JDT)",
+    "league": "Malaysia Super League",
+    "country": "Malaysia",
+    "stadium": "Sultan Ibrahim Stadium",
+    "tier": "Tier 1 - Reigning Champion & ACL Participant",
+    "president": "Tunku Ismail Idris (Simulated)",
+    "sporting_director": {
+      "name": "Martin Prest",
+      "role": "Director of Football",
+      "email": "martin.prest.mock@jdt.com.my",
+      "whatsapp": "+60-12-MOCK-JDT",
+      "communication_preference": "Formal executive dossier followed by brief WhatsApp summary"
+    },
+    "head_coach_id": "coach_hector_bidoglio",
+    "squad_needs": [
+      {
+        "position": "Striker (CF)",
+        "priority": "Critical",
+        "description": "Dynamic, high-scoring center forward for Asian Champions League campaign."
+      },
+      {
+        "position": "Central Attacking Midfielder (CAM)",
+        "priority": "High",
+        "description": "Creative ASEAN or foreign playmaker with high key pass volume."
+      }
+    ],
+    "financials": {
+      "monthly_wage_budget_cap_eur": 35000,
+      "annual_wage_budget_cap_eur": 420000,
+      "transfer_fee_budget_eur": 250000,
+      "currency_preference": "EUR"
+    },
+    "foreign_player_quota": {
+      "total_allowed": 9,
+      "currently_registered": 8,
+      "open_slots_available": 1,
+      "is_quota_open": true,
+      "quota_restriction_note": "1 Global slot + 1 ASEAN quota slot open."
+    },
+    "transfer_window": {
+      "name": "Malaysia Super League Primary Window",
+      "is_window_open": true,
+      "window_close_date": "2026-07-31"
+    },
+    "relationship_history": {
+      "previous_collaborations": 3,
+      "relationship_strength": "Established VIP Partner - Direct trust with Football Director"
+    }
+  },
+  {
+    "_data_classification": "SYNTHETIC_MOCK_FIXTURE_FOR_DEVELOPMENT_ONLY",
+    "_is_mock": true,
+    "_disclaimer": "This is synthetic demonstration data. Real club names are used for contextual simulation only; all budgets, contacts, squad needs, and staff assignments are fictional simulation fixtures.",
+    "id": "club_buriram_thailand",
+    "club_name": "Buriram United",
+    "league": "Thai League 1",
+    "country": "Thailand",
+    "stadium": "Chang Arena",
+    "tier": "Tier 1 - Continental ACL Contender",
+    "president": "Newin Chidchob (Simulated)",
+    "sporting_director": {
+      "name": "Chaiyachet Thanawat",
+      "role": "Technical Director",
+      "email": "chaiyachet.director.mock@buriram.th",
+      "whatsapp": "+66-81-MOCK-BURIRAM",
+      "communication_preference": "Email presentation with video links"
+    },
+    "head_coach_id": "coach_osmar_loss",
+    "squad_needs": [
+      {
+        "position": "Striker (CF)",
+        "priority": "Moderate",
+        "description": "Target striker profile."
+      }
+    ],
+    "financials": {
+      "monthly_wage_budget_cap_eur": 30000,
+      "annual_wage_budget_cap_eur": 360000,
+      "transfer_fee_budget_eur": 150000,
+      "currency_preference": "EUR"
+    },
+    "foreign_player_quota": {
+      "total_allowed": 7,
+      "currently_registered": 7,
+      "open_slots_available": 0,
+      "is_quota_open": false,
+      "quota_restriction_note": "CRITICAL HARD BLOCKER: Foreign player quota 100% full (7/7 registered). No foreign signings permitted until a player departs."
+    },
+    "transfer_window": {
+      "name": "Thai League Window",
+      "is_window_open": true,
+      "window_close_date": "2026-08-05"
+    },
+    "relationship_history": {
+      "previous_collaborations": 1,
+      "relationship_strength": "Standard Professional Relationship"
+    }
+  },
+  {
+    "_data_classification": "SYNTHETIC_MOCK_FIXTURE_FOR_DEVELOPMENT_ONLY",
+    "_is_mock": true,
+    "_disclaimer": "This is synthetic demonstration data. Real club names are used for contextual simulation only; all budgets, contacts, squad needs, and staff assignments are fictional simulation fixtures.",
+    "id": "club_kerala_blasters",
+    "club_name": "Kerala Blasters FC",
+    "league": "Indian Super League",
+    "country": "India",
+    "stadium": "Jawaharlal Nehru Stadium (Kochi)",
+    "tier": "Top 4 ISL Contender",
+    "president": "Nikhil Bhardwaj (Simulated)",
+    "sporting_director": {
+      "name": "Karolis Skinkys",
+      "role": "Sporting Director",
+      "email": "karolis.skinkys.mock@keralablastersfc.in",
+      "whatsapp": "+91-98-MOCK-KBFC",
+      "communication_preference": "WhatsApp direct followed by data analysis dossier"
+    },
+    "head_coach_id": "coach_mikael_stahre",
+    "squad_needs": [
+      {
+        "position": "Center Back (CB)",
+        "priority": "Critical",
+        "description": "Experienced European center back to lead defensive line in ISL."
+      },
+      {
+        "position": "Defensive Midfielder (CDM)",
+        "priority": "High",
+        "description": "Ball-winning holding midfielder with tactical composure."
+      }
+    ],
+    "financials": {
+      "monthly_wage_budget_cap_eur": 20000,
+      "annual_wage_budget_cap_eur": 240000,
+      "transfer_fee_budget_eur": 50000,
+      "currency_preference": "EUR"
+    },
+    "foreign_player_quota": {
+      "total_allowed": 6,
+      "currently_registered": 5,
+      "open_slots_available": 1,
+      "is_quota_open": true,
+      "quota_restriction_note": "1 foreign player slot available."
+    },
+    "transfer_window": {
+      "name": "ISL Summer Transfer Window",
+      "is_window_open": true,
+      "window_close_date": "2026-08-31"
+    },
+    "relationship_history": {
+      "previous_collaborations": 1,
+      "relationship_strength": "Active Partner - Regular scouting exchange"
+    }
+  },
+  {
+    "_data_classification": "SYNTHETIC_MOCK_FIXTURE_FOR_DEVELOPMENT_ONLY",
+    "_is_mock": true,
+    "_disclaimer": "This is synthetic demonstration data. Real club names are used for contextual simulation only; all budgets, contacts, squad needs, and staff assignments are fictional simulation fixtures.",
+    "id": "club_cordoba_spain",
+    "club_name": "Córdoba CF",
+    "league": "Spain Segunda División",
+    "country": "Spain",
+    "stadium": "Estadio Nuevo Arcángel",
+    "tier": "Spanish Professional Second Tier",
+    "president": "Javier González Calvo (Simulated)",
+    "sporting_director": {
+      "name": "Juanito Gutiérrez",
+      "role": "Director Deportivo",
+      "email": "direccion.deportiva.mock@cordobacf.com",
+      "whatsapp": "+34-610-MOCK-CORDOBA",
+      "communication_preference": "Executive dossier in Spanish"
+    },
+    "head_coach_id": "coach_ivan_ania",
+    "squad_needs": [
+      {
+        "position": "Striker (CF)",
+        "priority": "High",
+        "description": "High work-rate forward capable of stretching Spanish second division defenses."
+      }
+    ],
+    "financials": {
+      "monthly_wage_budget_cap_eur": 18000,
+      "annual_wage_budget_cap_eur": 216000,
+      "transfer_fee_budget_eur": 0,
+      "currency_preference": "EUR"
+    },
+    "foreign_player_quota": {
+      "total_allowed": 2,
+      "currently_registered": 2,
+      "open_slots_available": 0,
+      "is_quota_open": true,
+      "quota_restriction_note": "Non-EU slots full (2/2). EU passport holders only (EU/Spanish eligible)."
+    },
+    "transfer_window": {
+      "name": "LaLiga / Segunda Summer Window",
+      "is_window_open": true,
+      "window_close_date": "2026-09-01"
+    },
+    "relationship_history": {
+      "previous_collaborations": 4,
+      "relationship_strength": "Longstanding European Network Contact"
+    }
+  }
+]
+

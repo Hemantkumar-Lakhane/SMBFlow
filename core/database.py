@@ -13,6 +13,12 @@ from __future__ import annotations
 import os
 from typing import AsyncGenerator
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv(override=False)
+except ImportError:
+    pass
+
 import structlog
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
@@ -24,7 +30,7 @@ log = structlog.get_logger()
 
 DATABASE_URL: str = os.getenv(
     "DATABASE_URL",
-    "postgresql+asyncpg://opsgrid:postgres@localhost:5432/opsgrid",
+    "postgresql+asyncpg://opsgrid:opsgrid_dev_password@127.0.0.1:5434/opsgrid",
 )
 
 _connect_args: dict = {}

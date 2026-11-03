@@ -134,6 +134,8 @@ class ResearchAgent(BaseAgent):
                 "deals", "expenses", "messages", "emails",
                 # Real estate entities:
                 "listings", "leases", "buyers", "showings", "maintenance_tickets",
+                # Football entities:
+                "players", "clubs", "coaches",
             )
             entities_found = sum(
                 len(output_data.get(k) or []) for k in entity_keys
@@ -159,6 +161,8 @@ class ResearchAgent(BaseAgent):
                 output_data=output_data,
                 reasoning_chain=f"Research completed via {len(calls)} LLM calls. "
                                 f"Tools used: {available_tools}",
+                escalate=bool(output_data.get('escalate', False)),
+                escalation_reason=str(output_data.get('escalation_reason', '')),
                 **costs,
                 duration_ms=int((time.time() - start) * 1000),
             )
@@ -991,6 +995,8 @@ class ExecutionAgent(BaseAgent):
                                 f"Emails: {output_data.get('emails_queued', 0)}, "
                                 f"Tasks: {output_data.get('tasks_created', 0)}, "
                                 f"Slack: {output_data.get('slack_alerts_sent', 0)}",
+                escalate=bool(output_data.get("escalate", False) or output_data.get("approval_items")),
+                escalation_reason=str(output_data.get("escalation_reason", "Action Center HITL approval required")),
                 **costs,
                 duration_ms=int((time.time() - start) * 1000),
             )

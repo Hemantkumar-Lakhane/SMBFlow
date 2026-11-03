@@ -371,6 +371,7 @@ class WorkflowOrchestrator:
             "workflow_name": workflow_name,
             "started_at": datetime.utcnow().isoformat(),
             "patterns": [],
+            "tenant_config": tenant_config,
         }
 
         return await self._run_segment(
@@ -386,6 +387,7 @@ class WorkflowOrchestrator:
         self,
         instance_id: str,
         additional_context: Optional[dict] = None,
+        tenant_config: Optional[dict] = None,
     ) -> dict:
         """
         Resume a suspended workflow.
@@ -404,7 +406,7 @@ class WorkflowOrchestrator:
             raise ValueError(f"Instance {instance_id} not found for resumption")
 
         workflow_name = result.workflow_name
-        tenant_config = result.tenant_config or {}
+        tenant_config = tenant_config or getattr(result, "tenant_config", None) or accumulated_context.get("tenant_config") or {}
         trigger_signal = accumulated_context.get("trigger_signal", {})
 
         dag = await self._load_dag(workflow_name)
@@ -1160,7 +1162,7 @@ class WorkflowOrchestrator:
                                         organization_id=tenant_id,
                                         instance_id=run_id,
                                         node_id=node_id,
-                                        review_type=appr.get("action_type", "email_response"),
+                                        review_type=appr.get("review_type") or appr.get("action_type", "email_response"),
                                         reason=appr.get("reason", "AI identified item requiring human approval"),
                                         context_brief=appr.get("title", f"Approval required at {node_id}"),
                                         payload=appr,

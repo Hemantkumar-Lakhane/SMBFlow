@@ -125,6 +125,35 @@ async def lifespan(app: FastAPI):
         # persist to the normalized table until this column exists.
         log.error("Additive column migration failed (non-fatal)", error=str(_mig_err))
 
+    # Migration: ensure workflow_instances has organization_id and trigger_payload
+    try:
+        from sqlalchemy import text as _sql_text
+        async with engine.begin() as _mconn:
+            await _mconn.execute(_sql_text(
+                "ALTER TABLE workflow_instances "
+                "ADD COLUMN IF NOT EXISTS organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE"
+            ))
+            await _mconn.execute(_sql_text(
+                "ALTER TABLE workflow_instances "
+                "ADD COLUMN IF NOT EXISTS trigger_payload JSONB NOT NULL DEFAULT '{}'::jsonb"
+            ))
+            await _mconn.execute(_sql_text(
+                """
+                DO $$
+                BEGIN
+                    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'workflow_instances' AND column_name = 'tenant_id') THEN
+                        UPDATE workflow_instances SET organization_id = tenant_id WHERE organization_id IS NULL AND tenant_id IS NOT NULL;
+                    END IF;
+                    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'workflow_instances' AND column_name = 'trigger_signal') THEN
+                        UPDATE workflow_instances SET trigger_payload = trigger_signal WHERE trigger_payload IS NULL AND trigger_signal IS NOT NULL;
+                    END IF;
+                END $$;
+                """
+            ))
+        log.info("Schema check: workflow_instances.organization_id + trigger_payload present")
+    except Exception as _wi_mig_err:
+        log.error("Workflow instances column migration failed (non-fatal)", error=str(_wi_mig_err))
+
     # Migration 004: workflow_catalog scope + industry columns (idempotent)
     try:
         from sqlalchemy import text as _sql_text

@@ -507,7 +507,7 @@ def _register_utility_tools(registry: ToolRegistry) -> None:
     """Always-available tools that don't require external credentials."""
 
     async def db_write_outcome(
-        tenant_id: str, action_taken: str, metric_name: str = None, metric_value: float = None
+        tenant_id: str = "default_tenant", action_taken: str = "action_executed", metric_name: str = None, metric_value: float = None, **kwargs
     ) -> dict:
         log.info("Outcome logged", tenant=tenant_id, action=action_taken)
         return {"logged": True, "action": action_taken}

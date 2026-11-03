@@ -146,11 +146,11 @@ function Ensure-PortReadyForProject {
 # 1. Start Infrastructure & Fixtures
 # =============================================================================
 
-Write-Host "Ensuring Redis container is running..." -ForegroundColor Gray
+Write-Host "Ensuring Postgres and Redis containers are running..." -ForegroundColor Gray
 try {
-    docker-compose up -d redis 2>$null
+    docker-compose up -d postgres redis 2>$null
 } catch {
-    Write-Host "Notice: Docker not available or Redis already running natively." -ForegroundColor Yellow
+    Write-Host "Notice: Docker not available or services already running natively." -ForegroundColor Yellow
 }
 
 $emailFixture = Join-Path $PSScriptRoot "db\seed\data\email_messages.json"

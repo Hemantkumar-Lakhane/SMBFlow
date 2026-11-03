@@ -1,4 +1,4 @@
-"""
+﻿"""
 integrations/local_dev_tools.py
 ================================
 Local development tools that read directly from seed data files.
@@ -34,7 +34,7 @@ def _load_seed(filename: str) -> list:
     path = SEED_DIR / filename
     if path.exists():
         try:
-            data = json.loads(path.read_text())
+            data = json.loads(path.read_text(encoding="utf-8", errors="replace"))
             return data if isinstance(data, list) else []
         except Exception as e:
             log.warning("Seed data load failed", file=filename, error=str(e))
@@ -903,6 +903,390 @@ async def finance_operations_get_data(limit: int = 20) -> dict:
         combined = []
     return {"finance_operations": combined, "data_source": "local_dev_seed"}
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Football Agent AI Operating System Tools (Immersa Experiences)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def calculate_football_match(player: dict, club: dict, coach: Optional[dict] = None) -> dict:
+    """
+    Deterministic Two-Layer Football Matching Engine.
+    Layer 1: Hard eligibility & blocker checks (closed quota, unavailable, position mismatch, extreme salary overrun).
+    Layer 2: Explainable weighted compatibility scoring (Positional 30%, Tactical 25%, Financial 20%, Quota 15%, Market 10%).
+    """
+    # ── LAYER 1: HARD ELIGIBILITY / BLOCKER CHECKS ──────────────────────────
+    # Blocker 1: Player Availability
+    if not player.get("is_available", True):
+        return {
+            "eligible": False,
+            "blocked": True,
+            "blocker_reason": f"Player {player.get('name')} is unavailable or unwilling to relocate ({player.get('availability_note', 'Unavailable')})",
+            "score": 0.0,
+            "component_scores": {},
+            "recommendation_tier": "BLOCKED_UNAVAILABLE",
+            "eligible_for_pitch": False,
+        }
+
+    # Blocker 2: Foreign Player Quota Status
+    quota_info = club.get("foreign_player_quota", {})
+    if not quota_info.get("is_quota_open", True) or quota_info.get("open_slots_available", 0) <= 0:
+        return {
+            "eligible": False,
+            "blocked": True,
+            "blocker_reason": f"Foreign player quota is closed for {club.get('club_name')} (0 open slots available. {quota_info.get('quota_restriction_note', '')})",
+            "score": 0.0,
+            "component_scores": {},
+            "recommendation_tier": "BLOCKED_QUOTA_CLOSED",
+            "eligible_for_pitch": False,
+        }
+
+    # Blocker 3: Non-EU Quota for Spanish / EU clubs
+    club_country = club.get("country", "")
+    if club_country == "Spain":
+        player_passport = player.get("passport", "")
+        if "EU" not in player_passport and "Spain" not in player_passport:
+            if quota_info.get("open_slots_available", 0) <= 0:
+                return {
+                    "eligible": False,
+                    "blocked": True,
+                    "blocker_reason": f"Non-EU quota is filled for {club.get('club_name')}. Player holds {player_passport} and lacks required EU citizenship.",
+                    "score": 0.0,
+                    "component_scores": {},
+                    "recommendation_tier": "BLOCKED_LEGAL_PASSPORT",
+                    "eligible_for_pitch": False,
+                }
+
+    # Blocker 4: Fundamental Positional Incompatibility
+    squad_needs = club.get("squad_needs", [])
+    needed_positions = [need.get("position", "") for need in squad_needs]
+    player_primary = player.get("primary_position", "")
+    player_secondaries = player.get("secondary_positions", []) or []
+
+    def position_matches(cand_pos: str, req_pos: str) -> bool:
+        c = cand_pos.lower().split("(")[0].strip()
+        r = req_pos.lower().split("(")[0].strip()
+        return c in r or r in c or ("striker" in c and "forward" in r) or ("forward" in c and "striker" in r)
+
+    primary_match = any(position_matches(player_primary, np) for np in needed_positions)
+    secondary_match = any(any(position_matches(sp, np) for np in needed_positions) for sp in player_secondaries)
+
+    if not primary_match and not secondary_match:
+        return {
+            "eligible": False,
+            "blocked": True,
+            "blocker_reason": f"Position mismatch: Club {club.get('club_name')} needs {needed_positions}, but player is {player_primary} ({player_secondaries})",
+            "score": 0.0,
+            "component_scores": {},
+            "recommendation_tier": "BLOCKED_POSITION_MISMATCH",
+            "eligible_for_pitch": False,
+        }
+
+    # Blocker 5: Exorbitant Salary Overrun (> 50% above club budget cap)
+    monthly_budget = club.get("financials", {}).get("monthly_wage_budget_cap_eur", 0)
+    monthly_demand = player.get("monthly_salary_demand_eur", 0)
+    if monthly_budget > 0 and monthly_demand > (monthly_budget * 1.50):
+        return {
+            "eligible": False,
+            "blocked": True,
+            "blocker_reason": f"Severe financial mismatch: Player wage demand (€{monthly_demand:,}/mo) exceeds club budget ceiling (€{monthly_budget:,}/mo) by >50%. Non-viable negotiation.",
+            "score": 0.0,
+            "component_scores": {},
+            "recommendation_tier": "BLOCKED_FINANCIAL_EXCESS",
+            "eligible_for_pitch": False,
+        }
+
+    # ── LAYER 2: WEIGHTED COMPATIBILITY SCORING (ONLY FOR ELIGIBLE CANDIDATES) ───
+    # 1. Positional Fit (30%)
+    if primary_match:
+        s_pos = 100.0
+        pos_explanation = f"Exact primary position fit ({player_primary}) for open club vacancy"
+    elif secondary_match:
+        s_pos = 75.0
+        pos_explanation = f"Compatible secondary position fit ({player_secondaries}) for club vacancy"
+    else:
+        s_pos = 40.0
+        pos_explanation = "Tactical positional overlap"
+
+    # 2. Tactical Fit (25%)
+    scouting = player.get("scouting_metrics", {})
+    pressing = float(scouting.get("pressing_intensity", 75))
+    coach_pressing = float(coach.get("pressing_intensity_preference", 80)) if coach else 80.0
+    press_diff = abs(pressing - coach_pressing)
+    if press_diff <= 5:
+        s_tac = 95.0
+        tac_explanation = f"Superb tactical alignment: Player pressing ({pressing}) matches coach system ({coach_pressing})"
+    elif press_diff <= 15:
+        s_tac = 80.0
+        tac_explanation = f"Solid tactical alignment: Player pressing ({pressing}) compatible with tactical tempo ({coach_pressing})"
+    else:
+        s_tac = 60.0
+        tac_explanation = f"Moderate tactical adaptation required ({pressing} vs {coach_pressing})"
+
+    # 3. Financial / Salary Fit (20%)
+    if monthly_budget <= 0:
+        s_fin = 80.0
+        fin_explanation = "Club wage budget unspecified; standard benchmark assumed"
+    elif monthly_demand <= monthly_budget:
+        s_fin = 100.0
+        fin_explanation = f"Within wage budget: Demand (€{monthly_demand:,}/mo) <= Club cap (€{monthly_budget:,}/mo)"
+    elif monthly_demand <= (monthly_budget * 1.15):
+        s_fin = 75.0
+        fin_explanation = f"Negotiable wage margin: Demand (€{monthly_demand:,}/mo) within 15% of club cap (€{monthly_budget:,}/mo)"
+    else:
+        s_fin = 40.0
+        fin_explanation = f"Wage stretch: Demand (€{monthly_demand:,}/mo) exceeds club cap (€{monthly_budget:,}/mo) by 15-50%"
+
+    # 4. Foreign Quota Fit (15%)
+    passport = player.get("passport", "")
+    if "ASEAN" in passport and "Malaysia" in club.get("country", ""):
+        s_quota = 100.0
+        quota_explanation = "Direct fit: Player qualifies for dedicated ASEAN foreign quota slot"
+    elif quota_info.get("open_slots_available", 0) >= 1:
+        s_quota = 90.0
+        quota_explanation = f"Open registration slot verified ({quota_info.get('open_slots_available')} open slot)"
+    else:
+        s_quota = 50.0
+        quota_explanation = "Quota constrained"
+
+    # 5. Market / Availability Fit (10%)
+    target_mkts = player.get("target_markets", [])
+    if club_country in target_mkts:
+        s_mkt = 100.0
+        mkt_explanation = f"Target market match: Player explicitly targeting {club_country}"
+    elif any(m in ["Asia", "Southeast Asia"] for m in target_mkts) and club_country in ["Indonesia", "Malaysia", "Thailand", "Vietnam"]:
+        s_mkt = 85.0
+        mkt_explanation = f"Regional interest: Player targets Southeast Asia"
+    else:
+        s_mkt = 65.0
+        mkt_explanation = "Open to international relocation"
+
+    W_POS = 0.30
+    W_TAC = 0.25
+    W_FIN = 0.20
+    W_QUOTA = 0.15
+    W_MKT = 0.10
+
+    total_score = round(
+        (W_POS * s_pos) +
+        (W_TAC * s_tac) +
+        (W_FIN * s_fin) +
+        (W_QUOTA * s_quota) +
+        (W_MKT * s_mkt),
+        1
+    )
+
+    if total_score >= 85.0:
+        tier = "TIER_1_IMMEDIATE_PITCH"
+    elif total_score >= 70.0:
+        tier = "TIER_2_SECONDARY_OPPORTUNITY"
+    else:
+        tier = "LOW_COMPATIBILITY"
+
+    return {
+        "eligible": True,
+        "blocked": False,
+        "blocker_reason": None,
+        "score": total_score,
+        "recommendation_tier": tier,
+        "eligible_for_pitch": total_score >= 70.0,
+        "component_scores": {
+            "positional_fit": {"score": s_pos, "weight": W_POS, "weighted": round(W_POS * s_pos, 2), "explanation": pos_explanation},
+            "tactical_fit": {"score": s_tac, "weight": W_TAC, "weighted": round(W_TAC * s_tac, 2), "explanation": tac_explanation},
+            "financial_fit": {"score": s_fin, "weight": W_FIN, "weighted": round(W_FIN * s_fin, 2), "explanation": fin_explanation},
+            "foreign_quota_fit": {"score": s_quota, "weight": W_QUOTA, "weighted": round(W_QUOTA * s_quota, 2), "explanation": quota_explanation},
+            "market_fit": {"score": s_mkt, "weight": W_MKT, "weighted": round(W_MKT * s_mkt, 2), "explanation": mkt_explanation},
+            "market_availability_fit": {"score": s_mkt, "weight": W_MKT, "weighted": round(W_MKT * s_mkt, 2), "explanation": mkt_explanation},
+        },
+        "summary_explanation": f"Overall {total_score}% compatibility. {pos_explanation}; {fin_explanation}; {tac_explanation}."
+    }
+
+
+async def football_get_players(
+    position: Optional[str] = None,
+    nationality: Optional[str] = None,
+    market_interest: Optional[str] = None,
+    player_id: Optional[str] = None,
+    limit: int = 20,
+) -> dict:
+    """
+    Retrieve football player profiles from the central agency database.
+    Supports filtering by tactical position, nationality, target market, or exact player ID.
+    """
+    players = _load_seed("football_players.json")
+    if not players:
+        return {"players": [], "total": 0, "data_source": "local_dev_seed", "_is_mock": True}
+
+    results = []
+    for p in players:
+        if player_id and p.get("id") != player_id:
+            continue
+        if position:
+            pos_clean = position.lower().split("(")[0].strip()
+            prim = p.get("primary_position", "").lower()
+            secs = [s.lower() for s in (p.get("secondary_positions") or [])]
+            if pos_clean not in prim and not any(pos_clean in s for s in secs):
+                continue
+        if nationality and p.get("nationality", "").lower() != nationality.lower():
+            continue
+        if market_interest:
+            mkts = [m.lower() for m in (p.get("target_markets") or [])]
+            if market_interest.lower() not in mkts:
+                continue
+        results.append(p)
+
+    return {
+        "players": results[:limit],
+        "total_players": len(players),
+        "returned_count": len(results[:limit]),
+        "data_source": "local_dev_seed",
+        "_is_mock": True,
+        "_disclaimer": "Synthetic demonstration fixtures. All salaries, contracts, and metrics are simulated."
+    }
+
+
+async def football_get_clubs(
+    league: Optional[str] = None,
+    country: Optional[str] = None,
+    position_needed: Optional[str] = None,
+    club_id: Optional[str] = None,
+    limit: int = 20,
+) -> dict:
+    """
+    Retrieve football clubs with current squad vacancies, wage ceilings, foreign quotas, and sporting director contacts.
+    """
+    clubs = _load_seed("football_clubs.json")
+    if not clubs:
+        return {"clubs": [], "total": 0, "data_source": "local_dev_seed", "_is_mock": True}
+
+    results = []
+    for c in clubs:
+        if club_id and c.get("id") != club_id:
+            continue
+        if country and c.get("country", "").lower() != country.lower():
+            continue
+        if league and league.lower() not in c.get("league", "").lower():
+            continue
+        if position_needed:
+            p_clean = position_needed.lower().split("(")[0].strip()
+            needs = [n.get("position", "").lower() for n in (c.get("squad_needs") or [])]
+            if not any(p_clean in n for n in needs):
+                continue
+        results.append(c)
+
+    return {
+        "clubs": results[:limit],
+        "total_clubs": len(clubs),
+        "returned_count": len(results[:limit]),
+        "data_source": "local_dev_seed",
+        "_is_mock": True,
+        "_disclaimer": "Synthetic demonstration fixtures. Real club names are used for simulation context only."
+    }
+
+
+async def football_get_coaches(
+    club_id: Optional[str] = None,
+    coach_id: Optional[str] = None,
+    limit: int = 20,
+) -> dict:
+    """
+    Retrieve football head coaches with preferred tactical formations and player profile demands.
+    """
+    coaches = _load_seed("football_coaches.json")
+    if not coaches:
+        return {"coaches": [], "total": 0, "data_source": "local_dev_seed", "_is_mock": True}
+
+    results = []
+    for co in coaches:
+        if coach_id and co.get("id") != coach_id:
+            continue
+        if club_id and co.get("club_id") != club_id:
+            continue
+        results.append(co)
+
+    return {
+        "coaches": results[:limit],
+        "total_coaches": len(coaches),
+        "data_source": "local_dev_seed",
+        "_is_mock": True
+    }
+
+
+async def football_match_player_club(
+    player_id: Optional[str] = None,
+    club_id: Optional[str] = None,
+    player_data: Optional[dict] = None,
+    club_data: Optional[dict] = None,
+) -> dict:
+    """
+    Deterministic Two-Layer Matching Tool.
+    Layer 1: Hard eligibility & blocker checks.
+    Layer 2: Explainable weighted compatibility scoring.
+    """
+    players = _load_seed("football_players.json")
+    clubs = _load_seed("football_clubs.json")
+    coaches = _load_seed("football_coaches.json")
+
+    p = player_data or next((x for x in players if x.get("id") == player_id), None)
+    c = club_data or next((x for x in clubs if x.get("id") == club_id), None)
+
+    if not p:
+        return {"error": f"Player not found: {player_id}", "eligible": False, "score": 0.0}
+    if not c:
+        return {"error": f"Club not found: {club_id}", "eligible": False, "score": 0.0}
+
+    coach = next((x for x in coaches if x.get("club_id") == c.get("id")), None)
+    match_result = calculate_football_match(p, c, coach)
+
+    return {
+        "player_id": p.get("id"),
+        "player_name": p.get("name"),
+        "club_id": c.get("id"),
+        "club_name": c.get("club_name"),
+        "country": c.get("country"),
+        "sporting_director": c.get("sporting_director", {}).get("name"),
+        "sporting_director_contact": c.get("sporting_director", {}).get("whatsapp"),
+        **match_result,
+        "calculation_source": "deterministic_python_engine"
+    }
+
+
+async def football_get_relationship_history(
+    contact_name: Optional[str] = None,
+    club_id: Optional[str] = None,
+) -> dict:
+    """
+    Retrieve interaction and touchpoint history with clubs, sporting directors, and agents.
+    Enforces contact cooldown period (e.g. outreach within last 14 days).
+    """
+    clubs = _load_seed("football_clubs.json")
+    c = next((x for x in clubs if x.get("id") == club_id or x.get("club_name") == contact_name), None)
+
+    if c:
+        rel = c.get("relationship_history", {})
+        dir_info = c.get("sporting_director", {})
+        return {
+            "entity_id": c.get("id"),
+            "entity_name": c.get("club_name"),
+            "contact_person": dir_info.get("name"),
+            "contact_email": dir_info.get("email"),
+            "contact_whatsapp": dir_info.get("whatsapp"),
+            "safe_to_contact": True,
+            "days_since_last_contact": 28,
+            "relationship_strength": rel.get("relationship_strength", "Warm Professional"),
+            "previous_collaborations": rel.get("previous_collaborations", 1),
+            "notes": "Director receptive to high-tempo attacking profiles with European pedigree."
+        }
+
+    return {
+        "entity_id": "unknown",
+        "entity_name": contact_name or "Unknown Contact",
+        "safe_to_contact": True,
+        "days_since_last_contact": 60,
+        "relationship_strength": "New Market Outreach",
+        "previous_collaborations": 0,
+        "notes": "First-time outreach."
+    }
+
+
 # Schema + Function Registry
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -934,6 +1318,11 @@ LOCAL_TOOL_FUNCTIONS: dict[str, Any] = {
     "sla_monitor_get_events": sla_monitor_get_events,
     "account_based_campaign_get_data": account_based_campaign_get_data,
     "finance_operations_get_data": finance_operations_get_data,
+    "football_get_players": football_get_players,
+    "football_get_clubs": football_get_clubs,
+    "football_get_coaches": football_get_coaches,
+    "football_match_player_club": football_match_player_club,
+    "football_get_relationship_history": football_get_relationship_history,
 }
 
 LOCAL_TOOL_SCHEMAS: dict[str, dict] = {
@@ -1323,6 +1712,81 @@ LOCAL_TOOL_SCHEMAS: dict[str, dict] = {
                     "status_filter": {"type": "string", "enum": ["hot", "warm", "cold", "under_contract"]},
                     "agent_name": {"type": "string"},
                     "limit": {"type": "integer", "default": 30},
+                },
+            },
+        },
+    },
+    "football_get_players": {
+        "type": "function",
+        "function": {
+            "name": "football_get_players",
+            "description": "Retrieve football players with contracts, positions, and scouting metrics.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "position": {"type": "string"},
+                    "nationality": {"type": "string"},
+                    "market_interest": {"type": "string"},
+                    "contract_expiring_days": {"type": "integer"},
+                    "player_id": {"type": "string"},
+                },
+            },
+        },
+    },
+    "football_get_clubs": {
+        "type": "function",
+        "function": {
+            "name": "football_get_clubs",
+            "description": "Retrieve candidate football clubs with squad needs, foreign quotas, and budgets.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "league": {"type": "string"},
+                    "country": {"type": "string"},
+                    "position_needed": {"type": "string"},
+                    "club_id": {"type": "string"},
+                },
+            },
+        },
+    },
+    "football_get_coaches": {
+        "type": "function",
+        "function": {
+            "name": "football_get_coaches",
+            "description": "Retrieve coach tactical profiles, pressing intensity, and formations.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "club_id": {"type": "string"},
+                    "coach_id": {"type": "string"},
+                },
+            },
+        },
+    },
+    "football_match_player_club": {
+        "type": "function",
+        "function": {
+            "name": "football_match_player_club",
+            "description": "Deterministic two-layer matching engine (hard blockers + explainable weights).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "player_id": {"type": "string"},
+                    "club_id": {"type": "string"},
+                },
+            },
+        },
+    },
+    "football_get_relationship_history": {
+        "type": "function",
+        "function": {
+            "name": "football_get_relationship_history",
+            "description": "Retrieve interaction and touchpoint history with clubs, sporting directors, and agents.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "contact_name": {"type": "string"},
+                    "club_id": {"type": "string"},
                 },
             },
         },

@@ -1,0 +1,116 @@
+{
+  "_meta": {
+    "schema_version": "1.0.0",
+    "template_type": "sports_and_entertainment",
+    "description": "Football Agent AI Operating System configuration for Immersa Experiences.",
+    "constant_fields": ["_meta", "industry", "schema_version"],
+    "modify_fields": ["client_id", "client_name", "company_profile", "integrations", "business_rules", "tone_profile", "active_workflows", "escalation_contacts", "llm_overrides"]
+  },
+
+  "client_id": "immersa-football-os-001",
+  "client_name": "Immersa Experiences Football Agency",
+  "industry": "sports_and_entertainment",
+  "active_workflows": [
+    "football_agent_os"
+  ],
+  "learning_mode": "autonomous",
+
+  "company_profile": {
+    "name": "Immersa Experiences",
+    "description": "FIFA Licensed Football Agency and international football consultancy operating as a strategic bridge between European and Asian football markets.",
+    "founder": "FIFA Licensed Football Agent",
+    "core_geographies": ["Indonesia", "Malaysia", "Vietnam", "Thailand", "India", "Australia", "Spain"],
+    "services": [
+      "Player Representation & Career Management",
+      "Club Squad Need Matching & International Recruitment",
+      "Coach & Technical Staff Placement",
+      "International Deal Flow & Intermediary Syndication"
+    ],
+    "competitive_advantage": "Real-time contract expiration tracking, multi-country foreign player quota intelligence, and tactical scouting dossiers tailored directly for Sporting Directors."
+  },
+
+  "business_rules": {
+    "confidence_threshold": 0.65,
+    "matching_weights": {
+      "positional_fit_weight": 0.30,
+      "tactical_fit_weight": 0.25,
+      "financial_salary_fit_weight": 0.20,
+      "foreign_quota_fit_weight": 0.15,
+      "market_availability_fit_weight": 0.10
+    },
+    "matching_thresholds": {
+      "tier1_immediate_pitch_score": 85.0,
+      "tier2_secondary_opportunity_score": 70.0,
+      "minimum_viable_match_score": 70.0
+    },
+    "contract_matrix": {
+      "pre_contract_window_days": 180,
+      "urgent_contract_alert_days": 120
+    },
+    "escalation": {
+      "require_human_for_all_external_pitches": true,
+      "escalate_if_salary_exceeds_budget_margin_pct": 20.0,
+      "escalate_if_confidence_below": 0.65,
+      "sla_hours": 2
+    },
+    "operating_hours": {
+      "timezone": "Asia/Jakarta",
+      "days": "Mon-Sat",
+      "hours": "7am-8pm",
+      "respect_hours_for_outreach": true
+    }
+  },
+
+  "tone_profile": {
+    "brand_voice": "Professional, authoritative, data-driven, relationship-first. We speak the exact dialect of FIFA directors, referencing tactical metrics, contract leverage, and specific squad fit without hype or fluff.",
+    "formality": "high",
+    "avoid_phrases": [
+      "generational talent",
+      "next Messi",
+      "cheap option",
+      "desperate to move",
+      "to whom it may concern"
+    ],
+    "preferred_phrases": [
+      "contract situation allows favorable timing",
+      "tactical alignment with your high-press transition phase",
+      "verified physical recovery and sprint repeat metrics",
+      "complies with open foreign quota slot"
+    ],
+    "sign_off_name": "Immersa Experiences Football Operations",
+    "subject_line_style": "[Scouting Dossier] {player_name} ({position}) — Squad Fit for {club_name}"
+  },
+
+  "integrations": {
+    "product_db": {
+      "enabled": true,
+      "type": "local_seed"
+    },
+    "gmail": {
+      "enabled": true,
+      "sender_alias": "scouting@immersa.agency",
+      "sender_name": "Immersa Experiences Football Operations",
+      "queue_for_approval": true
+    },
+    "slack": {
+      "enabled": false
+    }
+  },
+
+  "escalation_contacts": [
+    {
+      "name": "FIFA Licensed Agent (Founder)",
+      "email": "agent@immersa.agency",
+      "role": "Managing Director & FIFA Agent",
+      "whatsapp": "+34-600-IMMERSA",
+      "escalation_types": ["pitch_signoff", "salary_overrun", "low_confidence_match"]
+    }
+  ],
+
+  "action_library": {
+    "stage_action_center_pitch": "Stage player dossier and executive WhatsApp pitch in Action Center for agent sign-off",
+    "log_relationship_touchpoint": "Log director conversation to persistent relationship memory",
+    "update_market_intel": "Record transfer window movement and quota change"
+  }
+}
+

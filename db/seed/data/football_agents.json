@@ -1,0 +1,44 @@
+[
+  {
+    "_data_classification": "SYNTHETIC_MOCK_FIXTURE_FOR_DEVELOPMENT_ONLY",
+    "_is_mock": true,
+    "_disclaimer": "This is synthetic demonstration data. All agency and intermediary records are fictional simulation fixtures.",
+    "id": "agency_immersa_experiences",
+    "name": "Immersa Experiences Football Agency",
+    "lead_agent": "FIFA Licensed Agent (Founder)",
+    "license_type": "FIFA Football Agent License",
+    "operating_hubs": ["Europe (Spain)", "Asia (Indonesia, Malaysia, Vietnam, Thailand, India, Australia)"],
+    "role": "Primary Representation & Mandated Placement",
+    "commission_structure": "Standard FIFA regulation 10% player wage / 3% transfer fee",
+    "active_mandates": 14,
+    "collaboration_rating": 5.0
+  },
+  {
+    "_data_classification": "SYNTHETIC_MOCK_FIXTURE_FOR_DEVELOPMENT_ONLY",
+    "_is_mock": true,
+    "_disclaimer": "This is synthetic demonstration data. All agency and intermediary records are fictional simulation fixtures.",
+    "id": "agency_iberia_sports",
+    "name": "Iberia Sports Management (Simulated)",
+    "lead_agent": "Rodrigo Alarcón",
+    "operating_hubs": ["Spain", "Portugal"],
+    "role": "Partner Agency / Co-Broker",
+    "commission_structure": "50/50 split on joint mandates",
+    "active_mandates": 6,
+    "collaboration_rating": 4.8,
+    "relationship_notes": "Reliable partner for Spanish RFEF and Segunda division talents."
+  },
+  {
+    "_data_classification": "SYNTHETIC_MOCK_FIXTURE_FOR_DEVELOPMENT_ONLY",
+    "_is_mock": true,
+    "_disclaimer": "This is synthetic demonstration data. All agency and intermediary records are fictional simulation fixtures.",
+    "id": "agency_nusantara_group",
+    "name": "Nusantara Football Intermediary Group (Simulated)",
+    "lead_agent": "Bambang Wijaya",
+    "operating_hubs": ["Indonesia", "Malaysia"],
+    "role": "Local Market Intermediary",
+    "commission_structure": "60/40 split on incoming foreign deals",
+    "active_mandates": 8,
+    "collaboration_rating": 4.5,
+    "relationship_notes": "Strong connections with Liga 1 management boards and Indonesian immigration clearance."
+  }
+]

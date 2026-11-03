@@ -439,9 +439,10 @@ class StateManager:
         if new_status in (WorkflowStatus.COMPLETED, WorkflowStatus.FAILED, WorkflowStatus.STOPPED):
             values["completed_at"] = datetime.utcnow()
 
+        inst_uuid = uuid.UUID(instance_id) if isinstance(instance_id, str) and instance_id else instance_id
         await self._db.execute(
             update(WorkflowInstance)
-            .where(WorkflowInstance.id == instance_id)
+            .where(WorkflowInstance.id == inst_uuid)
             .values(**values)
         )
         await self._db.commit()
@@ -449,8 +450,9 @@ class StateManager:
 
     async def update_context(self, instance_id: str, new_data: dict) -> None:
         """Merge new data into the workflow's accumulated context."""
+        inst_uuid = uuid.UUID(instance_id) if isinstance(instance_id, str) and instance_id else instance_id
         result = await self._db.execute(
-            select(WorkflowInstance).where(WorkflowInstance.id == instance_id)
+            select(WorkflowInstance).where(WorkflowInstance.id == inst_uuid)
         )
         instance = result.scalar_one_or_none()
         if not instance:
@@ -459,7 +461,7 @@ class StateManager:
         merged = {**(instance.context or {}), **new_data}
         await self._db.execute(
             update(WorkflowInstance)
-            .where(WorkflowInstance.id == instance_id)
+            .where(WorkflowInstance.id == inst_uuid)
             .values(context=merged)
         )
         await self._db.commit()
@@ -517,8 +519,9 @@ class StateManager:
             await self._db.commit()
 
     async def get_instance(self, instance_id: str) -> Optional[WorkflowInstance]:
+        inst_uuid = uuid.UUID(instance_id) if isinstance(instance_id, str) and instance_id else instance_id
         result = await self._db.execute(
-            select(WorkflowInstance).where(WorkflowInstance.id == instance_id)
+            select(WorkflowInstance).where(WorkflowInstance.id == inst_uuid)
         )
         return result.scalar_one_or_none()
     
@@ -654,10 +657,12 @@ class StateManager:
         recommended_action: Optional[str] = None,
         options: Optional[list] = None,
     ) -> Escalation:
+        inst_uuid = uuid.UUID(instance_id) if isinstance(instance_id, str) and instance_id else instance_id
+        t_uuid = uuid.UUID(tenant_id) if isinstance(tenant_id, str) and tenant_id else tenant_id
         esc = Escalation(
             id=uuid.uuid4(),
-            instance_id=instance_id,
-            tenant_id=tenant_id,
+            instance_id=inst_uuid,
+            tenant_id=t_uuid,
             node_id=node_id,
             reason=reason,
             context_brief=context_brief,
@@ -812,15 +817,15 @@ class StateManager:
             "resume_from_node": resume_from_node,
             **(extra or {}),
         }
+        inst_uuid = uuid.UUID(str(instance_id)) if not isinstance(instance_id, uuid.UUID) else instance_id
         # Merge suspension metadata into context so it survives a single JSONB column
         frozen_context = {**context, "_suspension": suspension_data}
         await self._db.execute(
             update(WorkflowInstance)
-            .where(WorkflowInstance.id == instance_id)
+            .where(WorkflowInstance.id == inst_uuid)
             .values(
                 status=status,
                 context=frozen_context,
-                suspension_data=suspension_data,
             )
         )
         await self._db.commit()
@@ -832,8 +837,9 @@ class StateManager:
         Load a suspended workflow's accumulated context and suspension envelope.
         Returns (accumulated_context, suspension_data).
         """
+        inst_uuid = uuid.UUID(str(instance_id)) if not isinstance(instance_id, uuid.UUID) else instance_id
         result = await self._db.execute(
-            select(WorkflowInstance).where(WorkflowInstance.id == instance_id)
+            select(WorkflowInstance).where(WorkflowInstance.id == inst_uuid)
         )
         inst = result.scalar_one_or_none()
         if not inst:

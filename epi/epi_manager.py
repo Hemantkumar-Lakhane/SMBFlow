@@ -209,13 +209,20 @@ class EPIManager:
     def list_artifacts(self) -> list[dict]:
         """List all evidence artifacts in the evidence directory."""
         artifacts = []
-        for p in sorted(EVIDENCE_DIR.glob("*.epi"), key=lambda x: x.stat().st_mtime, reverse=True):
-            artifacts.append({
-                "filename": p.name,
-                "path": str(p),
-                "size_kb": round(p.stat().st_size / 1024, 1),
-                "created": datetime.fromtimestamp(p.stat().st_mtime).isoformat(),
-            })
+        dirs = [EVIDENCE_DIR, Path("epi-recordings/evidence")]
+        seen = set()
+        for d in dirs:
+            if not d.exists():
+                continue
+            for p in sorted(d.glob("*.epi"), key=lambda x: x.stat().st_mtime, reverse=True):
+                if p.name not in seen:
+                    seen.add(p.name)
+                    artifacts.append({
+                        "filename": p.name,
+                        "path": str(p),
+                        "size_kb": round(p.stat().st_size / 1024, 1),
+                        "created": datetime.fromtimestamp(p.stat().st_mtime).isoformat(),
+                    })
         return artifacts
 
     async def view_artifact(self, artifact_path: str) -> None:

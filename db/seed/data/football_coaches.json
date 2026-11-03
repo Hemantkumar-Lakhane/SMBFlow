@@ -1,0 +1,84 @@
+[
+  {
+    "_data_classification": "SYNTHETIC_MOCK_FIXTURE_FOR_DEVELOPMENT_ONLY",
+    "_is_mock": true,
+    "_disclaimer": "This is synthetic demonstration data. Real coach names are used for contextual simulation only; tactical preferences and parameters are fictional simulation fixtures.",
+    "id": "coach_bojan_hodak",
+    "name": "Bojan Hodak",
+    "club_id": "club_persib_bandung",
+    "club_name": "Persib Bandung",
+    "nationality": "Croatia",
+    "preferred_formation": "4-3-3",
+    "secondary_formation": "4-2-3-1",
+    "tactical_style": "High-intensity transition play, strong physical presence, direct counter-attacks",
+    "pressing_intensity_preference": 85,
+    "desired_player_profile": {
+      "stamina_minimum": 80,
+      "physical_strength": "High",
+      "work_rate": "High/High",
+      "tactical_discipline": "Very High"
+    },
+    "coach_notes": "Prefers players with European competitive experience who can handle high pressure and intense crowd environments."
+  },
+  {
+    "_data_classification": "SYNTHETIC_MOCK_FIXTURE_FOR_DEVELOPMENT_ONLY",
+    "_is_mock": true,
+    "_disclaimer": "This is synthetic demonstration data. Real coach names are used for contextual simulation only; tactical preferences and parameters are fictional simulation fixtures.",
+    "id": "coach_hector_bidoglio",
+    "name": "Hector Bidoglio",
+    "club_id": "club_jdt_malaysia",
+    "club_name": "Johor Darul Ta'zim (JDT)",
+    "nationality": "Venezuela",
+    "preferred_formation": "4-2-3-1",
+    "secondary_formation": "4-3-3",
+    "tactical_style": "Dominant possession, aggressive high counter-press, dynamic wing rotations",
+    "pressing_intensity_preference": 90,
+    "desired_player_profile": {
+      "stamina_minimum": 85,
+      "sprint_speed_kmh_minimum": 32.0,
+      "technical_skill": "Very High",
+      "decision_making": "High"
+    },
+    "coach_notes": "Demands players who can execute quick one-touch combinations and press immediately upon turnover."
+  },
+  {
+    "_data_classification": "SYNTHETIC_MOCK_FIXTURE_FOR_DEVELOPMENT_ONLY",
+    "_is_mock": true,
+    "_disclaimer": "This is synthetic demonstration data. Real coach names are used for contextual simulation only; tactical preferences and parameters are fictional simulation fixtures.",
+    "id": "coach_mikael_stahre",
+    "name": "Mikael Stahre",
+    "club_id": "club_kerala_blasters",
+    "club_name": "Kerala Blasters FC",
+    "nationality": "Sweden",
+    "preferred_formation": "4-4-2",
+    "secondary_formation": "4-2-3-1",
+    "tactical_style": "Organized defensive shape, quick vertical distribution, aerial dominance on set pieces",
+    "pressing_intensity_preference": 75,
+    "desired_player_profile": {
+      "stamina_minimum": 75,
+      "aerial_duel_win_pct_minimum": 70.0,
+      "tactical_discipline": "High"
+    },
+    "coach_notes": "Focuses heavily on defensive structure and leadership qualities in central positions."
+  },
+  {
+    "_data_classification": "SYNTHETIC_MOCK_FIXTURE_FOR_DEVELOPMENT_ONLY",
+    "_is_mock": true,
+    "_disclaimer": "This is synthetic demonstration data. Real coach names are used for contextual simulation only; tactical preferences and parameters are fictional simulation fixtures.",
+    "id": "coach_osmar_loss",
+    "name": "Osmar Loss",
+    "club_id": "club_buriram_thailand",
+    "club_name": "Buriram United",
+    "nationality": "Brazil",
+    "preferred_formation": "3-5-2",
+    "secondary_formation": "4-3-3",
+    "tactical_style": "Flexible wing-back progression, patient buildup through half-spaces",
+    "pressing_intensity_preference": 80,
+    "desired_player_profile": {
+      "technical_skill": "High",
+      "versatility": "High"
+    },
+    "coach_notes": "Prioritizes tactical versatility across multiple attacking positions."
+  }
+]
+
