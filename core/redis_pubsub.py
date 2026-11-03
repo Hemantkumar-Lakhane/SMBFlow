@@ -82,6 +82,27 @@ class RedisPubSub:
             self._available = False
             return False
 
+    async def ping(self) -> bool:
+        """
+        Actively checks whether Redis is reachable and responding to PING.
+        Returns True if connected and responsive, False otherwise.
+        """
+        redis_url = os.getenv("REDIS_URL")
+        if not redis_url:
+            return False
+
+        if self._redis:
+            try:
+                res = await self._redis.ping()
+                self._available = bool(res)
+                return bool(res)
+            except Exception as e:
+                log.debug("Active Redis connection ping failed, attempting reconnect", error=str(e))
+                self._available = False
+                return await self.connect()
+
+        return await self.connect()
+
     async def publish(self, event_type: str, data: dict) -> None:
         """
         Publish an event to appropriate topic channels based on event data.

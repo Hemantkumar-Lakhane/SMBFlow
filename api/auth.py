@@ -19,7 +19,7 @@ import bcrypt
 import structlog
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import JWTError, jwt
+from jose import ExpiredSignatureError, JWTError, jwt
 from jose.exceptions import JWKError, JOSEError
 from pydantic import BaseModel
 
@@ -142,14 +142,19 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
+ASYMMETRIC_ALGORITHMS = {"ES256", "RS256", "ES384", "ES512", "RS384", "RS512", "EdDSA"}
+SYMMETRIC_ALGORITHMS = {"HS256", "HS384", "HS512"}
+
 _jwks_cache: dict[str, Any] = {"keys": None, "fetched_at": 0}
 
 
-def get_supabase_jwks() -> Optional[dict]:
-    """Fetch and cache Supabase Auth JWKS public keys."""
+def get_supabase_jwks(force_refresh: bool = False) -> Optional[dict]:
+    """
+    Fetch and cache Supabase Auth JWKS public keys with safe TTL and key rotation support.
+    """
     import time
     now = time.time()
-    if _jwks_cache["keys"] and (now - _jwks_cache["fetched_at"] < 3600):
+    if not force_refresh and _jwks_cache["keys"] and (now - _jwks_cache["fetched_at"] < 3600):
         return _jwks_cache["keys"]
 
     supabase_url = os.getenv("SUPABASE_URL") or os.getenv("VITE_SUPABASE_URL")
@@ -165,44 +170,92 @@ def get_supabase_jwks() -> Optional[dict]:
                 _jwks_cache["fetched_at"] = now
                 return data
     except Exception as e:
-        log.debug("Failed to fetch Supabase JWKS", error=str(e))
-    return None
+        log.warning("Failed to fetch Supabase JWKS", error=str(e))
+    return _jwks_cache.get("keys")
 
 
-def _verify_supabase_jwks(token: str) -> Optional[dict]:
+def _verify_supabase_jwks(token: str, header: dict) -> Optional[dict]:
     """
-    Cryptographically verify Supabase Auth ES256/RS256 JWT signature using JWKS.
+    Cryptographically verify Supabase Auth asymmetric JWT signature (ES256, RS256, etc.) using JWKS.
+    Strictly verifies algorithm, key ID, key type, issuer, and expiration.
     """
+    alg = header.get("alg")
+    if not alg or alg not in ASYMMETRIC_ALGORITHMS:
+        return None
+
+    kid = header.get("kid")
+    jwks = get_supabase_jwks()
+    if not jwks or "keys" not in jwks:
+        return None
+
+    target_key = None
+    if kid:
+        for k in jwks.get("keys", []):
+            if k.get("kid") == kid:
+                target_key = k
+                break
+        # Key rotation handling: if kid not found, force refresh JWKS once
+        if not target_key:
+            jwks = get_supabase_jwks(force_refresh=True)
+            if jwks and "keys" in jwks:
+                for k in jwks.get("keys", []):
+                    if k.get("kid") == kid:
+                        target_key = k
+                        break
+
+    # If no kid or still not found, match key by algorithm and key type
+    if not target_key and jwks and "keys" in jwks:
+        for k in jwks.get("keys", []):
+            k_alg = k.get("alg")
+            k_kty = k.get("kty")
+            if k_alg == alg:
+                target_key = k
+                break
+            if alg.startswith("ES") and k_kty == "EC":
+                target_key = k
+                break
+            if alg.startswith("RS") and k_kty == "RSA":
+                target_key = k
+                break
+
+    if not target_key:
+        log.warning("No matching key found in Supabase JWKS for token", alg=alg, kid=kid)
+        return None
+
+    # Strict key type check against algorithm
+    kty = target_key.get("kty")
+    if alg.startswith("ES") and kty != "EC":
+        log.warning("Key type mismatch for ES algorithm", alg=alg, kty=kty)
+        return None
+    if alg.startswith("RS") and kty != "RSA":
+        log.warning("Key type mismatch for RS algorithm", alg=alg, kty=kty)
+        return None
+
     try:
         from jose import jwk
-        header = jwt.get_unverified_header(token)
-        alg = header.get("alg", "ES256")
-        kid = header.get("kid")
-        jwks = get_supabase_jwks()
-        if not jwks or "keys" not in jwks:
-            return None
-
-        target_key = None
-        if kid:
-            for k in jwks["keys"]:
-                if k.get("kid") == kid:
-                    target_key = k
-                    break
-        if not target_key and jwks["keys"]:
-            target_key = jwks["keys"][0]
-
-        if not target_key:
-            return None
-
         key_obj = jwk.construct(target_key, alg)
-        return jwt.decode(
+
+        supabase_url = os.getenv("SUPABASE_URL") or os.getenv("VITE_SUPABASE_URL")
+        expected_iss = f"{supabase_url.rstrip('/')}/auth/v1" if supabase_url else None
+
+        payload = jwt.decode(
             token,
             key_obj,
-            algorithms=[alg, "ES256", "RS256", "HS256"],
-            options={"verify_aud": False}
+            algorithms=[alg],
+            options={"verify_aud": False},
+        )
+        if expected_iss and payload.get("iss") and payload.get("iss") != expected_iss:
+            log.warning("JWT issuer mismatch", expected=expected_iss, received=payload.get("iss"))
+            return None
+        return payload
+    except ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has expired",
+            headers={"WWW-Authenticate": "Bearer"},
         )
     except Exception as e:
-        log.debug("Supabase JWKS signature verification skipped/failed", error=str(e))
+        log.debug("Supabase JWKS signature verification failed", error=str(e), alg=alg)
         return None
 
 
@@ -242,108 +295,184 @@ def decode_token(token: str) -> TokenData:
     Strictly verifies and decodes a Bearer JWT access token.
     
     Verification hierarchy (ALL require cryptographic proof):
-    1. Direct ES256/RS256 signature verification using Supabase JWKS
-    2. Direct HMAC-SHA256 signature verification using SUPABASE_JWT_SECRET
-    3. Direct HMAC-SHA256 signature verification using SECRET_KEY
-    4. Server-side token validation against Supabase Auth API (/auth/v1/user)
+    1. Distinguish algorithm type from token header:
+       - Asymmetric (ES256, RS256): Supabase JWKS public key verification
+       - Symmetric (HS256): SMBFlow SECRET_KEY & SUPABASE_JWT_SECRET verification
+    2. Fallback to Supabase Auth API (/auth/v1/user) online verification
     
     Unverified claims are NEVER accepted. Invalid or forged tokens return HTTP 401.
     """
-    # 1. Attempt ES256/RS256 signature verification via Supabase JWKS
-    payload = _verify_supabase_jwks(token)
-    if payload:
-        user_id = payload.get("sub") or payload.get("user_id")
-        email = payload.get("email", f"{user_id}@smbflow.com")
-        user_meta = payload.get("user_metadata") or {}
-        role = payload.get("role") or user_meta.get("role", "org_user")
-        if role == "super_admin":
-            role = "platform_admin"
-        elif role in ("tenant_user", "authenticated"):
-            role = "org_user"
-        org_id = payload.get("organization_id") or payload.get("tenant_id") or user_meta.get("organization_id") or user_meta.get("tenant_id")
-        full_name = payload.get("full_name") or user_meta.get("full_name") or user_meta.get("name")
-        return TokenData(
-            user_id=str(user_id),
-            email=email,
-            role=role,
-            organization_id=str(org_id) if org_id else None,
-            tenant_id=str(org_id) if org_id else None,
-            full_name=full_name,
-        )
-
-    key = get_supabase_jwt_secret()
-
-    # 2. Attempt signature verification using SUPABASE_JWT_SECRET
     try:
-        payload = jwt.decode(token, key, algorithms=["HS256"], options={"verify_aud": False})
-        user_id = payload.get("sub") or payload.get("user_id")
-        email = payload.get("email", "user@smbflow.com")
-        role = payload.get("role") or payload.get("user_metadata", {}).get("role", "org_user")
-        if role == "super_admin":
-            role = "platform_admin"
-        elif role in ("tenant_user", "authenticated"):
-            role = "org_user"
-        org_id = payload.get("organization_id") or payload.get("tenant_id") or payload.get("user_metadata", {}).get("organization_id")
-        user_meta = payload.get("user_metadata") or {}
-        full_name = payload.get("full_name") or user_meta.get("full_name") or user_meta.get("name")
-        return TokenData(
-            user_id=str(user_id),
-            email=email,
-            role=role,
-            organization_id=str(org_id) if org_id else None,
-            tenant_id=str(org_id) if org_id else None,
-            full_name=full_name,
+        header = jwt.get_unverified_header(token)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Malformed or invalid token header",
+            headers={"WWW-Authenticate": "Bearer"},
         )
-    except (JWTError, JWKError, JOSEError, Exception):
-        pass
 
-    # 3. Attempt signature verification using local SECRET_KEY (if distinct from key)
-    if key != SECRET_KEY:
-        try:
-            payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"], options={"verify_aud": False})
-            role = payload.get("role", "org_user")
+    alg = header.get("alg")
+    if not alg:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing algorithm in token header",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # 1. Asymmetric Tokens (Supabase Auth ES256 / RS256)
+    # ─────────────────────────────────────────────────────────────────────────
+    if alg in ASYMMETRIC_ALGORITHMS:
+        payload = _verify_supabase_jwks(token, header)
+        if payload:
+            user_id = payload.get("sub") or payload.get("user_id")
+            if not user_id:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Token subject missing",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+            email = payload.get("email", f"{user_id}@smbflow.com")
+            user_meta = payload.get("user_metadata") or {}
+            role = payload.get("role") or user_meta.get("role", "org_user")
             if role == "super_admin":
                 role = "platform_admin"
-            org_id = payload.get("tenant_id") or payload.get("organization_id")
-            user_meta = payload.get("user_metadata") or {}
+            elif role in ("tenant_user", "authenticated"):
+                role = "org_user"
+            org_id = payload.get("organization_id") or payload.get("tenant_id") or user_meta.get("organization_id") or user_meta.get("tenant_id")
             full_name = payload.get("full_name") or user_meta.get("full_name") or user_meta.get("name")
             return TokenData(
-                user_id=str(payload["sub"]),
-                email=payload.get("email") or payload.get("sub") or "user@smbflow.com",
+                user_id=str(user_id),
+                email=email,
                 role=role,
                 organization_id=str(org_id) if org_id else None,
                 tenant_id=str(org_id) if org_id else None,
                 full_name=full_name,
             )
+
+
+        # Online validation fallback for asymmetric token
+        user_data = _verify_supabase_token_online(token)
+        if user_data and user_data.get("id"):
+            user_id = user_data["id"]
+            email = user_data.get("email", f"{user_id}@smbflow.com")
+            user_meta = user_data.get("user_metadata") or {}
+            role = user_data.get("role") or user_meta.get("role", "org_user")
+            if role == "super_admin":
+                role = "platform_admin"
+            elif role in ("tenant_user", "authenticated"):
+                role = "org_user"
+            org_id = user_meta.get("organization_id") or user_meta.get("tenant_id")
+            full_name = user_meta.get("full_name") or user_meta.get("name")
+            return TokenData(
+                user_id=str(user_id),
+                email=email,
+                role=role,
+                organization_id=str(org_id) if org_id else None,
+                tenant_id=str(org_id) if org_id else None,
+                full_name=full_name,
+            )
+
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid asymmetric token or signature",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # 2. Symmetric Tokens (Local session HS256 / Supabase secret HS256)
+    # ─────────────────────────────────────────────────────────────────────────
+    if alg in SYMMETRIC_ALGORITHMS:
+        payload = None
+        # Attempt 1: Verify using local SECRET_KEY
+        try:
+            payload = jwt.decode(token, SECRET_KEY, algorithms=[alg], options={"verify_aud": False})
+        except ExpiredSignatureError:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token has expired",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
         except (JWTError, JWKError, JOSEError, Exception):
             pass
 
-    # 4. Server-side online validation against Supabase Auth API (/auth/v1/user)
-    user_data = _verify_supabase_token_online(token)
-    if user_data and user_data.get("id"):
-        user_id = user_data["id"]
-        email = user_data.get("email", f"{user_id}@smbflow.com")
-        user_meta = user_data.get("user_metadata") or {}
-        role = user_data.get("role") or user_meta.get("role", "org_user")
-        if role == "super_admin":
-            role = "platform_admin"
-        elif role in ("tenant_user", "authenticated"):
-            role = "org_user"
-        org_id = user_meta.get("organization_id") or user_meta.get("tenant_id")
-        full_name = user_meta.get("full_name") or user_meta.get("name")
-        return TokenData(
-            user_id=str(user_id),
-            email=email,
-            role=role,
-            organization_id=str(org_id) if org_id else None,
-            tenant_id=str(org_id) if org_id else None,
-            full_name=full_name,
+        # Attempt 2: Verify using SUPABASE_JWT_SECRET if distinct
+        if not payload:
+            supa_secret = get_supabase_jwt_secret()
+            if supa_secret and supa_secret != SECRET_KEY:
+                try:
+                    payload = jwt.decode(token, supa_secret, algorithms=[alg], options={"verify_aud": False})
+                except ExpiredSignatureError:
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="Token has expired",
+                        headers={"WWW-Authenticate": "Bearer"},
+                    )
+                except JWTError:
+                    pass
+
+        # Attempt 3: If payload successfully verified, build TokenData
+        if payload:
+            user_id = payload.get("sub") or payload.get("user_id")
+            if not user_id:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Token subject missing",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+            email = payload.get("email") or f"{user_id}@smbflow.com"
+            user_meta = payload.get("user_metadata") or {}
+            role = payload.get("role") or user_meta.get("role", "org_user")
+            if role == "super_admin":
+                role = "platform_admin"
+            elif role in ("tenant_user", "authenticated"):
+                role = "org_user"
+            org_id = payload.get("organization_id") or payload.get("tenant_id") or user_meta.get("organization_id") or user_meta.get("tenant_id")
+            full_name = payload.get("full_name") or user_meta.get("full_name") or user_meta.get("name")
+            return TokenData(
+                user_id=str(user_id),
+                email=email,
+                role=role,
+                organization_id=str(org_id) if org_id else None,
+                tenant_id=str(org_id) if org_id else None,
+                full_name=full_name,
+            )
+
+        # Attempt 4: Online validation fallback against Supabase Auth API
+        user_data = _verify_supabase_token_online(token)
+        if user_data and user_data.get("id"):
+            user_id = user_data["id"]
+            email = user_data.get("email", f"{user_id}@smbflow.com")
+            user_meta = user_data.get("user_metadata") or {}
+            role = user_data.get("role") or user_meta.get("role", "org_user")
+            if role == "super_admin":
+                role = "platform_admin"
+            elif role in ("tenant_user", "authenticated"):
+                role = "org_user"
+            org_id = user_meta.get("organization_id") or user_meta.get("tenant_id")
+            full_name = user_meta.get("full_name") or user_meta.get("name")
+            return TokenData(
+                user_id=str(user_id),
+                email=email,
+                role=role,
+                organization_id=str(org_id) if org_id else None,
+                tenant_id=str(org_id) if org_id else None,
+                full_name=full_name,
+            )
+
+        # All symmetric checks failed
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+            headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # All verification mechanisms failed — reject with 401 Unauthorized
+    # ─────────────────────────────────────────────────────────────────────────
+    # 3. Unsupported Algorithm
+    # ─────────────────────────────────────────────────────────────────────────
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Invalid or expired token",
+        detail=f"Unsupported token signing algorithm: {alg}",
         headers={"WWW-Authenticate": "Bearer"},
     )
 

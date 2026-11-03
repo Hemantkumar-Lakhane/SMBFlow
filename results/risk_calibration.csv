@@ -1,0 +1,7 @@
+Metric,Value
+AUC_ROC,0.7644
+Brier_Score,0.1652
+ECE,0.0495
+Conformal_Threshold,0.4693
+Target_False_Execute_Bound_Pct,5.0
+Empirical_False_Execute_Rate_Pct,5.18

@@ -1,0 +1,19 @@
+{
+  "execution_timestamp": 1793713240.6134105,
+  "total_runtime_seconds": 10.38,
+  "total_workflow_runs": 900,
+  "adversarial_cases": 240,
+  "calibration_samples": 1500,
+  "key_findings": {
+    "mean_non_llm_overhead_ms": 4.7,
+    "verification_gate_latency_ms": 0.99,
+    "unsafe_execution_rate_smbflow": 0.0,
+    "cost_savings_vs_frontier_pct": 51.83,
+    "risk_auc_roc": 0.7644,
+    "risk_ece": 0.0495,
+    "hitl_review_reduction_pct": 3.9,
+    "graphrag_hybrid_recall": 1.0,
+    "graphrag_vector_only_recall": 0.05,
+    "saga_rollback_success_pct": 100.0
+  }
+}

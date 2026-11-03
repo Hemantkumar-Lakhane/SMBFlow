@@ -11,7 +11,7 @@ CONSTANT — do not modify for business customization.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Optional
 
 import structlog
@@ -32,7 +32,14 @@ from core.state_manager import (
     WorkflowInstance,
     WorkflowStatus,
 )
-from db.models.core import Organization, OrganizationUser
+from db.models.core import (
+    Organization,
+    OrganizationUser,
+    WorkflowCatalog,
+    WorkflowTestRun,
+    WorkflowDefect,
+    WorkflowReleaseApproval,
+)
 
 log = structlog.get_logger()
 
@@ -138,15 +145,19 @@ async def create_user(
     password_hash: str,
     full_name: Optional[str] = None,
     role: str = "tenant_user",
-    tenant_id: Optional[str] = None,
+    tenant_id: Optional[Any] = None,
 ) -> User:
+    t_uuid = None
+    if tenant_id:
+        t_uuid = uuid.UUID(str(tenant_id)) if not isinstance(tenant_id, uuid.UUID) else tenant_id
+
     u = User(
         id=uuid.uuid4(),
         email=email,
         password_hash=password_hash,
         full_name=full_name,
         role=role,
-        tenant_id=tenant_id,
+        tenant_id=t_uuid,
         is_active=True,
     )
     db.add(u)
@@ -156,10 +167,14 @@ async def create_user(
 
 
 async def update_user_last_login(db: AsyncSession, user_id: str) -> None:
-    await db.execute(
-        update(User).where(User.id == user_id).values(last_login=datetime.utcnow())
-    )
-    await db.commit()
+    try:
+        u_uuid = uuid.UUID(user_id) if isinstance(user_id, str) else user_id
+        await db.execute(
+            update(User).where(User.id == u_uuid).values(last_login=datetime.utcnow())
+        )
+        await db.commit()
+    except Exception as e:
+        log.debug("Update user last_login skipped", error=str(e))
 
 
 async def deactivate_user(db: AsyncSession, user_id: str) -> None:
@@ -286,7 +301,10 @@ async def create_workflow_instance(
 
 
 async def get_workflow_instance(db: AsyncSession, run_id: str) -> Optional[WorkflowInstance]:
-    u_id = uuid.UUID(run_id) if isinstance(run_id, str) else run_id
+    try:
+        u_id = uuid.UUID(run_id) if isinstance(run_id, str) else run_id
+    except (ValueError, TypeError, AttributeError):
+        return None
     result = await db.execute(select(WorkflowInstance).where(WorkflowInstance.id == u_id))
     return result.scalar_one_or_none()
 
@@ -306,13 +324,17 @@ async def list_workflow_instances(
 
 async def list_agent_run_records(
     db: AsyncSession,
-    instance_id: str,
+    instance_id: Any,
 ) -> list:
     """Return full agent run history for a workflow instance from the normalised table."""
     from core.state_manager import AgentRunRecord
+    try:
+        inst_uuid = uuid.UUID(str(instance_id))
+    except (ValueError, TypeError, AttributeError):
+        return []
     result = await db.execute(
         select(AgentRunRecord)
-        .where(AgentRunRecord.instance_id == instance_id)
+        .where(AgentRunRecord.instance_id == inst_uuid)
         .order_by(AgentRunRecord.completed_at)
     )
     return list(result.scalars().all())
@@ -332,12 +354,12 @@ def agent_run_record_to_dict(r) -> dict:
         "duration_ms":        r.duration_ms,
         "error":              r.error,
         "tools_used":         r.tools_used or [],
-        "output_data":        r.output_data,
-        "_prosecutor_issues": r.prosecutor_issues,
-        "_judge_verdict":     r.judge_verdict,
-        "delta_vs_history":   r.delta_vs_history,
-        "delta_trend":        r.delta_trend,
-        "delta_analysis":     r.delta_analysis,
+        "output_data":        getattr(r, "output_data", None),
+        "_prosecutor_issues": getattr(r, "prosecutor_issues", None),
+        "_judge_verdict":     getattr(r, "judge_verdict", None),
+        "delta_vs_history":   getattr(r, "delta_vs_history", None),
+        "delta_trend":        getattr(r, "delta_trend", None),
+        "delta_analysis":     getattr(r, "delta_analysis", None),
         "completed_at":       r.completed_at.isoformat() if r.completed_at else None,
     }
 
@@ -1793,10 +1815,17 @@ from db.models.core import (
 
 # ─── Workflow Catalog ─────────────────────────────────────────────────────────
 
-async def list_workflow_catalog(db: AsyncSession, *, active_only: bool = False) -> list[WorkflowCatalog]:
+async def list_workflow_catalog(
+    db: AsyncSession,
+    *,
+    active_only: bool = False,
+    include_deleted: bool = False,
+) -> list[WorkflowCatalog]:
     stmt = select(WorkflowCatalog).order_by(WorkflowCatalog.name)
+    if not include_deleted:
+        stmt = stmt.where(WorkflowCatalog.status != "deleted")
     if active_only:
-        stmt = stmt.where(WorkflowCatalog.active.is_(True))
+        stmt = stmt.where(WorkflowCatalog.active.is_(True), WorkflowCatalog.status != "deleted")
     result = await db.execute(stmt)
     return list(result.scalars().all())
 
@@ -1848,6 +1877,7 @@ async def create_workflow_catalog_entry(db: AsyncSession, data: dict) -> Workflo
         active=data.get("active", True),
         scope=data.get("scope", "GLOBAL"),
         industry=data.get("industry"),
+        metadata_=data.get("metadata", {}),
     )
     db.add(entry)
     await db.commit()
@@ -1864,12 +1894,63 @@ async def update_workflow_catalog_entry(db: AsyncSession, workflow_id: str, data
     for field in allowed:
         if field in data:
             setattr(entry, field, data[field])
+    if "metadata" in data:
+        curr_meta = dict(getattr(entry, "metadata_", {}) or {})
+        curr_meta.update(data["metadata"])
+        entry.metadata_ = curr_meta
+    await db.commit()
+    await db.refresh(entry)
+    return entry
+
+
+async def delete_workflow_catalog_entry(
+    db: AsyncSession,
+    workflow_id: str,
+    deleted_by: Optional[str] = None,
+) -> Optional[WorkflowCatalog]:
+    """
+    Permanently delete a workflow from active catalogs.
+    Enforces server-side lifecycle rules:
+      - Sets active=False, status='deleted'
+      - Sets deleted_at and deleted_by provenance
+      - Cancels or finalizes in-progress runs safely
+      - Retains historical runs and audit records
+    """
+    entry = await get_workflow_catalog_entry(db, workflow_id)
+    if not entry:
+        return None
+
+    entry.active = False
+    entry.status = "deleted"
+    curr_meta = dict(getattr(entry, "metadata_", {}) or {})
+    curr_meta["deleted_at"] = datetime.now(timezone.utc).isoformat()
+    if deleted_by:
+        curr_meta["deleted_by"] = deleted_by
+    entry.metadata_ = curr_meta
+    entry.updated_at = datetime.utcnow()
+
+    # Cancel active in-progress runs targeting this workflow
+    try:
+        inst_res = await db.execute(
+            select(WorkflowInstance).where(
+                WorkflowInstance.definition_id == entry.id,
+                WorkflowInstance.status.in_(["pending", "running", "in_progress"])
+            )
+        )
+        for inst in inst_res.scalars().all():
+            inst.status = "cancelled"
+            inst.completed_at = datetime.utcnow()
+            inst.error_log = f"Workflow '{entry.key}' permanently deleted by administrator ({deleted_by or 'admin'})."
+    except Exception:
+        pass
+
     await db.commit()
     await db.refresh(entry)
     return entry
 
 
 def workflow_catalog_to_dict(w: WorkflowCatalog) -> dict:
+    meta = dict(getattr(w, "metadata_", {}) or {})
     return {
         "id":                     str(w.id),
         "name":                   w.name,
@@ -1882,6 +1963,11 @@ def workflow_catalog_to_dict(w: WorkflowCatalog) -> dict:
         "required_integrations":  w.required_integrations or [],
         "supported_modules":      w.supported_modules or [],
         "active":                 w.active,
+        "metadata":               meta,
+        "required_capabilities":  meta.get("required_capabilities", []),
+        "input_schema":           meta.get("input_schema", {}),
+        "output_schema":          meta.get("output_schema", {}),
+        "execution_handler":      meta.get("execution_handler"),
         # ── Industry applicability (Migration 004) ────────────────────────
         "scope":                  getattr(w, "scope", "GLOBAL") or "GLOBAL",
         "industry":               getattr(w, "industry", None),
@@ -2244,25 +2330,29 @@ async def check_org_workflow_access(db: AsyncSession, organization_id: str, work
       6. Admin has explicitly assigned the workflow to this org
     This is the server-side authorization boundary — never trust the frontend.
     """
+    # 1. Resolve workflow catalog entry
+    wf = await get_workflow_catalog_by_key(db, workflow_key)
+    if not wf:
+        return {"allowed": False, "reason": f"Workflow '{workflow_key}' not found in catalog"}
+    if not wf.active or wf.status == "deleted":
+        return {"allowed": False, "reason": f"Workflow '{workflow_key}' has been deleted"}
+    if wf.status == "disabled":
+        return {"allowed": False, "reason": f"Workflow '{workflow_key}' is disabled by an administrator"}
+    if wf.status in ("draft", "in_testing", "changes_required"):
+        return {"allowed": False, "reason": f"Workflow '{workflow_key}' is currently in draft/testing mode and not yet published"}
+
     try:
         oid = uuid.UUID(str(organization_id))
     except (ValueError, AttributeError):
         return {"allowed": False, "reason": "Invalid organization ID"}
 
-    # 1. Check org exists and is active
+    # 2. Check org exists and is active
     org_result = await db.execute(select(Organization).where(Organization.id == oid))
     org = org_result.scalar_one_or_none()
     if not org:
         return {"allowed": False, "reason": "Organization not found"}
     if not org.active:
         return {"allowed": False, "reason": "Organization is not active"}
-
-    # 2. Resolve workflow catalog entry
-    wf = await get_workflow_catalog_by_key(db, workflow_key)
-    if not wf:
-        return {"allowed": False, "reason": f"Workflow '{workflow_key}' not found in catalog"}
-    if not wf.active:
-        return {"allowed": False, "reason": f"Workflow '{workflow_key}' is not active"}
 
     # 3. Industry applicability check — GLOBAL workflows pass for any org;
     #    INDUSTRY workflows only pass when the org's industry matches.
@@ -2296,17 +2386,33 @@ async def check_org_workflow_access(db: AsyncSession, organization_id: str, work
         return {"allowed": False, "reason": f"Subscription is not active (status: {effective_status})"}
 
     # 5. Check plan entitles this workflow
-    # Global workflows (unless flagged requires_explicit_assignment) are automatically included
-    requires_explicit = bool((getattr(wf, "metadata_", {}) or {}).get("requires_explicit_assignment", False))
-    if wf_scope != "GLOBAL" or requires_explicit:
-        entitlements = await get_plan_entitlements(db, str(sub.plan_id))
+    # All implemented workflows are treated as GLOBAL and do not require organization assignment.
+    IMPLEMENTED_WORKFLOW_KEYS = {
+        "meeting_intelligence_followup",
+        "meeting_intelligence",
+        "product_launch_sprint",
+        "product_launch",
+        "email_summarizer",
+        "customer_lead_enricher",
+        "invoice_processing",
+        "social_media_generator",
+        "contract_risk_analyzer",
+    }
+    is_implemented = wf.key in IMPLEMENTED_WORKFLOW_KEYS
+    effective_scope = "GLOBAL" if is_implemented else wf_scope
+
+    requires_explicit = False if is_implemented else bool((getattr(wf, "metadata_", {}) or {}).get("requires_explicit_assignment", False))
+    entitlements = await get_plan_entitlements(db, str(sub.plan_id))
+    has_explicit_plan_entitlements = len(entitlements) > 0 and not is_implemented
+
+    if (effective_scope != "GLOBAL" or requires_explicit or has_explicit_plan_entitlements) and not is_implemented:
         if str(wf.id) not in entitlements:
             return {"allowed": False, "reason": f"Current plan does not include '{workflow_key}'"}
 
     # 6. Check explicit workflow assignment
-    # Global workflows are automatically assigned and available to all users & organizations
+    # Non-global, non-implemented workflows require an active OrganizationWorkflowAssignment.
     assignment = await get_org_workflow_assignment(db, organization_id, str(wf.id))
-    if (wf_scope != "GLOBAL" or requires_explicit) and (not assignment or assignment.status != "active"):
+    if not is_implemented and (effective_scope != "GLOBAL" or requires_explicit or has_explicit_plan_entitlements) and (not assignment or assignment.status != "active"):
         return {"allowed": False, "reason": f"Workflow '{workflow_key}' has not been assigned to this organization"}
 
     return {
@@ -2315,7 +2421,7 @@ async def check_org_workflow_access(db: AsyncSession, organization_id: str, work
         "workflow_id":   str(wf.id),
         "workflow_name": wf.name,
         "assignment_id": str(assignment.id) if assignment else "global_assigned",
-        "scope":         wf_scope,
+        "scope":         effective_scope,
         "industry":      wf_industry,
     }
 
@@ -3208,3 +3314,309 @@ async def list_organizations_with_details(db: AsyncSession, include_test_fixture
             "total_spend_usd":  stats.get("total_cost"),
         })
     return result
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Workflow QA, Test Runs, Defects & Release Approvals
+# ─────────────────────────────────────────────────────────────────────────────
+
+async def create_workflow_test_run(db: AsyncSession, data: dict) -> WorkflowTestRun:
+    """Persist a new QA test run record."""
+    tr = WorkflowTestRun(
+        workflow_key=data["workflow_key"],
+        workflow_id=data.get("workflow_id"),
+        workflow_version=data.get("workflow_version", "1.0.0"),
+        test_mode=data.get("test_mode", "real_provider"),
+        status=data.get("status", "passed"),
+        is_real_provider_verified=data.get("is_real_provider_verified", False),
+        safe_preview=data.get("safe_preview", True),
+        input_payload=data.get("input_payload", {}),
+        execution_steps=data.get("execution_steps", []),
+        outputs=data.get("outputs", {}),
+        error_message=data.get("error_message"),
+        duration_ms=data.get("duration_ms", 0),
+        tokens_consumed=data.get("tokens_consumed", 0),
+        cost_usd=data.get("cost_usd", 0.0),
+        tested_by=data.get("tested_by", "system"),
+        tenant_id=data.get("tenant_id"),
+    )
+    db.add(tr)
+    await db.commit()
+    await db.refresh(tr)
+    return tr
+
+
+async def get_workflow_test_run(db: AsyncSession, run_id: str) -> Optional[WorkflowTestRun]:
+    """Fetch single QA test run by UUID."""
+    try:
+        rid = uuid.UUID(str(run_id))
+    except Exception:
+        return None
+    res = await db.execute(select(WorkflowTestRun).where(WorkflowTestRun.id == rid))
+    return res.scalar_one_or_none()
+
+
+async def list_workflow_test_runs(
+    db: AsyncSession,
+    workflow_key: Optional[str] = None,
+    test_mode: Optional[str] = None,
+    limit: int = 50,
+) -> list[WorkflowTestRun]:
+    """List QA test runs ordered by creation date descending."""
+    query = select(WorkflowTestRun).order_by(WorkflowTestRun.created_at.desc())
+    if workflow_key:
+        query = query.where(WorkflowTestRun.workflow_key == workflow_key)
+    if test_mode:
+        query = query.where(WorkflowTestRun.test_mode == test_mode)
+    query = query.limit(limit)
+    res = await db.execute(query)
+    return list(res.scalars().all())
+
+
+async def review_workflow_test_run(
+    db: AsyncSession,
+    run_id: str,
+    verdict: str,
+    notes: Optional[str] = None,
+) -> Optional[WorkflowTestRun]:
+    """Record human tester verification verdict on test run outputs."""
+    tr = await get_workflow_test_run(db, run_id)
+    if not tr:
+        return None
+    tr.review_verdict = verdict
+    tr.review_notes = notes
+    await db.commit()
+    await db.refresh(tr)
+    return tr
+
+
+async def create_workflow_defect(db: AsyncSession, data: dict) -> WorkflowDefect:
+    """Report a new defect on a workflow node or run."""
+    defect = WorkflowDefect(
+        workflow_key=data["workflow_key"],
+        workflow_id=data.get("workflow_id"),
+        workflow_version=data.get("workflow_version", "1.0.0"),
+        node_id=data.get("node_id"),
+        node_name=data.get("node_name"),
+        test_run_id=data.get("test_run_id"),
+        title=data["title"],
+        severity=data.get("severity", "medium"),
+        status=data.get("status", "open"),
+        expected_behavior=data["expected_behavior"],
+        actual_behavior=data["actual_behavior"],
+        reproduction_steps=data.get("reproduction_steps"),
+        sanitized_error=data.get("sanitized_error"),
+        tester_notes=data.get("tester_notes"),
+        reported_by=data.get("reported_by", "qa_tester"),
+        assigned_developer=data.get("assigned_developer"),
+    )
+    db.add(defect)
+
+    # Mark workflow catalog status as changes_required if active defect is critical or high
+    cat = await get_workflow_catalog_by_key(db, data["workflow_key"])
+    if cat and cat.status != "deleted":
+        cat.status = "changes_required"
+        curr_meta = dict(getattr(cat, "metadata_", {}) or {})
+        curr_meta["last_defect_reported_at"] = datetime.now(timezone.utc).isoformat()
+        curr_meta["qa_status"] = "changes_required"
+        cat.metadata_ = curr_meta
+
+    await db.commit()
+    await db.refresh(defect)
+    return defect
+
+
+async def get_workflow_defect(db: AsyncSession, defect_id: str) -> Optional[WorkflowDefect]:
+    """Retrieve defect by UUID."""
+    try:
+        did = uuid.UUID(str(defect_id))
+    except Exception:
+        return None
+    res = await db.execute(select(WorkflowDefect).where(WorkflowDefect.id == did))
+    return res.scalar_one_or_none()
+
+
+async def list_workflow_defects(
+    db: AsyncSession,
+    workflow_key: Optional[str] = None,
+    status: Optional[str] = None,
+    severity: Optional[str] = None,
+    limit: int = 100,
+) -> list[WorkflowDefect]:
+    """Query defects with optional filtering."""
+    query = select(WorkflowDefect).order_by(WorkflowDefect.created_at.desc())
+    if workflow_key:
+        query = query.where(WorkflowDefect.workflow_key == workflow_key)
+    if status:
+        query = query.where(WorkflowDefect.status == status)
+    if severity:
+        query = query.where(WorkflowDefect.severity == severity)
+    query = query.limit(limit)
+    res = await db.execute(query)
+    return list(res.scalars().all())
+
+
+async def update_workflow_defect(db: AsyncSession, defect_id: str, updates: dict) -> Optional[WorkflowDefect]:
+    """Update defect status, developer assignment, or resolution notes."""
+    defect = await get_workflow_defect(db, defect_id)
+    if not defect:
+        return None
+    for field in ("status", "assigned_developer", "developer_notes", "severity", "title", "tester_notes"):
+        if field in updates:
+            setattr(defect, field, updates[field])
+    
+    if updates.get("status") == "resolved" and not defect.resolved_at:
+        defect.resolved_at = datetime.utcnow()
+    elif updates.get("status") in ("awaiting_retest", "fix_ready"):
+        defect.retested_at = None
+    if "retested_by" in updates:
+        defect.retested_by = updates["retested_by"]
+        defect.retested_at = datetime.utcnow()
+
+    defect.updated_at = datetime.utcnow()
+    await db.commit()
+    await db.refresh(defect)
+    return defect
+
+
+async def get_or_create_release_approval(
+    db: AsyncSession,
+    workflow_key: str,
+    version: str = "1.0.0",
+) -> WorkflowReleaseApproval:
+    """Retrieve or initialize formal release approval record."""
+    res = await db.execute(
+        select(WorkflowReleaseApproval).where(
+            WorkflowReleaseApproval.workflow_key == workflow_key,
+            WorkflowReleaseApproval.workflow_version == version,
+        )
+    )
+    item = res.scalar_one_or_none()
+    if not item:
+        item = WorkflowReleaseApproval(
+            workflow_key=workflow_key,
+            workflow_version=version,
+            status="pending",
+        )
+        db.add(item)
+        await db.commit()
+        await db.refresh(item)
+    return item
+
+
+async def approve_workflow_release(
+    db: AsyncSession,
+    workflow_key: str,
+    version: str,
+    approved_by: str,
+    notes: Optional[str] = None,
+    gate_results: Optional[dict] = None,
+) -> WorkflowReleaseApproval:
+    """Explicit administrator release approval after automated gates pass."""
+    rec = await get_or_create_release_approval(db, workflow_key, version)
+    rec.status = "approved"
+    rec.release_gates_passed = True
+    rec.gate_results = gate_results or {}
+    rec.approved_by = approved_by
+    rec.approval_notes = notes
+    rec.approved_at = datetime.utcnow()
+
+    # Update catalog entry status
+    cat = await get_workflow_catalog_by_key(db, workflow_key)
+    if cat:
+        curr_meta = dict(getattr(cat, "metadata_", {}) or {})
+        curr_meta["qa_status"] = "approved"
+        curr_meta["release_approval"] = {
+            "approved_by": approved_by,
+            "approved_at": rec.approved_at.isoformat(),
+            "version": version,
+            "notes": notes,
+        }
+        cat.metadata_ = curr_meta
+
+    await db.commit()
+    await db.refresh(rec)
+    return rec
+
+
+async def publish_workflow_version(
+    db: AsyncSession,
+    workflow_key: str,
+    version: str,
+    published_by: str,
+) -> WorkflowCatalog:
+    """Promote an approved workflow version to published status for client users."""
+    cat = await get_workflow_catalog_by_key(db, workflow_key)
+    if not cat:
+        raise ValueError(f"Workflow '{workflow_key}' not found in catalog")
+
+    cat.status = "published"
+    cat.active = True
+    cat.version = version
+    curr_meta = dict(getattr(cat, "metadata_", {}) or {})
+    curr_meta["published_at"] = datetime.now(timezone.utc).isoformat()
+    curr_meta["published_by"] = published_by
+    curr_meta["qa_status"] = "published"
+    cat.metadata_ = curr_meta
+
+    # Update release approval record
+    rec = await get_or_create_release_approval(db, workflow_key, version)
+    rec.status = "published"
+    rec.published_at = datetime.utcnow()
+
+    await db.commit()
+    await db.refresh(cat)
+    return cat
+
+
+async def get_qa_dashboard_metrics(db: AsyncSession) -> dict:
+    """Calculate truthful, database-derived metrics across all workflows and test runs."""
+    # 1. Total workflows and lifecycle breakdown
+    wf_res = await db.execute(select(WorkflowCatalog))
+    workflows = list(wf_res.scalars().all())
+    
+    total_registered = len([w for w in workflows if w.status != "deleted"])
+    published_count = len([w for w in workflows if w.status in ("published", "active") and w.active])
+    disabled_count = len([w for w in workflows if w.status == "disabled" or (not w.active and w.status != "deleted")])
+    deleted_count = len([w for w in workflows if w.status == "deleted"])
+    in_testing_count = len([w for w in workflows if w.status in ("in_testing", "beta")])
+    changes_required_count = len([w for w in workflows if w.status == "changes_required"])
+
+    # 2. Defect metrics
+    defects_res = await db.execute(select(WorkflowDefect))
+    all_defects = list(defects_res.scalars().all())
+    open_defects = [d for d in all_defects if d.status not in ("resolved", "closed")]
+    awaiting_fixes = [d for d in all_defects if d.status in ("open", "triaged", "assigned", "in_progress")]
+    retest_queue_count = len([d for d in all_defects if d.status in ("fix_ready", "awaiting_retest")])
+
+    # 3. Test run counts
+    runs_res = await db.execute(select(WorkflowTestRun))
+    all_runs = list(runs_res.scalars().all())
+    tested_keys = {r.workflow_key for r in all_runs}
+    not_tested_count = max(0, total_registered - len(tested_keys))
+    passed_runs = [r for r in all_runs if r.status == "passed"]
+    failed_runs = [r for r in all_runs if r.status in ("failed", "blocked")]
+
+    # 4. Approvals
+    approvals_res = await db.execute(select(WorkflowReleaseApproval))
+    all_approvals = list(approvals_res.scalars().all())
+    approved_count = len([a for a in all_approvals if a.status == "approved"])
+
+    return {
+        "total_registered": total_registered,
+        "not_tested": not_tested_count,
+        "in_testing": in_testing_count,
+        "passed": len(passed_runs),
+        "failed": len(failed_runs),
+        "reported_defects": len(open_defects),
+        "defects_reported": len(open_defects),
+        "defects_open": len(open_defects),
+        "awaiting_fixes": len(awaiting_fixes),
+        "retest_queue": retest_queue_count,
+        "ready_for_review": len([w for w in workflows if (getattr(w, "metadata_", {}) or {}).get("qa_status") == "ready_for_review"]),
+        "approved": approved_count,
+        "published": published_count,
+        "disabled": disabled_count,
+        "deleted": deleted_count,
+        "total_test_runs": len(all_runs),
+    }

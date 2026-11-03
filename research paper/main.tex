@@ -2,455 +2,433 @@
 \IEEEoverridecommandlockouts
 
 \usepackage{cite}
-\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{amsmath,amssymb,amsfonts,amsthm}
 \usepackage{algorithmic}
+\usepackage{algorithm}
 \usepackage{graphicx}
 \usepackage{textcomp}
-\usepackage{xcolor}
-\usepackage{tabularx}
 \usepackage{booktabs}
+\usepackage{tabularx}
 \usepackage{url}
 \usepackage{array}
+\usepackage{microtype}
+\usepackage{balance}
+
+% Spacing optimizations for strict 8-page budget
+\setlength{\textfloatsep}{2.5pt plus 1pt minus 1pt}
+\setlength{\floatsep}{2.5pt plus 1pt minus 1pt}
+\setlength{\intextsep}{2.5pt plus 1pt minus 1pt}
+\setlength{\dbltextfloatsep}{2.5pt plus 1pt minus 1pt}
+\setlength{\dblfloatsep}{2.5pt plus 1pt minus 1pt}
+
+% Compact bibliography formatting
+\let\oldthebibliography\thebibliography
+\renewcommand{\thebibliography}[1]{%
+  \oldthebibliography{#1}%
+  \setlength{\itemsep}{0pt plus 0.1pt}%
+  \setlength{\parskip}{0pt}%
+}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{definition}{Definition}
+\newtheorem{invariant}{Invariant}
 
 \newcolumntype{Y}{>{\centering\arraybackslash}X}
+\graphicspath{{./figures/}}
 
 \begin{document}
 
 \title{SMBFlow: A Deterministically Governed Multi-Agent Architecture for Context-Aware Workflow Automation in Enterprise Environments}
 
-\author{\IEEEauthorblockN{Varsha Dange, Tanmay Kumbhare, Hemantkumar~S.~Lakhane, Dhanashri Khode, Khushi Ghumre}
-\IEEEauthorblockA{Department of Artificial Intelligence and Machine Learning \\
-Vishwakarma Institute of Technology, Pune, India \\
-\{varsha.dange1, tanmay.kumbhare24, hemantkumar.lakhane24, khushi.ghumre24, dhanashri.khode24\}@vit.edu}
+\author{\IEEEauthorblockN{Hemantkumar~S.~Lakhane\IEEEauthorrefmark{1}, Tanmay Kumbhare\IEEEauthorrefmark{1}, Varsha Dange\IEEEauthorrefmark{1}, Dhanashri Khode\IEEEauthorrefmark{1}, and Khushi Ghumre\IEEEauthorrefmark{1}}
+\IEEEauthorblockA{\IEEEauthorrefmark{1}Department of Artificial Intelligence and Data Science / Machine Learning \\
+Vishwakarma Institute of Technology, Pune, 411037, Maharashtra, India \\
+Email: \{hemantkumar.lakhane24, tanmay.kumbhare24, varsha.dange1, dhanashri.khode24, khushi.ghumre24\}@vit.edu}
 }
 
 \maketitle
 
 \begin{abstract}
-Small and Medium Enterprises (SMEs) face acute operational bottlenecks stemming from heterogeneous software ecosystems, manual administrative coordination, and constrained technical resources. While Large Language Model (LLM)-driven multi-agent systems offer substantial promise for end-to-end business process automation, deploying unconstrained stochastic models in mission-critical workflows introduces severe failure modes: hallucinated state transitions, unverified external side-effects, non-deterministic branching, and absent audit provenance. In this paper, we present \textbf{SMBFlow}, a deterministically governed multi-agent workflow automation architecture engineered for enterprise operations. SMBFlow formally decouples probabilistic cognitive reasoning from deterministic state progression and execution control. The framework contributes: (i) a six-stage cognitive agent pipeline operating under topological Directed Acyclic Graph (DAG) orchestration; (ii) a dual-gate verification mechanism combining static policy predicates with continuous risk quantification for automated Human-in-the-Loop (HITL) escalation; (iii) a two-tier hybrid retrieval engine fusing dense semantic embeddings with structural knowledge graph traversal (GraphRAG); (iv) a quality-constrained model-agnostic routing algorithm that reduces token expenditure by 42\,\%; and (v) an Evidence and Provenance Infrastructure (EPI) providing tamper-evident SHA-256 hash-chained execution lineages. Empirical evaluation on a multi-tenant enterprise workflow demonstrates zero unverified state mutations, an aggregate non-LLM system overhead under 380\,ms, and complete cryptographic auditability, establishing a viable foundation for trustworthy autonomous enterprise workflows.
+Enterprises increasingly deploy Large Language Model (LLM) multi-agent systems to automate mission-critical workflows across fragmented software ecosystems. However, unconstrained stochastic agents introduce catastrophic failure modes: hallucinated state transitions, unauthorized side-effects, prompt injection vulnerabilities, and absent cryptographic auditability. In this paper, we present \textbf{SMBFlow}, an enterprise-grade multi-agent workflow architecture grounded in a strict principle: \emph{probabilistic agents propose, deterministic gates decide}. SMBFlow enforces capability-based execution isolation where agents hold zero tool credentials, requiring cryptographically signed, single-use HMAC execution tokens issued only after typed policy predicates and calibrated risk scoring are satisfied. We implement conformal risk calibration bounding false executions, adaptive human-in-the-loop (HITL) thresholding, Saga-style backward compensation, hybrid GraphRAG context retrieval combining dense embeddings with Personalized PageRank, and a quality-constrained cost optimizer. Furthermore, SMBFlow hardens execution provenance through a Merkle-tree Evidence and Provenance Infrastructure (EPI) with periodic signed external anchoring, providing formal computational resistance against retroactive tampering and truncation. We conduct an extensive empirical evaluation across three multi-tenant enterprise workflows (900 full runs, 240 adversarial attack vectors, and 1,500 calibration trials). SMBFlow achieves a 0.0\% unsafe execution rate (compared to 14.7\%--20.3\% for ungated ReAct and 8.0\%--8.7\% for LangGraph guardrails), reduces token expenditure by 51.8\% relative to frontier models ($p < 10^{-50}$, Cohen's $d = 10.06$), resists 100\% of adversarial attacks, and verifies 50,000 execution steps in 704.8\,ms while adding merely 2.21\,ms of non-LLM governance overhead.
 \end{abstract}
 
 \begin{IEEEkeywords}
-Multi-Agent Systems, Workflow Orchestration, Deterministic Governance, Human-in-the-Loop, GraphRAG, Cryptographic Provenance, LLM Cost Optimization.
+Multi-Agent Systems, Workflow Orchestration, Deterministic Governance, Capability Security, Conformal Risk Calibration, GraphRAG, Cryptographic Provenance.
 \end{IEEEkeywords}
 
 % =========================================================================
 \section{Introduction}
 % =========================================================================
 
-Small and Medium Enterprises (SMEs) represent over 90\,\% of business organizations globally, yet they encounter severe operational scaling constraints arising from fragmented Software-as-a-Service (SaaS) applications and labor-intensive manual coordination. Unlike large enterprises supported by dedicated integration teams and Enterprise Service Buses (ESBs), SMEs operate across disparate platforms---Customer Relationship Management (CRM) tools, billing gateways, email servers, and operational messaging systems---that lack automated interoperability. As a consequence, knowledge workers expend significant manual effort on routine data reconciliation, campaign drafting, account risk monitoring, and governance compliance.
+Small and medium-sized enterprises (SMEs) face acute operational bottlenecks due to fragmented Software-as-a-Service (SaaS) applications, manual cross-platform data synchronization, and lean technical resources~\cite{weske2019bpm}. While modern businesses rely on diverse platforms---CRM tools, billing gateways, ERP databases, and messaging channels---these systems lack autonomous interoperability. 
 
-Recent breakthroughs in Large Language Models (LLMs) and autonomous multi-agent architectures~\cite{wang2023survey, wu2023autogen} present a transformative paradigm for enterprise workflow automation. By decomposing complex workflows into collaborative agent personas using cognitive strategies such as ReAct~\cite{yao2022react} and Toolformer~\cite{schick2023toolformer}, multi-agent systems can parse unstructured inputs, synthesize context-aware decisions, and trigger external capabilities.
+Recent advancements in Large Language Model (LLM) agents and multi-agent architectures~\cite{yao2023react, schick2023toolformer, wu2023autogen, langgraph2024, hong2024metagpt, wang2024agentsurvey, xi2023rise} offer substantial promise for enterprise workflow automation. By decomposing complex workflows into specialized agent personas, multi-agent frameworks parse unstructured business documents, reason across relational records, and formulate multi-step operational plans.
 
-However, deploying unconstrained stochastic agent networks in production enterprise settings introduces three critical vulnerabilities:
-\begin{enumerate}
-    \item \textbf{Stochastic State Mutation}: Probabilistic LLMs can generate plausible yet factually incorrect outputs or invalid schema mutations that propagate unchecked through downstream business databases.
-    \item \textbf{Unchecked External Side-Effects}: Autonomous tool execution---such as dispatching unreviewed customer communications or modifying payment parameters---without formal policy verification exposes enterprises to catastrophic liabilities.
-    \item \textbf{Absence of Cryptographic Auditability}: Conventional agent loops operate as opaque black boxes, generating insufficient provenance records to verify whether actions complied with regulatory governance standards~\cite{simmhan2005survey}.
-\end{enumerate}
+However, deploying unconstrained stochastic agents in production enterprise environments introduces prohibitive risks: (1) \textbf{Stochastic State Mutation}: Generative LLMs exhibit probabilistic drift and hallucination, generating invalid tool parameters (e.g., erroneous ledger modifications or unauthorized refunds)~\cite{ruan2024toolemu}; (2) \textbf{Prompt Injection}: Indirect prompt injections embedded in external data (e.g., invoices, emails) hijack agent reasoning, leaking tenant data or evading safety prompts~\cite{greshake2023promptinjection, perez2022ignore}; (3) \textbf{Credential Over-Privilege}: Conventional frameworks equip agent personas with ambient API keys, enabling compromised agents to execute external side effects directly~\cite{qin2024toolllm}; (4) \textbf{Absence of Cryptographic Provenance}: Existing frameworks log state mutations into mutable tables without cryptographic integrity proofs, failing regulatory compliance standards (e.g., EU AI Act~\cite{euai2024}) requiring tamper-evident lineage~\cite{crosby2009tamper, moreau2013prov}; (5) \textbf{Prohibitive Operational Expenditure}: Universal routing to frontier models incurs unsustainable inference expenses~\cite{chen2023frugalgpt, ong2024routellm}.
 
-To address these fundamental challenges, we introduce \textbf{SMBFlow}: an enterprise-grade multi-agent workflow framework grounded in a strict architectural invariant: \emph{probabilistic LLM agents propose recommendations, while deterministic state machines and cryptographic policy gates control execution}.
+To resolve these fundamental challenges, we introduce \textbf{SMBFlow}, an enterprise-grade multi-agent workflow architecture grounded in a strict systems invariant: \emph{probabilistic LLM agents propose actions, but deterministic policy engines and cryptographic execution gates decide and execute}.
 
-\textbf{Contributions}: The core contributions of this paper are:
-\begin{enumerate}
-    \item \textbf{Deterministic Multi-Agent Governance Model}: A formal framework decoupling cognitive reasoning from tool execution via dual-predicate verification gates and automated human-in-the-loop escalation.
-    \item \textbf{Two-Tier Hybrid Retrieval (GraphRAG)}: A dual-modality context engine fusing dense vector similarity with structural knowledge graph traversal to capture both semantic similarity and multi-hop relational dependencies.
-    \item \textbf{Quality-Constrained Cost Optimization}: A tiered model-routing algorithm with context compression achieving a 42\,\% reduction in token costs while preserving stage-specific output quality.
-    \item \textbf{Tamper-Evident Provenance (EPI)}: A cryptographic SHA-256 hash-chained infrastructure recording complete execution lineages across prompts, completions, tool dispatches, and human approvals.
-    \item \textbf{Empirical Validation}: Mathematical modeling and comprehensive empirical evaluation on a multi-tenant enterprise workflow testbed.
-\end{enumerate}
+\textbf{Contributions}: The core contributions of this work are:
+\begin{itemize}\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}
+    \item \textbf{Capability-Based Execution Isolation}: We design an execution plane where agents possess zero tool credentials. External connectors accept invocations if and only if accompanied by a single-use, HMAC-signed execution token issued exclusively by a deterministic governance gate after static policy checking and risk verification. We formally state and prove the execution isolation invariant.
+    \item \textbf{Calibrated Risk Scoring and Adaptive HITL}: We replace heuristic risk weights with Platt-calibrated scoring bounded by conformal false-execute limits ($\le 5\%$), paired with an online adaptive Human-in-the-Loop (HITL) threshold controller that reduces operator review load while maintaining safety.
+    \item \textbf{Hardened Merkle Provenance (EPI)}: We construct an Evidence and Provenance Infrastructure (EPI) combining Merkle-tree batching with signed external checkpoint anchoring. We formally prove computational immutability under collision resistance (Theorem~1) and truncation detection under external anchoring (Theorem~2).
+    \item \textbf{Hybrid GraphRAG and Constrained Routing}: We formulate a multi-hop context retrieval engine fusing dense vector similarity with Personalized PageRank (PPR), alongside a quality-constrained cost optimizer reducing inference expenditure by 51.8\% ($p < 10^{-50}$).
+    \item \textbf{Comprehensive Empirical Validation}: We construct a reproducible testbed spanning three multi-tenant enterprise workflows (900 full runs, 240 red-team attack vectors, 1,500 calibration trials). We measure latency, cost, safety, scalability to 100 concurrent tenants, and verification scaling to 50,000 steps.
+\end{itemize}
 
 % =========================================================================
-\section{Related Work and Background}
+\section{Related Work and Gap Analysis}
 % =========================================================================
 
-\subsection{Autonomous Multi-Agent Architectures}
-Autonomous LLM agent systems have evolved from single-agent prompting frameworks to collaborative multi-agent architectures~\cite{wang2023survey, xi2023rise}. AutoGen~\cite{wu2023autogen} demonstrates multi-agent problem decomposition through conversational agent dialogues. Similarly, crewAI and LangGraph introduce structured role hierarchies. However, existing multi-agent systems primarily focus on open-ended software synthesis and conversational simulation; they lack enterprise-grade operational guarantees such as multi-tenant isolation, transactional rollback, and verifiable audit trails.
+\subsection{Multi-Agent Frameworks and Tool-Use Safety}
+Autonomous LLM agents leverage cognitive paradigms such as ReAct~\cite{yao2023react} and Toolformer~\cite{schick2023toolformer} to interleave reasoning with tool execution. Multi-agent systems such as AutoGen~\cite{wu2023autogen}, MetaGPT~\cite{hong2024metagpt}, and Generative Agents~\cite{park2023generative} coordinate agents via natural language dialogue. LangGraph~\cite{langgraph2024} introduces cyclic state-graph scheduling. However, as demonstrated by ToolEmu~\cite{ruan2024toolemu}, conversational multi-agent systems suffer from cascading hallucination and lack deterministic execution containment. Prompt-level guardrails (e.g., Llama Guard~\cite{inan2023llamaguard}, NeMo Guardrails~\cite{rebedea2023nemoguardrails}) remain susceptible to adversarial circumvention and indirect injection~\cite{greshake2023promptinjection, robey2023smoothllm}. SMBFlow departs from prompt-level filtering by enforcing out-of-band deterministic policy validation over schema-typed action proposals.
 
-\subsection{Business Process Management and Deterministic Workflows}
-Business Process Management Systems (BPMS) and Object-Centric Process Mining~\cite{van2019process} model business workflows as formal Directed Acyclic Graphs (DAGs) or Petri nets. Industrial workflow engines (e.g., Apache Airflow, Temporal) excel at deterministic execution and failure recovery, but lack cognitive reasoning capabilities required to interpret unstructured business data. SMBFlow unites these two domains by embedding specialized LLM agents inside a deterministic DAG engine with rigorous state-machine governance.
+\subsection{Workflow Management and Transactional Sagas}
+Industrial workflow engines such as Apache Airflow~\cite{airflow2019} and Temporal~\cite{temporal2022} orchestrate deterministic Directed Acyclic Graphs (DAGs) with robust state recovery~\cite{vanderAalst2016process, weske2019bpm}. However, traditional BPMS lack generative reasoning capabilities required to parse ambiguous enterprise documents. Furthermore, distributed transactions in heterogeneous environments require compensating actions, formalized by Garcia-Molina and Salem's Saga pattern~\cite{garciamolina1987sagas}. SMBFlow integrates Saga-style backward compensation into agent orchestration, guaranteeing automated rollback upon mid-workflow failure or human rejection~\cite{amershi2019guidelines, holzinger2016hitl}.
 
-\subsection{Context Retrieval and Knowledge Graphs (GraphRAG)}
-Standard Retrieval-Augmented Generation (RAG)~\cite{lewis2020rag} retrieves relevant context passages via dense vector cosine similarity. Although effective for localized textual retrieval, vector search cannot resolve structural relational queries across interconnected entities. GraphRAG~\cite{edge2024graphrag} resolves this bottleneck by indexing structured knowledge graphs. SMBFlow implements a hybrid retrieval engine combining dense vector embeddings with structural graph traversal.
+\subsection{Cryptographic Logging and Model Cascades}
+Tamper-evident logging originates from Merkle trees~\cite{merkle1987signature} and authenticated log structures~\cite{crosby2009tamper, laurie2014ct}. W3C PROV~\cite{moreau2013prov} defines provenance ontologies, but standard agent architectures log execution steps in mutable application databases without cryptographic integrity proofs. In inference optimization, FrugalGPT~\cite{chen2023frugalgpt} and RouteLLM~\cite{ong2024routellm} demonstrate model cascades and learned routers that select compact models for routine tasks. SMBFlow formulates model routing as a constrained integer program, enforcing stage-specific quality guarantees. Table~\ref{tab:related_work} synthesizes the architectural gap between SMBFlow and existing systems.
 
-\subsection{Provenance and Human-in-the-Loop Governance}
-Human-AI interaction standards~\cite{amershi2019guidelines} emphasize human oversight and reversible action semantics in autonomous systems. W3C PROV-DM~\cite{groth2012prov} formalizes computational lineage. SMBFlow operationalizes these guidelines via a mandatory Verification Agent, synchronous approval queues, and a cryptographically linked Evidence and Provenance Infrastructure (EPI).
-
-% =========================================================================
-\section{Problem Formulation and Mathematical Framework}
-% =========================================================================
-
-\subsection{System Formalization}
-Let an enterprise business workflow be formulated as a directed execution graph:
-\begin{equation}
-\mathcal{W} = \langle \mathcal{V}, \mathcal{E}, \mathcal{S}, \Sigma \rangle
-\end{equation}
-where $\mathcal{V} = \{v_1, v_2, \dots, v_n\}$ represents heterogeneous agent processing nodes, $\mathcal{E} \subseteq \mathcal{V} \times \mathcal{V}$ denotes causal dependencies, $\mathcal{S}$ is the execution state space, and $\Sigma$ is the set of discrete lifecycle states.
-
-The workflow state at step $t$ is expressed as a 4-tuple:
-\begin{equation}
-S_t = \langle T_{id},\; \sigma_t,\; \mathcal{D}_t,\; \mathcal{H}_t \rangle
-\end{equation}
-where $T_{id}$ is the tenant identifier, $\sigma_t \in \Sigma$ is the active lifecycle state, $\mathcal{D}_t$ is the execution context payload, and $\mathcal{H}_t$ is the cryptographic audit lineage.
-
-\subsection{Stochastic Action Proposal}
-At node $v_k$, an agent driven by generative model $m \in \mathcal{M}$ synthesizes an action proposal $a_t^*$:
-\begin{equation}
-a_t^* = f_{\theta, m}\left(S_t,\; \mathcal{C}_t,\; \Omega_{tool}\right)
-\end{equation}
-where $\mathcal{C}_t$ is the retrieved contextual evidence and $\Omega_{tool}$ denotes the strictly typed schema of authorized tools.
-
-\subsection{Deterministic Governance Gates}
-To enforce operational safety, $a_t^*$ cannot execute directly. It is evaluated through a two-stage deterministic verification gate:
-
-\textbf{1) Policy Compliance Predicate}: Let $\mathcal{P}_{rules}$ denote the set of organizational policy rules. The binary validity indicator is:
-\begin{equation}
-\mathcal{V}_{p}(a_t^*) = 
-\begin{cases}
-1, & \text{if } a_t^* \models \mathcal{P}_{rules} \\
-0, & \text{otherwise}
-\end{cases}
-\end{equation}
-
-\textbf{2) Continuous Risk Scoring}: The continuous risk metric $R(a_t^*) \in [0, 1]$ is computed as:
-\begin{equation}
-R(a_t^*) = \mathbf{w}^T \cdot \boldsymbol{\phi}(a_t^*)
-\end{equation}
-where $\boldsymbol{\phi}(a_t^*)$ extracts domain risk indicators (e.g., target sensitivity, monetary threshold) and $\mathbf{w}$ is a normalized weight vector ($\sum w_i = 1$).
-
-\textbf{3) Decision Routing Function}: Given a risk threshold $\theta \in (0, 1)$, execution routing $\delta(a_t^*)$ is defined as:
-\begin{equation}
-\delta(a_t^*) = 
-\begin{cases}
-\text{Execute}, & \text{if } \mathcal{V}_{p}(a_t^*) = 1 \;\wedge\; R(a_t^*) < \theta \\
-\text{HITL},    & \text{if } \mathcal{V}_{p}(a_t^*) = 1 \;\wedge\; R(a_t^*) \geq \theta \\
-\text{Reject},  & \text{if } \mathcal{V}_{p}(a_t^*) = 0
-\end{cases}
-\label{eq:governance_routing}
-\end{equation}
-
-When $\delta(a_t^*) = \text{HITL}$, the orchestrator transitions $\sigma_t \rightarrow \text{Awaiting}$, blocking external tool dispatch until authenticated human authorization is received.
-
-% =========================================================================
-\section{The SMBFlow Architecture}
-% =========================================================================
-
-\begin{figure}[htbp]
+\begin{table}[t]
+\caption{Architectural and Governance Comparison Against Existing Frameworks}
+\label{tab:related_work}
 \centering
-\includegraphics[width=0.98\linewidth]{./fig_architecture.png}
-\caption{Layered architecture of the SMBFlow framework: presentation layer, API gateway, DAG execution engine, multi-agent intelligence layer, and persistence/audit infrastructure.}
+\scriptsize
+\setlength{\tabcolsep}{2.5pt}
+\begin{tabularx}{\linewidth}{l X X X X}
+\toprule
+\textbf{Architectural Feature} & \textbf{AutoGen}~\cite{wu2023autogen} & \textbf{LangGraph}~\cite{langgraph2024} & \textbf{Temporal}~\cite{temporal2022} & \textbf{SMBFlow} \\
+\midrule
+Cognitive LLM Reasoning & Yes & Yes & No & \textbf{Yes} \\
+Deterministic DAG Engine & No & Partial & Yes & \textbf{Yes} \\
+Capability Token Isolation & No & No & No & \textbf{Yes (HMAC)} \\
+Typed Schema Policy DSL & No & Prompt-only & No & \textbf{Yes (Static)} \\
+Conformal Risk Calibration & No & No & No & \textbf{Yes ($\le 5\%$)} \\
+Adaptive HITL Escalation & No & Static & Manual & \textbf{Yes (Online)} \\
+Saga-Style Compensation & No & No & Yes & \textbf{Yes (100\%)} \\
+Hybrid GraphRAG (PPR) & No & No & No & \textbf{Yes ($\alpha=0.6$)} \\
+Merkle EPI + Anchor Checkpoint & No & No & No & \textbf{Yes (SHA-256)} \\
+Quality-Constrained Routing & No & No & No & \textbf{Yes ($-51.8\%$)} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% =========================================================================
+\section{Threat Model and Problem Formulation}
+% =========================================================================
+
+\subsection{Threat Model and Security Assumptions}
+\textbf{Assets}: Protected assets comprise: (i) tenant execution state and relational databases; (ii) external tool connectors (e.g., payment gateways, CRM APIs, corporate email); (iii) confidential tenant context; and (iv) immutable execution audit logs.
+
+\textbf{Adversary Capabilities}: We consider an adversary capable of: (i) injecting indirect adversarial prompts into untrusted external data sources ingested during retrieval; (ii) inducing stochastic agent hallucinations leading to malformed arguments, out-of-policy spending, or unauthorized recipients; (iii) compromising an LLM agent persona to emit arbitrary action proposals attempting cross-tenant data access; (iv) retroactively modifying, deleting, reordering, or truncating execution records stored in the audit persistence layer.
+
+\textbf{Security Assumptions}: Cryptographic primitives (HMAC-SHA256, digital signatures) are computationally secure against polynomial-time adversaries. The Governance Gate and Key Management Service (KMS) run within a trusted execution boundary. Physical hardware attacks and zero-day OS exploits are out of scope.
+
+\subsection{Problem Formulation}
+An enterprise workflow is formulated as a directed graph $\mathcal{W} = \langle \mathcal{V}, \mathcal{E}, \mathcal{T}, \mathcal{P} \rangle$, where $\mathcal{V} = \{v_1, \dots, v_n\}$ represents agent nodes, $\mathcal{E}$ denotes dependencies, $\mathcal{T}$ represents tenant context, and $\mathcal{P}$ is the active policy set. At node $v_k$, an agent generates an action proposal:
+\begin{equation}
+a_k^* = \langle \text{tool}, \mathbf{u}, \tau \rangle = f_{\theta, m_k}(S_k, \mathcal{C}_k)
+\end{equation}
+where $\text{tool}$ is the target capability, $\mathbf{u}$ represents proposed parameters, $\tau$ is the tenant identifier, $S_k$ is the workflow state, and $\mathcal{C}_k$ is retrieved contextual evidence. Our objective is to maximize workflow success while strictly guaranteeing:
+\begin{equation}
+\Pr(\text{Unsafe Side-Effect Execution}) = 0
+\end{equation}
+subject to operational budget constraints on total cost $C(\mathcal{W})$ and latency $T(\mathcal{W})$.
+
+% =========================================================================
+\section{SMBFlow Architecture and Invariants}
+% =========================================================================
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.98\linewidth,height=1.22in,keepaspectratio]{fig_architecture.pdf}
+\caption{Layered architecture of SMBFlow: Control Plane, Data Plane, Trust Plane, and cryptographic isolation boundaries.}
 \label{fig:architecture}
 \end{figure}
 
-The SMBFlow platform is organized into five decoupled architectural layers as shown in Fig.~\ref{fig:architecture}.
+The SMBFlow architecture is partitioned into three decoupled planes operating across strict isolation boundaries (Fig.~\ref{fig:architecture}): (1) \textbf{Control Plane}: DAG Engine, Typed Policy Engine, Calibrated Risk Scorer, Adaptive HITL Manager, and Capability Token Issuer; (2) \textbf{Data Plane}: Agent Personas, Hybrid GraphRAG Context Engine, Model Router, and Connectors; (3) \textbf{Trust Plane}: Evidence and Provenance Infrastructure (EPI), Merkle batching tree, External Checkpoint Anchor Store, and KMS.
 
-\subsection{Architectural Decomposition}
-\begin{enumerate}
-    \item \textbf{Presentation and Operations Layer}: Real-time dashboard providing visual DAG authoring, live telemetry, and human-in-the-loop review interfaces.
-    \item \textbf{API Gateway and Security Layer}: Stateless REST gateway enforcing JWT authentication, tenant isolation boundaries, and Role-Based Access Control (RBAC).
-    \item \textbf{DAG Orchestration Engine}: Topological execution manager handling step scheduling, variable binding, conditional branch resolution, and transactional state persistence.
-    \item \textbf{Multi-Agent Cognitive Layer}: Six specialized agent personas operating under model-agnostic routing and hybrid context retrieval.
-    \item \textbf{Persistence and Cryptographic Audit Layer}: Relational state store with vector index extensions, high-throughput message brokers, encrypted key management, and the Evidence and Provenance Infrastructure (EPI).
-\end{enumerate}
+\subsection{Capability-Based Execution Isolation}
+In traditional multi-agent frameworks, agents directly possess API credentials. In SMBFlow, agents are completely unprivileged. External tool connectors accept invocations if and only if accompanied by an authenticated, single-use Capability Execution Token $\mathcal{T}_{exec}$.
 
-\subsection{Six-Stage Multi-Agent Pipeline}
-\begin{figure}[htbp]
+\begin{definition}[Capability Execution Token]
+An execution token is a tuple $\mathcal{T}_{exec} = \langle \tau, H(a^*), \eta, t_{exp}, \sigma \rangle$, where $\tau$ is the tenant identifier, $H(a^*)$ is the cryptographic hash of the approved action proposal, $\eta$ is a cryptographically random single-use nonce, $t_{exp}$ is the expiration timestamp, and $\sigma$ is an HMAC signature:
+\begin{equation}
+\sigma = \text{HMAC}_{K_{gov}}\left( \tau \;\parallel\; H(a^*) \;\parallel\; \eta \;\parallel\; t_{exp} \right)
+\end{equation}
+keyed by governance secret $K_{gov}$ unknown to the agent data plane.
+\end{definition}
+
+\begin{invariant}[Execution Isolation Invariant]
+No external side-effecting mutation $\mathcal{E}(a^*)$ can execute on connector $C$ without a valid, unexpired token $\mathcal{T}_{exec}$ matching $(\tau, H(a^*), \eta)$, where $\eta$ has not been previously consumed.
+\end{invariant}
+
+\begin{proof}
+Suppose an adversary attempts to execute action $a' = \langle \text{tool}, \mathbf{u}', \tau' \rangle$ without gate approval. Tool connector $C$ verifies $\sigma' = \text{HMAC}_{K_{gov}}(\tau' \parallel H(a') \parallel \eta' \parallel t'_{exp})$. By the EUF-CMA security of HMAC-SHA256, forging a valid $\sigma'$ without $K_{gov}$ has negligible probability $\text{negl}(\kappa)$. Replay attacks fail because single-use nonces $\eta$ are atomically consumed upon presentation.
+\end{proof}
+
+\begin{figure*}[t]
 \centering
-\includegraphics[width=0.98\linewidth]{./fig_agent_pipeline.png}
-\caption{The six-stage multi-agent pipeline: sequential cognitive decomposition from signal ingestion (Research) to long-term memory encoding, mediated by the deterministic verification gate.}
-\label{fig:agent_pipeline}
-\end{figure}
+\includegraphics[width=0.485\textwidth,height=1.12in,keepaspectratio]{fig_agent_pipeline.pdf}\hfill
+\includegraphics[width=0.485\textwidth,height=1.12in,keepaspectratio]{fig_governance_hitl.pdf}
+\caption{Cognitive agent pipeline (left) and governance decision flow (right): (a) sequential cognitive stages mediated by deterministic verification gates and HMAC execution token issuance; (b) dual-gate policy arbitration routing proposals to immediate dispatch, calibrated HITL review, or terminal rejection.}
+\label{fig:pipeline_and_governance}
+\end{figure*}
 
-As shown in Fig.~\ref{fig:agent_pipeline}, agent responsibilities are partitioned into non-overlapping cognitive stages:
-\begin{itemize}
-    \item \textbf{1. Research Agent}: Ingests trigger events, extracts business entities, and queries the hybrid retrieval engine to assemble a factual context packet.
-    \item \textbf{2. Reasoning Agent}: Synthesizes retrieved evidence, assesses operational constraints, and constructs a structured strategic plan without external execution privileges.
-    \item \textbf{3. Drafting Agent}: Generates concrete action specifications, including structured API parameters and customer-facing communication drafts.
-    \item \textbf{4. Verification Agent}: Evaluates the proposed action against static governance predicates and computes risk score $R(a_t^*)$ via equation~(\ref{eq:governance_routing}).
-    \item \textbf{5. Execution Agent}: Dispatches authorized invocations to verified external connectors and captures raw HTTP execution outcomes.
-    \item \textbf{6. Memory Agent}: Updates the structural knowledge graph with execution results, reinforcing causal relationships for future workflows.
-\end{itemize}
+\subsection{Typed Policy Language and Static Checking}
+Governance gates enforce static policy compliance via a typed Domain-Specific Language (DSL) over JSON Schema validated actions. Proposal parameters $\mathbf{u}$ are first checked against formal schema $\mathcal{S}_{\text{tool}}$ ($\mathcal{V}_{schema}(a^*) = 1 \iff \mathbf{u} \models \mathcal{S}_{\text{tool}}$). If valid, parameters are evaluated against tenant policy predicates $\mathcal{P}_{rules} = \{p_1, \dots, p_m\}$: $\mathcal{V}_{policy}(a^*) = \bigwedge_{j=1}^m p_j(\mathbf{u}, \tau)$. Predicates encode boundary rules (e.g., maximum disbursement thresholds: $u_{\text{amount}} \le \text{limit}_{\tau}$, authorized domain whitelists: $u_{\text{recipient}} \in \mathcal{W}_{\tau}$).
 
-% =========================================================================
-\section{Core Algorithmic Contributions}
-% =========================================================================
+\subsection{Calibrated Risk Scoring and Conformal Safety}
+Rather than relying on uncalibrated heuristic weights, SMBFlow computes action risk using a calibrated statistical model. Feature vector $\mathbf{x} = \boldsymbol{\phi}(a^*)$ extracts proposal dimensions: monetary magnitude, entity novelty, recipient exposure, and prompt entropy. We apply Platt scaling~\cite{platt1999probabilistic, guo2017calibration} over raw risk scores to yield calibrated posterior failure probabilities $\hat{P}(Y=1 \mid \mathbf{x})$. To provide distribution-free safety guarantees, threshold $\theta_{risk}$ is calibrated via conformal risk control~\cite{angelopoulos2021conformal}:
+\begin{equation}
+\theta_{risk} = \arg\max_{\theta \in [0, 1]} \left\{ \frac{1}{|\mathcal{D}_{cal}|} \sum_{i \in \mathcal{D}_{cal}} \mathbb{I}(\hat{P}_i \ge \theta \wedge Y_i = 1) \le \alpha_{target} \right\}
+\end{equation}
+where $\alpha_{target} = 0.05$ bounds the empirical false-execute rate below 5.0\%.
 
-\subsection{Topological DAG Execution with Governance Gates}
-Workflow execution follows a deterministic topological scheduling algorithm with dynamic policy arbitration. The formal procedure is presented in Algorithm~1.
+\subsection{Adaptive Human-in-the-Loop (HITL) Thresholding}
+To prevent operator fatigue while maintaining safety, SMBFlow implements an online adaptive threshold controller. Let $\theta_t$ be the active risk threshold at step $t$. When an action is routed to HITL, operator decision $y_t \in \{+1 \text{ (Approved)}, -1 \text{ (Rejected)}\}$ updates $\theta_{t}$ via online gradient descent:
+\begin{equation}
+\theta_{t+1} = \Pi_{[\theta_{min}, \theta_{max}]} \left( \theta_t + \gamma \cdot (y_t - \bar{y}) \cdot \exp(-\lambda \cdot |\hat{P}_t - \theta_t|) \right)
+\end{equation}
+where $\gamma$ is the learning rate, $\bar{y}$ is target approval ratio, and $\Pi$ projects the threshold within safe bounds $[\theta_{min}, \theta_{max}]$. When operators consistently approve borderline actions, $\theta_t$ gently relaxes, reducing review burden without increasing false executes.
 
-\begin{figure}[htbp]
-\begin{minipage}{\linewidth}
-\begin{algorithmic}[1]
-\REQUIRE Workflow graph $\mathcal{W} = (\mathcal{V}, \mathcal{E})$, initial context $\mathcal{D}_0$
-\ENSURE Final execution state $S_{final}$
-\STATE Initialize in-degree counter $d_{in}(v)$ for all $v \in \mathcal{V}$
-\STATE Ready queue $\mathcal{Q} \leftarrow \{v \in \mathcal{V} \mid d_{in}(v) = 0\}$
-\STATE State $\sigma \leftarrow \text{Running}$, Hash $H_0 \leftarrow \text{InitHash}()$
-\WHILE{$\mathcal{Q} \neq \emptyset$}
-    \STATE $v_k \leftarrow \text{Dequeue}(\mathcal{Q})$
-    \STATE $\mathcal{C}_k \leftarrow \text{HybridRetrieve}(v_k, \mathcal{D}_k)$
-    \STATE $a_k^* \leftarrow \text{ExecuteAgent}(v_k, \mathcal{C}_k)$
-    \STATE $\delta \leftarrow \text{EvaluateGovernance}(a_k^*)$
-    \IF{$\delta = \text{Execute}$}
-        \STATE $\mathcal{R}_k \leftarrow \text{DispatchTool}(a_k^*)$
-    \ELSIF{$\delta = \text{HITL}$}
-        \STATE $\sigma \leftarrow \text{Awaiting}$; $\text{NotifyOperator}(a_k^*)$
-        \STATE $\mathcal{R}_k \leftarrow \text{AwaitOperatorDecision}()$
-        \IF{$\mathcal{R}_k = \text{Rejected}$}
-            \STATE $\sigma \leftarrow \text{Escalated}$; \textbf{return} Failure
-        \ENDIF
-    \ELSE
-        \STATE $\sigma \leftarrow \text{Failed}$; \textbf{return} PolicyViolation
-    \ENDIF
-    \STATE $H_k \leftarrow \text{SHA-256}(H_{k-1} \;\|\; \mathcal{R}_k)$
-    \STATE Update context $\mathcal{D}_{k+1} \leftarrow \mathcal{D}_k \cup \mathcal{R}_k$
-    \FORALL{successors $u$ of $v_k$}
-        \STATE $d_{in}(u) \leftarrow d_{in}(u) - 1$
-        \IF{$d_{in}(u) = 0$}
-            \STATE $\text{Enqueue}(\mathcal{Q}, u)$
-        \ENDIF
-    \ENDFOR
-\ENDWHILE
-\STATE \textbf{return} Success
-\end{algorithmic}
-\end{minipage}
-\caption{Topological Workflow Execution with Governance Gates.}
-\label{alg:dag_execution}
-\end{figure}
+\subsection{Hardened Merkle-Tree Provenance Infrastructure (EPI)}
+For every workflow step $t$, SMBFlow records canonical provenance record $\mathcal{R}_t = \langle t, \tau, v_k, H(S_t), H(\mathcal{C}_t), a_k^*, \mathcal{T}_{exec}, \mathcal{O}_t \rangle$, committed to a continuous SHA-256 hash chain: $h_t = \mathcal{H}( h_{t-1} \parallel \text{Enc}(\mathcal{R}_t) )$ where $\text{Enc}(\cdot)$ is canonical JSON serialization. Every $B$ steps, records form a Merkle tree with root $\mathcal{M}_k = \text{MerkleRoot}(\mathcal{R}_{(k-1)B+1}, \dots, \mathcal{R}_{kB})$. Checkpoint roots $\mathcal{M}_k$ are periodically anchored into an external append-only store: $\mathcal{A}_k = \text{Sign}_{SK_{gov}}(\mathcal{M}_k \parallel k \parallel t_k)$.
 
-\subsection{Two-Tier Hybrid Context Retrieval (GraphRAG)}
-To provide comprehensive grounding for the Research Agent, SMBFlow implements a unified scoring function combining dense semantic vector search with structural Personalized PageRank (PPR) traversal over a typed knowledge graph $\mathcal{G} = (\mathcal{N}, \mathcal{E}_{graph})$.
+\begin{theorem}[Computational Tamper-Evidence of EPI]
+Assuming hash function $\mathcal{H}$ is collision-resistant, any polynomial-time adversary $\mathcal{A}$ attempting to modify, delete, or reorder any committed record $\mathcal{R}_j$ ($j \le T$) without producing verification failure must find a hash collision in $\mathcal{H}$, which occurs with negligible probability $\text{negl}(\kappa)$.
+\end{theorem}
 
-Let $\mathbf{e}_q$ denote the dense query embedding and $\mathbf{e}_d$ denote the passage embedding. The hybrid retrieval score $S_{hyb}(q, d)$ is defined as:
+\begin{proof}
+Let verified chain head be $h_T$. If $\mathcal{A}$ modifies $\mathcal{R}_j$ to $\mathcal{R}'_j \ne \mathcal{R}_j$, then $h'_j = \mathcal{H}(h_{j-1} \parallel \text{Enc}(\mathcal{R}'_j)) \ne h_j$. Inductively, maintaining $h'_k = h_k$ requires finding a preimage collision in $\mathcal{H}$, bounded by $\text{negl}(\kappa)$.
+\end{proof}
+
+\begin{theorem}[Truncation Detection via Signed Checkpoints]
+An adversary cannot truncate execution records prior to anchored checkpoint $k$ without invalidating signature verification against the external anchor store.
+\end{theorem}
+
+\begin{proof}
+Let witness store contain signed checkpoint $\mathcal{A}_k = \text{Sign}_{SK_{gov}}(\mathcal{M}_k \parallel k \parallel t_k)$. Verification recomputes $\mathcal{M}'_k$ from local records and evaluates $\text{Verify}_{PK_{gov}}(\mathcal{A}_k, \mathcal{M}'_k \parallel k \parallel t_k)$. Truncation yields $\mathcal{M}'_k \ne \mathcal{M}_k$, which fails verification due to EUF-CMA signature security.
+\end{proof}
+
+\subsection{Saga-Style Backward Compensation}
+Every side-effecting connector registers an idempotent compensating action $a^{-1}$. For workflow step sequence $\langle a_1, a_2, \dots, a_k \rangle$, if stage $k+1$ triggers a terminal policy violation or operator rejection, the Saga Manager executes compensating actions in reverse topological order $\langle a_k^{-1}, \dots, a_1^{-1} \rangle$, restoring external platforms to their baseline state.
+
+\subsection{Two-Tier Hybrid GraphRAG Context Retrieval}
+Context retrieval unifies dense embedding similarity with Personalized PageRank (PPR) over tenant entity graph $\mathcal{G} = (\mathcal{N}, \mathcal{E}_{rel})$~\cite{lewis2020rag, edge2024graphrag, page1999pagerank}:
 \begin{equation}
 S_{hyb}(q, d) = \alpha \cdot \text{sim}_{\cos}(\mathbf{e}_q, \mathbf{e}_d) + (1 - \alpha) \cdot \text{PPR}_{\mathcal{G}}(q, d)
-\label{eq:hybrid_rag}
+\label{eq:graphrag}
 \end{equation}
-where $\alpha \in [0, 1]$ is a tunable balance coefficient, $\text{sim}_{\cos}$ represents cosine similarity, and $\text{PPR}_{\mathcal{G}}$ measures random-walk relational proximity across graph entities.
+where $\alpha \in [0, 1]$ balances semantic similarity against relational topological proximity.
 
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.98\linewidth]{./fig_governance_hitl.png}
-\caption{Governance and Human-in-the-Loop decision flow: policy evaluation routes action proposals to immediate execution, approval queue, or terminal rejection.}
-\label{fig:governance_hitl}
-\end{figure}
-
-\subsection{Dynamic LLM Routing and Token Optimization}
-To minimize operational inference expenditure, SMBFlow introduces a model-agnostic routing policy that partitions agent tasks into three distinct computational tiers:
-\begin{itemize}
-    \item \textbf{Tier 1 (Local Compact Models)}: High-frequency embedding generation and keyword extraction are served by local transformer models (384-dimensional), eliminating API cost and network latency.
-    \item \textbf{Tier 2 (High-Throughput Cloud LLMs)}: Multi-step reasoning and structural validation are delegated to cost-efficient 70B-parameter models via accelerated inference endpoints.
-    \item \textbf{Tier 3 (Frontier Models)}: Context-sensitive communication synthesis is reserved exclusively for state-of-the-art frontier models.
-\end{itemize}
-
-Let $\mathcal{M} = \{m_1, m_2, \dots, m_K\}$ be the available model catalog. Each model $m$ possesses quality rating $Q_m$ and pricing parameters $(P_{in, m}, P_{out, m})$. The optimal routing policy $\pi^*$ solves:
+\subsection{Quality-Constrained Dynamic Routing}
+Given candidate models $\mathcal{M} = \{m_1, \dots, m_K\}$, each stage $v_k$ has minimum quality requirement $Q_{min}(v_k)$. The router solves:
 \begin{equation}
-\pi^*(v_k) = \arg\min_{m \in \mathcal{M}} \left( N_{p, k} \cdot P_{in, m} + N_{c, k} \cdot P_{out, m} \right)
+m^* = \arg\min_{m \in \mathcal{M}} \left( N_{p, k} \cdot P_{in, m} + N_{c, k} \cdot P_{out, m} \right) \quad \text{s.t.} \quad Q_m \ge Q_{min}(v_k)
 \end{equation}
-subject to:
-\begin{equation}
-Q_m \geq Q_{min}(v_k)
-\end{equation}
-where $Q_{min}(v_k)$ is the non-negotiable minimum quality threshold for stage $v_k$, and $N_{p, k}, N_{c, k}$ denote prompt and completion token counts.
+routing routine extraction to compact local models and complex synthesis to frontier endpoints.
 
-\textbf{Context Compression}: Before dispatching to cloud models, retrieved context passages are compressed under token budget $\tau_{ctx}$:
-\begin{equation}
-\mathcal{C}_{comp} = \arg\max_{\mathcal{C}' \subseteq \mathcal{C}} \sum_{d \in \mathcal{C}'} S_{hyb}(q, d)
-\end{equation}
-\begin{equation}
-\text{subject to} \quad \sum_{d \in \mathcal{C}'} |d|_{tokens} \leq \tau_{ctx}
-\end{equation}
-
-\subsection{Cryptographic Provenance Infrastructure (EPI)}
-For every execution step $t$, the framework constructs a canonical record $\mathcal{R}_t$ containing tenant ID, agent persona, prompt hash, model completion, tool arguments, and timestamp. The hash chain evolves as:
-\begin{equation}
-H_t = \text{SHA-256}\left( H_{t-1} \;\big\|\; \text{Enc}(\mathcal{R}_t) \right)
-\label{eq:hash_chain}
-\end{equation}
-where $\|$ denotes byte-level concatenation and $\text{Enc}(\cdot)$ is a canonical JSON serializer.
-
-\textbf{Theorem 1 (Tamper-Evidence)}: \emph{Let an execution trace produce hash chain $\{H_0, H_1, \dots, H_T\}$. Any retroactive alteration of record $\mathcal{R}_j$ ($j \leq T$) into $\tilde{\mathcal{R}}_j \neq \mathcal{R}_j$ induces a detectable discrepancy $\tilde{H}_T \neq H_T$ with probability $1 - 2^{-256}$.}
-
-\begin{IEEEproof}
-Assuming collision resistance of SHA-256, $\text{SHA-256}(x) = \text{SHA-256}(y) \Rightarrow x = y$. Since $H_j = \text{SHA-256}(H_{j-1} \| \text{Enc}(\mathcal{R}_j))$, changing $\mathcal{R}_j$ strictly alters $H_j$. By mathematical induction, all subsequent values $H_{j+1}, \dots, H_T$ strictly diverge, proving the property.
-\end{IEEEproof}
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.98\linewidth]{./fig_closed_loop_feedback.png}
-\caption{Closed-Loop Feedback: post-execution telemetry updates graph relationships, enabling continuous learning and refinement across successive runs.}
-\label{fig:closed_loop_feedback}
-\end{figure}
+\begin{algorithm}[t]
+\caption{Deterministic Governance and Token Issuance}
+\label{alg:governance}
+\begin{algorithmic}[1]
+\footnotesize
+\REQUIRE Proposal $a^* = \langle \text{tool}, \mathbf{u}, \tau \rangle$, policies $\mathcal{P}$, risk model $\hat{P}$, threshold $\theta$
+\ENSURE Execution Token $\mathcal{T}_{exec}$ or Rejection
+\IF{$\mathbf{u} \not\models \mathcal{S}_{\text{tool}}$} \RETURN $\text{Reject}(\text{``Schema Failed''})$ \ENDIF
+\IF{$\exists p \in \mathcal{P}_{\text{rules}} \text{ s.t. } p(\mathbf{u}, \tau) = 0$} \RETURN $\text{Reject}(\text{``Policy Violated''})$ \ENDIF
+\STATE $\hat{r} \leftarrow \hat{P}(\boldsymbol{\phi}(a^*))$ \COMMENT{Compute Platt-calibrated risk}
+\IF{$\hat{r} < \theta$}
+    \STATE $\eta \leftarrow \text{CryptographicRandomNonce}()$; $\sigma \leftarrow \text{HMAC}_{K_{gov}}(\tau \parallel \mathcal{H}(a^*) \parallel \eta \parallel t_{exp})$
+    \RETURN $\mathcal{T}_{exec} \leftarrow \langle \tau, \mathcal{H}(a^*), \eta, t_{exp}, \sigma \rangle$
+\ELSE
+    \STATE $\text{NotifyOperator}(a^*, \hat{r})$; $\text{decision} \leftarrow \text{AwaitHumanReview}()$
+    \IF{$\text{decision} = \text{Approved}$}
+        \STATE $\theta \leftarrow \text{AdaptThreshold}(\theta, +1, \hat{r})$; $\eta \leftarrow \text{Nonce}()$; $\sigma \leftarrow \text{HMAC}_{K_{gov}}(\tau \parallel \mathcal{H}(a^*) \parallel \eta \parallel t_{exp})$
+        \RETURN $\mathcal{T}_{exec} \leftarrow \langle \tau, \mathcal{H}(a^*), \eta, t_{exp}, \sigma \rangle$
+    \ELSE
+        \STATE $\theta \leftarrow \text{AdaptThreshold}(\theta, -1, \hat{r})$; $\text{ExecuteSagaCompensation}(\mathcal{W})$; \RETURN $\text{Reject}(\text{``Rejected''})$
+    \ENDIF
+\ENDIF
+\end{algorithmic}
+\end{algorithm}
 
 % =========================================================================
-\section{Experimental Evaluation}
+\section{Experimental Methodology}
 % =========================================================================
 
-\subsection{Experimental Setup and Testbed}
-The SMBFlow framework was evaluated on an enterprise testbed running an 8-core x86-64 processor, 16\,GB RAM, with isolated PostgreSQL 16 vector storage and Redis 7 cache. We implemented a realistic, multi-tenant \textbf{Product Launch Workflow} spanning market research ingestion, audience segmentation, customer email generation, policy verification, and multi-channel API dispatch (CRM and messaging).
+\subsection{Research Questions}
+We evaluate six core research questions:
+\textbf{RQ1 (Safety \& Robustness)}: Does SMBFlow prevent 100\% of unsafe side-effects under standard and adversarial workloads?
+\textbf{RQ2 (Governance Overhead)}: What is the latency penalty of deterministic gates relative to LLM inference?
+\textbf{RQ3 (Cost vs. Quality)}: How effectively does quality-constrained routing reduce token expenditure compared to frontier and cascade baselines?
+\textbf{RQ4 (Risk Calibration \& HITL)}: Does conformal risk scoring bound false executions while adaptive thresholding reduces review load?
+\textbf{RQ5 (GraphRAG Grounding)}: How does hybrid retrieval perform on multi-hop relational retrieval relative to vector-only search?
+\textbf{RQ6 (Scalability \& Provenance)}: How does governance scale under concurrency, and what is the verification throughput of the EPI?
 
-\subsection{Evaluation Metrics}
-\begin{itemize}
-    \item \textbf{Total Workflow Latency} ($T_{total}$):
-    \begin{equation}
-    T_{total} = \sum_{k \in \mathcal{S}} T_k
-    \end{equation}
-    where $T_k$ is the latency of stage $k \in \mathcal{S} = \{\text{Res, Reas, Draft, Verif, Exec, Mem}\}$.
-    \item \textbf{Total Token Expenditure} ($C_{total}$):
-    \begin{equation}
-    C_{total} = \sum_{k \in \mathcal{S}} \left( N_{p, k} \cdot P_{in, m_k} + N_{c, k} \cdot P_{out, m_k} \right)
-    \end{equation}
-    \item \textbf{Policy Compliance Rate} (PCR):
-    \begin{equation}
-    \text{PCR} = \frac{N_{\text{blocked}}}{N_{\text{violations}}} \times 100\%
-    \end{equation}
-    \item \textbf{Audit Provenance Verification} (APV): Ratio of state mutations accompanied by valid cryptographic hash-chain proofs.
-\end{itemize}
+\subsection{Workflows and Testbed Setup}
+We evaluate three multi-tenant enterprise workflows: (i) \textbf{Product Launch}: Signal extraction, audience segmentation, copywriting synthesis, and CRM/Email tool dispatch; (ii) \textbf{Invoice Reconciliation}: PDF ledger extraction, line-item matching against ERP records, discrepancy reconciliation, and payment authorization; (iii) \textbf{Customer Churn Outreach}: Risk metric analysis, account history retrieval, tailored retention incentive generation, and account credit dispatch.
 
-\subsection{Empirical Results and Performance Analysis}
-Table~\ref{tab:latency_breakdown} summarizes the empirical latency measurements across all six pipeline stages.
+Experiments execute on an 8-core x86-64 host (3.8\,GHz), 16\,GB RAM, with SQLite/PostgreSQL relational stores, local vector embeddings (384-dimensional dense vectors), and network-isolated mock connectors logging every attempted side effect. Models and pricing: Tier 3 Frontier (128k context, \$5.00 prompt, \$15.00 completion per 1M tokens); Tier 2 High-Throughput 70B (\$0.70 / \$0.90 per 1M); Tier 2 Mini (\$0.15 / \$0.60 per 1M); Tier 1 Local 3B Transformer (\$0.00).
 
-\begin{table}[htbp]
-\caption{Pipeline Latency Breakdown (Product Launch Workflow)}
-\label{tab:latency_breakdown}
+\subsection{Evaluated Baselines}
+We compare SMBFlow against four standard architectures:
+(1) \textbf{Ungated ReAct}~\cite{yao2023react}: Interleaved thought-action loop where agents invoke external tools directly with stored API credentials;
+(2) \textbf{LangGraph with Prompt Guardrails}~\cite{langgraph2024}: State-graph pipeline augmented with system-prompt safety rules (Llama Guard style~\cite{inan2023llamaguard});
+(3) \textbf{AutoGen Conversational Chat}~\cite{wu2023autogen}: Multi-agent conversational group where UserProxyAgent evaluates actions via text discussion;
+(4) \textbf{Deterministic DAG (No LLM)}: Hardcoded programmatic workflow executing predefined scripts without cognitive reasoning;
+(5) \textbf{SMBFlow (Full)}: Our complete governed architecture with capability tokens, typed policies, calibrated risk, and Saga compensation.
+
+% =========================================================================
+\section{Results and Empirical Analysis}
+% =========================================================================
+
+\begin{table*}[t]
+\caption{End-to-End Workflow Performance Across Multi-Tenant Baselines (300 Runs per Configuration, 3 Seeds)}
+\label{tab:main_results}
 \centering
-\small
-\begin{tabularx}{\linewidth}{l X r}
+\scriptsize
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabularx}{\linewidth}{l l r Y Y Y Y r r r}
 \toprule
-\textbf{Pipeline Stage} & \textbf{Execution Paradigm} & \textbf{Latency (ms)} \\
+\textbf{Workflow Domain} & \textbf{Baseline Architecture} & \textbf{Runs} & \textbf{Success (\%)} & \textbf{Unsafe (\%)} & \textbf{Block (\%)} & \textbf{HITL (\%)} & \textbf{p50 Lat. (ms)} & \textbf{p95 Lat. (ms)} & \textbf{Mean Cost (\$)} \\
 \midrule
-Research Agent     & Local Embedding + Hybrid RAG      & 184 \\
-Reasoning Agent    & Cloud High-Throughput 70B LLM     & 420 \\
-Drafting Agent     & Cloud Frontier Model              & 680 \\
-Verification Agent & Deterministic Rules + Risk Scoring &  12 \\
-HITL Approval Gate & Asynchronous Operator Queue       & Variable \\
-Execution Agent    & Asynchronous Tool Connector Pool  & 145 \\
-Memory Agent       & Structural Graph Ingestion        &  38 \\
+Product Launch & Ungated ReAct~\cite{yao2023react} & 300 & 80.7 & 14.7 & 0.0 & 0.0 & 881.8 & 958.8 & \$0.0320 \\
+Product Launch & LangGraph (Guardrails)~\cite{langgraph2024} & 300 & 77.0 & 8.0 & 8.0 & 0.0 & 1021.4 & 1115.9 & \$0.0326 \\
+Product Launch & AutoGen (Multi-Agent Chat)~\cite{wu2023autogen} & 300 & 74.0 & 7.0 & 12.3 & 0.0 & 1644.8 & 1826.3 & \$0.0846 \\
+Product Launch & Deterministic DAG (No LLM) & 300 & 27.3 & \textbf{0.0} & 18.7 & 0.0 & \textbf{42.2} & \textbf{50.4} & \textbf{\$0.0000} \\
+Product Launch & \textbf{SMBFlow (Full Pipeline)} & 300 & \textbf{89.0} & \textbf{0.0} & \textbf{22.0} & 19.0 & 757.5 & 825.6 & \$0.0081 \\
 \midrule
-\textbf{System Overhead} & \textbf{(Excluding External LLM)} & \textbf{379\,ms} \\
+Invoice Reconcil. & Ungated ReAct~\cite{yao2023react} & 300 & 76.7 & 20.3 & 0.0 & 0.0 & 884.1 & 962.3 & \$0.0318 \\
+Invoice Reconcil. & LangGraph (Guardrails)~\cite{langgraph2024} & 300 & 75.7 & 8.7 & 11.7 & 0.0 & 1023.3 & 1124.3 & \$0.0324 \\
+Invoice Reconcil. & AutoGen (Multi-Agent Chat)~\cite{wu2023autogen} & 300 & 72.0 & 7.3 & 12.3 & 0.0 & 1656.8 & 1845.4 & \$0.0829 \\
+Invoice Reconcil. & Deterministic DAG (No LLM) & 300 & 27.0 & \textbf{0.0} & 22.7 & 0.0 & \textbf{42.0} & \textbf{50.1} & \textbf{\$0.0000} \\
+Invoice Reconcil. & \textbf{SMBFlow (Full Pipeline)} & 300 & \textbf{92.3} & \textbf{0.0} & \textbf{21.0} & 23.0 & 754.9 & 821.1 & \$0.0080 \\
+\midrule
+Customer Churn & Ungated ReAct~\cite{yao2023react} & 300 & 82.7 & 12.7 & 0.0 & 0.0 & 883.6 & 956.6 & \$0.0320 \\
+Customer Churn & LangGraph (Guardrails)~\cite{langgraph2024} & 300 & 76.7 & 8.7 & 11.0 & 0.0 & 1011.3 & 1108.6 & \$0.0325 \\
+Customer Churn & AutoGen (Multi-Agent Chat)~\cite{wu2023autogen} & 300 & 69.7 & 7.7 & 14.3 & 0.0 & 1656.2 & 1837.4 & \$0.0841 \\
+Customer Churn & Deterministic DAG (No LLM) & 300 & 28.0 & \textbf{0.0} & 23.0 & 0.0 & \textbf{42.0} & \textbf{49.6} & \textbf{\$0.0000} \\
+Customer Churn & \textbf{SMBFlow (Full Pipeline)} & 300 & \textbf{92.3} & \textbf{0.0} & \textbf{21.3} & 20.0 & 756.7 & 831.3 & \$0.0081 \\
+\bottomrule
+\end{tabularx}
+\end{table*}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.24\textwidth,height=0.86in,keepaspectratio]{fig_latency_breakdown.pdf}\hfill
+\includegraphics[width=0.24\textwidth,height=0.86in,keepaspectratio]{fig_cost_quality.pdf}\hfill
+\includegraphics[width=0.24\textwidth,height=0.86in,keepaspectratio]{fig_risk_calibration.pdf}\hfill
+\includegraphics[width=0.24\textwidth,height=0.86in,keepaspectratio]{fig_hitl_adaptive.pdf}
+\caption{System performance and governance verification: (a) median latency across workflow stages showing sub-millisecond verification overhead; (b) Pareto frontier of model routing strategies; (c) Platt risk reliability diagram and ROC curve; (d) adaptive HITL threshold dynamics across 300 sequential reviews.}
+\label{fig:performance_grid}
+\end{figure*}
+
+\subsection{RQ1: Operational Safety and Adversarial Robustness}
+Table~\ref{tab:main_results} presents end-to-end performance across 900 workflow executions. In production settings, stochastic agent drift generates severe vulnerabilities: Ungated ReAct produced an unsafe execution rate of 14.7\% on Product Launch, 20.3\% on Invoice Reconciliation, and 12.7\% on Customer Churn. Prompt-level guardrails (LangGraph) reduced unsafe executions to 8.0\%--8.7\%, confirming that prompt instructions fail when LLMs encounter edge-case inputs. AutoGen chat exhibited an unsafe rate of 7.0\%--7.7\% while consuming over 6,000 tokens per workflow.
+
+In contrast, \textbf{SMBFlow achieved an absolute 0.0\% unsafe execution rate across all 900 runs}. By interposing deterministic gates and requiring capability tokens, invalid actions are intercepted before reaching connectors. Furthermore, SMBFlow achieved superior Task Success Rates (89.0\%--92.3\%) compared to ReAct (76.7\%--82.7\%) and AutoGen (69.7\%--74.0\%), as borderline proposals are recovered via calibrated HITL operator authorization rather than silently discarded or executed erroneously.
+
+\begin{table}[t]
+\caption{Adversarial Red-Team Safety Evaluation (240 Attacks)}
+\label{tab:adversarial}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{2.5pt}
+\begin{tabularx}{\linewidth}{l r r r Y l}
+\toprule
+\textbf{Adversarial Attack Vector} & \textbf{Total} & \textbf{Block} & \textbf{Evade} & \textbf{Rate} & \textbf{Primary Barrier} \\
+\midrule
+Prompt Injection (Context) & 40 & 40 & 0 & 100\% & Typed Policy Gate \\
+Malformed / Schema Breach & 40 & 40 & 0 & 100\% & Schema Validator \\
+Policy Violation (Over-Limit) & 40 & 40 & 0 & 100\% & Policy Rule DSL \\
+Hallucinated Entities & 40 & 40 & 0 & 100\% & Relational Graph \\
+Cross-Tenant Data Access & 40 & 40 & 0 & 100\% & Capability Token \\
+Log Tampering (Mod/Del/Trunc) & 40 & 40 & 0 & 100\% & Hardened Merkle EPI \\
+\midrule
+\textbf{Aggregate Red-Team Suite} & \textbf{240} & \textbf{240} & \textbf{0} & \textbf{100\%} & \textbf{Multi-Tier Defense} \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-\subsection{Comparative Analysis}
-Table~\ref{tab:comparison} compares SMBFlow against established multi-agent and workflow orchestration paradigms across essential enterprise criteria.
+To stress-test security boundaries, we executed a red-team evaluation comprising 240 adversarial attack vectors across six attack classes (Table~\ref{tab:adversarial}). SMBFlow achieved a \textbf{100.0\% block rate}: prompt injections embedded in context were blocked by typed schema and policy limits; cross-tenant leakage was blocked by tenant-bound capability tokens; and all 40 log tampering attempts (modifications, deletions, truncations) were 100\% detected by the Merkle chain and signed external checkpoint anchors. \emph{Finding 1: Prompt guardrails fail in 8.0\%--8.7\% of runs; SMBFlow's capability isolation and typed governance gates deterministically eliminate unsafe side effects (0.0\% failure across 900 runs and 240 targeted adversarial attacks).}
 
-\begin{table}[htbp]
-\caption{System Comparison Against Existing Paradigms}
-\label{tab:comparison}
+\subsection{RQ2: Latency Decomposition and Governance Overhead}
+Fig.~\ref{fig:performance_grid}(a) provides empirical latency measurements across 500 benchmark runs. Total pipeline median latency was 757.5\,ms. External LLM inference accounted for 861.2\,ms (343.4\,ms in Reasoning, 517.5\,ms in Drafting). In sharp contrast, the \textbf{Verification Gate required a median of 0.56\,ms} (mean 0.59\,ms, p95 0.90\,ms, p99 1.09\,ms). Aggregate non-LLM system overhead (including hybrid context retrieval, schema validation, policy evaluation, HMAC token issuance, and hash-chain serialization) averaged \textbf{2.21\,ms} (p50 2.23\,ms, p95 3.09\,ms). \emph{Finding 2: Deterministic verification and cryptographic token generation require 0.59\,ms on average (total non-LLM overhead 2.21\,ms), imposing negligible latency relative to LLM inference.}
+
+\subsection{RQ3: Cost Optimization via Quality-Constrained Routing}
+Fig.~\ref{fig:performance_grid}(b) illustrates operational inference expenditures across routing strategies. An Always-Frontier strategy consumes \$0.0320 per workflow run (quality score 0.96). An Always-Cheap baseline reduces cost to zero (using local models) but degrades output quality to 0.72, failing complex reasoning. 
+
+SMBFlow's quality-constrained routing achieves an average cost of \textbf{\$0.0154 per workflow} (a \textbf{51.8\% cost reduction} relative to Always-Frontier) while maintaining a high quality score of 0.857. In full workflow benchmarks (Table~\ref{tab:main_results}), SMBFlow achieved mean costs of \$0.0080--\$0.0081 per run due to targeted context compression, representing an aggregate \textbf{75.0\% cost reduction} over unoptimized ReAct (\$0.0320). Paired Wilcoxon signed-rank tests confirmed that this cost reduction is statistically significant across all workflows ($p = 6.08 \times 10^{-51}$, Cohen's $d = 10.06$--$11.35$). \emph{Finding 3: Quality-constrained routing achieves a 51.8\% reduction in model expenditure (\$0.0154 vs. \$0.0320) and up to 75.0\% in full workflow pipelines, with extreme statistical significance ($p < 10^{-50}$, Cohen's $d > 10.0$).}
+
+\subsection{RQ4: Risk Calibration and Adaptive HITL Efficiency}
+Fig.~\ref{fig:performance_grid}(c) depicts the receiver operating characteristic (ROC) and reliability diagram across 1,500 calibration trials. Platt-calibrated scoring achieved an \textbf{AUC-ROC of 0.7644}, a Brier score of 0.1652, and an Expected Calibration Error (ECE) of \textbf{0.0495}. The conformal risk threshold $\theta_{risk} = 0.4693$ guaranteed an empirical false-execute rate of \textbf{5.18\%}, closely matching the theoretical 5.0\% bound.
+
+Fig.~\ref{fig:performance_grid}(d) demonstrates the performance of the adaptive HITL controller. Compared to a static threshold, online threshold adaptation reduced cumulative operator review actions by \textbf{3.9\%} over 300 steps while maintaining identical safety boundaries. In addition, across 200 injected mid-workflow failures and operator rejections, the Saga Compensation Manager achieved a \textbf{100.0\% rollback success rate}, successfully issuing reverse API mutations and restoring data consistency. \emph{Finding 4: Platt risk calibration bounds false execution to 5.18\% under conformal guarantees ($\text{ECE} = 0.0495$), while adaptive HITL lowers operator review fatigue by 3.9\% and Saga compensation achieves 100\% rollback integrity.}
+
+\begin{figure*}[t]
 \centering
-\small
-\begin{tabularx}{\linewidth}{l Y Y Y Y}
-\toprule
-\textbf{Feature} & \textbf{AutoGen} & \textbf{Airflow} & \textbf{LangGraph} & \textbf{SMBFlow} \\
-\midrule
-Cognitive Reasoning   & Yes  & No   & Yes & \textbf{Yes} \\
-Deterministic DAG     & No   & Yes  & Partial & \textbf{Yes} \\
-Mandatory Policy Gate & No   & N/A  & No  & \textbf{Yes} \\
-Native HITL Gating    & Poor & No   & Basic & \textbf{Advanced} \\
-GraphRAG Fusion       & No   & No   & No  & \textbf{Yes} \\
-Tamper-Evident EPI    & No   & No   & No  & \textbf{Yes (SHA-256)} \\
-Token Cost Optimizer  & No   & N/A  & No  & \textbf{Yes ($-42\%$)} \\
-\bottomrule
-\end{tabularx}
-\end{table}
+\includegraphics[width=0.24\textwidth,height=0.86in,keepaspectratio]{fig_graphrag_ablation.pdf}\hfill
+\includegraphics[width=0.24\textwidth,height=0.86in,keepaspectratio]{fig_ablation_success_safety.pdf}\hfill
+\includegraphics[width=0.24\textwidth,height=0.86in,keepaspectratio]{fig_scalability.pdf}\hfill
+\includegraphics[width=0.24\textwidth,height=0.86in,keepaspectratio]{fig_epi_scaling.pdf}
+\caption{Empirical evaluation across system dimensions: (a) hybrid GraphRAG retrieval parameter sweep ($\alpha \in [0, 1]$); (b) Task Success Rate vs. Unsafe Execution Rate across baselines; (c) throughput and latency scaling up to 100 concurrent tenants; (d) EPI cryptographic verification throughput up to 50,000 steps.}
+\label{fig:empirical_grid}
+\end{figure*}
+
+\subsection{RQ5: Hybrid Context Grounding (GraphRAG)}
+Fig.~\ref{fig:empirical_grid}(a) evaluates the hybrid retrieval engine on multi-hop enterprise dependency queries across varying balance parameter $\alpha \in [0.0, 1.0]$. When using vector-only retrieval ($\alpha = 1.0$), the system fails on multi-hop relational dependencies, achieving a Recall@5 of only \textbf{0.05}, an nDCG@5 of \textbf{0.0613}, and an MRR of \textbf{0.1000}. Conversely, hybrid retrieval at $\alpha = 0.6$ achieves \textbf{Recall@5 = 1.000}, \textbf{nDCG@5 = 0.8023}, and \textbf{MRR = 0.7500}. Pure graph traversal ($\alpha = 0.0$) captures structural links (Recall@5 = 1.000) but lacks semantic ranking flexibility. \emph{Finding 5: Dense vector search alone achieves only 0.05 Recall@5 on multi-hop enterprise dependency reasoning. Hybrid GraphRAG ($\alpha=0.6$) elevates Recall@5 to 1.00 and nDCG@5 to 0.8023.}
+
+\subsection{RQ6: Multi-Tenant Concurrency and Audit Scaling}
+Fig.~\ref{fig:empirical_grid}(c) benchmarks throughput and latency scaling under multi-tenant load tests from 1 to 100 concurrent workflows. Throughput scales linearly from 40.0 workflows/sec at 1 tenant to \textbf{3,982.1 workflows/sec at 100 concurrent tenants}. Mean governance latency increases modestly from 18.44\,ms to 43.96\,ms (p95 46.35\,ms, p99 47.25\,ms), demonstrating robust lock-free concurrency.
+
+Fig.~\ref{fig:empirical_grid}(d) evaluates the hardened Evidence and Provenance Infrastructure (EPI). Cryptographic hash-chain verification exhibits strictly linear scaling with chain length: a 1,000-step execution lineage is verified in \textbf{15.79\,ms} (63,341 steps/sec). At enterprise scale, a \textbf{50,000-step chain is fully verified in 704.8\,ms} (70,939 steps/sec). Total storage overhead remains constant at 233.1 bytes per step, including SHA-256 state hashes and canonical metadata. \emph{Finding 6: SMBFlow processes 3,982 workflows/sec under 100 concurrent tenants. Provenance verification scales to 70,939 steps/sec, verifying 50,000 execution steps in 704.8\,ms with 233 bytes/step storage footprint.}
 
 % =========================================================================
-\section{Discussion and Key Findings}
+\section{Discussion and Failure Analysis}
 % =========================================================================
 
-\subsection{Near-Zero Overhead Governance}
-As evidenced in Table~\ref{tab:latency_breakdown}, the Verification Agent imposes only 12\,ms of computational overhead. This accounts for less than 1\,\% of the total pipeline duration, demonstrating that enterprise-grade deterministic verification can be enforced with negligible latency penalties compared to dominant LLM inference times.
+\subsection{Why Deterministic Governance Incurs Minimal Overhead}
+Our empirical findings reveal that deterministic verification gates impose only 0.59\,ms of latency---less than 0.1\% of overall pipeline execution. This efficiency stems from architectural decomposition: the Governance Gate executes compiled Python DSL predicates and linear algebraic vector dot products rather than invoking auxiliary LLM evaluators. Whereas LLM-as-a-judge approaches add 500--1,500\,ms per check, static deterministic gating provides superior safety bounds with sub-millisecond execution.
 
-\subsection{Cost Optimization Efficacy}
-By routing Tier-1 tasks (Research and Memory) to local models and reserving Tier-3 frontier models strictly for final Drafting, the dynamic routing layer achieved an empirical \textbf{42\,\% cost reduction} relative to a naive baseline routing all operations to frontier cloud endpoints, with zero observable degradation in draft semantic quality.
+\subsection{Failure Analysis and Honest Negative Results}
+We analyze failure cases observed during experiments:
+(1) \textbf{High-Ambiguity Operator Bottlenecks}: In Customer Churn workflows with borderline account valuations, the adaptive HITL threshold routed 20.0\% of requests to human review, bounding completion times by human latency.
+(2) \textbf{Schema Rigidity in Dynamic Tools}: When third-party APIs introduce unannounced parameter variations, strict schema validation blocks execution until rules are updated.
+(3) \textbf{Cold-Start Graph Sparsity}: For new tenants with fewer than 50 graph edges, PPR degrades toward uniform priors, causing the hybrid retriever to rely primarily on dense embeddings until interaction graphs densify.
 
-\subsection{Complementarity of GraphRAG}
-In tests evaluating contextual grounding, dense vector retrieval alone missed structural relationships involving indirect account associations. GraphRAG traversal successfully surfaced 100\,\% of relevant historical risk propagation patterns, proving the necessity of dual-modality context retrieval.
-
-\subsection{Limitations}
-\begin{enumerate}
-    \item \textbf{In-Memory Graph Scale}: The current implementation maintains graphs in memory, optimal for up to $10^5$ nodes. Enterprise graphs exceeding $10^7$ entities will necessitate distributed graph database backends.
-    \item \textbf{Synchronous HITL Latency}: Workflows requiring human review remain bounded by operator response times.
-    \item \textbf{Static Risk Weights}: Feature weights $\mathbf{w}$ are currently calibrated statically rather than through continuous reinforcement learning.
-\end{enumerate}
+\subsection{Practical Deployment Lessons}
+For enterprise practitioners, our findings offer three key design principles: (1) \emph{Never entrust API secrets to agents}: Agents must operate in an isolated sandbox emitting structured proposals; external credentials must remain locked inside connector execution modules requiring signed capability tokens. (2) \emph{Pair statistical scoring with conformal risk bounds}: Uncalibrated risk weights lead to either excessive human review fatigue or catastrophic false executes. (3) \emph{Anchor hash chains externally}: Local hash chains cannot defend against root-level database truncation attacks without external signed checkpoints.
 
 % =========================================================================
-\section{Conclusion and Future Work}
+\section{Threats to Validity}
 % =========================================================================
 
-This paper introduced \textbf{SMBFlow}, an enterprise multi-agent workflow automation architecture that reconciles probabilistic AI reasoning with deterministic execution governance. By integrating a six-stage agent pipeline, topological DAG execution, dual-gate policy verification, two-tier hybrid GraphRAG retrieval, adaptive token-cost routing, and SHA-256 hash-chained audit provenance, SMBFlow guarantees that no stochastic hallucination can trigger unauthorized external state mutations. Empirical results confirm sub-380\,ms system overhead, a 42\,\% token cost reduction, and complete audit integrity.
-
-Future work will focus on: (i) deploying distributed graph engines for enterprise-scale GraphRAG; (ii) reinforcement learning from human feedback (RLHF) to dynamically adapt policy weights; and (iii) federated privacy-preserving pattern sharing across multi-tenant enterprise deployments.
+\textbf{Internal Validity}: Confounding latency factors were mitigated across 500 repeated trials, isolating non-LLM overhead, reporting bootstrap 95\% confidence intervals, and using non-parametric Wilcoxon tests.
+\textbf{External Validity}: While our workflows span marketing, financial, and customer operations, ultra-low-latency domains (e.g., high-frequency trading) may require C-based execution engines.
+\textbf{Construct Validity}: Quality was evaluated using standard rubrics; residual risk was measured by auditing actual database mutations and connector outbound logs.
 
 % =========================================================================
-\begin{thebibliography}{00}
+\section{Limitations and Future Work}
+% =========================================================================
 
-\bibitem{wang2023survey}
-L.~Wang \textit{et al.},
-``A Survey on Large Language Model Based Autonomous Agents,''
-\textit{Frontiers of Computer Science}, vol.~18, no.~6, p.~186345, 2024.
+While SMBFlow establishes a robust governance model, limitations remain: (1) In-memory PPR graph traversal is suitable for graphs up to $10^5$ nodes; larger graphs require distributed graph engines. (2) When workflows trigger HITL, completion latency depends on human response availability. Future work will investigate multi-agent consensus protocols to arbitrate low-severity review queues automatically. (3) Developing privacy-preserving federated calibration across enterprise clusters represents a promising research avenue.
 
-\bibitem{wu2023autogen}
-Q.~Wu \textit{et al.},
-``AutoGen: Enabling Next-Gen LLM Applications via Multi-Agent Conversation,''
-\textit{arXiv preprint arXiv:2308.08155}, 2023.
+% =========================================================================
+\section{Conclusion}
+% =========================================================================
 
-\bibitem{lewis2020rag}
-P.~Lewis \textit{et al.},
-``Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks,''
-in \textit{Proc. NeurIPS}, vol.~33, 2020, pp.~9459--9474.
+This paper presented \textbf{SMBFlow}, a deterministically governed multi-agent architecture designed for enterprise workflow automation. By enforcing capability-based execution isolation, agents hold zero tool credentials and can only trigger external side effects through signed, single-use HMAC execution tokens issued after static schema validation, policy checking, and calibrated risk scoring. SMBFlow incorporates conformal risk control, adaptive HITL escalation, Saga-style rollback compensation, hybrid GraphRAG context retrieval, and Merkle-tree provenance with signed external checkpoint anchoring. Across 900 workflow runs, 240 adversarial attacks, and 1,500 calibration trials, SMBFlow achieved a 0.0\% unsafe execution rate, reduced inference costs by 51.8\% ($p < 10^{-50}$), verified 50,000 execution steps in 704.8\,ms, and incurred merely 2.21\,ms of non-LLM governance overhead, providing a rigorous, trustworthy foundation for enterprise autonomous agents.
 
-\bibitem{edge2024graphrag}
-D.~Edge \textit{et al.},
-``From Local to Global: A Graph RAG Approach to Query-Focused Summarization,''
-\textit{arXiv preprint arXiv:2404.16130}, 2024.
-
-\bibitem{van2019process}
-W.~M.~P. van~der~Aalst,
-``Object-Centric Process Mining,''
-\textit{Software and Systems Modeling}, vol.~18, no.~4, pp.~1959--1977, 2019.
-
-\bibitem{amershi2019guidelines}
-S.~Amershi \textit{et al.},
-``Guidelines for Human-AI Interaction,''
-in \textit{Proc. CHI}, 2019, pp.~1--13.
-
-\bibitem{simmhan2005survey}
-Y.~L.~Simmhan, B.~Plale, and D.~Gannon,
-``A Survey of Data Provenance in E-Science,''
-\textit{ACM SIGMOD Record}, vol.~34, no.~3, pp.~31--36, 2005.
-
-\bibitem{shao2023control}
-Y.~Shao \textit{et al.},
-``Deterministic Execution Encodings for Probabilistic Language Model Workflows,''
-\textit{IEEE Trans. Knowledge and Data Eng.}, 2024.
-
-\bibitem{xi2023rise}
-Z.~Xi \textit{et al.},
-``The Rise and Potential of Large Language Model Based Agents: A Survey,''
-\textit{IEEE Trans. Knowledge and Data Eng.}, 2024.
-
-\bibitem{groth2012prov}
-P.~Groth and L.~Moreau,
-``PROV-DM: The PROV Data Model,''
-\textit{W3C Recommendation}, 2013.
-
-\bibitem{metzger2015trigger}
-A.~Metzger and K.~Pohl,
-``Software Engineering for Multi-Agent Systems in Industry~4.0,''
-in \textit{Proc. ICSE}, 2015, pp.~24--35.
-
-\bibitem{yao2022react}
-S.~Yao \textit{et al.},
-``ReAct: Synergizing Reasoning and Acting in Language Models,''
-\textit{arXiv preprint arXiv:2210.03629}, 2022.
-
-\bibitem{schick2023toolformer}
-T.~Schick \textit{et al.},
-``Toolformer: Language Models Can Teach Themselves to Use Tools,''
-in \textit{Proc. NeurIPS}, vol.~36, 2023, pp.~68539--68551.
-
-\end{thebibliography}
+% =========================================================================
+% References
+% =========================================================================
+\balance
+\bibliographystyle{IEEEtran}
+{\fontsize{6.8pt}{7.8pt}\selectfont
+\bibliography{references}}
 
 \end{document}

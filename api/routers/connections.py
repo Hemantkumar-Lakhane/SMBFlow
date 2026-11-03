@@ -169,6 +169,12 @@ async def get_google_oauth_authorize_url(
             "https://www.googleapis.com/auth/drive.file",
             "https://www.googleapis.com/auth/drive.readonly",
         ],
+        "meet": [
+            "https://www.googleapis.com/auth/meetings.space.readonly",
+        ],
+        "google_meet": [
+            "https://www.googleapis.com/auth/meetings.space.readonly",
+        ],
     }
 
     resolved_scopes = set()

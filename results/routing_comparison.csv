@@ -1,0 +1,5 @@
+Strategy,Total_Cost_USD,Cost_Per_Workflow_USD,p50_Latency_ms,Avg_Quality,Savings_vs_Frontier_Pct
+Always-Frontier,31.95,0.03195,2560.0,0.96,0.0
+Always-Cheap,0.0,0.0,180.0,0.72,100.0
+Cascade (FrugalGPT),7.219,0.00722,1104.6,0.869,77.41
+SMBFlow Constrained,15.39,0.01539,1215.0,0.857,51.83

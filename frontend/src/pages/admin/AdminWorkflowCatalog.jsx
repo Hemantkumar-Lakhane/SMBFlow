@@ -4,7 +4,9 @@ import {
   Layers, Plus, RefreshCw, Search, XCircle,
   Edit2, ToggleLeft, ToggleRight, Tag, Plug, Globe, Building2,
   Sparkles, ArrowRight, Play, CheckCircle2, ShieldCheck,
-  Activity, ArrowUpRight, Filter
+  Activity, ArrowUpRight, Filter, Trash2, AlertTriangle,
+  CheckCircle, ExternalLink, Shield, Cpu, Terminal, PlayCircle, Loader2,
+  Sliders, Info, FileText
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { Modal, Button, Input, Select, EmptyState } from '../../components/ui'
@@ -48,9 +50,12 @@ const CATEGORY_STYLES = {
 }
 
 const STATUS_COLORS = {
-  active:     'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20',
-  beta:       'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20',
-  deprecated: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20',
+  active:               'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20',
+  beta:                 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20',
+  requires_integration: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30',
+  disabled:             'bg-slate-500/15 text-slate-600 dark:text-slate-400 border border-slate-500/20',
+  draft:                'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20',
+  deprecated:           'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20',
 }
 
 const SCOPE_COLORS = {
@@ -59,7 +64,7 @@ const SCOPE_COLORS = {
 }
 
 const CATEGORIES = ['general','productivity','marketing','healthcare','finance','sales','operations','compliance']
-const STATUSES   = ['active','beta','deprecated']
+const STATUSES   = ['active','beta','requires_integration','disabled','draft','deprecated']
 const SCOPES     = ['GLOBAL','INDUSTRY']
 const INDUSTRIES = ['saas','healthcare','finance','real_estate','retail','general']
 
@@ -178,7 +183,7 @@ function WorkflowModal({ open, onClose, api, existing, onDone }) {
           <Select label="Category" value={form.category} onChange={e => set('category', e.target.value)}
             options={CATEGORIES.map(c => ({ value: c, label: c.charAt(0).toUpperCase()+c.slice(1) }))} />
           <Select label="Status" value={form.status} onChange={e => set('status', e.target.value)}
-            options={STATUSES.map(s => ({ value: s, label: s.charAt(0).toUpperCase()+s.slice(1) }))} />
+            options={STATUSES.map(s => ({ value: s, label: s.replace('_', ' ').charAt(0).toUpperCase()+s.replace('_', ' ').slice(1) }))} />
           <Input label="Version" value={form.version} onChange={e => set('version', e.target.value)} placeholder="1.0.0" />
         </div>
 
@@ -234,6 +239,472 @@ function WorkflowModal({ open, onClose, api, existing, onDone }) {
   )
 }
 
+// ── Admin Workflow Testing Center Modal ───────────────────────────────────────
+function WorkflowTestCenterModal({ open, onClose, workflow, api }) {
+  const [testMode, setTestMode] = useState('unit') // 'unit' | 'integration' | 'real_provider'
+  const [safePreview, setSafePreview] = useState(true)
+  const [connections, setConnections] = useState([])
+  const [loadingConns, setLoadingConns] = useState(false)
+  const [running, setRunning] = useState(false)
+  const [result, setResult] = useState(null)
+  const [error, setError] = useState('')
+
+  // Specialized or generic test inputs
+  const [inputMeetUrl, setInputMeetUrl] = useState('https://meet.google.com/abc-defg-hij')
+  const [inputTranscript, setInputTranscript] = useState(
+    'Hemantkumar: Welcome everyone. We are here to review the SMBFlow architecture and finalize the Google Meet transcript pipeline.\nSarah: Sounds great. I commit to completing the integration tests by Tuesday.\nAlex: I will review the PR by Wednesday afternoon.\nHemantkumar: Agreed. Next meeting is Thursday.'
+  )
+  const [inputEmailSubject, setInputEmailSubject] = useState('Quarterly Product Roadmap Review & Next Steps')
+  const [inputEmailBody, setInputEmailBody] = useState('Team, please review the attached architecture proposal and submit feedback by tomorrow at 5 PM.')
+  const [inputJson, setInputJson] = useState('{\n  "sample_client": "Acme Corp",\n  "urgency": "high"\n}')
+
+  // Load real connections when modal opens
+  useEffect(() => {
+    if (!open) {
+      setResult(null)
+      setError('')
+      return
+    }
+    async function fetchConnections() {
+      setLoadingConns(true)
+      try {
+        const res = await api.get('/connections')
+        setConnections(Array.isArray(res) ? res : [])
+      } catch (e) {
+        console.error('Failed to load connections for test adapter:', e)
+      } finally {
+        setLoadingConns(false)
+      }
+    }
+    fetchConnections()
+  }, [open, api])
+
+  if (!workflow) return null
+
+  const requiredTools = workflow.required_integrations || []
+  const isMeetingWf = workflow.key?.includes('meeting')
+  const isEmailWf = workflow.key?.includes('email')
+
+  // Check integration readiness
+  const integrationStatuses = requiredTools.map(tool => {
+    const raw = tool.toLowerCase()
+    const conn = connections.find(c => {
+      const cName = (c.tool_name || '').toLowerCase()
+      if (cName === raw) return true
+      if (raw === 'google_workspace' && (cName === 'gmail' || cName === 'google_workspace')) return true
+      if (raw === 'gmail' && (cName === 'google_workspace' || cName === 'gmail')) return true
+      return false
+    })
+    const isConn = !!conn && (conn.status === 'connected' || conn.status === 'active')
+    return {
+      tool,
+      connected: isConn,
+      account: conn?.config?.connected_email || conn?.display_name || null,
+      status: conn?.status || 'not_connected',
+    }
+  })
+
+  const hasMissingIntegrations = integrationStatuses.some(s => !s.connected)
+
+  async function handleConnectOAuth(toolName) {
+    try {
+      const redirectUri = window.location.origin + window.location.pathname
+      const res = await api.get(`/connections/oauth/google/authorize?redirect_uri=${encodeURIComponent(redirectUri)}`)
+      if (res?.url) {
+        window.location.href = res.url
+      }
+    } catch (err) {
+      setError(err?.response?.data?.detail || err.message || 'Failed to initiate OAuth')
+    }
+  }
+
+  async function runTest() {
+    setRunning(true)
+    setError('')
+    setResult(null)
+
+    // Build payload based on workflow
+    let payload = {}
+    if (isMeetingWf) {
+      payload = {
+        meet_url: inputMeetUrl.trim(),
+        transcript: inputTranscript.trim(),
+      }
+    } else if (isEmailWf) {
+      payload = {
+        subject: inputEmailSubject.trim(),
+        body: inputEmailBody.trim(),
+      }
+    } else {
+      try {
+        payload = JSON.parse(inputJson)
+      } catch (parseErr) {
+        payload = { raw_input: inputJson }
+      }
+    }
+
+    try {
+      const resp = await api.post(`/admin/workflows/${workflow.key}/test-run`, {
+        input_payload: payload,
+        test_mode: testMode,
+        safe_preview: safePreview,
+      })
+      setResult(resp)
+    } catch (err) {
+      const msg = err?.response?.data?.detail || err.message || 'Workflow test run failed'
+      setError(typeof msg === 'string' ? msg : JSON.stringify(msg))
+    } finally {
+      setRunning(false)
+    }
+  }
+
+  return (
+    <Modal open={open} onClose={onClose} title={`Admin Workflow Testing Center — ${workflow.name}`}>
+      <div className="space-y-4 max-h-[80vh] overflow-y-auto pr-1">
+        
+        {/* Workflow Overview Banner */}
+        <div className="p-3.5 bg-slate-50 dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-xl flex items-center justify-between gap-3 text-xs">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-slate-900 dark:text-white">{workflow.name}</span>
+              <span className="font-mono text-[10px] text-slate-400">v{workflow.version}</span>
+              <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-500 border border-blue-500/20">{workflow.key}</span>
+            </div>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">{workflow.description}</p>
+          </div>
+          <div className="text-right shrink-0">
+            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Handler</span>
+            <span className="text-xs font-mono font-medium text-slate-700 dark:text-slate-300">
+              {workflow.metadata?.execution_handler || 'default_engine'}
+            </span>
+          </div>
+        </div>
+
+        {/* Integration Readiness & Actionable Connectors */}
+        <div className="p-3.5 bg-white dark:bg-[#151c2a] border border-slate-200 dark:border-[#233048] rounded-xl space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+              <Plug size={13} className="text-blue-500" />
+              <span>Required Integration Readiness</span>
+            </span>
+            <span className="text-[11px] text-slate-400">
+              {requiredTools.length === 0 ? 'No external tools declared' : `${integrationStatuses.filter(s => s.connected).length}/${requiredTools.length} connected`}
+            </span>
+          </div>
+
+          {requiredTools.length === 0 ? (
+            <p className="text-xs text-slate-400 italic">This workflow uses platform-native AI execution nodes.</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+              {integrationStatuses.map(s => (
+                <div
+                  key={s.tool}
+                  className={`flex items-center justify-between p-2 rounded-lg border text-xs ${
+                    s.connected
+                      ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-800 dark:text-emerald-300'
+                      : 'bg-amber-500/10 border-amber-500/30 text-amber-800 dark:text-amber-200'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <ToolLogo name={s.tool} className="w-4 h-4 shrink-0" />
+                    <div className="truncate">
+                      <span className="font-semibold capitalize block truncate">{s.tool.replace('_', ' ')}</span>
+                      <span className="text-[10px] opacity-75 truncate block">
+                        {s.connected ? (s.account || 'Connected & Verified') : 'Not Connected'}
+                      </span>
+                    </div>
+                  </div>
+                  {!s.connected && (
+                    <button
+                      type="button"
+                      onClick={() => handleConnectOAuth(s.tool)}
+                      className="px-2 py-1 bg-amber-600 hover:bg-amber-500 text-white text-[10px] font-bold rounded cursor-pointer transition-colors shrink-0"
+                    >
+                      Connect
+                    </button>
+                  )}
+                  {s.connected && (
+                    <CheckCircle size={14} className="text-emerald-500 shrink-0" />
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {hasMissingIntegrations && testMode === 'real_provider' && (
+            <div className="p-2.5 bg-amber-500/15 border border-amber-500/30 rounded-lg text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2">
+              <AlertTriangle size={14} className="text-amber-500 shrink-0 mt-0.5" />
+              <span>
+                Real-provider mode requires verified connected credentials. Connect missing integrations above or switch to <strong>Unit Test</strong> mode for offline validation.
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* 3 Distinct Testing Modes */}
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold text-slate-800 dark:text-slate-200 block">Testing Mode</label>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { id: 'unit', label: '1. Unit Test (Mock)', desc: 'Isolated sandbox logic' },
+              { id: 'integration', label: '2. Integration Test', desc: 'Controlled test fixtures' },
+              { id: 'real_provider', label: '3. Real Provider Test', desc: 'Live external APIs' },
+            ].map(m => (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => setTestMode(m.id)}
+                className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                  testMode === m.id
+                    ? 'border-blue-500 bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold shadow-2xs'
+                    : 'border-slate-200 dark:border-[#233048] hover:bg-slate-50 dark:hover:bg-[#162030] text-slate-600 dark:text-slate-400 text-xs'
+                }`}
+              >
+                <div className="text-xs font-bold leading-snug">{m.label}</div>
+                <div className="text-[10px] opacity-75 mt-0.5">{m.desc}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Safe Preview / Dry Run Switch */}
+        <div className="p-3 bg-slate-50 dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-xl flex items-center justify-between text-xs">
+          <div className="flex items-center gap-2">
+            <Shield size={14} className={safePreview ? 'text-emerald-500' : 'text-slate-400'} />
+            <div>
+              <span className="font-semibold text-slate-900 dark:text-white">Safe Preview / Dry-Run Mode</span>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                Intercepts external write actions (e.g. sending real emails) to prevent live customer side-effects.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSafePreview(v => !v)}
+            className="cursor-pointer"
+          >
+            {safePreview ? <ToggleRight size={22} className="text-emerald-500" /> : <ToggleLeft size={22} className="text-slate-400" />}
+          </button>
+        </div>
+
+        {/* Dynamic Inputs */}
+        <div className="p-3.5 bg-slate-50 dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-xl space-y-3">
+          <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+            <Sliders size={13} className="text-blue-500" />
+            <span>Test Inputs</span>
+          </span>
+
+          {isMeetingWf ? (
+            <div className="space-y-3">
+              <div>
+                <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-300 block mb-1">Google Meet URL</label>
+                <input
+                  type="text"
+                  value={inputMeetUrl}
+                  onChange={e => setInputMeetUrl(e.target.value)}
+                  className="w-full px-3 py-1.5 text-xs bg-white dark:bg-[#0b0f17] border border-slate-200 dark:border-[#233048] rounded-lg font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-300 block mb-1">Pasted Transcript (Direct Ground Truth)</label>
+                <textarea
+                  rows={4}
+                  value={inputTranscript}
+                  onChange={e => setInputTranscript(e.target.value)}
+                  className="w-full p-2.5 text-xs bg-white dark:bg-[#0b0f17] border border-slate-200 dark:border-[#233048] rounded-lg font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+          ) : isEmailWf ? (
+            <div className="space-y-3">
+              <div>
+                <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-300 block mb-1">Email Subject</label>
+                <input
+                  type="text"
+                  value={inputEmailSubject}
+                  onChange={e => setInputEmailSubject(e.target.value)}
+                  className="w-full px-3 py-1.5 text-xs bg-white dark:bg-[#0b0f17] border border-slate-200 dark:border-[#233048] rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-300 block mb-1">Email Body</label>
+                <textarea
+                  rows={3}
+                  value={inputEmailBody}
+                  onChange={e => setInputEmailBody(e.target.value)}
+                  className="w-full p-2.5 text-xs bg-white dark:bg-[#0b0f17] border border-slate-200 dark:border-[#233048] rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+          ) : (
+            <div>
+              <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-300 block mb-1">Payload JSON</label>
+              <textarea
+                rows={4}
+                value={inputJson}
+                onChange={e => setInputJson(e.target.value)}
+                className="w-full p-2.5 text-xs bg-white dark:bg-[#0b0f17] border border-slate-200 dark:border-[#233048] rounded-lg font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Error Notification */}
+        {error && (
+          <div className="p-3 bg-red-500/10 border border-red-500/25 rounded-xl text-xs text-red-600 dark:text-red-400 flex items-start gap-2">
+            <XCircle size={14} className="shrink-0 mt-0.5" />
+            <span className="leading-snug">{error}</span>
+          </div>
+        )}
+
+        {/* Real Test Execution Result Trace */}
+        {result && (
+          <div className="space-y-3 pt-1">
+            <div className={`p-3 rounded-xl border flex items-center justify-between text-xs ${
+              result.ok
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300'
+                : 'bg-red-500/10 border-red-500/30 text-red-800 dark:text-red-300'
+            }`}>
+              <div className="flex items-center gap-2">
+                {result.ok ? <CheckCircle2 size={16} className="text-emerald-500 shrink-0" /> : <XCircle size={16} className="text-red-500 shrink-0" />}
+                <div>
+                  <span className="font-bold">{result.ok ? 'Workflow Test Passed' : 'Test Run Failed'}</span>
+                  <p className="text-[11px] opacity-85 mt-0.5">{result.message}</p>
+                </div>
+              </div>
+              <div className="text-right font-mono text-[10px] shrink-0 opacity-80">
+                <div>ID: {result.test_run_id?.slice(0, 14)}...</div>
+                <div>{result.total_simulated_tokens?.toLocaleString() || 0} tokens · ${result.total_simulated_cost_usd || '0.00'}</div>
+              </div>
+            </div>
+
+            {/* Step Trace Table */}
+            {Array.isArray(result.steps) && result.steps.length > 0 && (
+              <div className="border border-slate-200 dark:border-[#233048] rounded-xl overflow-hidden">
+                <div className="bg-slate-100 dark:bg-[#162030] px-3 py-2 text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between border-b border-slate-200 dark:border-[#233048]">
+                  <span>Execution Step Trace ({result.steps.length} nodes)</span>
+                  <span className="font-mono text-[10px] text-slate-400">Mode: {result.test_mode || testMode}</span>
+                </div>
+                <div className="divide-y divide-slate-100 dark:divide-[#1e2a3f] text-xs">
+                  {result.steps.map((st, sIdx) => (
+                    <div key={sIdx} className="p-2.5 flex items-center justify-between gap-3 hover:bg-slate-50/50 dark:hover:bg-[#162030]/50">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className={`w-2 h-2 rounded-full shrink-0 ${st.status === 'success' ? 'bg-emerald-500' : st.status === 'running' ? 'bg-blue-500 animate-pulse' : 'bg-red-500'}`} />
+                        <span className="font-medium text-slate-800 dark:text-slate-200 truncate">{st.step_name || st.node_id}</span>
+                        {st.provider && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-[#121826] font-mono text-slate-400">{st.provider}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0 text-[11px] font-mono text-slate-400">
+                        {st.duration_ms && <span>{st.duration_ms}ms</span>}
+                        {st.tokens && <span>{st.tokens} tok</span>}
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                          st.status === 'success'
+                            ? 'bg-emerald-500/10 text-emerald-500'
+                            : 'bg-red-500/10 text-red-500'
+                        }`}>
+                          {st.status}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Action Controls */}
+        <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-[#233048]">
+          <span className="text-[11px] text-slate-400">
+            {testMode === 'real_provider' ? '⚠️ Uses live API credentials' : 'Safe isolated test adapter'}
+          </span>
+          <div className="flex items-center gap-2">
+            <Button variant="secondary" size="sm" type="button" onClick={onClose}>Close</Button>
+            <Button
+              variant="primary"
+              size="sm"
+              loading={running}
+              disabled={running}
+              icon={running ? <Loader2 size={13} className="animate-spin" /> : <Play size={13} />}
+              onClick={runTest}
+            >
+              Run {testMode === 'real_provider' ? 'Real Test' : 'Test'}
+            </Button>
+          </div>
+        </div>
+
+      </div>
+    </Modal>
+  )
+}
+
+// ── Permanent Deletion Modal ──────────────────────────────────────────────────
+function WorkflowDeleteModal({ open, onClose, workflow, api, onDone }) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  if (!workflow) return null
+
+  async function handleDelete() {
+    setLoading(true)
+    setError('')
+    try {
+      await api.delete(`/admin/workflows/catalog/${workflow.id}`)
+      onDone()
+      onClose()
+    } catch (err) {
+      setError(err?.response?.data?.detail || err.message || 'Failed to delete workflow')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Modal open={open} onClose={onClose} title="Permanently Delete Workflow">
+      <div className="space-y-4">
+        {error && (
+          <div className="p-3 bg-red-500/10 border border-red-500/25 rounded-xl text-xs text-red-600 dark:text-red-400 flex items-center gap-2">
+            <XCircle size={14} className="shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        <div className="p-3.5 bg-red-500/10 border border-red-500/20 rounded-xl space-y-2">
+          <div className="flex items-center gap-2 text-red-700 dark:text-red-400 font-bold text-xs">
+            <AlertTriangle size={15} />
+            <span>Permanent Deletion Semantics</span>
+          </div>
+          <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+            You are permanently deleting <strong>{workflow.name}</strong> (<code className="font-mono text-[11px]">{workflow.key}</code>).
+          </p>
+          <ul className="text-[11px] text-slate-500 dark:text-slate-400 space-y-1 list-disc pl-4">
+            <li>Unregisters workflow definition from active catalogs, builders, and client runners.</li>
+            <li>Safely cancels any active in-progress execution runs immediately.</li>
+            <li>Preserves compliance audit logs, timestamps, and historical billing records.</li>
+            <li>Rejects any future execution requests targeting this workflow key with HTTP 410.</li>
+          </ul>
+        </div>
+
+        <div className="flex justify-end gap-2 pt-2">
+          <Button variant="secondary" size="sm" type="button" onClick={onClose} disabled={loading}>
+            Cancel
+          </Button>
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={loading}
+            className="px-3.5 py-1.5 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5 transition-all disabled:opacity-50"
+          >
+            {loading ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+            <span>Permanently Delete</span>
+          </button>
+        </div>
+      </div>
+    </Modal>
+  )
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 export default function AdminWorkflowCatalog() {
   const { api } = useAuth()
@@ -246,6 +717,8 @@ export default function AdminWorkflowCatalog() {
   const [filterCategory, setFilterCategory] = useState('all')
   const [filterScope, setFilterScope] = useState('all')
   const [editItem, setEditItem] = useState(null)
+  const [testItem, setTestItem] = useState(null)
+  const [deleteItem, setDeleteItem] = useState(null)
   const [showCreate, setShowCreate] = useState(false)
   const [toggling, setToggling] = useState(null)
 
@@ -305,10 +778,10 @@ export default function AdminWorkflowCatalog() {
             <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
               <Layers size={18} />
             </div>
-            <span>Platform Workflow Catalog</span>
+            <span>Platform Workflow Catalog &amp; Testing Center</span>
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            {loading ? 'Synchronizing catalog…' : `${catalog.length} blueprints registered · ${globalCount} global · ${industryCount} industry-tailored`}
+            {loading ? 'Synchronizing catalog…' : `${catalog.length} canonical workflows registered · ${globalCount} global · ${industryCount} industry-tailored`}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -373,7 +846,7 @@ export default function AdminWorkflowCatalog() {
             className="px-3 py-2 text-xs bg-slate-50 dark:bg-[#0b0f17] border border-slate-200 dark:border-[#233048] text-slate-900 dark:text-white rounded-xl focus:outline-none"
           >
             <option value="all">All Statuses</option>
-            {STATUSES.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase()+s.slice(1)}</option>)}
+            {STATUSES.map(s => <option key={s} value={s}>{s.replace('_', ' ').charAt(0).toUpperCase()+s.replace('_', ' ').slice(1)}</option>)}
           </select>
         </div>
       </div>
@@ -419,7 +892,7 @@ export default function AdminWorkflowCatalog() {
                         {wf.category}
                       </span>
                       <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize ${STATUS_COLORS[wf.status] || 'bg-slate-500/10 text-slate-400'}`}>
-                        {wf.status}
+                        {wf.status.replace('_', ' ')}
                       </span>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
@@ -439,6 +912,13 @@ export default function AdminWorkflowCatalog() {
                         {wf.active
                           ? <ToggleRight size={20} className="text-emerald-500" />
                           : <ToggleLeft size={20} />}
+                      </button>
+                      <button
+                        onClick={() => setDeleteItem(wf)}
+                        title="Permanently Delete Workflow"
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-500/10 transition-colors cursor-pointer"
+                      >
+                        <Trash2 size={13} />
                       </button>
                     </div>
                   </div>
@@ -482,13 +962,23 @@ export default function AdminWorkflowCatalog() {
                     <span className="capitalize">{wf.pricing_model?.replace('_', ' ')}</span>
                   </div>
 
-                  <button
-                    onClick={() => navigate(`/workflows/builder?wf=${encodeURIComponent(wf.name || wf.key)}`)}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-blue-600/10 hover:bg-blue-600 text-blue-600 hover:text-white dark:text-blue-400 dark:hover:text-white border border-blue-500/20 font-semibold text-xs transition-all cursor-pointer shadow-2xs"
-                  >
-                    <span>Open in DAG Builder</span>
-                    <ArrowRight size={12} />
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => setTestItem(wf)}
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500 text-emerald-600 hover:text-white dark:text-emerald-400 dark:hover:text-white border border-emerald-500/20 font-semibold text-xs transition-all cursor-pointer shadow-2xs"
+                      title="Test workflow in Admin Testing Center"
+                    >
+                      <Play size={12} />
+                      <span>Test</span>
+                    </button>
+                    <button
+                      onClick={() => navigate(`/workflows/builder?wf=${encodeURIComponent(wf.name || wf.key)}`)}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-blue-600/10 hover:bg-blue-600 text-blue-600 hover:text-white dark:text-blue-400 dark:hover:text-white border border-blue-500/20 font-semibold text-xs transition-all cursor-pointer shadow-2xs"
+                    >
+                      <span>DAG Builder</span>
+                      <ArrowRight size={12} />
+                    </button>
+                  </div>
                 </div>
               </div>
             )
@@ -498,6 +988,8 @@ export default function AdminWorkflowCatalog() {
 
       <WorkflowModal open={showCreate} onClose={() => setShowCreate(false)} api={api} existing={null} onDone={load} />
       <WorkflowModal open={!!editItem}  onClose={() => setEditItem(null)}   api={api} existing={editItem} onDone={load} />
+      <WorkflowTestCenterModal open={!!testItem} onClose={() => setTestItem(null)} workflow={testItem} api={api} />
+      <WorkflowDeleteModal open={!!deleteItem} onClose={() => setDeleteItem(null)} workflow={deleteItem} api={api} onDone={load} />
     </div>
   )
 }

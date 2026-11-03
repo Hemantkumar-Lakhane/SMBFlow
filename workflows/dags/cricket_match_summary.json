@@ -1,0 +1,114 @@
+{
+  "_meta": {
+    "name": "Cricket Match Summary",
+    "description": "Automatically fetches cricket scores, summarizes commentary, and emails updates on outs or sixes.",
+    "category": "productivity",
+    "industry": "general",
+    "sla_hours": 2,
+    "estimated_duration_minutes": 2,
+    "trigger": {
+      "type": "schedule",
+      "source": "visual_builder"
+    },
+    "trigger_types": [
+      "schedule"
+    ],
+    "created_by": "admin@smbflow.com",
+    "created_at": "2026-10-18T15:18:22.863866",
+    "is_custom": true
+  },
+  "nodes": [
+    {
+      "id": "trigger_schedule_fetch",
+      "agent": "trigger_schedule",
+      "name": "Schedule Fetch",
+      "description": "Triggers periodic fetch of cricket score.",
+      "timeout_seconds": 90,
+      "tools": []
+    },
+    {
+      "id": "fetch_score",
+      "agent": "research_agent",
+      "name": "Fetch Score",
+      "description": "Retrieves current score from Crickbuzz.",
+      "timeout_seconds": 90,
+      "tools": []
+    },
+    {
+      "id": "analyze_events",
+      "agent": "reasoning_agent",
+      "name": "Analyze Events",
+      "description": "Detects outs or sixes in the score.",
+      "timeout_seconds": 90,
+      "tools": []
+    },
+    {
+      "id": "generate_commentary",
+      "agent": "drafting_agent",
+      "name": "Generate Commentary",
+      "description": "Creates commentary summary of the match.",
+      "timeout_seconds": 90,
+      "tools": []
+    },
+    {
+      "id": "condition_event",
+      "agent": "logic_condition",
+      "name": "Event Check",
+      "description": "Checks if an out or six event occurred.",
+      "timeout_seconds": 90,
+      "tools": []
+    },
+    {
+      "id": "email_event_update",
+      "agent": "tool_gmail",
+      "name": "Email Event Update",
+      "description": "Sends email update for the event.",
+      "timeout_seconds": 90,
+      "tools": []
+    },
+    {
+      "id": "email_crazy_moments",
+      "agent": "tool_gmail",
+      "name": "Email Crazy Moments",
+      "description": "Sends email with crazy moments in real time.",
+      "timeout_seconds": 90,
+      "tools": []
+    }
+  ],
+  "edges": [
+    {
+      "from": "trigger_schedule_fetch",
+      "to": "fetch_score",
+      "condition": null
+    },
+    {
+      "from": "fetch_score",
+      "to": "analyze_events",
+      "condition": null
+    },
+    {
+      "from": "analyze_events",
+      "to": "generate_commentary",
+      "condition": null
+    },
+    {
+      "from": "generate_commentary",
+      "to": "condition_event",
+      "condition": null
+    },
+    {
+      "from": "condition_event",
+      "to": "email_event_update",
+      "condition": "event_detected"
+    },
+    {
+      "from": "condition_event",
+      "to": "email_crazy_moments",
+      "condition": "event_detected"
+    }
+  ],
+  "escalation_config": {
+    "sla_hours": 2,
+    "resume_after_decision": true
+  }
+}

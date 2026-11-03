@@ -1,0 +1,8 @@
+Stage,Paradigm,Mean_ms,CI_95_Low,CI_95_High,p50_ms,p95_ms,p99_ms
+Research (Hybrid RAG),Deterministic / Hybrid,3.52,3.40,3.65,3.53,5.83,7.41
+Reasoning (Planning),LLM Inference,343.40,340.74,345.86,344.74,390.88,410.66
+Drafting (Synthesis),LLM Inference,517.49,513.83,521.29,517.81,589.37,616.33
+Verification Gate,Deterministic / Hybrid,0.99,0.95,1.03,0.84,2.19,2.82
+Execution (Connector + Token),Deterministic / Hybrid,84.06,83.06,85.00,83.70,102.96,109.36
+Memory (Graph Update),Deterministic / Hybrid,0.09,0.08,0.11,0.07,0.17,0.59
+Non-LLM System Overhead,LLM Inference,4.68,4.54,4.82,4.70,7.36,8.60

@@ -210,6 +210,7 @@ function StatusBadge({ status }) {
 }
 
 function NodePreviewModal({ workflow, onClose, onRun }) {
+  const { api } = useAuth()
   const [selectedNodeIdx, setSelectedNodeIdx] = useState(0)
   const [activeModalTab, setActiveModalTab] = useState('pipeline') // 'pipeline' | 'schedule'
   const [scheduleFreq, setScheduleFreq] = useState('0 8 * * 1-5')
@@ -217,8 +218,43 @@ function NodePreviewModal({ workflow, onClose, onRun }) {
   const [scheduleSavedToast, setScheduleSavedToast] = useState(false)
   const [isTriggeringTest, setIsTriggeringTest] = useState(false)
   const [triggerSuccess, setTriggerSuccess] = useState(null)
+  const [isRequestingAccess, setIsRequestingAccess] = useState(false)
+  const [accessRequested, setAccessRequested] = useState(false)
+  const [requestToast, setRequestToast] = useState(null)
 
   if (!workflow) return null
+
+  const IMPLEMENTED_KEYS = [
+    'meeting_intelligence_followup',
+    'meeting_intelligence',
+    'product_launch_sprint',
+    'product_launch',
+    'email_summarizer',
+    'customer_lead_enricher',
+    'invoice_processing',
+    'social_media_generator',
+    'contract_risk_analyzer',
+  ]
+  const isImplemented = IMPLEMENTED_KEYS.includes(workflow?.name) || IMPLEMENTED_KEYS.includes(workflow?.key)
+  const canDirectRun = workflow?.is_assigned || isImplemented
+
+  async function handleRequestAccess() {
+    setIsRequestingAccess(true)
+    setRequestToast(null)
+    try {
+      const res = await api.post('/catalog/request-access', {
+        workflow_key: workflow.key || workflow.name,
+        workflow_name: workflow.display_name || workflow.title || workflow.name,
+        reason: 'Requested from Workflows Catalog',
+      })
+      setAccessRequested(true)
+      setRequestToast(res?.message || 'Access request submitted. Platform admin notified.')
+    } catch (err) {
+      setRequestToast(err?.message || 'Failed to submit access request')
+    } finally {
+      setIsRequestingAccess(false)
+    }
+  }
 
   const selectedNode = workflow.nodes?.[selectedNodeIdx] || workflow.nodes?.[0]
 
@@ -486,26 +522,46 @@ function NodePreviewModal({ workflow, onClose, onRun }) {
         </div>
 
         {/* Footer Actions */}
-        <div className="p-4 bg-slate-50 dark:bg-[#0b0f17] border-t border-slate-200 dark:border-[#233048] flex items-center justify-end gap-3">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
-          >
-            Close
-          </button>
-          {workflow?.is_assigned ? (
+        <div className="p-4 bg-slate-50 dark:bg-[#0b0f17] border-t border-slate-200 dark:border-[#233048] flex items-center justify-between gap-3 flex-wrap">
+          {requestToast ? (
+            <div className="text-xs text-blue-600 dark:text-blue-400 font-medium flex items-center gap-1.5 animate-fade-in">
+              <Clock size={13} />
+              <span>{requestToast}</span>
+            </div>
+          ) : <div />}
+
+          <div className="flex items-center gap-3">
             <button
-              onClick={() => { onClose(); onRun(workflow) }}
-              className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
+              onClick={onClose}
+              className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
             >
-              <Play size={13} className="fill-white" />
-              <span>Open Workflow Dashboard</span>
+              Close
             </button>
-          ) : (
-            <span className="px-4 py-2 text-xs font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/40 rounded-xl">
-              Assignment Required to Execute
-            </span>
-          )}
+            {canDirectRun ? (
+              <button
+                onClick={() => { onClose(); onRun(workflow) }}
+                className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
+              >
+                <Play size={13} className="fill-white" />
+                <span>Open Workflow Dashboard</span>
+              </button>
+            ) : accessRequested ? (
+              <span className="px-4 py-2 text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/40 rounded-xl flex items-center gap-1.5">
+                <Clock size={13} />
+                <span>Access Requested • Pending Admin Review</span>
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={handleRequestAccess}
+                disabled={isRequestingAccess}
+                className="px-5 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
+              >
+                {isRequestingAccess ? <RefreshCw size={13} className="animate-spin" /> : <Shield size={13} />}
+                <span>{isRequestingAccess ? 'Submitting Request...' : 'Request Access to Run Workflow'}</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -825,12 +881,34 @@ export default function WorkflowsPage() {
                 {filteredWorkflows.map((wf) => {
                   const isEmail = wf.name === 'email_summarizer' || wf.name?.includes('email')
                   const isLaunch = wf.name === 'product_launch_sprint' || wf.name === 'product_launch'
+                  const isImpl = [
+                    'meeting_intelligence_followup',
+                    'meeting_intelligence',
+                    'product_launch_sprint',
+                    'product_launch',
+                    'email_summarizer',
+                    'customer_lead_enricher',
+                    'invoice_processing',
+                    'social_media_generator',
+                    'contract_risk_analyzer',
+                  ].includes(wf.name) || [
+                    'meeting_intelligence_followup',
+                    'meeting_intelligence',
+                    'product_launch_sprint',
+                    'product_launch',
+                    'email_summarizer',
+                    'customer_lead_enricher',
+                    'invoice_processing',
+                    'social_media_generator',
+                    'contract_risk_analyzer',
+                  ].includes(wf.key)
+                  const isAssignedOrGlobal = wf.is_assigned || isImpl
 
                   return (
                     <div
                       key={wf.name}
                       onClick={() => {
-                        if (wf.is_assigned) {
+                        if (isAssignedOrGlobal) {
                           navigate(`/workflows/${wf.name}`)
                         } else {
                           setPreviewWorkflow(wf)
@@ -844,7 +922,7 @@ export default function WorkflowsPage() {
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-100 dark:bg-[#182234] text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-[#233048]">
                             {wf.category || 'Operations'}
                           </span>
-                          <StatusBadge status={wf.is_assigned ? 'active' : 'ready'} />
+                          <StatusBadge status={isAssignedOrGlobal ? 'active' : 'ready'} />
                         </div>
 
                         {/* Title & Description */}
@@ -888,7 +966,7 @@ export default function WorkflowsPage() {
                           <span className="text-[11px] text-slate-400 ml-2 font-mono">{wf.totalRuns} runs</span>
                         </div>
 
-                        {wf.is_assigned ? (
+                        {isAssignedOrGlobal ? (
                           <button
                             type="button"
                             onClick={(e) => {

@@ -11,6 +11,7 @@ const STATUS_META = {
   operational:    { label: 'Operational',    cls: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20', dot: 'bg-emerald-500', icon: CheckCircle2 },
   degraded:       { label: 'Degraded',       cls: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',   dot: 'bg-amber-500', icon: AlertTriangle },
   unavailable:    { label: 'Unavailable',    cls: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',       dot: 'bg-rose-500',  icon: XCircle },
+  unreachable:    { label: 'Unreachable',    cls: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',       dot: 'bg-rose-500',  icon: XCircle },
   not_configured: { label: 'Not Configured', cls: 'bg-slate-500/10 text-slate-500 dark:text-slate-400 border-slate-500/20', dot: 'bg-slate-400',  icon: Minus },
   configured:     { label: 'Configured',     cls: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20', dot: 'bg-emerald-500', icon: CheckCircle2 },
   partial:        { label: 'Partial',        cls: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20', dot: 'bg-orange-400', icon: AlertTriangle },

@@ -14,7 +14,7 @@
       "manual"
     ],
     "created_by": "admin@smbflow.com",
-    "created_at": "2026-09-26T11:46:51.820192",
+    "created_at": "2026-10-18T15:17:03.450261",
     "is_custom": true
   },
   "nodes": [
@@ -30,7 +30,8 @@
       "position": {
         "x": 60,
         "y": 180
-      }
+      },
+      "config": {}
     },
     {
       "id": "node_res_01",
@@ -46,7 +47,8 @@
       "position": {
         "x": 400,
         "y": 312
-      }
+      },
+      "config": {}
     },
     {
       "id": "node_reason_01",
@@ -60,7 +62,8 @@
       "position": {
         "x": 620,
         "y": 180
-      }
+      },
+      "config": {}
     },
     {
       "id": "node_gate_01",
@@ -74,7 +77,8 @@
       "position": {
         "x": 900,
         "y": 180
-      }
+      },
+      "config": {}
     },
     {
       "id": "node_verify_01",
@@ -88,7 +92,8 @@
       "position": {
         "x": 1180,
         "y": 180
-      }
+      },
+      "config": {}
     },
     {
       "id": "node_exec_01",
@@ -106,7 +111,8 @@
       "position": {
         "x": 1460,
         "y": 180
-      }
+      },
+      "config": {}
     }
   ],
   "edges": [

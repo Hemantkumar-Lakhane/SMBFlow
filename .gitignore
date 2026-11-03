@@ -34,9 +34,23 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# Media and user uploads / recordings
+# Media and user uploads / recordings / generated assets
 epi-recordings/
 uploads/
+uploads/**
+uploads/audio/
+uploads/images/
+evidence/
+artifacts/
+temp_audio/
+*.mp3
+*.wav
+*.m4a
+*.webm
+*.mp4
+*.ogg
+*.flac
+*.webp
 
 # Frontend dependencies and build artifacts
 node_modules/

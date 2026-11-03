@@ -1,0 +1,114 @@
+{
+  "_meta": {
+    "name": "Cricket Score Alert",
+    "description": "Fetches live cricket scores and alerts via Gmail on interesting events.",
+    "category": "productivity",
+    "industry": "general",
+    "sla_hours": 2,
+    "estimated_duration_minutes": 2,
+    "trigger": {
+      "type": "schedule",
+      "source": "visual_builder"
+    },
+    "trigger_types": [
+      "schedule"
+    ],
+    "created_by": "admin@smbflow.com",
+    "created_at": "2026-10-18T17:22:53.446107",
+    "is_custom": true
+  },
+  "nodes": [
+    {
+      "id": "trigger_schedule",
+      "agent": "trigger_schedule",
+      "name": "Schedule Trigger",
+      "description": "Runs workflow every minute.",
+      "timeout_seconds": 90,
+      "tools": []
+    },
+    {
+      "id": "fetch_score",
+      "agent": "research_agent",
+      "name": "Fetch Score",
+      "description": "Retrieve live cricket score from Cricbuzz API.",
+      "timeout_seconds": 90,
+      "tools": []
+    },
+    {
+      "id": "analyze_score",
+      "agent": "reasoning_agent",
+      "name": "Analyze Score",
+      "description": "Detect interesting events like sixes or wickets.",
+      "timeout_seconds": 90,
+      "tools": []
+    },
+    {
+      "id": "event_check",
+      "agent": "logic_condition",
+      "name": "Event Check",
+      "description": "Branch on whether an interesting event occurred.",
+      "timeout_seconds": 90,
+      "tools": []
+    },
+    {
+      "id": "compose_email",
+      "agent": "drafting_agent",
+      "name": "Compose Email",
+      "description": "Generate alert email content.",
+      "timeout_seconds": 90,
+      "tools": []
+    },
+    {
+      "id": "send_email",
+      "agent": "tool_gmail",
+      "name": "Send Email",
+      "description": "Send alert via Gmail.",
+      "timeout_seconds": 90,
+      "tools": []
+    },
+    {
+      "id": "noop",
+      "agent": "code_transform",
+      "name": "Noop",
+      "description": "Do nothing when no event.",
+      "timeout_seconds": 90,
+      "tools": []
+    }
+  ],
+  "edges": [
+    {
+      "from": "trigger_schedule",
+      "to": "fetch_score",
+      "condition": null
+    },
+    {
+      "from": "fetch_score",
+      "to": "analyze_score",
+      "condition": null
+    },
+    {
+      "from": "analyze_score",
+      "to": "event_check",
+      "condition": null
+    },
+    {
+      "from": "event_check",
+      "to": "compose_email",
+      "condition": "interesting"
+    },
+    {
+      "from": "event_check",
+      "to": "noop",
+      "condition": "not_interesting"
+    },
+    {
+      "from": "compose_email",
+      "to": "send_email",
+      "condition": null
+    }
+  ],
+  "escalation_config": {
+    "sla_hours": 2,
+    "resume_after_decision": true
+  }
+}

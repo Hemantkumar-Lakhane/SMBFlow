@@ -1,5 +1,5 @@
 // frontend/src/components/ui/index.jsx
-import { useState, useEffect, useRef, forwardRef } from 'react'
+import { useState, useEffect, useRef, forwardRef, isValidElement } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Loader2, CheckCircle2, AlertTriangle, XCircle, Info,
@@ -50,6 +50,16 @@ export const Button = forwardRef(function Button({
   children, variant = 'primary', size = 'md', loading = false,
   className = '', icon, iconRight, ...props
 }, ref) {
+  const renderIcon = (ic) => {
+    if (!ic) return null
+    if (isValidElement(ic)) return ic
+    if (typeof ic === 'function' || (typeof ic === 'object' && (ic.$$typeof || ic.render))) {
+      const IconComponent = ic
+      return <IconComponent className="w-4 h-4 shrink-0" />
+    }
+    return ic
+  }
+
   return (
     <button
       ref={ref}
@@ -57,9 +67,9 @@ export const Button = forwardRef(function Button({
       disabled={props.disabled || loading}
       className={cn(BTN_BASE, BTN_VARIANTS[variant], BTN_SIZES[size], className)}
     >
-      {loading ? <Spinner size="sm" color="currentColor" /> : icon}
+      {loading ? <Spinner size="sm" color="currentColor" /> : renderIcon(icon)}
       {children}
-      {!loading && iconRight}
+      {!loading && renderIcon(iconRight)}
     </button>
   )
 })

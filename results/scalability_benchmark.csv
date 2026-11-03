@@ -1,0 +1,5 @@
+Concurrency_Tenants,Throughput_Workflows_per_Sec,Mean_Governance_Latency_ms,p95_Governance_Latency_ms,p99_Governance_Latency_ms
+1,40.0,18.44,20.85,21.82
+10,399.8,29.54,31.81,32.45
+50,1994.7,39.48,42.05,42.56
+100,3978.2,43.96,46.35,47.25

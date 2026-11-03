@@ -1,0 +1,31 @@
+{
+  "nodes": [
+    {
+      "id": "trigger_start",
+      "name": "Initial Trigger",
+      "agent": "webhook_agent",
+      "description": "Trigger entrypoint for workflow execution",
+      "timeout_seconds": 60,
+      "tools": []
+    }
+  ],
+  "edges": [],
+  "_meta": {
+    "name": "Test Starter WF V4",
+    "description": "testing",
+    "category": "operations",
+    "industry": "general",
+    "sla_hours": 2,
+    "estimated_duration_minutes": 2,
+    "trigger": {
+      "type": "manual",
+      "source": "visual_builder"
+    },
+    "trigger_types": [
+      "manual"
+    ],
+    "created_by": "admin@smbflow.com",
+    "created_at": "2026-10-18T17:49:37.477587",
+    "is_custom": true
+  }
+}

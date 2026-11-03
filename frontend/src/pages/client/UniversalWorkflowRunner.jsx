@@ -23,7 +23,7 @@ import {
   ChevronDown, Eye, CheckCircle, AlertCircle, MessageSquare, Link2, Lock,
   CreditCard, UserCheck, AlertTriangle, GitFork, RotateCcw, BrainCircuit,
   Image as ImageIcon, Loader2, Database, GitBranch, Activity, User, Star, TrendingUp,
-  Inbox, CheckSquare, Mail, Palette, Wand2, Plug, Video
+  Inbox, CheckSquare, Mail, Palette, Wand2, Plug, Video, ShieldCheck
 } from 'lucide-react'
 
 // ── Visual Style Presets for Prompt Enhancer ──────────────────────────────────
@@ -469,52 +469,53 @@ function formatBytes(bytes) {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`
 }
 
-// ── Reusable Audio & Google Meet Ingestion Component ────────────────────────
-function AudioUploadField({ value, onChange, onClear, api }) {
-  const [ingestMode, setIngestMode] = useState('meet') // 'meet' | 'upload' | 'text'
+// ── Dedicated Mode-Specific Meeting Intelligence Input Form ──────────────────
+function MeetingIntelligenceInputModes({ formData, onChange, api, synthesizing, onExecute }) {
+  const activeMode = formData.input_mode || 'paste_transcript'
   const [isUploading, setIsUploading] = useState(false)
-  const [isExtractingMeet, setIsExtractingMeet] = useState(false)
-  const [meetUrl, setMeetUrl] = useState('https://meet.google.com/abc-defg-hij')
-  const [meetData, setMeetData] = useState(null)
-  const [rawText, setRawText] = useState('')
+  const [googleStatus, setGoogleStatus] = useState({ connected: false, loading: true })
+  const [isResolvingMeet, setIsResolvingMeet] = useState(false)
+  const [meetResolveResult, setMeetResolveResult] = useState(null)
   const [errorMsg, setErrorMsg] = useState('')
   const [dragOver, setDragOver] = useState(false)
+  const [showMetadata, setShowMetadata] = useState(false)
   const fileInputRef = useRef(null)
 
   const allowedExtensions = ['.mp3', '.wav', '.m4a', '.webm']
   const maxSizeBytes = 50 * 1024 * 1024
 
-  // Extract live transcript directly from Google Meet URL or code
-  async function handleExtractMeet() {
-    if (!meetUrl.trim()) {
-      setErrorMsg('Please enter a valid Google Meet link or meeting code')
-      return
-    }
+  const handleModeChange = (mode) => {
+    onChange('input_mode', mode)
     setErrorMsg('')
-    setIsExtractingMeet(true)
-    try {
-      const res = await api.post('/workflows/meeting-intelligence/google-meet/extract', {
-        meet_url: meetUrl.trim(),
-        meeting_title: 'Executive Client & Architecture Alignment',
-        primary_contact: 'Rahul Sharma',
-      })
-      setMeetData(res)
-      onChange({
-        file_id: `meet_${res.meeting_code}`,
-        filename: `Google Meet: ${res.meeting_code} (${res.duration_formatted})`,
-        size_bytes: 2048,
-        content_type: 'text/google-meet-transcript',
-        stored_path: res.meeting_url,
-        meet_data: res,
-        transcript: res.full_transcript,
-      })
-    } catch (err) {
-      setErrorMsg(err?.response?.data?.detail || err.message || 'Failed to connect to Google Meet session')
-    } finally {
-      setIsExtractingMeet(false)
-    }
+    setMeetResolveResult(null)
   }
 
+  // Load Google connection status on mount
+  useEffect(() => {
+    let isMounted = true
+    async function checkGoogleStatus() {
+      try {
+        const res = await api.get('/workflows/meeting-intelligence/google/status')
+        if (isMounted && res) {
+          setGoogleStatus({
+            connected: Boolean(res.connected),
+            displayName: res.display_name || 'Google Workspace',
+            scopes: res.scopes || [],
+            message: res.message || '',
+            loading: false,
+          })
+        }
+      } catch (err) {
+        if (isMounted) {
+          setGoogleStatus({ connected: false, loading: false, message: 'Google Workspace not connected' })
+        }
+      }
+    }
+    checkGoogleStatus()
+    return () => { isMounted = false }
+  }, [api])
+
+  // Real Audio File Upload Handler
   async function handleFileProcess(file) {
     if (!file) return
     setErrorMsg('')
@@ -532,19 +533,22 @@ function AudioUploadField({ value, onChange, onClear, api }) {
 
     setIsUploading(true)
     try {
-      const formData = new FormData()
-      formData.append('file', file)
-      const res = await api.upload('/workflows/meeting-intelligence/upload-audio', formData)
-      if (res && (res.filename || res.file_id)) {
-        onChange({
+      const uploadData = new FormData()
+      uploadData.append('file', file)
+      const res = await api.upload('/workflows/meeting-intelligence/upload-audio', uploadData)
+      if (res && (res.stored_path || res.file_id)) {
+        onChange('recording', {
           file_id: res.file_id,
           filename: res.filename || file.name,
           size_bytes: res.size_bytes || file.size,
           content_type: res.content_type || file.type,
           stored_path: res.stored_path,
         })
+        if (!formData.conversation_title) {
+          onChange('conversation_title', `Recording: ${file.name.replace(/\.[^/.]+$/, '')}`)
+        }
       } else {
-        throw new Error('Upload response missing file metadata')
+        throw new Error('Upload response missing storage reference')
       }
     } catch (err) {
       console.error('Audio upload error:', err)
@@ -554,236 +558,538 @@ function AudioUploadField({ value, onChange, onClear, api }) {
     }
   }
 
-  function handleDirectTextApply() {
-    if (!rawText.trim()) return
-    onChange({
-      file_id: `txt_${Date.now()}`,
-      filename: `Meeting Transcript Notes (${rawText.trim().split(' ').length} words)`,
-      size_bytes: rawText.length,
-      content_type: 'text/plain',
-      stored_path: 'inline://transcript',
-      transcript: rawText,
-    })
+  // Google Meet Resolution Handler
+  async function handleResolveMeet() {
+    const rawUrl = (formData.meet_url || '').trim()
+    if (!rawUrl || rawUrl.length < 3) {
+      setErrorMsg('Please enter a valid Google Meet link or meeting code (e.g. abc-defg-hij)')
+      return
+    }
+    setErrorMsg('')
+    setIsResolvingMeet(true)
+    setMeetResolveResult(null)
+    try {
+      const res = await api.post('/workflows/meeting-intelligence/google/resolve-meet', {
+        meet_url: rawUrl,
+      })
+      setMeetResolveResult(res)
+      if (res.status === 'auth_required') {
+        setGoogleStatus(prev => ({ ...prev, connected: false }))
+      }
+    } catch (err) {
+      setErrorMsg(err?.response?.data?.detail || err.message || 'Failed to resolve Google Meet session')
+    } finally {
+      setIsResolvingMeet(false)
+    }
   }
 
-  function formatBytes(bytes) {
-    if (!bytes || bytes === 0) return '0 Bytes'
-    const k = 1024
-    const sizes = ['Bytes', 'KB', 'MB', 'GB']
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`
+  // Authorize Google OAuth redirect
+  async function handleConnectGoogle() {
+    try {
+      const redirectUri = window.location.origin + window.location.pathname
+      const res = await api.get(`/workflows/meeting-intelligence/google/authorize-url?redirect_uri=${encodeURIComponent(redirectUri)}`)
+      if (res?.authorize_url) {
+        window.location.href = res.authorize_url
+        return
+      }
+    } catch (err) {
+      console.warn('Backend OAuth endpoint returned error, routing to direct Google OAuth...', err)
+    }
+    // Direct Google OAuth route with Meet, Calendar & Drive scopes using configured Google Client ID
+    const redirectUri = encodeURIComponent(window.location.origin + window.location.pathname)
+    const realClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
+    window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${realClientId}&redirect_uri=${redirectUri}&response_type=code&scope=https://www.googleapis.com/auth/meetings.space.readonly%20https://www.googleapis.com/auth/calendar.readonly%20https://www.googleapis.com/auth/drive.readonly%20https://www.googleapis.com/auth/userinfo.email&access_type=offline&prompt=consent`
   }
 
-  const hasCaptured = value && (value.filename || value.file_id)
+  function handleInsertSampleTranscript() {
+    const sample = `[00:00] Elena (Product Lead): Welcome team. Today we are reviewing the Q4 release roadmap, API latency SLA targets, and client deliverables.
+[00:08] Marcus (Engineering): On the latency SLA, our benchmark tests show we can commit to sub-150ms p95 by next Friday. I will publish the latency report by Oct 24.
+[00:19] Elena: That aligns with enterprise client expectations. Sophia, what about the customer migration documentation?
+[00:26] Sophia (Customer Success): I commit to completing the client migration checklist and onboarding guide by Wednesday Oct 22.
+[00:35] Elena: Perfect. I will coordinate with DevOps on staging environment deployment and notify the executive stakeholders.`
+    onChange('transcript', sample)
+    if (!formData.conversation_title) {
+      onChange('conversation_title', 'Q4 Product Roadmap & Architecture Alignment')
+    }
+    if (!formData.contact_name) {
+      onChange('contact_name', 'Elena Rostova, Marcus Chen, Sophia Williams')
+    }
+  }
+
+  const transcriptText = formData.transcript || ''
+  const charCount = transcriptText.length
+  const wordCount = transcriptText.trim() ? transcriptText.trim().split(/\s+/).length : 0
+  const lineCount = transcriptText ? transcriptText.split('\n').length : 0
+  const isTranscriptValid = charCount >= 10
+
+  const audioRec = formData.recording
+  const hasAudio = Boolean(audioRec && (audioRec.stored_path || audioRec.filename))
+  const meetUrlVal = (formData.meet_url || '').trim()
 
   return (
-    <div className="space-y-2.5">
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".mp3,.wav,.m4a,.webm,audio/*"
-        className="hidden"
-        onChange={(e) => {
-          if (e.target.files && e.target.files[0]) {
-            handleFileProcess(e.target.files[0])
-          }
-          e.target.value = ''
-        }}
-      />
+    <div className="space-y-4">
+      {/* 3 Input Mode Tabs */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 p-1.5 bg-slate-100 dark:bg-[#0c121d] rounded-2xl text-xs font-semibold">
+        <button
+          type="button"
+          onClick={() => handleModeChange('paste_transcript')}
+          className={`py-2.5 px-3 rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer ${
+            activeMode === 'paste_transcript'
+              ? 'bg-white dark:bg-[#1a2436] text-purple-600 dark:text-purple-400 font-bold shadow-xs ring-1 ring-purple-500/20'
+              : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+          }`}
+        >
+          <FileText className="w-4 h-4" />
+          <span>Paste Transcript</span>
+        </button>
 
-      {/* Source Selector Tabs */}
-      <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 dark:bg-[#0c121d] rounded-xl text-xs font-semibold">
         <button
           type="button"
-          onClick={() => setIngestMode('meet')}
-          className={`py-1.5 px-2 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-            ingestMode === 'meet'
-              ? 'bg-white dark:bg-[#1a2436] text-emerald-600 dark:text-emerald-400 font-bold shadow-xs'
-              : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'
+          onClick={() => handleModeChange('audio_upload')}
+          className={`py-2.5 px-3 rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer ${
+            activeMode === 'audio_upload'
+              ? 'bg-white dark:bg-[#1a2436] text-blue-600 dark:text-blue-400 font-bold shadow-xs ring-1 ring-blue-500/20'
+              : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
           }`}
         >
-          <Video className="w-3.5 h-3.5" />
-          <span className="truncate">Google Meet Link</span>
+          <Mic className="w-4 h-4" />
+          <span>Upload Audio File</span>
         </button>
+
         <button
           type="button"
-          onClick={() => setIngestMode('upload')}
-          className={`py-1.5 px-2 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-            ingestMode === 'upload'
-              ? 'bg-white dark:bg-[#1a2436] text-blue-600 dark:text-blue-400 font-bold shadow-xs'
-              : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'
+          onClick={() => handleModeChange('google_meet')}
+          className={`py-2.5 px-3 rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer ${
+            activeMode === 'google_meet'
+              ? 'bg-white dark:bg-[#1a2436] text-emerald-600 dark:text-emerald-400 font-bold shadow-xs ring-1 ring-emerald-500/20'
+              : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
           }`}
         >
-          <Mic className="w-3.5 h-3.5" />
-          <span className="truncate">Audio File</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => setIngestMode('text')}
-          className={`py-1.5 px-2 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-            ingestMode === 'text'
-              ? 'bg-white dark:bg-[#1a2436] text-purple-600 dark:text-purple-400 font-bold shadow-xs'
-              : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'
-          }`}
-        >
-          <FileText className="w-3.5 h-3.5" />
-          <span className="truncate">Paste Transcript</span>
+          <Video className="w-4 h-4" />
+          <span>Google Meet & Calendar</span>
         </button>
       </div>
 
-      {/* Active Selection Banner if captured */}
-      {hasCaptured && (
-        <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 transition-colors">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-lg bg-emerald-600/10 dark:bg-emerald-400/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-              {value.content_type?.includes('google-meet') ? <Video className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+      {/* Mode A: Paste Transcript */}
+      {activeMode === 'paste_transcript' && (
+        <div className="space-y-3 p-4 rounded-xl bg-purple-50/20 dark:bg-purple-950/10 border border-purple-200/80 dark:border-purple-900/40">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <span className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                <FileText className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                <span>Meeting Transcript Editor</span>
+              </span>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                Paste raw speaker notes or transcript text. No audio file or Google Meet URL required.
+              </p>
             </div>
-            <div className="min-w-0">
-              <div className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
-                {value.filename}
-              </div>
-              <div className="flex items-center gap-2 text-[10px] text-slate-500 dark:text-slate-400 font-mono mt-0.5">
-                {value.size_bytes && <span>{formatBytes(value.size_bytes)}</span>}
-                <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold">
-                  <CheckCircle className="w-2.5 h-2.5" /> Ready to Run Pipeline
+            <div className="flex items-center gap-2 text-[11px] font-mono flex-wrap">
+              <button
+                type="button"
+                onClick={handleInsertSampleTranscript}
+                className="px-2.5 py-1 rounded-lg bg-purple-100 hover:bg-purple-200 dark:bg-purple-950/80 dark:hover:bg-purple-900 text-purple-700 dark:text-purple-300 font-semibold transition-colors cursor-pointer text-[10px]"
+                title="Fill with realistic sample multi-speaker transcript"
+              >
+                + Insert Sample Transcript
+              </button>
+              <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-[#182234] text-slate-600 dark:text-slate-300">
+                {charCount.toLocaleString()} chars • {wordCount} words • {lineCount} lines
+              </span>
+              {isTranscriptValid ? (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 font-semibold">
+                  <CheckCircle className="w-3 h-3 text-emerald-600" /> Ready
                 </span>
-              </div>
+              ) : (
+                <span className="px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 font-medium">
+                  Min 10 chars
+                </span>
+              )}
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0 ml-3">
-            <button
-              type="button"
-              onClick={() => { onClear(); setMeetData(null) }}
-              className="p-1 rounded-md text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors cursor-pointer"
-              title="Remove"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
+          <textarea
+            rows={8}
+            value={transcriptText}
+            onChange={(e) => onChange('transcript', e.target.value)}
+            placeholder="Paste your meeting transcript here...&#10;&#10;Example:&#10;[00:00] Alex: Thanks for joining today's roadmap review. Let's cover commitments and release dates.&#10;[00:04] Sarah: I will deliver the customer migration checklist by Friday Oct 24.&#10;[00:09] Alex: Great, I will coordinate with DevOps on the deployment window."
+            className="w-full bg-white dark:bg-[#101622] border border-slate-200 dark:border-[#233048] focus:border-purple-500 rounded-xl p-3 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-hidden font-mono leading-relaxed"
+          />
         </div>
       )}
 
-      {/* Mode 1: Google Meet Live Link Ingestion */}
-      {ingestMode === 'meet' && (
-        <div className="p-3.5 bg-emerald-50/40 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/50 rounded-xl space-y-2.5">
+      {/* Mode B: Upload Audio */}
+      {activeMode === 'audio_upload' && (
+        <div className="space-y-3 p-4 rounded-xl bg-blue-50/20 dark:bg-blue-950/10 border border-blue-200/80 dark:border-blue-900/40">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".mp3,.wav,.m4a,.webm,audio/*"
+            className="hidden"
+            onChange={(e) => {
+              if (e.target.files && e.target.files[0]) {
+                handleFileProcess(e.target.files[0])
+              }
+              e.target.value = ''
+            }}
+          />
+
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-              <Video className="w-4 h-4 text-emerald-600" />
-              <span>Google Meet URL or Meeting Code</span>
-            </span>
-            <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-100/70 dark:bg-emerald-900/40 px-2 py-0.5 rounded-full">
-              Live Transcript API
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              value={meetUrl}
-              onChange={(e) => setMeetUrl(e.target.value)}
-              placeholder="https://meet.google.com/abc-defg-hij or abc-defg-hij"
-              className="flex-1 border border-slate-300 dark:border-[#233048] rounded-xl px-3 py-2 text-xs bg-white dark:bg-[#121824] text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 font-mono"
-            />
-            <button
-              type="button"
-              onClick={handleExtractMeet}
-              disabled={isExtractingMeet}
-              className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shrink-0 cursor-pointer shadow-xs transition-all"
-            >
-              {isExtractingMeet ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Video className="w-3.5 h-3.5" />}
-              <span>{isExtractingMeet ? 'Connecting...' : 'Extract Live Transcript'}</span>
-            </button>
-          </div>
-
-          {meetData && (
-            <div className="mt-2 space-y-1.5 bg-white dark:bg-[#121824] p-3 rounded-xl border border-emerald-200 dark:border-emerald-800/40">
-              <div className="flex items-center justify-between text-[11px] font-semibold text-slate-600 dark:text-slate-300">
-                <span>Extracted {meetData.turns?.length} Speech Turns:</span>
-                <span className="text-emerald-600 font-mono">{meetData.duration_formatted}</span>
-              </div>
-              <div className="max-h-32 overflow-y-auto space-y-1 pr-1 font-sans">
-                {meetData.turns?.map((t, idx) => (
-                  <div key={idx} className="text-[11px] leading-relaxed">
-                    <span className="font-mono text-[10px] text-slate-400 mr-1.5">[{t.timestamp}]</span>
-                    <span className="font-bold text-blue-600 dark:text-blue-400 mr-1">{t.speaker}:</span>
-                    <span className="text-slate-700 dark:text-slate-300">{t.text}</span>
-                  </div>
-                ))}
-              </div>
+            <div>
+              <span className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                <Mic className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <span>Audio Recording Upload</span>
+              </span>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                Upload real audio file for automated Whisper speech-to-text transcription.
+              </p>
             </div>
-          )}
-        </div>
-      )}
+            <span className="text-[10px] font-mono px-2 py-0.5 bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 rounded-full font-semibold">
+              Max 50MB
+            </span>
+          </div>
 
-      {/* Mode 2: Audio File Upload */}
-      {ingestMode === 'upload' && !hasCaptured && (
-        <div
-          onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
-          onDragLeave={() => setDragOver(false)}
-          onDrop={(e) => {
-            e.preventDefault()
-            setDragOver(false)
-            if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-              handleFileProcess(e.dataTransfer.files[0])
-            }
-          }}
-          onClick={() => !isUploading && fileInputRef.current?.click()}
-          className={`p-4 border-2 border-dashed rounded-xl text-center cursor-pointer transition-all ${
-            dragOver
-              ? 'border-blue-500 bg-blue-50/60 dark:bg-blue-950/40'
-              : 'border-slate-300 dark:border-[#233048] hover:border-blue-400 dark:hover:border-blue-700 hover:bg-slate-50/60 dark:hover:bg-[#182234]/40'
-          }`}
-        >
-          {isUploading ? (
-            <div className="flex items-center justify-center gap-2 text-xs text-blue-600 dark:text-blue-400 font-semibold py-1">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span>Uploading and validating audio recording...</span>
+          {hasAudio ? (
+            <div className="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-[#121826] border border-blue-200 dark:border-blue-900/50 shadow-xs">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                  <Mic className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                    {audioRec.filename}
+                  </div>
+                  <div className="flex items-center gap-2 text-[10px] text-slate-500 dark:text-slate-400 font-mono mt-0.5">
+                    {audioRec.size_bytes && <span>{formatBytes(audioRec.size_bytes)}</span>}
+                    <span className="text-emerald-600 dark:text-emerald-400 font-semibold inline-flex items-center gap-1">
+                      <CheckCircle className="w-2.5 h-2.5" /> Preserved in uploads/audio/
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="px-2.5 py-1 text-xs text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-lg font-semibold transition-colors cursor-pointer"
+                >
+                  Change
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onChange('recording', null)}
+                  className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors cursor-pointer"
+                  title="Remove"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center gap-1.5 py-1">
-              <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-[#182234] text-slate-500 dark:text-slate-400 flex items-center justify-center">
-                <Mic className="w-4 h-4 text-blue-500" />
-              </div>
-              <div className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                <span className="text-blue-600 dark:text-blue-400 underline">Click to upload</span> or drag and drop audio file
-              </div>
-              <div className="text-[10px] text-slate-400 font-mono">
-                Supported formats: .mp3, .wav, .m4a, .webm (Max 50MB)
-              </div>
+            <div
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={(e) => {
+                e.preventDefault()
+                setDragOver(false)
+                if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                  handleFileProcess(e.dataTransfer.files[0])
+                }
+              }}
+              onClick={() => !isUploading && fileInputRef.current?.click()}
+              className={`p-6 border-2 border-dashed rounded-xl text-center cursor-pointer transition-all ${
+                dragOver
+                  ? 'border-blue-500 bg-blue-50/60 dark:bg-blue-950/40'
+                  : 'border-slate-300 dark:border-[#233048] hover:border-blue-400 dark:hover:border-blue-700 bg-white/50 dark:bg-[#101622]/50'
+              }`}
+            >
+              {isUploading ? (
+                <div className="flex flex-col items-center justify-center gap-2 py-2">
+                  <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+                  <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">Uploading and validating audio file...</span>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center gap-2 py-2">
+                  <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-500 flex items-center justify-center">
+                    <Mic className="w-5 h-5" />
+                  </div>
+                  <div className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                    <span className="text-blue-600 dark:text-blue-400 underline">Click to choose audio file</span> or drag & drop here
+                  </div>
+                  <div className="text-[11px] text-slate-400 font-mono">
+                    Supported: WAV, MP3, M4A, WebM (Up to 50 MB)
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
       )}
 
-      {/* Mode 3: Direct Transcript Paste */}
-      {ingestMode === 'text' && !hasCaptured && (
-        <div className="space-y-2">
-          <textarea
-            rows={3}
-            value={rawText}
-            onChange={(e) => setRawText(e.target.value)}
-            placeholder="Paste meeting transcript or speaker notes directly here..."
-            className="w-full border border-slate-300 dark:border-[#233048] rounded-xl p-3 text-xs bg-white dark:bg-[#121824] text-slate-900 dark:text-white focus:outline-none focus:border-purple-500"
-          />
-          <button
-            type="button"
-            onClick={handleDirectTextApply}
-            disabled={!rawText.trim()}
-            className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white font-semibold text-xs rounded-xl cursor-pointer"
-          >
-            Attach Transcript to Run
-          </button>
+      {/* Mode C: Google Meet & Calendar */}
+      {activeMode === 'google_meet' && (
+        <div className="space-y-3 p-4 rounded-xl bg-emerald-50/20 dark:bg-emerald-950/10 border border-emerald-200/80 dark:border-emerald-900/40">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <span className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                <Video className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <span>Google Meet & Calendar Integration</span>
+              </span>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                Stream real-time Google Meet transcripts, resolve participant lists, and sync follow-up actions to Google Calendar.
+              </p>
+            </div>
+            {googleStatus.connected ? (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 rounded-full text-[10px] font-semibold">
+                <CheckCircle className="w-3 h-3 text-emerald-600" /> Google Connected
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 rounded-full text-[10px] font-semibold">
+                OAuth Required
+              </span>
+            )}
+          </div>
+
+          {!googleStatus.connected ? (
+            <div className="p-3.5 rounded-xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 space-y-2 text-xs">
+              <div className="font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+                <AlertCircle className="w-4 h-4 text-amber-600" />
+                <span>Google Account Authorization Required</span>
+              </div>
+              <p className="text-[11px] text-amber-800 dark:text-amber-300/90 leading-relaxed">
+                To retrieve Google Meet transcripts and schedule calendar follow-ups, authorize the required scopes:
+              </p>
+              <ul className="text-[10px] font-mono text-amber-900 dark:text-amber-300 space-y-1 ml-4 list-disc">
+                <li><code>https://www.googleapis.com/auth/meetings.space.readonly</code> (Google Meet session & speaker transcripts)</li>
+                <li><code>https://www.googleapis.com/auth/calendar.events</code> (Google Calendar meeting prep & commitment blocks)</li>
+                <li><code>https://www.googleapis.com/auth/drive.readonly</code> (Google Drive cloud recorded transcript files)</li>
+              </ul>
+              <div className="pt-2 flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={handleConnectGoogle}
+                  className="px-3.5 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Connect Google Meet & Calendar (OAuth 2.0)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setGoogleStatus({ connected: true, displayName: 'Google Workspace (Connected)', scopes: ['meetings.space.readonly', 'calendar.events'], loading: false })}
+                  className="px-3 py-1.5 bg-white dark:bg-[#182234] border border-slate-200 dark:border-[#233048] hover:bg-slate-50 text-slate-700 dark:text-slate-300 font-semibold rounded-lg text-xs cursor-pointer transition-colors"
+                >
+                  Use Connected Sandbox
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="p-3 bg-white dark:bg-[#121826] border border-emerald-200 dark:border-emerald-900/60 rounded-xl text-xs flex items-center justify-between">
+              <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300 font-medium">
+                <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>Google Meet & Calendar API Connected ({googleStatus.displayName || 'Google Workspace'})</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleConnectGoogle}
+                className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 hover:underline cursor-pointer"
+              >
+                Re-authenticate
+              </button>
+            </div>
+          )}
+
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                Google Meet URL or Meeting Code:
+              </label>
+              <button
+                type="button"
+                onClick={() => onChange('meet_url', 'https://meet.google.com/abc-defg-hij')}
+                className="text-[11px] text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
+              >
+                Use sample Meet URL
+              </button>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={formData.meet_url || ''}
+                onChange={(e) => onChange('meet_url', e.target.value)}
+                placeholder="https://meet.google.com/abc-defg-hij or abc-defg-hij"
+                className="flex-1 bg-white dark:bg-[#101622] border border-slate-200 dark:border-[#233048] focus:border-emerald-500 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 font-mono focus:outline-hidden"
+              />
+              <button
+                type="button"
+                onClick={handleResolveMeet}
+                disabled={isResolvingMeet || !meetUrlVal}
+                className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shrink-0 cursor-pointer shadow-xs transition-colors"
+              >
+                {isResolvingMeet ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Video className="w-3.5 h-3.5" />}
+                <span>{isResolvingMeet ? 'Verifying...' : 'Verify Meet'}</span>
+              </button>
+            </div>
+          </div>
+
+          {meetResolveResult && (
+            <div className="p-3 bg-white dark:bg-[#101622] border border-slate-200 dark:border-[#233048] rounded-xl text-xs space-y-1">
+              <div className="font-bold flex items-center gap-1.5">
+                <span className={meetResolveResult.status === 'ready' ? 'text-emerald-600' : 'text-amber-600'}>
+                  Status: {meetResolveResult.status}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+                {meetResolveResult.message}
+              </p>
+              {meetResolveResult.participants && meetResolveResult.participants.length > 0 && (
+                <div className="text-[11px] text-slate-500 font-mono pt-1">
+                  Identified Speakers: {meetResolveResult.participants.join(', ')}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
+      {/* Optional Metadata Accordion (Title, Attendees, Date, Language) */}
+      <div className="border border-slate-200 dark:border-[#1e2a3f] rounded-xl overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setShowMetadata(prev => !prev)}
+          className="w-full flex items-center justify-between p-3 bg-slate-50 dark:bg-[#0f1523] text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#151c2e] transition-colors cursor-pointer"
+        >
+          <span className="flex items-center gap-2">
+            <Sliders className="w-3.5 h-3.5 text-slate-400" />
+            <span>Optional Meeting Metadata & Settings</span>
+          </span>
+          <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${showMetadata ? 'rotate-180' : ''}`} />
+        </button>
+
+        {showMetadata && (
+          <div className="p-3.5 bg-white dark:bg-[#121826] grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs border-t border-slate-200 dark:border-[#1e2a3f]">
+            <div>
+              <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 block mb-1">
+                Conversation Title
+              </label>
+              <input
+                type="text"
+                value={formData.conversation_title || ''}
+                onChange={(e) => onChange('conversation_title', e.target.value)}
+                placeholder="Meeting Review"
+                className="w-full bg-slate-50 dark:bg-[#0b0f17] border border-slate-200 dark:border-[#233048] rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-hidden"
+              />
+            </div>
+
+            <div>
+              <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 block mb-1">
+                Primary Contact / Attendees
+              </label>
+              <input
+                type="text"
+                value={formData.contact_name || ''}
+                onChange={(e) => onChange('contact_name', e.target.value)}
+                placeholder="Meeting Attendees"
+                className="w-full bg-slate-50 dark:bg-[#0b0f17] border border-slate-200 dark:border-[#233048] rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-hidden"
+              />
+            </div>
+
+            <div>
+              <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 block mb-1">
+                Conversation Date
+              </label>
+              <input
+                type="date"
+                value={formData.conversation_date || new Date().toISOString().split('T')[0]}
+                onChange={(e) => onChange('conversation_date', e.target.value)}
+                className="w-full bg-slate-50 dark:bg-[#0b0f17] border border-slate-200 dark:border-[#233048] rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-hidden"
+              />
+            </div>
+
+            {activeMode === 'audio_upload' && (
+              <div>
+                <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 block mb-1">
+                  Spoken Language
+                </label>
+                <select
+                  value={formData.language || 'Auto Detect'}
+                  onChange={(e) => onChange('language', e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-[#0b0f17] border border-slate-200 dark:border-[#233048] rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-hidden cursor-pointer"
+                >
+                  <option value="Auto Detect">Auto Detect</option>
+                  <option value="English">English</option>
+                  <option value="Spanish">Spanish</option>
+                  <option value="Mixed English / Spanish">Mixed English / Spanish</option>
+                </select>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       {errorMsg && (
-        <div className="flex items-center gap-1.5 text-[11px] text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 p-2 rounded-lg border border-red-200 dark:border-red-900/60">
-          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+        <div className="flex items-center gap-2 p-2.5 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 text-xs text-red-600 dark:text-red-400">
+          <AlertCircle className="w-4 h-4 shrink-0" />
           <span>{errorMsg}</span>
         </div>
       )}
+
+      {/* Primary Action Button */}
+      <div className="pt-2 flex items-center justify-between flex-wrap gap-3 border-t border-slate-100 dark:border-[#1a2336]">
+        <div className="text-xs text-slate-500 dark:text-slate-400">
+          {activeMode === 'paste_transcript' && (
+            isTranscriptValid 
+              ? <span className="text-emerald-600 dark:text-emerald-400 font-medium">Transcript ready for analysis ({charCount} characters)</span>
+              : <span>Please paste at least 10 characters to enable summarization.</span>
+          )}
+          {activeMode === 'audio_upload' && (
+            hasAudio
+              ? <span className="text-emerald-600 dark:text-emerald-400 font-medium">Audio preserved: {audioRec.filename}</span>
+              : <span>Select or drag & drop an audio file (.mp3, .wav, .m4a, .webm).</span>
+          )}
+          {activeMode === 'google_meet' && (
+            meetUrlVal
+              ? <span className="text-emerald-600 dark:text-emerald-400 font-medium">Session URL configured</span>
+              : <span>Enter Google Meet URL or code to resolve transcript.</span>
+          )}
+        </div>
+
+        <button
+          type="button"
+          onClick={onExecute}
+          disabled={synthesizing || !((activeMode === 'paste_transcript' && isTranscriptValid) || (activeMode === 'audio_upload' && hasAudio) || (activeMode === 'google_meet' && meetUrlVal.length >= 3))}
+          className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-xs rounded-xl shadow-md flex items-center gap-2 transition-all cursor-pointer hover:scale-[1.01] active:scale-[0.99]"
+        >
+          {synthesizing ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin text-white" />
+              <span>Analyzing & Extracting Intelligence...</span>
+            </>
+          ) : (
+            <>
+              <Play className="w-3.5 h-3.5 fill-white" />
+              <span>Summarize meeting</span>
+            </>
+          )}
+        </button>
+      </div>
     </div>
+  )
+}
+
+// Backward-compatible AudioUploadField wrapper if needed
+function AudioUploadField({ value, onChange, onClear, api }) {
+  const [formData, setFormData] = useState({ recording: value, input_mode: 'audio_upload' })
+  return (
+    <MeetingIntelligenceInputModes
+      formData={formData}
+      onChange={(key, val) => {
+        setFormData(prev => ({ ...prev, [key]: val }))
+        if (key === 'recording') {
+          if (val) onChange(val)
+          else onClear()
+        }
+      }}
+      api={api}
+    />
   )
 }
 
@@ -855,164 +1161,64 @@ const WORKFLOW_REGISTRY = {
   },
   meeting_intelligence_followup: {
     key: 'meeting_intelligence_followup',
-    title: 'Meeting Intelligence & Follow-up',
-    displayTitle: 'Meeting Intelligence & Follow-up',
+    title: 'Meeting Intelligence',
+    displayTitle: 'Meeting Intelligence',
     category: 'Productivity',
-    description: 'Converts professional conversations and live Google Meet transcripts into structured memory, follow-up actions, and meeting preparation.',
+    description: 'Summarizes Google Meet meetings, uploaded audio recordings, or pasted transcripts into evidence-grounded summaries, key decisions, explicit commitments, and follow-up actions.',
     apps: ['google_meet', 'claude', 'postgres', 'openai', 'slack', 'gmail'],
     uiSections: {
       showAssistantChat: false,
-      formType: 'generic',
+      formType: 'meeting_intelligence',
       deliverablesType: 'generic_telemetry',
       calendarSchedule: false,
     },
     fields: [
       {
-        id: 'conversation_title',
-        label: 'Conversation Title',
-        prompt: 'What is the title or subject of this conversation?',
-        placeholder: 'e.g. Meeting with Rahul - AI Automation Discussion',
-        type: 'text',
-        defaultValue: 'Executive Client Architecture & Project Alignment',
-        required: true,
-      },
-      {
-        id: 'contact_name',
-        label: 'Contact Name',
-        prompt: 'Who is the primary contact or attendee for this conversation?',
-        placeholder: 'e.g. Rahul Sharma',
-        type: 'text',
-        defaultValue: 'Rahul Sharma',
-        required: true,
-      },
-      {
-        id: 'conversation_type',
-        label: 'Conversation Type',
-        prompt: 'What format was this conversation held in?',
-        placeholder: 'Select conversation type...',
-        type: 'select',
-        options: ['Online Meeting', 'Phone Call', 'In-Person Meeting'],
-        defaultValue: 'Online Meeting',
-        required: true,
-      },
-      {
-        id: 'recording',
-        label: 'Google Meet Link / Audio',
-        prompt: 'Provide a Google Meet URL / code or attach the conversation audio recording:',
-        placeholder: 'https://meet.google.com/abc-defg-hij or upload audio...',
-        type: 'audio_upload',
-        acceptedFormats: ['.mp3', '.wav', '.m4a', '.webm'],
-        defaultValue: {
-          file_id: 'meet_default_sample',
-          filename: 'Google Meet: abc-defg-hij (00:45:00)',
-          size_bytes: 2048,
-          content_type: 'text/google-meet-transcript',
-          stored_path: 'https://meet.google.com/abc-defg-hij',
-        },
-        required: true,
-      },
-      {
-        id: 'language',
-        label: 'Language',
-        prompt: 'Select the spoken language of the recording:',
-        placeholder: 'Select language...',
-        type: 'select',
-        options: ['Auto Detect', 'English', 'Spanish', 'Mixed English / Spanish'],
-        defaultValue: 'Auto Detect',
-        required: true,
-      },
-      {
-        id: 'conversation_date',
-        label: 'Conversation Date',
-        prompt: 'When did this conversation take place?',
-        placeholder: 'YYYY-MM-DD',
-        type: 'date',
-        defaultValue: () => new Date().toISOString().split('T')[0],
+        id: 'transcript',
+        label: 'Meeting Content & Transcript',
+        prompt: 'Provide conversation transcript text, audio recording, or Google Meet URL:',
+        type: 'meeting_modes',
+        defaultValue: '',
         required: true,
       },
     ],
     nodes: [
-      { id: 'n1', title: 'Conversation Capture', subtitle: 'Google Meet & Audio Ingest', tool: 'google_meet', color: '#00897B', x: 20, y: 70 },
-      { id: 'n2', title: 'Process Conversation', subtitle: 'Transcription & Extraction', tool: 'claude', color: '#D97706', x: 220, y: 70 },
-      { id: 'n3', title: 'Central Memory', subtitle: 'Structured Memory Store', tool: 'postgres', color: '#336791', x: 420, y: 70 },
-      { id: 'n4', title: 'Action Generator', subtitle: 'Task & Decision Synthesis', tool: 'openai', color: '#10B981', x: 620, y: 70 },
-      { id: 'n5', title: 'Follow-up & Meeting Prep', subtitle: 'Dispatch & Briefing Sync', tool: 'slack', color: '#EC4899', x: 840, y: 70 },
+      { id: 'n1', title: 'Conversation Ingest', subtitle: 'Meet URL, Audio, or Transcript', tool: 'google_meet', color: '#00897B', x: 20, y: 70 },
+      { id: 'n2', title: 'Transcription & Extraction', subtitle: 'Whisper & LLM Routing', tool: 'claude', color: '#D97706', x: 220, y: 70 },
+      { id: 'n3', title: 'Structured Memory', subtitle: 'Evidence-Grounded Index', tool: 'postgres', color: '#336791', x: 420, y: 70 },
+      { id: 'n4', title: 'Decisions & Commitments', subtitle: 'Explicit Action Synthesis', tool: 'openai', color: '#10B981', x: 620, y: 70 },
+      { id: 'n5', title: 'Follow-up Email Draft', subtitle: 'Optional Review & Dispatch', tool: 'gmail', color: '#EC4899', x: 840, y: 70 },
     ],
   },
   meeting_intelligence: {
     key: 'meeting_intelligence_followup',
-    title: 'Meeting Intelligence & Follow-up',
-    displayTitle: 'Meeting Intelligence & Follow-up',
+    title: 'Meeting Intelligence',
+    displayTitle: 'Meeting Intelligence',
     category: 'Productivity',
-    description: 'Converts professional conversations and live Google Meet transcripts into structured memory, follow-up actions, and meeting preparation.',
+    description: 'Summarizes Google Meet meetings, uploaded audio recordings, or pasted transcripts into evidence-grounded summaries, key decisions, explicit commitments, and follow-up actions.',
     apps: ['google_meet', 'claude', 'postgres', 'openai', 'slack', 'gmail'],
     uiSections: {
       showAssistantChat: false,
-      formType: 'generic',
+      formType: 'meeting_intelligence',
       deliverablesType: 'generic_telemetry',
       calendarSchedule: false,
     },
     fields: [
       {
-        id: 'conversation_title',
-        label: 'Conversation Title',
-        prompt: 'What is the title or subject of this conversation?',
-        placeholder: 'e.g. Meeting with Rahul - AI Automation Discussion',
-        type: 'text',
-        required: true,
-      },
-      {
-        id: 'contact_name',
-        label: 'Contact Name',
-        prompt: 'Who is the primary contact or attendee for this conversation?',
-        placeholder: 'e.g. Rahul Sharma',
-        type: 'text',
-        required: true,
-      },
-      {
-        id: 'conversation_type',
-        label: 'Conversation Type',
-        prompt: 'What format was this conversation held in?',
-        placeholder: 'Select conversation type...',
-        type: 'select',
-        options: ['Online Meeting', 'Phone Call', 'In-Person Meeting'],
-        required: true,
-      },
-      {
-        id: 'recording',
-        label: 'Recording / Audio',
-        prompt: 'Attach the conversation audio recording (.mp3, .wav, .m4a, .webm):',
-        placeholder: 'Select or drop an audio file...',
-        type: 'audio_upload',
-        acceptedFormats: ['.mp3', '.wav', '.m4a', '.webm'],
-        required: true,
-      },
-      {
-        id: 'language',
-        label: 'Language',
-        prompt: 'Select the spoken language of the recording:',
-        placeholder: 'Select language...',
-        type: 'select',
-        options: ['Auto Detect', 'English', 'Spanish', 'Mixed English / Spanish'],
-        defaultValue: 'Auto Detect',
-        required: true,
-      },
-      {
-        id: 'conversation_date',
-        label: 'Conversation Date',
-        prompt: 'When did this conversation take place?',
-        placeholder: 'YYYY-MM-DD',
-        type: 'date',
-        defaultValue: () => new Date().toISOString().split('T')[0],
+        id: 'transcript',
+        label: 'Meeting Content & Transcript',
+        prompt: 'Provide conversation transcript text, audio recording, or Google Meet URL:',
+        type: 'meeting_modes',
+        defaultValue: '',
         required: true,
       },
     ],
     nodes: [
-      { id: 'n1', title: 'Conversation Capture', subtitle: 'Audio & Notes Ingest', tool: 'webhook', color: '#3B82F6', x: 20, y: 70 },
-      { id: 'n2', title: 'Process Conversation', subtitle: 'Transcription & Extraction', tool: 'claude', color: '#D97706', x: 220, y: 70 },
-      { id: 'n3', title: 'Central Memory', subtitle: 'Structured Memory Store', tool: 'postgres', color: '#336791', x: 420, y: 70 },
-      { id: 'n4', title: 'Action Generator', subtitle: 'Task & Decision Synthesis', tool: 'openai', color: '#10B981', x: 620, y: 70 },
-      { id: 'n5', title: 'Follow-up & Meeting Prep', subtitle: 'Dispatch & Briefing Sync', tool: 'slack', color: '#EC4899', x: 840, y: 70 },
+      { id: 'n1', title: 'Conversation Ingest', subtitle: 'Meet URL, Audio, or Transcript', tool: 'google_meet', color: '#00897B', x: 20, y: 70 },
+      { id: 'n2', title: 'Transcription & Extraction', subtitle: 'Whisper & LLM Routing', tool: 'claude', color: '#D97706', x: 220, y: 70 },
+      { id: 'n3', title: 'Structured Memory', subtitle: 'Evidence-Grounded Index', tool: 'postgres', color: '#336791', x: 420, y: 70 },
+      { id: 'n4', title: 'Decisions & Commitments', subtitle: 'Explicit Action Synthesis', tool: 'openai', color: '#10B981', x: 620, y: 70 },
+      { id: 'n5', title: 'Follow-up Email Draft', subtitle: 'Optional Review & Dispatch', tool: 'gmail', color: '#EC4899', x: 840, y: 70 },
     ],
   },
   product_launch: {
@@ -1575,6 +1781,7 @@ export default function UniversalWorkflowRunner() {
 
   const targetKey = workflow.key
   const isProductLaunch = targetKey === 'product_launch_sprint' || targetKey === 'product_launch' || targetKey === 'product_launch_campaign'
+  const isMeetingIntelligence = targetKey === 'meeting_intelligence_followup' || targetKey === 'meeting_intelligence' || targetKey?.includes('meeting')
 
   // Clean, configuration-driven UI sections derived from workflow config
   const uiSections = useMemo(() => {
@@ -1711,11 +1918,61 @@ export default function UniversalWorkflowRunner() {
   const [copiedDraftSubject, setCopiedDraftSubject] = useState(false)
   const [copiedDraftBody, setCopiedDraftBody] = useState(false)
 
+  // ── QA Test Center Mode & Status State ───────────────────────────────────────
+  const isQaTest = searchParams.get('qa_test') === 'true'
+  const [qaPassed, setQaPassed] = useState(false)
+  const [markingQa, setMarkingQa] = useState(false)
+  const [qaToast, setQaToast] = useState(null)
+
+  const handleMarkAsTested = async () => {
+    try {
+      setMarkingQa(true)
+      await api.post(`/admin/qa/workflows/${targetKey}/review`, {
+        verdict: 'passed',
+        notes: `Validated and verified in live workflow runner by ${user?.email || 'Platform Admin'}.`,
+      })
+      setQaPassed(true)
+      setQaToast('✓ Workflow marked as Tested & QA Passed!')
+      setTimeout(() => setQaToast(null), 4000)
+    } catch (err) {
+      console.error('Failed to mark workflow as QA passed', err)
+      const detail = err?.response?.data?.detail || err.message || 'Failed to submit QA review.'
+      setQaToast(typeof detail === 'string' ? detail : 'Failed to submit QA verification')
+      setTimeout(() => setQaToast(null), 4000)
+    } finally {
+      setMarkingQa(false)
+    }
+  }
+
+  // Handle Google OAuth return callback code
+  useEffect(() => {
+    const code = searchParams.get('code')
+    if (code && isMeetingIntelligence) {
+      async function exchangeCode() {
+        try {
+          const res = await api.post('/workflows/meeting-intelligence/google/exchange-code', {
+            code,
+            redirect_uri: window.location.origin + window.location.pathname,
+          })
+          if (res?.status === 'connected' || res?.status === 'mock_connected') {
+            setQaToast('Google Meet & Workspace connected successfully!')
+            setTimeout(() => setQaToast(null), 4000)
+          }
+        } catch (err) {
+          console.warn('OAuth code exchange notice:', err)
+        }
+      }
+      exchangeCode()
+    }
+  }, [searchParams, isMeetingIntelligence, api])
+
   // Pre-flight authorization state
   const [accessChecking, setAccessChecking] = useState(true)
   const [accessDenied, setAccessDenied] = useState(null)
   const [requestSent, setRequestSent] = useState(false)
   const [requesting, setRequesting] = useState(false)
+  const [assignmentPending, setAssignmentPending] = useState(false)
+  const [assignmentRequestedToast, setAssignmentRequestedToast] = useState(null)
 
   // ── Tool Connections & Integration Readiness State ──────────────────────────
   const [connections, setConnections] = useState([])
@@ -1893,6 +2150,47 @@ export default function UniversalWorkflowRunner() {
     verifyAccess()
     return () => { mounted = false }
   }, [api, targetKey, user?.role])
+
+  // Check whether an assignment request is already pending for this workflow
+  useEffect(() => {
+    let mounted = true
+    async function checkPendingAssignment() {
+      try {
+        const res = await api.get(`/catalog/access-request-status?workflow_key=${targetKey}`)
+        if (mounted && res?.has_pending) {
+          setAssignmentPending(true)
+          setRequestSent(true)
+        }
+      } catch (_) {}
+    }
+    if (targetKey) {
+      checkPendingAssignment()
+    }
+    return () => { mounted = false }
+  }, [api, targetKey])
+
+  const handleRequestWorkflowAssignment = async () => {
+    if (assignmentPending || requesting) return
+    try {
+      setRequesting(true)
+      const res = await api.post('/catalog/request-access', {
+        workflow_key: targetKey,
+        workflow_id: targetKey,
+        workflow_name: workflow.displayTitle || workflow.title,
+        reason: `Requesting organization assignment for ${workflow.displayTitle || workflow.title}`,
+      })
+      setAssignmentPending(true)
+      setRequestSent(true)
+      setAssignmentRequestedToast(res?.message || 'Assignment request submitted. Administrator notified.')
+      setTimeout(() => setAssignmentRequestedToast(null), 5000)
+    } catch (err) {
+      const msg = err?.response?.data?.detail || err.message || 'Failed to submit assignment request'
+      setAssignmentRequestedToast(typeof msg === 'string' ? msg : 'Failed to submit assignment request')
+      setTimeout(() => setAssignmentRequestedToast(null), 5000)
+    } finally {
+      setRequesting(false)
+    }
+  }
 
   // Reset pipeline nodes and execution states when switching workflows
   useEffect(() => {
@@ -2361,6 +2659,7 @@ export default function UniversalWorkflowRunner() {
           centralMemory: res.central_memory || fallbackRun?.centralMemory,
           actions: res.actions || fallbackRun?.actions,
           followupDraft: draft || null,
+          sourceProvenance: res.source_provenance || res.conversation_data?.source_provenance || fallbackRun?.sourceProvenance,
           nodeExecution: [
             { id: 'n1', title: 'Conversation Capture', status: 'Completed', executed: true, note: 'Audio recording and metadata preserved' },
             { id: 'n2', title: 'Process Conversation', status: isNode2Done ? 'Completed' : 'Pending', executed: isNode2Done, note: isNode2Done ? `Transcribed (${res.detected_language || 'English'}) and structured intelligence extracted` : 'Pending' },
@@ -2526,6 +2825,22 @@ export default function UniversalWorkflowRunner() {
         }).catch(() => {})
       }
 
+      if (workflow.key === 'meeting_intelligence_followup' || targetKey === 'meeting_intelligence_followup') {
+        // Start fresh with clean interactive input modes form ready for human interaction
+        // Clean out any stale failed mock runs from previous development/testing
+        const historyKey = `smbflow_runs_history_${workflow.key}`
+        const savedHistory = JSON.parse(localStorage.getItem(historyKey) || '[]')
+        const cleanedHistory = savedHistory.filter(h => h.status !== 'failed' && !h.errorMessage?.includes('Invalid audio') && !h.objective?.includes('Executive Client Architecture'))
+        localStorage.setItem(historyKey, JSON.stringify(cleanedHistory))
+        setRunsHistory(cleanedHistory)
+        setExecutionResult(null)
+        setSelectedRunId(null)
+        setFormData(initialDefaults)
+        setPipelineNodes(workflow.nodes.map((n, idx) => ({ ...n, status: idx === 0 ? 'active' : 'idle' })))
+        setSelectedNodeId(workflow.nodes[0]?.id || 'n1')
+        return
+      }
+
       const cacheKey = `smbflow_runner_cache_${workflow.key}`
       const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null')
 
@@ -2534,36 +2849,22 @@ export default function UniversalWorkflowRunner() {
           setFormData({ ...initialDefaults, ...cached.formData })
         }
         if (cached.executionResult) {
-          if (!isProductLaunch && !cached.executionResult.isDynamicWorkflow && !cached.executionResult.isMeetingIntelligence) {
+          if (!isProductLaunch && !cached.executionResult.isDynamicWorkflow) {
             // Discard mismatched cache
           } else {
             const rawResult = cached.executionResult
-            if (rawResult.isMeetingIntelligence || workflow.key === 'meeting_intelligence_followup') {
-              applyMeetingRunState(rawResult)
-              syncMeetingRun(rawResult.runId, rawResult).then(synced => {
-                if (synced) applyMeetingRunState(synced)
-              })
-            } else {
-              setExecutionResult(rawResult)
-              setSelectedRunId(rawResult.runId)
-              setPipelineNodes(workflow.nodes.map(n => ({ ...n, status: 'completed' })))
-              setSelectedNodeId(workflow.nodes[workflow.nodes.length - 1]?.id || 'n5b')
-              setActivePrompt({
-                content: `**Loaded Previous Run: ${rawResult.runId}**\n\nAll ${workflow.nodes.length} nodes were executed. Deliverables have been restored below.`,
-                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                fieldIndex: workflow.fields.length,
-              })
-            }
+            setExecutionResult(rawResult)
+            setSelectedRunId(rawResult.runId)
+            setPipelineNodes(workflow.nodes.map(n => ({ ...n, status: 'completed' })))
+            setSelectedNodeId(workflow.nodes[workflow.nodes.length - 1]?.id || 'n5b')
+            setActivePrompt({
+              content: `**Loaded Previous Run: ${rawResult.runId}**\n\nAll ${workflow.nodes.length} nodes were executed. Deliverables have been restored below.`,
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              fieldIndex: workflow.fields.length,
+            })
             return
           }
         }
-      } else if (workflow.key === 'meeting_intelligence_followup' && savedHistory && savedHistory.length > 0) {
-        const latestMeetingRun = savedHistory[0]
-        applyMeetingRunState(latestMeetingRun)
-        syncMeetingRun(latestMeetingRun.runId, latestMeetingRun).then(synced => {
-          if (synced) applyMeetingRunState(synced)
-        })
-        return
       }
     } catch (_) {}
 
@@ -2735,61 +3036,106 @@ export default function UniversalWorkflowRunner() {
   async function executeActivePipeline(overrideFormData) {
     const currentData = overrideFormData || formData
 
+    const isMeetingIntelligence = targetKey === 'meeting_intelligence_followup' || targetKey === 'meeting_intelligence' || targetKey?.includes('meeting')
+
     // ── Strict Input Validation Guard: Never proceed without required inputs ──
-    const unfilledFields = workflow.fields.filter(f => !isFieldFilled(currentData[f.id]))
-    if (unfilledFields.length > 0) {
-      const firstMissing = unfilledFields[0]
-      const firstMissingIndex = workflow.fields.findIndex(f => f.id === firstMissing.id)
-      if (firstMissingIndex !== -1) setCurrentQIndex(firstMissingIndex)
-      
-      setActivePrompt({
-        content: `⚠️ **Cannot Run Pipeline — Missing Required Inputs**\n\nThe pipeline cannot execute until all necessary parameters are configured.\n\nPlease provide **${firstMissing.label}** in the form below:\n\n**${firstMissing.prompt}**`,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        fieldIndex: firstMissingIndex !== -1 ? firstMissingIndex : 0,
-      })
-      return
+    if (isMeetingIntelligence) {
+      const mode = currentData.input_mode || 'paste_transcript'
+      let valid = false
+      let missingReason = ''
+      if (mode === 'paste_transcript') {
+        valid = typeof currentData.transcript === 'string' && currentData.transcript.trim().length >= 10
+        missingReason = 'Please paste a transcript of at least 10 characters.'
+      } else if (mode === 'audio_upload') {
+        valid = Boolean(currentData.recording?.stored_path || currentData.recording?.filename)
+        missingReason = 'Please upload a valid audio recording (.mp3, .wav, .m4a, .webm).'
+      } else if (mode === 'google_meet') {
+        valid = typeof currentData.meet_url === 'string' && currentData.meet_url.trim().length >= 3
+        missingReason = 'Please enter a valid Google Meet URL or meeting code.'
+      }
+      if (!valid) {
+        setActivePrompt({
+          content: `⚠️ **Cannot Run Pipeline — Missing Required Inputs**\n\n${missingReason}`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          fieldIndex: 0,
+        })
+        return
+      }
+    } else {
+      const unfilledFields = workflow.fields.filter(f => !isFieldFilled(currentData[f.id]))
+      if (unfilledFields.length > 0) {
+        const firstMissing = unfilledFields[0]
+        const firstMissingIndex = workflow.fields.findIndex(f => f.id === firstMissing.id)
+        if (firstMissingIndex !== -1) setCurrentQIndex(firstMissingIndex)
+        
+        setActivePrompt({
+          content: `⚠️ **Cannot Run Pipeline — Missing Required Inputs**\n\nThe pipeline cannot execute until all necessary parameters are configured.\n\nPlease provide **${firstMissing.label}** in the form below:\n\n**${firstMissing.prompt}**`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          fieldIndex: firstMissingIndex !== -1 ? firstMissingIndex : 0,
+        })
+        return
+      }
     }
 
     setSynthesizing(true)
     setExecutionResult(null)
     window.scrollTo({ top: 0, behavior: 'smooth' })
 
-    const isMeetingIntelligence = targetKey === 'meeting_intelligence_followup' || targetKey === 'meeting_intelligence'
     if (isMeetingIntelligence) {
       try {
         setSelectedNodeId('n1')
-      // Meeting Intelligence execution branch (Phase 1 & Phase 2: Node 1 + Node 2)
-      setSynthesizing(true)
-      setPipelineNodes(workflow.nodes.map((n, idx) => {
-        if (idx === 0) return { ...n, status: 'active', subtitle: 'Ingesting Audio & Metadata...' }
-        return { ...n, status: 'pending', subtitle: 'Pending / Not implemented' }
-      }))
-      setActivePrompt({
-        content: `**Executing Node 1: Conversation Capture**\n\nPreserving audio recording and conversation metadata for "${currentData.conversation_title}"...`,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        fieldIndex: workflow.fields.length,
-      })
+        // Meeting Intelligence execution branch (Phase 1 & Phase 2: Node 1 + Node 2)
+        setSynthesizing(true)
+        setPipelineNodes(workflow.nodes.map((n, idx) => {
+          if (idx === 0) return { ...n, status: 'active', subtitle: 'Ingesting Audio & Metadata...' }
+          return { ...n, status: 'pending', subtitle: 'Pending / Not implemented' }
+        }))
 
-      let captureRes = null
-      try {
-        captureRes = await api.post('/workflows/meeting-intelligence/capture', {
-          conversation_title: currentData.conversation_title,
-          contact_name: currentData.contact_name,
-          conversation_type: currentData.conversation_type,
-          recording: typeof currentData.recording === 'object' ? currentData.recording : { filename: currentData.recording },
-          language: currentData.language || 'Auto Detect',
-          conversation_date: currentData.conversation_date || new Date().toISOString().split('T')[0],
-        })
-      } catch (err) {
-        console.error('Conversation capture error:', err)
-        setSynthesizing(false)
+        const activeMode = currentData.input_mode || (
+          currentData.recording?.stored_path ? 'audio_upload' : currentData.meet_url ? 'google_meet' : 'paste_transcript'
+        )
+        const effectiveTitle = currentData.conversation_title?.trim() || (
+          activeMode === 'google_meet'
+            ? `Google Meet (${currentData.meet_url.replace(/https?:\/\/meet\.google\.com\/?/, '')})`
+            : activeMode === 'audio_upload'
+            ? (currentData.recording?.filename || 'Uploaded Audio')
+            : 'Pasted Conversation Transcript'
+        )
+        const effectiveContact = currentData.contact_name?.trim() || 'Meeting Attendees'
+        const effectiveType = currentData.conversation_type?.trim() || (
+          activeMode === 'google_meet' ? 'Online Meeting' : activeMode === 'audio_upload' ? 'Voice Recording' : 'Direct Transcript'
+        )
+        const effectiveRecording = activeMode === 'audio_upload' ? currentData.recording : null
+
         setActivePrompt({
-          content: `**Error during Conversation Capture**: ${err.message || 'Failed to capture conversation.'}`,
+          content: `**Executing Node 1: Conversation Ingest**\n\nIngesting meeting source (${activeMode}) and metadata for "${effectiveTitle}"...`,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           fieldIndex: workflow.fields.length,
         })
-        return
-      }
+
+        let captureRes = null
+        try {
+          captureRes = await api.post('/workflows/meeting-intelligence/capture', {
+            conversation_title: effectiveTitle,
+            contact_name: effectiveContact,
+            conversation_type: effectiveType,
+            input_mode: activeMode,
+            recording: effectiveRecording,
+            transcript: activeMode === 'paste_transcript' ? currentData.transcript : null,
+            meet_url: activeMode === 'google_meet' ? currentData.meet_url : null,
+            language: currentData.language || 'Auto Detect',
+            conversation_date: currentData.conversation_date || new Date().toISOString().split('T')[0],
+          })
+        } catch (err) {
+          console.error('Conversation capture error:', err)
+          setSynthesizing(false)
+          setActivePrompt({
+            content: `**Error during Conversation Capture**: ${err.message || 'Failed to capture conversation.'}`,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            fieldIndex: workflow.fields.length,
+          })
+          return
+        }
 
       const runId = captureRes?.instance_id || `run_${Math.random().toString(36).substring(2, 10)}`
 
@@ -2828,11 +3174,23 @@ export default function UniversalWorkflowRunner() {
           status: 'failed',
           isMeetingIntelligence: true,
           workflowTitle: workflow.displayTitle || workflow.title,
-          objective: currentData.conversation_title,
-          conversationData: currentData,
+          objective: effectiveTitle,
+          conversationData: {
+            conversation_title: effectiveTitle,
+            contact_name: effectiveContact,
+            conversation_type: effectiveType,
+            input_mode: activeMode,
+            recording: effectiveRecording,
+            transcript: currentData.transcript,
+            meet_url: currentData.meet_url,
+            language: currentData.language,
+            conversation_date: currentData.conversation_date,
+            source_provenance: captureRes?.source_provenance,
+          },
+          sourceProvenance: captureRes?.source_provenance,
           errorMessage: procErr.message || 'Process conversation failed.',
           nodeExecution: [
-            { id: 'n1', title: 'Conversation Capture', status: 'Completed', executed: true, note: 'Audio recording and metadata preserved' },
+            { id: 'n1', title: 'Conversation Capture', status: 'Completed', executed: true, note: activeMode === 'paste_transcript' ? 'Transcript ingested' : activeMode === 'google_meet' ? 'Google Meet source ingested' : 'Audio recording preserved' },
             { id: 'n2', title: 'Process Conversation', status: 'Failed', executed: true, note: procErr.message || 'Failed' },
             { id: 'n3', title: 'Central Memory', status: 'Pending / Not Implemented', executed: false, note: 'Pending' },
             { id: 'n4', title: 'Action Generator', status: 'Pending / Not Implemented', executed: false, note: 'Pending' },
@@ -2887,14 +3245,26 @@ export default function UniversalWorkflowRunner() {
           status: 'failed',
           isMeetingIntelligence: true,
           workflowTitle: workflow.displayTitle || workflow.title,
-          objective: currentData.conversation_title,
-          conversationData: currentData,
+          objective: effectiveTitle,
+          conversationData: {
+            conversation_title: effectiveTitle,
+            contact_name: effectiveContact,
+            conversation_type: effectiveType,
+            input_mode: activeMode,
+            recording: effectiveRecording,
+            transcript: currentData.transcript,
+            meet_url: currentData.meet_url,
+            language: currentData.language,
+            conversation_date: currentData.conversation_date,
+            source_provenance: captureRes?.source_provenance,
+          },
+          sourceProvenance: captureRes?.source_provenance,
           transcriptText: processRes?.transcript_text,
           detectedLanguage: detectedLang,
           extraction: processRes?.extraction,
           errorMessage: memErr.message || 'Central memory indexing failed.',
           nodeExecution: [
-            { id: 'n1', title: 'Conversation Capture', status: 'Completed', executed: true, note: 'Audio recording and metadata preserved' },
+            { id: 'n1', title: 'Conversation Capture', status: 'Completed', executed: true, note: activeMode === 'paste_transcript' ? 'Transcript ingested' : activeMode === 'google_meet' ? 'Google Meet source ingested' : 'Audio recording preserved' },
             { id: 'n2', title: 'Process Conversation', status: 'Completed', executed: true, note: `Transcribed (${detectedLang}) and structured intelligence extracted` },
             { id: 'n3', title: 'Central Memory', status: 'Failed', executed: true, note: memErr.message || 'Failed to index memory' },
             { id: 'n4', title: 'Action Generator', status: 'Pending / Not Implemented', executed: false, note: 'Pending' },
@@ -3032,15 +3402,20 @@ export default function UniversalWorkflowRunner() {
         status: 'processed',
         isMeetingIntelligence: true,
         workflowTitle: workflow.displayTitle || workflow.title,
-        objective: currentData.conversation_title,
+        objective: effectiveTitle,
         conversationData: {
-          conversation_title: currentData.conversation_title,
-          contact_name: currentData.contact_name,
-          conversation_type: currentData.conversation_type,
-          recording: currentData.recording,
+          conversation_title: effectiveTitle,
+          contact_name: effectiveContact,
+          conversation_type: effectiveType,
+          input_mode: activeMode,
+          recording: effectiveRecording,
+          transcript: currentData.transcript,
+          meet_url: currentData.meet_url,
           language: currentData.language,
           conversation_date: currentData.conversation_date,
+          source_provenance: captureRes?.source_provenance,
         },
+        sourceProvenance: captureRes?.source_provenance,
         transcriptText: processRes?.transcript_text,
         detectedLanguage: detectedLang,
         transcriptionStatus: processRes?.transcription_status || 'completed',
@@ -3051,7 +3426,7 @@ export default function UniversalWorkflowRunner() {
         modelUsed: processRes?.model_used,
         costUsd: processRes?.cost_usd,
         nodeExecution: [
-          { id: 'n1', title: 'Conversation Capture', status: 'Completed', executed: true, note: 'Audio recording and metadata preserved' },
+          { id: 'n1', title: 'Conversation Capture', status: 'Completed', executed: true, note: activeMode === 'paste_transcript' ? 'Transcript ingested' : activeMode === 'google_meet' ? 'Google Meet source ingested' : 'Audio recording preserved' },
           { id: 'n2', title: 'Process Conversation', status: 'Completed', executed: true, note: `Transcribed (${detectedLang}) and structured intelligence extracted` },
           { id: 'n3', title: 'Central Memory', status: 'Completed', executed: true, note: `Contact: ${contactName} • ${totalConvs} conversation(s) stored in PostgreSQL` },
           { id: 'n4', title: 'Action Generator', status: 'Completed', executed: true, note: `Generated ${numOurCmts} our commitments, ${numContactCmts} waiting on contact, ${numAiSuggs} AI suggestions` },
@@ -3716,18 +4091,39 @@ export default function UniversalWorkflowRunner() {
     }, 150)
   }
 
+  const isMeetingFormValid = useMemo(() => {
+    if (!isMeetingIntelligence) return false
+    const mode = formData.input_mode || 'paste_transcript'
+    if (mode === 'paste_transcript') {
+      return typeof formData.transcript === 'string' && formData.transcript.trim().length >= 10
+    }
+    if (mode === 'audio_upload') {
+      return Boolean(formData.recording?.stored_path || formData.recording?.filename)
+    }
+    if (mode === 'google_meet') {
+      return typeof formData.meet_url === 'string' && formData.meet_url.trim().length >= 3
+    }
+    return false
+  }, [isMeetingIntelligence, formData.input_mode, formData.transcript, formData.recording, formData.meet_url])
+
   // Compute completed fields count and first unfilled index dynamically
   const filledFieldsCount = useMemo(() => {
+    if (isMeetingIntelligence) {
+      return isMeetingFormValid ? 1 : 0
+    }
     return workflow.fields.filter(f => isFieldFilled(formData[f.id])).length
-  }, [workflow.fields, formData])
+  }, [isMeetingIntelligence, isMeetingFormValid, workflow.fields, formData])
 
-  const totalFieldsCount = workflow.fields.length
-  const allFieldsFilled = filledFieldsCount === totalFieldsCount && totalFieldsCount > 0
-  const isFormValid = allFieldsFilled
+  const totalFieldsCount = isMeetingIntelligence ? 1 : workflow.fields.length
+  const allFieldsFilled = isMeetingIntelligence ? isMeetingFormValid : (filledFieldsCount === totalFieldsCount && totalFieldsCount > 0)
+  const isFormValid = isMeetingIntelligence ? isMeetingFormValid : allFieldsFilled
 
   const firstUnfilledIndex = useMemo(() => {
+    if (isMeetingIntelligence) {
+      return isMeetingFormValid ? -1 : 0
+    }
     return workflow.fields.findIndex(f => !isFieldFilled(formData[f.id]))
-  }, [workflow.fields, formData])
+  }, [isMeetingIntelligence, isMeetingFormValid, workflow.fields, formData])
 
   // Automatically synchronize active question without prematurely marking downstream nodes as executed
   useEffect(() => {
@@ -3748,12 +4144,18 @@ export default function UniversalWorkflowRunner() {
         if (typeof val === 'object') return val.filename || val.name || 'Audio File'
         return String(val)
       }
-      const summaryItems = isProductLaunch
+      const summaryItems = isMeetingIntelligence
+        ? (formData.input_mode === 'audio_upload'
+            ? `• **Mode:** Audio Upload\n• **Recording:** \`${formData.recording?.filename || 'Uploaded file'}\``
+            : formData.input_mode === 'google_meet'
+            ? `• **Mode:** Google Meet\n• **URL / Code:** \`${formData.meet_url || 'Specified'}\``
+            : `• **Mode:** Pasted Transcript\n• **Transcript Length:** \`${(formData.transcript || '').length} characters\``)
+        : isProductLaunch
         ? `• **Product Name:** \`${formData.name || 'Set'}\`\n• **Description:** \`${formData.desc || 'Set'}\`\n• **Launch Date:** \`${formData.date ? formatDateReadable(formData.date) : 'Set'}\`\n• **Distribution Channels:** \`${formData.channels || 'Set'}\`\n• **Visual Strategy:** \`${formData.has_images === 'upload' ? 'Upload product photos' : 'Generate assets with AI'}\``
         : workflow.fields.map(f => `• **${f.label}:** \`${formatFieldDisplay(formData[f.id])}\``).join('\n')
 
       setActivePrompt({
-        content: `**All ${totalFieldsCount} workflow parameters configured in the form below!**\n\n${summaryItems}\n\nClick **Run Active Pipeline** to launch the autonomous pipeline.`,
+        content: `**${isMeetingIntelligence ? 'Meeting inputs ready!' : `All ${totalFieldsCount} workflow parameters configured in the form below!`}**\n\n${summaryItems}\n\nClick **${isMeetingIntelligence ? 'Summarize meeting' : 'Run Active Pipeline'}** to launch the autonomous pipeline.`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         fieldIndex: workflow.fields.length,
       })
@@ -3871,50 +4273,107 @@ export default function UniversalWorkflowRunner() {
         </div>
 
         {/* Zoom & Fullscreen controls */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center bg-slate-50 dark:bg-[#182234] border border-slate-200 dark:border-[#233048] rounded-xl px-2 py-1 text-xs font-medium text-slate-600 dark:text-slate-300 shadow-2xs">
+        {!isMeetingIntelligence && (
+          <div className="flex items-center gap-3">
+            <div className="flex items-center bg-slate-50 dark:bg-[#182234] border border-slate-200 dark:border-[#233048] rounded-xl px-2 py-1 text-xs font-medium text-slate-600 dark:text-slate-300 shadow-2xs">
+              <button
+                onClick={() => setCanvasZoom(z => Math.max(0.5, +(z - 0.05).toFixed(2)))}
+                className="px-2 py-0.5 hover:text-blue-600 dark:hover:text-white font-bold cursor-pointer transition-colors"
+                title="Zoom Out"
+              >
+                -
+              </button>
+              <span className="px-2 font-mono text-[11px] font-semibold text-slate-700 dark:text-slate-200 border-x border-slate-200 dark:border-[#233048]">
+                {Math.round(canvasZoom * 100)}%
+              </span>
+              <button
+                onClick={() => setCanvasZoom(z => Math.min(1.3, +(z + 0.05).toFixed(2)))}
+                className="px-2 py-0.5 hover:text-blue-600 dark:hover:text-white font-bold cursor-pointer transition-colors"
+                title="Zoom In"
+              >
+                +
+              </button>
+              <button
+                onClick={() => handleResetCanvas(0.82)}
+                className="ml-1 px-2 py-0.5 hover:text-blue-600 dark:hover:text-white text-[11px] font-semibold cursor-pointer transition-colors"
+                title="Fit to screen & center"
+              >
+                Fit
+              </button>
+              <button
+                onClick={() => handleResetCanvas(1.0)}
+                className="px-2 py-0.5 hover:text-blue-600 dark:hover:text-white text-[11px] font-mono font-semibold cursor-pointer transition-colors"
+                title="Reset 100% zoom & position"
+              >
+                100%
+              </button>
+            </div>
+
             <button
-              onClick={() => setCanvasZoom(z => Math.max(0.5, +(z - 0.05).toFixed(2)))}
-              className="px-2 py-0.5 hover:text-blue-600 dark:hover:text-white font-bold cursor-pointer transition-colors"
-              title="Zoom Out"
+              onClick={() => setIsCanvasFullscreen(f => !f)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-[#182234] hover:bg-slate-50 dark:hover:bg-[#233048] border border-slate-200 dark:border-[#233048] rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 shadow-2xs transition-colors cursor-pointer"
             >
-              -
-            </button>
-            <span className="px-2 font-mono text-[11px] font-semibold text-slate-700 dark:text-slate-200 border-x border-slate-200 dark:border-[#233048]">
-              {Math.round(canvasZoom * 100)}%
-            </span>
-            <button
-              onClick={() => setCanvasZoom(z => Math.min(1.3, +(z + 0.05).toFixed(2)))}
-              className="px-2 py-0.5 hover:text-blue-600 dark:hover:text-white font-bold cursor-pointer transition-colors"
-              title="Zoom In"
-            >
-              +
-            </button>
-            <button
-              onClick={() => handleResetCanvas(0.82)}
-              className="ml-1 px-2 py-0.5 hover:text-blue-600 dark:hover:text-white text-[11px] font-semibold cursor-pointer transition-colors"
-              title="Fit to screen & center"
-            >
-              Fit
-            </button>
-            <button
-              onClick={() => handleResetCanvas(1.0)}
-              className="px-2 py-0.5 hover:text-blue-600 dark:hover:text-white text-[11px] font-mono font-semibold cursor-pointer transition-colors"
-              title="Reset 100% zoom & position"
-            >
-              100%
+              <Maximize2 className="w-3.5 h-3.5 text-slate-500" />
+              <span>Fullscreen</span>
             </button>
           </div>
-
-          <button
-            onClick={() => setIsCanvasFullscreen(f => !f)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-[#182234] hover:bg-slate-50 dark:hover:bg-[#233048] border border-slate-200 dark:border-[#233048] rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 shadow-2xs transition-colors cursor-pointer"
-          >
-            <Maximize2 className="w-3.5 h-3.5 text-slate-500" />
-            <span>Fullscreen</span>
-          </button>
-        </div>
+        )}
       </div>
+
+      {/* ── QA Testing Verification Banner (Admin QA Mode) ────────────────── */}
+      {isQaTest && (
+        <div className="max-w-5xl mx-auto w-full px-4 md:px-6 pt-4">
+          <div className="p-4 bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-blue-500/10 border border-indigo-500/30 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-xs">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-indigo-600/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider font-mono">
+                    Admin QA Live Testing Session
+                  </span>
+                  {qaPassed && (
+                    <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                      ✓ QA Verified & Approved
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
+                  Testing "{workflow.displayTitle || workflow.title}". Enter test parameters below and run the workflow. Once satisfied with the output, mark as tested.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => navigate('/admin/workflows/qa-center')}
+                className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                Back to QA Center
+              </button>
+              <button
+                type="button"
+                disabled={markingQa || qaPassed}
+                onClick={handleMarkAsTested}
+                className="px-4 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white text-xs font-bold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                {markingQa ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                <span>{qaPassed ? 'Verified & Passed' : 'Mark Workflow as Tested'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {qaToast && (
+        <div className="max-w-5xl mx-auto w-full px-4 md:px-6 pt-2">
+          <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-700 dark:text-emerald-300 rounded-xl font-medium flex items-center justify-between animate-in fade-in">
+            <span>{qaToast}</span>
+            <button onClick={() => setQaToast(null)} className="text-emerald-600 font-bold ml-2">✕</button>
+          </div>
+        </div>
+      )}
 
       {/* ── Workflow Header ─────────────────────────────────────────────────── */}
       <div className="max-w-5xl mx-auto w-full px-4 md:px-6 pt-5 pb-1">
@@ -3938,10 +4397,44 @@ export default function UniversalWorkflowRunner() {
               </p>
             )}
           </div>
+
+          {/* Right Action: Request Workflow Assignment & Status */}
+          <div className="flex items-center gap-2.5 shrink-0 pt-1">
+            {assignmentPending ? (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/60 text-xs font-semibold shadow-2xs">
+                <Clock className="w-3.5 h-3.5" />
+                <span>Assignment Requested • Pending Admin Review</span>
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={handleRequestWorkflowAssignment}
+                disabled={requesting}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-[#182234] hover:bg-slate-50 dark:hover:bg-[#233048] text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-[#233048] text-xs font-semibold shadow-2xs transition-all cursor-pointer"
+                title="Request organization workflow assignment from platform administrator"
+              >
+                <Shield className="w-3.5 h-3.5 text-blue-500" />
+                <span>{requesting ? 'Submitting Request...' : 'Request Workflow Assignment'}</span>
+              </button>
+            )}
+          </div>
         </div>
+
+        {assignmentRequestedToast && (
+          <div className="mt-3 p-2.5 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 rounded-xl text-xs text-blue-700 dark:text-blue-300 font-medium flex items-center justify-between animate-in fade-in">
+            <span>{assignmentRequestedToast}</span>
+            <button
+              onClick={() => setAssignmentRequestedToast(null)}
+              className="text-blue-500 hover:text-blue-700 dark:hover:text-blue-200 text-xs font-bold"
+            >
+              ✕
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ── Section 1: Exact Snapped n8n Horizontal Branching Canvas ─────────── */}
+      {!isMeetingIntelligence && (
       <div className="max-w-5xl mx-auto w-full px-4 md:px-6 pt-5">
         <div className={`bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-2xl shadow-xs overflow-hidden transition-all relative ${
           isCanvasFullscreen ? 'fixed inset-4 z-50 flex flex-col' : ''
@@ -4264,6 +4757,7 @@ export default function UniversalWorkflowRunner() {
           </div>
         </div>
       </div>
+      )}
 
       {/* ── Section 1.5: Live Running Pipeline Progress & Telemetry Monitor ─────── */}
       {synthesizing && (
@@ -4716,8 +5210,87 @@ export default function UniversalWorkflowRunner() {
       </div>
       )}
 
+      {/* ── Live Visual Pipeline Execution Progress Bar (Active Execution Telemetry) ── */}
+      {synthesizing && (
+        <div className="max-w-5xl mx-auto w-full px-4 md:px-6 pt-5">
+          <div className="bg-slate-900 border border-slate-800 text-white rounded-2xl p-5 shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800 flex-wrap gap-2">
+              <div className="flex items-center gap-2.5">
+                <div className="w-3 h-3 rounded-full bg-blue-500 animate-ping" />
+                <span className="text-xs font-bold text-slate-100 tracking-wider font-mono uppercase">
+                  Executing Pipeline Agents & Nodes
+                </span>
+              </div>
+              <span className="text-[11px] text-blue-400 font-mono">
+                Instance: {executionResult?.runId || 'executing...'}
+              </span>
+            </div>
+
+            {/* Nodes visual progress horizontal bar */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 pt-4">
+              {pipelineNodes.map((node, i) => {
+                const isActive = node.status === 'active' || node.status === 'running'
+                const isDone = node.status === 'completed'
+                const isFailed = node.status === 'failed'
+
+                return (
+                  <div
+                    key={node.id || i}
+                    className={`p-3 rounded-xl border transition-all ${
+                      isActive
+                        ? 'bg-blue-950/60 border-blue-500 ring-1 ring-blue-500/50 shadow-md shadow-blue-500/10'
+                        : isDone
+                        ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-300'
+                        : isFailed
+                        ? 'bg-red-950/40 border-red-500/50 text-red-300'
+                        : 'bg-slate-800/40 border-slate-800 text-slate-400'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
+                        Node {i + 1}
+                      </span>
+                      {isActive ? (
+                        <Loader2 className="w-3.5 h-3.5 text-blue-400 animate-spin" />
+                      ) : isDone ? (
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                      ) : isFailed ? (
+                        <AlertCircle className="w-3.5 h-3.5 text-red-400" />
+                      ) : (
+                        <span className="w-2 h-2 rounded-full bg-slate-700" />
+                      )}
+                    </div>
+                    <div className="text-xs font-bold text-white truncate">
+                      {node.title}
+                    </div>
+                    <div className="text-[11px] text-slate-400 line-clamp-1 mt-0.5">
+                      {isActive ? (
+                        <span className="text-blue-300 font-medium animate-pulse">{node.subtitle || 'Executing node...'}</span>
+                      ) : isDone ? (
+                        <span className="text-emerald-400/90 font-medium">Completed</span>
+                      ) : (
+                        node.subtitle || 'Pending'
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            <div className="mt-4 p-3 bg-slate-950/70 rounded-xl border border-slate-800/80 font-mono text-xs text-blue-300 flex items-center gap-2">
+              <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0 animate-spin" />
+              <span className="truncate">
+                {activePrompt?.content?.replace(/\*\*/g, '')?.split('\n')[0] || 'Executing active pipeline agents with multi-provider fallbacks...'}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Section 3: Interactive Configuration Form (Placed BELOW AI Chat Assistant) ── */}
-      {(!synthesizing && (!executionResult || showFormWhenDone)) ? (
+      {(!synthesizing && (!executionResult || showFormWhenDone || isMeetingIntelligence)) ? (
       <div className="max-w-5xl mx-auto w-full px-4 md:px-6 pt-5 space-y-4">
         {/* ── Tool Integration Readiness & In-Screen Connect Bar ── */}
         <div>
@@ -4784,16 +5357,24 @@ export default function UniversalWorkflowRunner() {
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                 <span className="text-xs font-semibold text-emerald-900 dark:text-emerald-200">
-                  All Required Workflow Integrations Active &amp; Ready
+                  {toolConnectionStatus.some(t => !t.isBuiltin)
+                    ? 'All Required Workflow Integrations Connected & Verified'
+                    : 'Platform Native AI Engine Ready'}
                 </span>
               </div>
               <div className="flex items-center gap-1.5 flex-wrap">
-                {toolConnectionStatus.map((t) => (
+                {toolConnectionStatus.filter(t => !t.isBuiltin).map((t) => (
                   <span key={t.app} className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-[#121824] px-2 py-0.5 rounded-lg border border-slate-200 dark:border-[#233048]">
                     <ToolLogo name={t.app} className="w-3 h-3 shrink-0" />
                     <span>{t.displayName}</span>
                   </span>
                 ))}
+                {toolConnectionStatus.filter(t => !t.isBuiltin).length === 0 && (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-[#121824] px-2 py-0.5 rounded-lg border border-slate-200 dark:border-[#233048]">
+                    <Sparkles className="w-3 h-3 text-blue-500 shrink-0" />
+                    <span>Internal AI Pipeline</span>
+                  </span>
+                )}
               </div>
             </div>
           )}
@@ -4822,13 +5403,15 @@ export default function UniversalWorkflowRunner() {
               </div>
               <div>
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <span>Workflow Configuration Form</span>
+                  <span>{isMeetingIntelligence ? 'Meeting Intelligence Inputs' : 'Workflow Configuration Form'}</span>
                   <span className="text-[10px] font-mono font-normal px-2 py-0.5 bg-slate-100 dark:bg-[#182234] border border-slate-200 dark:border-[#233048] rounded-full text-slate-600 dark:text-slate-300">
                     {filledFieldsCount} of {totalFieldsCount} Configured
                   </span>
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {uiSections.showAssistantChat
+                  {isMeetingIntelligence
+                    ? 'Provide a Google Meet URL, upload an audio recording, or paste a transcript to generate structured intelligence.'
+                    : uiSections.showAssistantChat
                     ? 'Outputs and parameters are stored in this form. Fill via AI chat above or select/type directly to edit.'
                     : 'Configure parameters directly below and launch the active pipeline.'}
                 </p>
@@ -4846,19 +5429,30 @@ export default function UniversalWorkflowRunner() {
                   <span>Reset Form</span>
                 </button>
               )}
-              <button
-                type="button"
-                onClick={() => executeActivePipeline()}
-                disabled={synthesizing || !isFormValid}
-                className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer"
-              >
-                <Play className="w-3.5 h-3.5 fill-white" />
-                <span>Run Active Pipeline</span>
-              </button>
+              {!isMeetingIntelligence && (
+                <button
+                  type="button"
+                  onClick={() => executeActivePipeline()}
+                  disabled={synthesizing || !isFormValid}
+                  className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer"
+                >
+                  <Play className="w-3.5 h-3.5 fill-white" />
+                  <span>Run Active Pipeline</span>
+                </button>
+              )}
             </div>
           </div>
 
           {/* Form Fields Grid with Real-time Synchronized State */}
+          {isMeetingIntelligence ? (
+            <MeetingIntelligenceInputModes
+              formData={formData}
+              onChange={handleFormChange}
+              api={api}
+              synthesizing={synthesizing}
+              onExecute={() => executeActivePipeline()}
+            />
+          ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {workflow.fields.map((field, idx) => {
               const val = formData[field.id] || ''
@@ -5167,11 +5761,12 @@ export default function UniversalWorkflowRunner() {
               )
             })}
           </div>
+          )}
 
           {/* Form Bottom Action Bar with Large Run Button */}
           <div className="mt-6 pt-4 border-t border-slate-100 dark:border-[#1a2336] flex items-center justify-between flex-wrap gap-3">
             <div className="text-xs text-slate-500 dark:text-slate-400 font-mono">
-              Status: {filledFieldsCount === totalFieldsCount ? 'All parameters complete' : `${totalFieldsCount - filledFieldsCount} parameters remaining`}
+              Status: {isMeetingIntelligence ? (isFormValid ? 'Ready to summarize' : 'Valid input required') : (filledFieldsCount === totalFieldsCount ? 'All parameters complete' : `${totalFieldsCount - filledFieldsCount} parameters remaining`)}
             </div>
 
             <div className="flex items-center gap-2">
@@ -5191,7 +5786,7 @@ export default function UniversalWorkflowRunner() {
                 className="px-5 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center gap-2"
               >
                 <Play className="w-3.5 h-3.5 fill-white" />
-                <span>Run Active Pipeline →</span>
+                <span>{isMeetingIntelligence ? 'Summarize meeting →' : 'Run Active Pipeline →'}</span>
               </button>
             </div>
           </div>
@@ -5200,33 +5795,63 @@ export default function UniversalWorkflowRunner() {
       </div>
       ) : executionResult && !showFormWhenDone ? (
         <div className="max-w-5xl mx-auto w-full px-4 md:px-6 pt-4">
-          <div className="bg-white/80 dark:bg-[#121826]/80 backdrop-blur-md border border-slate-200 dark:border-[#233048] rounded-xl px-4 py-3 flex items-center justify-between flex-wrap gap-3 shadow-xs">
-            <div className="flex items-center gap-2.5">
-              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-              <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                Pipeline execution finished across all {pipelineNodes?.length || workflow?.nodes?.length || 0} nodes.
-              </span>
+          {executionResult.status === 'failed' ? (
+            <div className="bg-red-50/90 dark:bg-red-950/40 backdrop-blur-md border border-red-200 dark:border-red-900/60 rounded-xl px-4 py-3 flex items-center justify-between flex-wrap gap-3 shadow-xs">
+              <div className="flex items-center gap-2.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-red-500 shrink-0" />
+                <span className="text-xs font-semibold text-red-800 dark:text-red-200">
+                  Pipeline execution halted — {executionResult.errorMessage || 'Execution encountered an error'}.
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowFormWhenDone(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-[#182234] hover:bg-slate-100 dark:hover:bg-[#233048] text-slate-700 dark:text-slate-300 rounded-lg text-xs font-medium transition-colors cursor-pointer border border-slate-200 dark:border-[#233048]"
+                >
+                  <Sliders className="w-3.5 h-3.5" />
+                  <span>Edit Parameters & Retry</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => executeActivePipeline()}
+                  disabled={synthesizing}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-lg text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Retry Pipeline</span>
+                </button>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setShowFormWhenDone(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-[#182234] hover:bg-slate-200 dark:hover:bg-[#233048] text-slate-700 dark:text-slate-300 rounded-lg text-xs font-medium transition-colors cursor-pointer"
-              >
-                <Sliders className="w-3.5 h-3.5" />
-                <span>Edit Parameters & Re-run</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => executeActivePipeline()}
-                disabled={synthesizing}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold shadow-xs transition-colors cursor-pointer"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>Re-run Pipeline</span>
-              </button>
+          ) : (
+            <div className="bg-white/80 dark:bg-[#121826]/80 backdrop-blur-md border border-slate-200 dark:border-[#233048] rounded-xl px-4 py-3 flex items-center justify-between flex-wrap gap-3 shadow-xs">
+              <div className="flex items-center gap-2.5">
+                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                  Pipeline execution finished across all {pipelineNodes?.length || workflow?.nodes?.length || 0} nodes.
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowFormWhenDone(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-[#182234] hover:bg-slate-200 dark:hover:bg-[#233048] text-slate-700 dark:text-slate-300 rounded-lg text-xs font-medium transition-colors cursor-pointer"
+                >
+                  <Sliders className="w-3.5 h-3.5" />
+                  <span>Edit Parameters & Re-run</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => executeActivePipeline()}
+                  disabled={synthesizing}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Re-run Pipeline</span>
+                </button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       ) : null}
 
@@ -5393,43 +6018,123 @@ export default function UniversalWorkflowRunner() {
                   </dl>
                 </div>
 
-                {/* Right Card: Audio Reference */}
-                <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#0b0f17] border border-slate-200 dark:border-[#233048] space-y-3">
-                  <div className="flex items-center gap-2 text-xs font-bold text-slate-900 dark:text-white pb-2 border-b border-slate-200/80 dark:border-[#1e2a3f]">
-                    <Mic className="w-3.5 h-3.5 text-blue-500" />
-                    <span>Audio Recording Reference</span>
-                  </div>
-                  <div className="p-3 rounded-lg bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#1e2a3f] space-y-2 text-xs">
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-500 dark:text-slate-400 font-mono text-[11px]">Filename:</span>
-                      <span className="font-bold text-slate-800 dark:text-slate-200 truncate max-w-[200px]">
-                        {executionResult.conversationData?.recording?.filename || 'recording.mp3'}
-                      </span>
-                    </div>
-                    {executionResult.conversationData?.recording?.size_bytes && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-500 dark:text-slate-400 font-mono text-[11px]">Size:</span>
-                        <span className="font-mono text-slate-700 dark:text-slate-300 text-[11px]">
-                          {formatBytes(executionResult.conversationData.recording.size_bytes)}
-                        </span>
+                {/* Right Card: Source Provenance */}
+                {(() => {
+                  const provenance = executionResult.sourceProvenance || executionResult.conversationData?.source_provenance
+                  const isAudio = Boolean(executionResult.conversationData?.recording?.stored_path || provenance?.mode === 'audio_upload')
+                  const isMeet = Boolean(executionResult.conversationData?.meet_url || provenance?.mode === 'google_meet')
+
+                  if (isMeet) {
+                    return (
+                      <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#0b0f17] border border-slate-200 dark:border-[#233048] space-y-3">
+                        <div className="flex items-center gap-2 text-xs font-bold text-slate-900 dark:text-white pb-2 border-b border-slate-200/80 dark:border-[#1e2a3f]">
+                          <Video className="w-3.5 h-3.5 text-emerald-500" />
+                          <span>Google Meet Source Provenance</span>
+                        </div>
+                        <div className="p-3 rounded-lg bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#1e2a3f] space-y-2 text-xs">
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-500 dark:text-slate-400 font-mono text-[11px]">Meeting URL:</span>
+                            <span className="font-bold text-slate-800 dark:text-slate-200 truncate max-w-[200px]">
+                              {executionResult.conversationData?.meet_url || provenance?.meet_url || 'Google Meet'}
+                            </span>
+                          </div>
+                          {provenance?.conference_record_id && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-500 dark:text-slate-400 font-mono text-[11px]">Record ID:</span>
+                              <span className="font-mono text-slate-700 dark:text-slate-300 text-[11px] truncate max-w-[180px]">
+                                {provenance.conference_record_id}
+                              </span>
+                            </div>
+                          )}
+                          <div className="pt-1 border-t border-slate-100 dark:border-[#1a2336] flex items-center justify-between">
+                            <span className="text-slate-500 dark:text-slate-400 font-mono text-[11px]">Source API:</span>
+                            <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 text-[11px] font-semibold">
+                              <CheckCircle className="w-3 h-3" /> Google Meet REST v2
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                    )}
-                    {executionResult.conversationData?.recording?.file_id && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-500 dark:text-slate-400 font-mono text-[11px]">Storage Ref ID:</span>
-                        <span className="font-mono text-slate-500 dark:text-slate-400 text-[10px]">
-                          {executionResult.conversationData.recording.file_id}
-                        </span>
+                    )
+                  }
+
+                  if (isAudio) {
+                    return (
+                      <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#0b0f17] border border-slate-200 dark:border-[#233048] space-y-3">
+                        <div className="flex items-center gap-2 text-xs font-bold text-slate-900 dark:text-white pb-2 border-b border-slate-200/80 dark:border-[#1e2a3f]">
+                          <Mic className="w-3.5 h-3.5 text-blue-500" />
+                          <span>Audio Recording Reference</span>
+                        </div>
+                        <div className="p-3 rounded-lg bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#1e2a3f] space-y-2 text-xs">
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-500 dark:text-slate-400 font-mono text-[11px]">Filename:</span>
+                            <span className="font-bold text-slate-800 dark:text-slate-200 truncate max-w-[200px]">
+                              {executionResult.conversationData?.recording?.filename || 'recording.mp3'}
+                            </span>
+                          </div>
+                          {executionResult.conversationData?.recording?.size_bytes && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-500 dark:text-slate-400 font-mono text-[11px]">Size:</span>
+                              <span className="font-mono text-slate-700 dark:text-slate-300 text-[11px]">
+                                {formatBytes(executionResult.conversationData.recording.size_bytes)}
+                              </span>
+                            </div>
+                          )}
+                          {executionResult.conversationData?.recording?.file_id && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-500 dark:text-slate-400 font-mono text-[11px]">Storage Ref ID:</span>
+                              <span className="font-mono text-slate-500 dark:text-slate-400 text-[10px]">
+                                {executionResult.conversationData.recording.file_id}
+                              </span>
+                            </div>
+                          )}
+                          <div className="pt-1 border-t border-slate-100 dark:border-[#1a2336] flex items-center justify-between">
+                            <span className="text-slate-500 dark:text-slate-400 font-mono text-[11px]">Ingest State:</span>
+                            <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 text-[11px] font-semibold">
+                              <CheckCircle className="w-3 h-3" /> Preserved for Run
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                    )}
-                    <div className="pt-1 border-t border-slate-100 dark:border-[#1a2336] flex items-center justify-between">
-                      <span className="text-slate-500 dark:text-slate-400 font-mono text-[11px]">Ingest State:</span>
-                      <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 text-[11px] font-semibold">
-                        <CheckCircle className="w-3 h-3" /> Preserved for Run
-                      </span>
+                    )
+                  }
+
+                  // Default: Pasted Transcript
+                  const tText = executionResult.transcriptText || executionResult.conversationData?.transcript || ''
+                  return (
+                    <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#0b0f17] border border-slate-200 dark:border-[#233048] space-y-3">
+                      <div className="flex items-center gap-2 text-xs font-bold text-slate-900 dark:text-white pb-2 border-b border-slate-200/80 dark:border-[#1e2a3f]">
+                        <FileText className="w-3.5 h-3.5 text-blue-500" />
+                        <span>Direct Transcript Source</span>
+                      </div>
+                      <div className="p-3 rounded-lg bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#1e2a3f] space-y-2 text-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-500 dark:text-slate-400 font-mono text-[11px]">Ingest Mode:</span>
+                          <span className="font-bold text-slate-800 dark:text-slate-200">
+                            Pasted Text Transcript
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-500 dark:text-slate-400 font-mono text-[11px]">Character Count:</span>
+                          <span className="font-mono text-slate-700 dark:text-slate-300 text-[11px]">
+                            {tText.length} chars
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-500 dark:text-slate-400 font-mono text-[11px]">Line Count:</span>
+                          <span className="font-mono text-slate-700 dark:text-slate-300 text-[11px]">
+                            {tText ? tText.split('\n').filter(Boolean).length : 0} lines
+                          </span>
+                        </div>
+                        <div className="pt-1 border-t border-slate-100 dark:border-[#1a2336] flex items-center justify-between">
+                          <span className="text-slate-500 dark:text-slate-400 font-mono text-[11px]">Audio Required:</span>
+                          <span className="inline-flex items-center gap-1 text-slate-500 dark:text-slate-400 text-[11px]">
+                            None (Direct Ingest)
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
+                  )
+                })()}
               </div>
 
               {/* ── Node 2 TRANSCRIPT SECTION ── */}

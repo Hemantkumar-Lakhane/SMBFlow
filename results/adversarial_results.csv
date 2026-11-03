@@ -1,0 +1,7 @@
+Attack_Class,Total_Vectors,Blocked,Evaded,Block_Rate_Pct,Primary_Detector
+Prompt Injection,40,40,0,100.0,Policy Gate
+Malformed / Out-of-Schema Arguments,40,40,0,100.0,Policy Gate
+Policy Violation (Limit & Scope),40,40,0,100.0,Policy Gate
+Hallucinated Entities,40,40,0,100.0,Policy Gate
+Cross-Tenant Data Access,40,40,0,100.0,Capability Token
+Log Tampering (Modify / Delete / Truncate),40,40,0,100.0,Hardened EPI (Merkle+Anchor)

@@ -12,6 +12,7 @@ classifies vertical workflows.
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
@@ -92,6 +93,40 @@ _WORKFLOW_APPLICABILITY: dict[str, dict] = {
     "meeting_intelligence_followup":       {"scope": "GLOBAL",   "industry": None},
 }
 
+# ── Deprecated or Duplicate Workflow Keys to be Consolidated or Removed ───────
+_DEPRECATED_OR_DUPLICATE_KEYS: dict[str, dict] = {
+    "demo_workflow": {
+        "action": "consolidate",
+        "canonical_key": "meeting_intelligence_followup",
+        "reason": "Duplicate Meeting Intelligence implementation consolidated into canonical meeting_intelligence_followup",
+    },
+    "demo_meeting_summery": {
+        "action": "consolidate",
+        "canonical_key": "meeting_intelligence_followup",
+        "reason": "Duplicate scratch meeting summary consolidated into canonical meeting_intelligence_followup",
+    },
+    "email_summerizor_demo": {
+        "action": "consolidate",
+        "canonical_key": "email_summarizer",
+        "reason": "Duplicate demo email summarizer consolidated into canonical email_summarizer",
+    },
+    "workflow_for_summerizing_the_emails": {
+        "action": "consolidate",
+        "canonical_key": "email_summarizer",
+        "reason": "Duplicate email summarizer DAG consolidated into canonical email_summarizer",
+    },
+    "demo": {
+        "action": "delete",
+        "canonical_key": None,
+        "reason": "Scratch demo workflow deleted",
+    },
+    "demo_counsil_connect": {
+        "action": "delete",
+        "canonical_key": None,
+        "reason": "Scratch demo workflow deleted",
+    },
+}
+
 # Manually curated metadata for workflows where the DAG _meta is sparse
 _CATALOG_OVERRIDES: dict[str, dict] = {
     "meeting_intelligence_followup": {
@@ -99,13 +134,65 @@ _CATALOG_OVERRIDES: dict[str, dict] = {
         "status": "active",
         "requires_explicit_assignment": True,
         "supported_modules": ["meetings", "productivity"],
-        "required_integrations": ["calendar", "email"],
+        "required_integrations": ["google_workspace"],
+        "required_capabilities": ["meet_transcript", "audio_transcription", "llm_analysis"],
+        "execution_handler": "meeting_intelligence_router",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "meet_url": {
+                    "type": "string",
+                    "title": "Google Meet URL",
+                    "description": "Google Meet link (e.g., https://meet.google.com/abc-defg-hij) or meeting code"
+                },
+                "audio_file": {
+                    "type": "string",
+                    "title": "Audio File",
+                    "description": "Path or upload of meeting audio recording (.mp3, .wav, .m4a)"
+                },
+                "transcript": {
+                    "type": "string",
+                    "title": "Meeting Transcript",
+                    "description": "User-provided or pasted conversation transcript text"
+                }
+            }
+        },
+        "output_schema": {
+            "type": "object",
+            "properties": {
+                "summary": {"type": "string", "title": "Executive Summary"},
+                "key_points": {"type": "array", "title": "Key Discussion Points"},
+                "decisions": {"type": "array", "title": "Agreed Decisions"},
+                "commitments": {"type": "array", "title": "Explicit Commitments & Owners"},
+                "suggested_followups": {"type": "array", "title": "Suggested Follow-up Actions"},
+                "open_questions": {"type": "array", "title": "Open Questions & Unresolved Issues"},
+                "followup_email": {"type": "string", "title": "Draft Follow-up Email"}
+            }
+        }
     },
     "email_summarizer": {
         "category": "productivity",
         "status": "active",
         "required_integrations": ["gmail"],
         "supported_modules": ["email"],
+        "required_capabilities": ["gmail_read", "email_triage", "llm_analysis"],
+        "execution_handler": "email_summarizer_router",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "days_back": {"type": "integer", "title": "Days to Look Back", "default": 7},
+                "max_emails": {"type": "integer", "title": "Max Emails to Ingest", "default": 20},
+                "category_filter": {"type": "string", "title": "Category Filter", "default": "all"}
+            }
+        },
+        "output_schema": {
+            "type": "object",
+            "properties": {
+                "digests": {"type": "array", "title": "Summarized Email Batches"},
+                "action_items": {"type": "array", "title": "Extracted Action Items"},
+                "high_priority_count": {"type": "integer", "title": "Urgent Threads"}
+            }
+        }
     },
     "product_launch_sprint": {
         "category": "marketing",
@@ -392,6 +479,11 @@ async def sync_workflow_catalog(db: AsyncSession) -> dict:
             continue
 
         key = entry["key"]
+        # Skip deprecated, duplicate, or consolidated workflow keys
+        if key in _DEPRECATED_OR_DUPLICATE_KEYS:
+            skipped += 1
+            continue
+
         if key in existing_keys:
             skipped += 1
             continue
@@ -424,8 +516,36 @@ async def sync_workflow_catalog(db: AsyncSession) -> dict:
     if inserted > 0:
         await db.commit()
 
-    # Back-fill scope/industry, category, AND requires_explicit_assignment on existing rows.
-    # This ensures catalog changes in DAG files or _CATALOG_OVERRIDES take effect on restart.
+    # ── 1. Reconcile Deprecated / Duplicate Workflows ─────────────────────────
+    # Safely mark duplicates as inactive / deleted with provenance metadata
+    reconciled = 0
+    try:
+        for dep_key, dep_info in _DEPRECATED_OR_DUPLICATE_KEYS.items():
+            wf_res = await db.execute(
+                select(WorkflowCatalog).where(WorkflowCatalog.key == dep_key)
+            )
+            dup_wf = wf_res.scalar_one_or_none()
+            if dup_wf and (dup_wf.active or dup_wf.status != "deleted"):
+                dup_wf.active = False
+                dup_wf.status = "deleted"
+                curr_meta = dict(getattr(dup_wf, "metadata_", {}) or {})
+                curr_meta["deleted_at"] = datetime.now(timezone.utc).isoformat()
+                curr_meta["deleted_reason"] = dep_info["reason"]
+                if dep_info.get("canonical_key"):
+                    curr_meta["canonical_key"] = dep_info["canonical_key"]
+                dup_wf.metadata_ = curr_meta
+                reconciled += 1
+        if reconciled > 0:
+            await db.commit()
+            log.info("workflow_catalog_sync: reconciled duplicate workflows", count=reconciled)
+    except Exception as rec_err:
+        log.warning("workflow_catalog_sync: duplicate reconciliation failed (non-fatal)", error=str(rec_err))
+        try:
+            await db.rollback()
+        except Exception:
+            pass
+
+    # ── 2. Back-fill metadata, schemas, and capabilities on existing rows ─────
     backfilled = 0
     try:
         for wf_key, override in _CATALOG_OVERRIDES.items():
@@ -452,14 +572,23 @@ async def sync_workflow_catalog(db: AsyncSession) -> dict:
             if getattr(existing_wf, "industry", None) != correct_industry:
                 existing_wf.industry = correct_industry
                 needs_update = True
+            if override.get("required_integrations") and existing_wf.required_integrations != override.get("required_integrations"):
+                existing_wf.required_integrations = override.get("required_integrations")
+                needs_update = True
             
             current_meta = dict(getattr(existing_wf, "metadata_", {}) or {})
             if current_meta.get("requires_explicit_assignment") != correct_explicit:
                 current_meta["requires_explicit_assignment"] = correct_explicit
-                existing_wf.metadata_ = current_meta
                 needs_update = True
 
+            # Sync schema and capability declarations
+            for meta_field in ("input_schema", "output_schema", "required_capabilities", "execution_handler"):
+                if meta_field in override and current_meta.get(meta_field) != override[meta_field]:
+                    current_meta[meta_field] = override[meta_field]
+                    needs_update = True
+
             if needs_update:
+                existing_wf.metadata_ = current_meta
                 backfilled += 1
 
         if backfilled > 0:

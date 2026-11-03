@@ -47,6 +47,7 @@ const adminNav = [
   {
     title: 'Multi-Agent Workflows',
     items: [
+      { label: 'QA & Release Center',  to: '/admin/workflows/qa-center',     icon: ShieldCheck },
       { label: 'Workflow DAG Builder', to: '/workflows/builder',            icon: Workflow },
       { label: 'Workflow Catalog',     to: '/admin/workflows/catalog',     icon: Layers },
       { label: 'Workflow Assignments', to: '/admin/workflows/assignments', icon: GitBranch },

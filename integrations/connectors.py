@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import time
 from abc import ABC, abstractmethod
 from typing import Any, Optional
@@ -501,6 +502,7 @@ class GoogleWorkspaceConnector(BaseConnector):
 
     CALENDAR_BASE_URL = "https://www.googleapis.com/calendar/v3"
     DRIVE_BASE_URL = "https://www.googleapis.com/drive/v3"
+    MEET_BASE_URL = "https://meet.googleapis.com/v2"
 
     def __init__(self, credentials: dict, config: dict = None, on_token_refreshed: Optional[Any] = None):
         super().__init__(credentials, config)
@@ -668,6 +670,231 @@ class GoogleWorkspaceConnector(BaseConnector):
         except Exception as e:
             self._log.error("Google Calendar schedule event failed", error=str(e))
             raise
+
+    async def list_conference_records(self, meeting_code: Optional[str] = None, page_size: int = 10) -> list[dict]:
+        """
+        List conference records from Google Meet API v2.
+        Reference: https://developers.google.com/workspace/meet/api/reference/rest/v2/conferenceRecords/list
+        """
+        await self._ensure_valid_token()
+        if not self._access_token:
+            return []
+
+        try:
+            if not self._client:
+                self._client = httpx.AsyncClient(
+                    headers={"Authorization": f"Bearer {self._access_token}"}, timeout=30
+                )
+            params: dict[str, Any] = {"pageSize": page_size}
+            if meeting_code:
+                clean_code = meeting_code.strip().lower()
+                params["filter"] = f'space.meetingCode="{clean_code}"'
+
+            resp = await self._client.get(f"{self.MEET_BASE_URL}/conferenceRecords", params=params)
+            if resp.status_code == 200:
+                return resp.json().get("conferenceRecords", [])
+            elif resp.status_code == 404:
+                return []
+            else:
+                self._log.warning("list_conference_records response", status=resp.status_code, body=resp.text[:200])
+                return []
+        except Exception as e:
+            self._log.error("Google Meet list_conference_records failed", error=str(e))
+            return []
+
+    async def list_transcripts(self, conference_record_name: str) -> list[dict]:
+        """
+        List transcripts for a conference record.
+        Reference: https://developers.google.com/workspace/meet/api/reference/rest/v2/conferenceRecords.transcripts/list
+        """
+        await self._ensure_valid_token()
+        if not self._access_token or not conference_record_name:
+            return []
+
+        try:
+            if not self._client:
+                self._client = httpx.AsyncClient(
+                    headers={"Authorization": f"Bearer {self._access_token}"}, timeout=30
+                )
+            resp = await self._client.get(f"{self.MEET_BASE_URL}/{conference_record_name}/transcripts")
+            if resp.status_code == 200:
+                return resp.json().get("transcripts", [])
+            return []
+        except Exception as e:
+            self._log.error("Google Meet list_transcripts failed", conf=conference_record_name, error=str(e))
+            return []
+
+    async def list_transcript_entries(self, transcript_name: str, max_entries: int = 500) -> list[dict]:
+        """
+        Retrieve paginated transcript entries for a transcript resource.
+        Reference: https://developers.google.com/workspace/meet/api/reference/rest/v2/conferenceRecords.transcripts.entries/list
+        """
+        await self._ensure_valid_token()
+        if not self._access_token or not transcript_name:
+            return []
+
+        all_entries: list[dict] = []
+        page_token = None
+
+        try:
+            if not self._client:
+                self._client = httpx.AsyncClient(
+                    headers={"Authorization": f"Bearer {self._access_token}"}, timeout=30
+                )
+
+            while len(all_entries) < max_entries:
+                params: dict[str, Any] = {"pageSize": 100}
+                if page_token:
+                    params["pageToken"] = page_token
+
+                resp = await self._client.get(f"{self.MEET_BASE_URL}/{transcript_name}/entries", params=params)
+                if resp.status_code != 200:
+                    break
+
+                data = resp.json()
+                entries = data.get("transcriptEntries", [])
+                all_entries.extend(entries)
+
+                page_token = data.get("nextPageToken")
+                if not page_token:
+                    break
+
+            return all_entries
+        except Exception as e:
+            self._log.error("Google Meet list_transcript_entries failed", transcript=transcript_name, error=str(e))
+            return all_entries
+
+    async def read_drive_doc_text(self, document_id: str) -> Optional[str]:
+        """
+        Retrieve transcript text directly if Google Meet exported it as a Google Doc to Google Drive.
+        """
+        await self._ensure_valid_token()
+        if not self._access_token or not document_id:
+            return None
+
+        try:
+            if not self._client:
+                self._client = httpx.AsyncClient(
+                    headers={"Authorization": f"Bearer {self._access_token}"}, timeout=30
+                )
+            resp = await self._client.get(
+                f"{self.DRIVE_BASE_URL}/files/{document_id}/export",
+                params={"mimeType": "text/plain"}
+            )
+            if resp.status_code == 200:
+                return resp.text.strip()
+            return None
+        except Exception as e:
+            self._log.warning("Failed to export Drive transcript document", doc_id=document_id, error=str(e))
+            return None
+
+    async def resolve_google_meet_transcript(self, meet_url_or_code: str) -> dict:
+        """
+        Resolves Google Meet session, conference records, and transcripts end-to-end.
+        """
+        await self._ensure_valid_token()
+        if not self._access_token:
+            return {
+                "status": "auth_required",
+                "meeting_code": meet_url_or_code,
+                "message": "Google Workspace OAuth connection is not authorized or token has expired."
+            }
+
+        clean = meet_url_or_code.strip()
+        code_match = re.search(r"([a-z0-9]{3,4}-[a-z0-9]{3,4}-[a-z0-9]{3,4})", clean.lower())
+        if code_match:
+            meeting_code = code_match.group(1)
+        else:
+            clean_part = clean.split("/")[-1].split("?")[0]
+            meeting_code = re.sub(r"[^a-zA-Z0-9-]", "", clean_part).lower()
+
+        if len(meeting_code) < 3:
+            return {
+                "status": "error",
+                "meeting_code": meeting_code,
+                "message": f"Invalid Google Meet identifier '{meet_url_or_code}'."
+            }
+
+        conf_records = await self.list_conference_records(meeting_code=meeting_code)
+        if not conf_records:
+            return {
+                "status": "no_conference_records",
+                "meeting_code": meeting_code,
+                "message": f"No conference record found for Google Meet code '{meeting_code}'. Conference records are only generated once a meeting starts."
+            }
+
+        latest_record = conf_records[0]
+        rec_name = latest_record.get("name", "")
+
+        transcripts = await self.list_transcripts(conference_record_name=rec_name)
+        if not transcripts:
+            end_time = latest_record.get("endTime")
+            if not end_time:
+                return {
+                    "status": "in_progress",
+                    "meeting_code": meeting_code,
+                    "conference_record": rec_name,
+                    "message": f"Meeting '{meeting_code}' is currently active or transcript is still finalizing."
+                }
+            return {
+                "status": "no_transcript",
+                "meeting_code": meeting_code,
+                "conference_record": rec_name,
+                "message": f"Conference record '{rec_name}' has concluded, but no transcript artifact was recorded. Ensure host enabled Meet transcription."
+            }
+
+        active_tx = transcripts[0]
+        tx_name = active_tx.get("name", "")
+
+        entries = await self.list_transcript_entries(transcript_name=tx_name)
+        
+        doc_id = (active_tx.get("docsDestination") or {}).get("document")
+        if not entries and doc_id:
+            drive_text = await self.read_drive_doc_text(doc_id)
+            if drive_text:
+                return {
+                    "status": "ready",
+                    "meeting_code": meeting_code,
+                    "conference_record": rec_name,
+                    "transcript_name": tx_name,
+                    "turns": [{"timestamp": "00:00:00", "speaker": "Meeting Audio", "text": drive_text}],
+                    "participants": ["Meeting Participant"],
+                    "full_transcript": drive_text,
+                    "message": "Retrieved transcript from linked Google Drive document."
+                }
+
+        if not entries:
+            return {
+                "status": "in_progress",
+                "meeting_code": meeting_code,
+                "conference_record": rec_name,
+                "transcript_name": tx_name,
+                "message": "Transcript resource exists, but individual speech entries are still being indexed by Google."
+            }
+
+        turns = []
+        participants_set = set()
+        for idx, entry in enumerate(entries):
+            spk = (entry.get("participantDetail") or {}).get("displayName") or entry.get("participant") or f"Speaker {idx+1}"
+            raw_text = entry.get("text", "").strip()
+            st = entry.get("startTime", "")
+            ts = st[-8:-1] if len(st) >= 8 else f"00:{idx:02d}:00"
+            if raw_text:
+                turns.append({"timestamp": ts, "speaker": spk, "text": raw_text})
+                participants_set.add(spk)
+
+        full_tx = "\n".join([f"[{t['timestamp']}] {t['speaker']}: {t['text']}" for t in turns])
+
+        return {
+            "status": "ready",
+            "meeting_code": meeting_code,
+            "conference_record": rec_name,
+            "transcript_name": tx_name,
+            "turns": turns,
+            "participants": list(participants_set),
+            "full_transcript": full_tx,
+            "message": f"Successfully retrieved {len(turns)} transcript speech turns from Google Meet API v2."
+        }
 
     async def health_check(self) -> bool:
         return await self.authenticate()

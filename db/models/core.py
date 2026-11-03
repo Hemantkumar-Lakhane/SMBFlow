@@ -88,6 +88,7 @@ class WorkflowInstance(Base):
     total_tokens_in  = Column(Integer, default=0)
     total_tokens_out = Column(Integer, default=0)
     total_cost_usd   = Column(Float, default=0.0)
+    agent_runs       = Column(JSONB, default=list)
 
 class AgentRunRecord(Base):
     __tablename__ = "agent_run_records"
@@ -420,4 +421,90 @@ class RelationshipMemoryItem(Base):
     source_date          = Column(String(50), nullable=True)
     is_ai_generated      = Column(Boolean, nullable=False, default=False)
     created_at           = Column(DateTime, default=datetime.utcnow)
+
+
+# =============================================================================
+# Workflow QA, Defect Tracking & Release Approval Models
+# =============================================================================
+
+class WorkflowTestRun(Base):
+    """
+    Persistent record of an administrative QA test run across Unit, Integration, or Real Provider modes.
+    Stores complete node steps, actual inputs, outputs, tokens, costs, and human review verdict.
+    """
+    __tablename__ = "workflow_test_runs"
+
+    id                        = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workflow_key              = Column(String(100), nullable=False, index=True)
+    workflow_id               = Column(UUID(as_uuid=True), nullable=True)
+    workflow_version          = Column(String(50), nullable=False, default="1.0.0")
+    test_mode                 = Column(String(50), nullable=False, default="real_provider")  # unit | integration | real_provider
+    status                    = Column(String(50), nullable=False, default="passed")         # passed | failed | blocked | incomplete
+    is_real_provider_verified = Column(Boolean, nullable=False, default=False)
+    safe_preview              = Column(Boolean, nullable=False, default=True)
+    input_payload             = Column(JSONB, nullable=False, default=dict)
+    execution_steps           = Column(JSONB, nullable=False, default=list)
+    outputs                   = Column(JSONB, nullable=False, default=dict)
+    error_message             = Column(Text, nullable=True)
+    duration_ms               = Column(Integer, nullable=False, default=0)
+    tokens_consumed           = Column(Integer, nullable=False, default=0)
+    cost_usd                  = Column(Float, nullable=False, default=0.0)
+    tested_by                 = Column(String(255), nullable=False)
+    tenant_id                 = Column(UUID(as_uuid=True), nullable=True)
+    review_verdict            = Column(String(50), nullable=True)  # correct | incomplete | irrelevant | unsafe
+    review_notes              = Column(Text, nullable=True)
+    created_at                = Column(DateTime, default=datetime.utcnow)
+
+
+class WorkflowDefect(Base):
+    """
+    Tracked QA defect on a specific workflow version, run, or node.
+    Supports full lifecycle from reporting, developer triage/assignment, fix readiness, to retesting.
+    """
+    __tablename__ = "workflow_defects"
+
+    id                 = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workflow_key       = Column(String(100), nullable=False, index=True)
+    workflow_id        = Column(UUID(as_uuid=True), nullable=True)
+    workflow_version   = Column(String(50), nullable=False, default="1.0.0")
+    node_id            = Column(String(100), nullable=True)
+    node_name          = Column(String(255), nullable=True)
+    test_run_id        = Column(UUID(as_uuid=True), nullable=True)
+    title              = Column(String(255), nullable=False)
+    severity           = Column(String(50), nullable=False, default="medium")  # critical | high | medium | low
+    status             = Column(String(50), nullable=False, default="open")    # open | triaged | assigned | in_progress | fix_ready | awaiting_retest | retest_failed | resolved | reopened
+    expected_behavior  = Column(Text, nullable=False)
+    actual_behavior    = Column(Text, nullable=False)
+    reproduction_steps = Column(Text, nullable=True)
+    sanitized_error    = Column(Text, nullable=True)
+    tester_notes       = Column(Text, nullable=True)
+    reported_by        = Column(String(255), nullable=False)
+    assigned_developer = Column(String(255), nullable=True)
+    developer_notes    = Column(Text, nullable=True)
+    resolved_at        = Column(DateTime, nullable=True)
+    retested_at        = Column(DateTime, nullable=True)
+    retested_by        = Column(String(255), nullable=True)
+    created_at         = Column(DateTime, default=datetime.utcnow)
+    updated_at         = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class WorkflowReleaseApproval(Base):
+    """
+    Formal release approval and publishing record for workflow versions.
+    Records automated release gate checks, explicit administrator sign-off, and publication metadata.
+    """
+    __tablename__ = "workflow_release_approvals"
+
+    id                   = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workflow_key         = Column(String(100), nullable=False, index=True)
+    workflow_version     = Column(String(50), nullable=False, default="1.0.0")
+    status               = Column(String(50), nullable=False, default="pending")  # pending | approved | rejected | published | rolled_back
+    release_gates_passed = Column(Boolean, nullable=False, default=False)
+    gate_results         = Column(JSONB, nullable=False, default=dict)
+    approved_by          = Column(String(255), nullable=True)
+    approval_notes       = Column(Text, nullable=True)
+    approved_at          = Column(DateTime, nullable=True)
+    published_at         = Column(DateTime, nullable=True)
+    created_at           = Column(DateTime, default=datetime.utcnow)
+    updated_at           = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

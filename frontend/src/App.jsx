@@ -24,6 +24,7 @@ import UsersPage                from './pages/admin/UsersPage'
 // WORKFLOWS
 import AdminWorkflowCatalog     from './pages/admin/AdminWorkflowCatalog'
 import AdminWorkflowAssignments from './pages/admin/AdminWorkflowAssignments'
+import AdminWorkflowQACenter    from './pages/admin/AdminWorkflowQACenter'
 import AdminRoutingAssignments  from './pages/admin/AdminRoutingAssignments'
 import AdminWorkflowRuns        from './pages/admin/AdminWorkflowRuns'
 // BILLING
@@ -44,8 +45,6 @@ import AdminPlatformSettings    from './pages/admin/AdminPlatformSettings'
 // ── SMB Owner pages ────────────────────────────────────────────────────────────
 import ConnectionsPage     from './pages/setup/ConnectionsPage'
 import CasesPage           from './pages/medical/CasesPage'
-import EmailSummarizerPage from './pages/client/EmailSummarizerPage'
-import ProductLaunchPage   from './pages/client/ProductLaunchPage'
 import UniversalWorkflowRunner from './pages/client/UniversalWorkflowRunner'
 import Dashboard           from './pages/client/Dashboard'
 import CopilotPage         from './pages/client/CopilotPage'
@@ -59,7 +58,6 @@ import BudgetPage          from './pages/client/BudgetPage'
 import EvidencePage        from './pages/client/EvidencePage'
 
 // ── Admin-accessible technical tools (kept for operational use) ───────────────
-import WorkflowDetail  from './pages/client/WorkflowDetail'
 import WorkflowBuilder from './pages/client/WorkflowBuilder'
 import ModelSettings   from './pages/client/ModelSettings'
 import ToolsPage       from './pages/client/ToolsPage'
@@ -144,6 +142,7 @@ function AppRoutes() {
       <Route path="/admin/users"                element={<Wrap adminOnly><UsersPage /></Wrap>} />
 
       {/* ── Platform Admin — WORKFLOWS ───────────────────────────────────── */}
+      <Route path="/admin/workflows/qa-center"    element={<Wrap adminOnly><AdminWorkflowQACenter /></Wrap>} />
       <Route path="/admin/workflows/catalog"      element={<Wrap adminOnly><AdminWorkflowCatalog /></Wrap>} />
       <Route path="/admin/workflows/assignments"  element={<Wrap adminOnly><AdminWorkflowAssignments /></Wrap>} />
       <Route path="/admin/runs"                   element={<Wrap adminOnly><AdminWorkflowRuns /></Wrap>} />

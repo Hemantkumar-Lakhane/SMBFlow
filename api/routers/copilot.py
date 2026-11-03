@@ -619,6 +619,19 @@ async def copilot_chat(
         )
 
     # ─────────────────────────────────────────────────────────────────────────
+    # 2.5 OFF-TOPIC / UNKNOWN QUERY DETECTION (Polite Guidance)
+    # ─────────────────────────────────────────────────────────────────────────
+    off_topic_keywords = ["weather", "mars", "recipe", "horoscope", "sports score", "joke", "movie review", "capital of"]
+    if any(k in user_msg_lower for k in off_topic_keywords):
+        return CopilotChatResponse(
+            message_id=str(uuid.uuid4())[:8],
+            reply="I did not recognize that query in the context of our platform workflows. Please select one of the recommended operational questions or workflow tasks below to get started.",
+            execution_nodes=[],
+            action_cta=ActionCTA(label="Browse Workflows Catalog", to="/workflows", icon="Workflow", variant="primary"),
+            suggested_followups=question_texts[:4],
+        )
+
+    # ─────────────────────────────────────────────────────────────────────────
     # 3. MATCH DYNAMIC PREDEFINED QUESTIONS
     # ─────────────────────────────────────────────────────────────────────────
     for q_item in dynamic_questions:
@@ -813,6 +826,7 @@ async def copilot_chat(
     # 5. REAL-TIME INTELLIGENT AI REASONING (Groq GPT-OSS-120B / Gemini 3.8 Flash)
     # Answers dynamic questions, reasons over workflows, and asks clarifying questions.
     # ─────────────────────────────────────────────────────────────────────────
+    is_admin = current_user.role in ("super_admin", "platform_admin")
     return await _generate_intelligent_copilot_reply(
         user_msg=user_msg,
         ctx=ctx,
@@ -911,8 +925,8 @@ Directives:
             )
         else:
             llm_reply = (
-                f"Hello {ctx.get('user_name', 'Admin')}. As the **Isolate Platform Operations Copilot**, I am connected to the core engine, PostgreSQL telemetry store, and workflow catalog.\n\n"
-                f"You have universal management over **{len(ctx.get('assigned_workflows', []))} registered workflows** and **{ctx.get('total_runs', 0)} total runs** across multi-tenant environments. Let me know what operational task or workflow you'd like to inspect or build."
+                "I did not recognize that query in the context of our platform workflows. "
+                "Please select one of the recommended operational questions or workflow tasks below to get started."
             )
 
     # Determine optimal ActionCTA

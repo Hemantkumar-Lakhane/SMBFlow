@@ -1,0 +1,7 @@
+Alpha,Mode,Recall_at_5,nDCG_at_5,MRR
+0.0,Graph-Only,1.0,0.8066,0.75
+0.2,Hybrid (alpha=0.2),1.0,0.8023,0.75
+0.4,Hybrid (alpha=0.4),1.0,0.8023,0.75
+0.6,Hybrid (alpha=0.6),1.0,0.8023,0.75
+0.8,Hybrid (alpha=0.8),0.95,0.7501,0.7
+1.0,Vector-Only,0.05,0.0613,0.1

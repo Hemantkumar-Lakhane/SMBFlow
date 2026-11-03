@@ -2337,7 +2337,7 @@ function FlowCanvas({
                 </div>
               )}
               {testRunResult.invalidNodes?.length > 0 && (
-                <div className="mt-2 space-y-1">
+                <div className="mt-2 space-y-1.5">
                   {testRunResult.invalidNodes.map(inv => {
                     const canvasNode = nodes.find(n => n.id === inv.id)
                     return (
@@ -2348,18 +2348,45 @@ function FlowCanvas({
                           if (canvasNode) setEditingNode(canvasNode)
                           setTestRunResult(null)
                         }}
-                        className="w-full text-left flex items-start gap-1.5 px-2 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/25 hover:bg-amber-100 dark:hover:bg-amber-500/20 transition-colors cursor-pointer"
+                        className="w-full text-left flex items-start justify-between gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/25 hover:bg-amber-100 dark:hover:bg-amber-500/20 transition-colors cursor-pointer group"
                       >
-                        <AlertTriangle className="w-2.5 h-2.5 text-amber-500 shrink-0 mt-0.5" />
-                        <span className="text-[10px] text-amber-700 dark:text-amber-200 leading-snug">
-                          <span className="font-semibold">{inv.name}</span>
-                          {' — '}
-                          <span className="opacity-75">{inv.missing.join(', ')}</span>
-                        </span>
+                        <div className="flex items-start gap-1.5 min-w-0">
+                          <AlertTriangle className="w-3 h-3 text-amber-500 shrink-0 mt-0.5" />
+                          <span className="text-[10px] text-amber-800 dark:text-amber-200 leading-snug">
+                            <span className="font-semibold">{inv.name}</span>
+                            {' — '}
+                            <span className="opacity-75">{inv.missing.join(', ')}</span>
+                          </span>
+                        </div>
+                        <span className="text-[9px] font-bold text-amber-600 dark:text-amber-400 group-hover:underline shrink-0 pl-1">Configure</span>
                       </button>
                     )
                   })}
-                  <p className="text-[9px] text-slate-400 mt-1 pl-1">Click a node above to configure it</p>
+                  <div className="flex items-center justify-between pt-1">
+                    <p className="text-[9px] text-slate-400">Click a node to configure</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // Actionable 1-click fix: fill recommended defaults for unconfigured nodes
+                        setNodes(ns => ns.map(n => {
+                          const isInvalid = testRunResult.invalidNodes.some(inv => inv.id === n.id)
+                          if (!isInvalid) return n
+                          const updatedData = { ...n.data }
+                          if (!updatedData.conditionExpression && (n.data.type === 'condition' || n.data.name?.includes('Condition') || n.data.name?.includes('Check'))) {
+                            updatedData.conditionExpression = 'followup_required == true'
+                          }
+                          if (!updatedData.recipient && (n.data.type === 'action' || n.data.tool === 'gmail' || n.data.name?.includes('Gmail'))) {
+                            updatedData.recipient = 'admin@example.com'
+                          }
+                          return { ...n, data: updatedData }
+                        }))
+                        setTestRunResult(null)
+                      }}
+                      className="text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                    >
+                      Auto-fill Defaults &amp; Clear
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -2421,8 +2448,8 @@ function TestRunDrawer({ open, onClose, workflowKey, api }) {
     try {
       const resp = await api.post('/workflows/meeting-intelligence/google-meet/extract', {
         meet_url: meetUrl.trim(),
-        meeting_title: 'Executive Architecture & Strategy Review',
-        primary_contact: 'Rahul Sharma',
+        meeting_title: 'Google Meet Session',
+        primary_contact: '',
       })
       setMeetData(resp)
       if (!testPrompt) {
@@ -2441,7 +2468,7 @@ function TestRunDrawer({ open, onClose, workflowKey, api }) {
     setResult(null)
     if (type === 'meet') {
       setTestMode('meet')
-      setMeetUrl('https://meet.google.com/iso-plan-2026')
+      setMeetUrl('')
       handleExtractGoogleMeet()
     } else if (type === 'invoice') {
       setTestMode('image')
@@ -3250,7 +3277,16 @@ export default function WorkflowBuilder() {
         is_custom: true,
         scope: formIsGlobal ? 'GLOBAL' : 'INDUSTRY',
       },
-      nodes: [], // 100% clean blank canvas!
+      nodes: [
+        {
+          id: 'trigger_start',
+          agent: 'webhook_agent',
+          name: 'Manual / Webhook Trigger',
+          description: 'Initial entrypoint trigger for workflow execution',
+          timeout_seconds: 60,
+          tools: [],
+        }
+      ],
       edges: [],
       escalation_config: { sla_hours: 4, resume_after_decision: true },
     }

@@ -341,7 +341,12 @@ def _validate_and_repair(dag: dict) -> dict:
     return dag
 
 
-def _build_final_response(dag: dict, prompt: str) -> dict:
+def _build_final_response(
+    dag: dict,
+    prompt: str,
+    requested_industry: Optional[str] = None,
+    requested_category: Optional[str] = None,
+) -> dict:
     """
     Merge the validated LLM DAG with the required top-level metadata,
     assign 2-D positions, and shape the nodes into the frontend format.
@@ -352,8 +357,14 @@ def _build_final_response(dag: dict, prompt: str) -> dict:
     if len(clean_key) < 3:
         clean_key = f"custom_workflow_{uuid.uuid4().hex[:6]}"
 
-    category = dag.get("category", "operations")
-    industry = dag.get("industry", "general")
+    industry = requested_industry or dag.get("industry") or "general"
+    category = requested_category
+    if not category:
+        if requested_industry and requested_industry in ("healthcare", "finance", "compliance", "productivity", "marketing", "sales"):
+            category = requested_industry
+        else:
+            category = dag.get("category") or "operations"
+
     trigger  = dag.get("trigger_type", "manual")
     scope    = "GLOBAL" if industry in ("general", "") else "INDUSTRY"
 
@@ -364,6 +375,8 @@ def _build_final_response(dag: dict, prompt: str) -> dict:
     shaped_nodes = []
     for n in nodes_with_pos:
         agent_type = n["agentType"]
+        if agent_type == "logic_approval_gate":
+            agent_type = "approval_gate"
         shaped_nodes.append({
             "id":   n["id"],
             "type": _agent_type_to_canvas_type(agent_type),
@@ -506,7 +519,7 @@ async def generate_workflow_from_prompt(
     # ── Try LLM path ──────────────────────────────────────────────────────────
     try:
         dag = await _call_llm_for_dag(prompt, industry)
-        result = _build_final_response(dag, prompt)
+        result = _build_final_response(dag, prompt, requested_industry=industry, requested_category=category)
         log.info(
             "LLM DAG generation succeeded",
             name=result["name"],

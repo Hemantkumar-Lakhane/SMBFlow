@@ -265,7 +265,7 @@ async def lifespan(app: FastAPI):
     log.info("SMBFlow API stopped")
 
 
-from api.routers import connections, reviews, medical_tourism, product_launch, copilot, meeting_intelligence, notifications, industry_workflows
+from api.routers import connections, reviews, medical_tourism, product_launch, copilot, meeting_intelligence, notifications, industry_workflows, admin_qa
 from api.routers import admin as admin_router
 
 app = FastAPI(
@@ -276,6 +276,7 @@ app = FastAPI(
 )
 
 app.include_router(admin_router.router)   # /api/v1/admin/* — must be first to win over legacy admin routes
+app.include_router(admin_qa.router)       # /api/v1/admin/qa/* — Workflow QA & Release Center
 app.include_router(connections.router)
 app.include_router(reviews.router)
 app.include_router(medical_tourism.router)
@@ -3241,7 +3242,16 @@ async def get_available_models():
 
 @app.get("/api/v1/config/dag/{workflow_name}", tags=["Config"])
 async def get_workflow_dag(workflow_name: str):
-    dag_path = Path("workflows/dags") / f"{workflow_name}.json"
+    from core.workflow_catalog_sync import _DEPRECATED_OR_DUPLICATE_KEYS
+    target_key = workflow_name
+    if workflow_name in _DEPRECATED_OR_DUPLICATE_KEYS:
+        dep = _DEPRECATED_OR_DUPLICATE_KEYS[workflow_name]
+        if dep.get("action") == "consolidate" and dep.get("canonical_key"):
+            target_key = dep["canonical_key"]
+        elif dep.get("action") == "delete":
+            raise HTTPException(status_code=410, detail=f"Workflow '{workflow_name}' has been deleted: {dep.get('reason')}")
+
+    dag_path = Path("workflows/dags") / f"{target_key}.json"
     if not dag_path.exists():
         raise HTTPException(status_code=404, detail=f"DAG not found: {workflow_name}")
     async with aiofiles.open(dag_path) as f:
@@ -3252,6 +3262,7 @@ async def get_workflow_dag(workflow_name: str):
 async def list_workflow_dags(db: AsyncSession = Depends(get_db)):
     from sqlalchemy import select, func
     from core.state_manager import WorkflowInstance
+    from core.workflow_catalog_sync import _DEPRECATED_OR_DUPLICATE_KEYS
 
     dags_dir = Path("workflows/dags")
     if not dags_dir.exists():
@@ -3278,7 +3289,12 @@ async def list_workflow_dags(db: AsyncSession = Depends(get_db)):
         run_counts, last_run = {}, {}
 
     workflows = []
+    seen_names = set()
     for f in sorted(dags_dir.glob("*.json")):
+        # Skip duplicate or deprecated DAGs
+        if f.stem in _DEPRECATED_OR_DUPLICATE_KEYS or f.stem in seen_names:
+            continue
+        seen_names.add(f.stem)
         try:
             async with aiofiles.open(f) as fp:
                 dag = json.loads(await fp.read())
@@ -3479,6 +3495,7 @@ async def list_tenant_workflows(
             _Assign.organization_id == oid,
             _Assign.status == "active",
             _WCat.active.is_(True),
+            _WCat.status.in_(["active", "published"]),
         )
     )
     rows = assigns_res.all()
@@ -3508,6 +3525,7 @@ async def list_tenant_workflows(
                     _Assign.organization_id == oid,
                     _Assign.status == "active",
                     _WCat.active.is_(True),
+                    _WCat.status.in_(["active", "published"]),
                 )
             )
             rows = assigns_res2.all()
@@ -3547,12 +3565,27 @@ async def list_tenant_workflows(
     all_catalogs = all_cats_res.scalars().all()
     assign_map = {str(assign.workflow_id): assign for assign, _ in rows if assign.status == "active"}
 
+    IMPLEMENTED_WORKFLOW_KEYS = {
+        "meeting_intelligence_followup",
+        "meeting_intelligence",
+        "product_launch_sprint",
+        "product_launch",
+        "email_summarizer",
+        "customer_lead_enricher",
+        "invoice_processing",
+        "social_media_generator",
+        "contract_risk_analyzer",
+    }
+
     result = []
     for wf_cat in all_catalogs:
         wf_scope = getattr(wf_cat, "scope", "GLOBAL") or "GLOBAL"
         wf_industry = getattr(wf_cat, "industry", None)
+        is_impl = wf_cat.key in IMPLEMENTED_WORKFLOW_KEYS
+        if is_impl:
+            wf_scope = "GLOBAL"
         is_global = (wf_scope == "GLOBAL")
-        is_assigned = is_global or (str(wf_cat.id) in assign_map)
+        is_assigned = is_impl or (str(wf_cat.id) in assign_map)
         assign = assign_map.get(str(wf_cat.id))
 
         # Non-assigned industry workflows only visible if matching tenant industry
@@ -3687,6 +3720,25 @@ async def request_workflow_access(
     else:
         org_uuid = uuid.uuid4()
 
+    # Prevent duplicate pending requests for the same workflow and organization
+    if org_uuid:
+        existing_stmt = select(ApprovalItem).where(
+            ApprovalItem.organization_id == org_uuid,
+            ApprovalItem.review_type == "workflow_access_request",
+            ApprovalItem.status == "pending",
+        )
+        existing_res = await db.execute(existing_stmt)
+        for existing_item in existing_res.scalars().all():
+            ep = existing_item.payload or {}
+            if ep.get("workflow_key") == wf_key or ep.get("workflow_id") == wf_id_str:
+                return {
+                    "status": "already_pending",
+                    "request_id": str(existing_item.id),
+                    "workflow_key": wf_key,
+                    "workflow_name": wf_name,
+                    "message": f"An assignment request for '{wf_name}' is already pending administrator review.",
+                }
+
     req_id = uuid.uuid4()
     req_reason = payload.reason or payload.notes or f"Requesting access to execute {wf_name} workflow."
     req_payload = {
@@ -3747,6 +3799,42 @@ async def request_workflow_access(
         "workflow_name": wf_name,
         "message": f"Access request for '{wf_name}' submitted successfully in real time. Your administrator has been notified.",
     }
+
+
+@app.get("/api/v1/catalog/access-request-status", tags=["Workflows"])
+async def get_workflow_access_request_status(
+    workflow_key: str,
+    current_user: TokenData = Depends(require_any_auth),
+    db: AsyncSession = Depends(get_db),
+):
+    """Check whether a pending assignment request exists for this workflow."""
+    from db.models.core import ApprovalItem
+    org_id = current_user.organization_id or current_user.tenant_id
+    if not org_id:
+        return {"has_pending": False}
+    try:
+        org_uuid = uuid.UUID(str(org_id))
+    except (ValueError, TypeError):
+        return {"has_pending": False}
+
+    stmt = select(ApprovalItem).where(
+        ApprovalItem.organization_id == org_uuid,
+        ApprovalItem.review_type == "workflow_access_request",
+        ApprovalItem.status == "pending",
+    ).order_by(ApprovalItem.created_at.desc())
+    res = await db.execute(stmt)
+    items = list(res.scalars().all())
+    for it in items:
+        p = it.payload or {}
+        if p.get("workflow_key") == workflow_key or p.get("workflow_id") == workflow_key or p.get("workflow_name") == workflow_key:
+            return {
+                "has_pending": True,
+                "request_id": str(it.id),
+                "status": "pending",
+                "requested_at": p.get("requested_at") or (it.created_at.isoformat() if it.created_at else None),
+                "message": "Workflow assignment request pending administrator review.",
+            }
+    return {"has_pending": False}
 
 
 @app.get("/api/v1/billing/summary", tags=["Billing"])
@@ -3880,12 +3968,17 @@ async def delete_workflow_dag(
 ):
     safe = workflow_name.replace("/", "_").replace("..", "")
     dag_path = Path("workflows/dags") / f"{safe}.json"
-    if not dag_path.exists():
-        raise HTTPException(status_code=404, detail="Workflow not found")
-    dag_path.unlink()
+    if dag_path.exists():
+        dag_path.unlink()
+
+    # Find matching catalog entry and permanently delete it through lifecycle manager
+    cat_entry = await crud.get_workflow_by_key(db, safe)
+    if cat_entry:
+        await crud.delete_workflow_catalog_entry(db, cat_entry.id, current_user.email)
+
     await crud.log_event(db, "dag_deleted", None, None,
-                         f"DAG '{safe}' deleted by {current_user.email}")
-    return {"message": f"Workflow '{safe}' deleted"}
+                         f"DAG '{safe}' permanently deleted by {current_user.email}")
+    return {"message": f"Workflow '{safe}' permanently deleted"}
 
 
 @app.get("/api/v1/config/prompt-tree", tags=["Config"])
@@ -4898,3 +4991,6 @@ def _build_config_schema() -> dict:
             },
         ]
     }
+
+
+# Auto-reload trigger
