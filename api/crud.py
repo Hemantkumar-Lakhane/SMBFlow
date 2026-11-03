@@ -1840,7 +1840,8 @@ async def get_workflow_catalog_entry(db: AsyncSession, workflow_id: str) -> Opti
 
 
 async def get_workflow_catalog_by_key(db: AsyncSession, key: str) -> Optional[WorkflowCatalog]:
-    result = await db.execute(select(WorkflowCatalog).where(WorkflowCatalog.key == key))
+    clean_key = (key or "").strip()
+    result = await db.execute(select(WorkflowCatalog).where(func.lower(WorkflowCatalog.key) == clean_key.lower()))
     wf = result.scalar_one_or_none()
     if wf is not None:
         return wf
@@ -1854,10 +1855,13 @@ async def get_workflow_catalog_by_key(db: AsyncSession, key: str) -> Optional[Wo
     _ALIASES: dict[str, str] = {
         "meeting_intelligence": "meeting_intelligence_followup",
         "product_launch":       "product_launch_sprint",
+        "football_intelligence": "football_agent_os",
+        "football_agent":       "football_agent_os",
+        "football_scouting":    "football_agent_os",
     }
-    canonical = _ALIASES.get(key)
+    canonical = _ALIASES.get(clean_key.lower())
     if canonical:
-        result2 = await db.execute(select(WorkflowCatalog).where(WorkflowCatalog.key == canonical))
+        result2 = await db.execute(select(WorkflowCatalog).where(func.lower(WorkflowCatalog.key) == canonical.lower()))
         return result2.scalar_one_or_none()
 
     return None
@@ -2354,12 +2358,32 @@ async def check_org_workflow_access(db: AsyncSession, organization_id: str, work
     if not org.active:
         return {"allowed": False, "reason": "Organization is not active"}
 
-    # 3. Industry applicability check — GLOBAL workflows pass for any org;
-    #    INDUSTRY workflows only pass when the org's industry matches.
-    #    Use getattr with fallback so pre-migration DBs don't crash.
+    # 3. Resolve implementation and scope upfront
+    # All implemented workflows are treated as GLOBAL and do not require organization assignment.
+    IMPLEMENTED_WORKFLOW_KEYS = {
+        "meeting_intelligence_followup",
+        "meeting_intelligence",
+        "product_launch_sprint",
+        "product_launch",
+        "email_summarizer",
+        "customer_lead_enricher",
+        "invoice_processing",
+        "social_media_generator",
+        "contract_risk_analyzer",
+        "football_agent_os",
+        "football_intelligence",
+        "football_agent",
+        "football_scouting",
+    }
+    raw_key = (workflow_key or "").lower().strip()
+    is_implemented = (wf.key.lower() in IMPLEMENTED_WORKFLOW_KEYS) or (raw_key in IMPLEMENTED_WORKFLOW_KEYS)
     wf_scope    = getattr(wf, "scope",    "GLOBAL") or "GLOBAL"
     wf_industry = getattr(wf, "industry", None)
-    if wf_scope == "INDUSTRY":
+    effective_scope = "GLOBAL" if is_implemented else wf_scope
+
+    # Industry applicability check — GLOBAL workflows pass for any org;
+    # INDUSTRY workflows only pass when the org's industry matches.
+    if effective_scope == "INDUSTRY":
         org_industry = (org.industry or "").lower().strip()
         req_industry = (wf_industry or "").lower().strip()
         if org_industry != req_industry:
@@ -2374,6 +2398,14 @@ async def check_org_workflow_access(db: AsyncSession, organization_id: str, work
     # 4. Check org has an active subscription (with real trial lifecycle enforcement)
     sub = await get_org_subscription(db, organization_id)
     if not sub:
+        try:
+            free_plan = await get_billing_plan_by_slug(db, "free")
+            if free_plan:
+                sub = await create_org_subscription(db, organization_id, str(free_plan.id), "monthly")
+        except Exception:
+            pass
+
+    if not sub:
         return {"allowed": False, "reason": "No active subscription for this organization"}
 
     # Enforce trial expiry: if trialing and trial_ends_at has passed → block
@@ -2386,34 +2418,29 @@ async def check_org_workflow_access(db: AsyncSession, organization_id: str, work
         return {"allowed": False, "reason": f"Subscription is not active (status: {effective_status})"}
 
     # 5. Check plan entitles this workflow
-    # All implemented workflows are treated as GLOBAL and do not require organization assignment.
-    IMPLEMENTED_WORKFLOW_KEYS = {
-        "meeting_intelligence_followup",
-        "meeting_intelligence",
-        "product_launch_sprint",
-        "product_launch",
-        "email_summarizer",
-        "customer_lead_enricher",
-        "invoice_processing",
-        "social_media_generator",
-        "contract_risk_analyzer",
-    }
-    is_implemented = wf.key in IMPLEMENTED_WORKFLOW_KEYS
-    effective_scope = "GLOBAL" if is_implemented else wf_scope
+    # Global workflows are universal and directly accessible to all organizations without requiring admin assignment.
+    is_global = (effective_scope == "GLOBAL")
+    meta = getattr(wf, "metadata_", {})
+    if not isinstance(meta, dict):
+        meta = {}
+    requires_explicit = bool(meta.get("requires_explicit_assignment", False))
 
-    requires_explicit = False if is_implemented else bool((getattr(wf, "metadata_", {}) or {}).get("requires_explicit_assignment", False))
-    entitlements = await get_plan_entitlements(db, str(sub.plan_id))
-    has_explicit_plan_entitlements = len(entitlements) > 0 and not is_implemented
-
-    if (effective_scope != "GLOBAL" or requires_explicit or has_explicit_plan_entitlements) and not is_implemented:
-        if str(wf.id) not in entitlements:
+    if not is_global and not is_implemented:
+        entitlements = await get_plan_entitlements(db, str(sub.plan_id))
+        if len(entitlements) > 0 and str(wf.id) not in entitlements:
             return {"allowed": False, "reason": f"Current plan does not include '{workflow_key}'"}
 
     # 6. Check explicit workflow assignment
-    # Non-global, non-implemented workflows require an active OrganizationWorkflowAssignment.
+    # ONLY non-global workflows (or workflows explicitly flagged as requiring custom assignment)
+    # require an active OrganizationWorkflowAssignment record.
+    # Global workflows are directly accessible to ANY user and organization.
     assignment = await get_org_workflow_assignment(db, organization_id, str(wf.id))
-    if not is_implemented and (effective_scope != "GLOBAL" or requires_explicit or has_explicit_plan_entitlements) and (not assignment or assignment.status != "active"):
-        return {"allowed": False, "reason": f"Workflow '{workflow_key}' has not been assigned to this organization"}
+    if (not is_global and not is_implemented) or requires_explicit:
+        if not assignment or assignment.status != "active":
+            return {
+                "allowed": False,
+                "reason": f"Workflow '{workflow_key}' has not been assigned to this organization. Please request admin assignment.",
+            }
 
     return {
         "allowed":       True,

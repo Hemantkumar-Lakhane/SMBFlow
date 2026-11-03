@@ -1992,7 +1992,12 @@ export default function UniversalWorkflowRunner() {
       } catch (err) {
         if (mounted) {
           const detail = err?.response?.data?.detail
-          const msg = typeof detail === 'string' ? detail : detail?.message || err?.message || 'This workflow has not been assigned to your organization.'
+          let msg = typeof detail === 'string' ? detail : detail?.message || err?.message || 'This workflow has not been assigned to your organization.'
+          if (typeof msg === 'object' && msg !== null) {
+            msg = msg.message || JSON.stringify(msg)
+          } else if (typeof msg === 'string' && msg.includes('[object Object]')) {
+            msg = 'This workflow has not been assigned to your organization.'
+          }
           setAccessDenied({ message: msg })
         }
       } finally {
@@ -4063,7 +4068,9 @@ export default function UniversalWorkflowRunner() {
           </div>
           <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Workflow Access Restricted</h2>
           <p className="text-xs text-slate-600 dark:text-slate-400 mb-6 leading-relaxed">
-            {accessDenied.message || `Workflow "${workflow.displayTitle || workflow.title}" has not been assigned to your organization.`}
+            {typeof accessDenied?.message === 'string' && !accessDenied.message.includes('[object Object]')
+              ? accessDenied.message
+              : `Workflow "${workflow.displayTitle || workflow.title}" has not been assigned to your organization.`}
           </p>
           <div className="flex flex-col gap-2.5">
             <button

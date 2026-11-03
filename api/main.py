@@ -3575,6 +3575,10 @@ async def list_tenant_workflows(
         "invoice_processing",
         "social_media_generator",
         "contract_risk_analyzer",
+        "football_agent_os",
+        "football_intelligence",
+        "football_agent",
+        "football_scouting",
     }
 
     result = []
@@ -3585,7 +3589,7 @@ async def list_tenant_workflows(
         if is_impl:
             wf_scope = "GLOBAL"
         is_global = (wf_scope == "GLOBAL")
-        is_assigned = is_impl or (str(wf_cat.id) in assign_map)
+        is_assigned = is_impl or is_global or (str(wf_cat.id) in assign_map)
         assign = assign_map.get(str(wf_cat.id))
 
         # Non-assigned industry workflows only visible if matching tenant industry

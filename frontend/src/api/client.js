@@ -69,6 +69,10 @@ export async function apiCall(path, options = {}, token = null) {
             const field = err.loc ? err.loc.slice(-1).join('.') : 'field'
             return `[${field}]: ${err.msg}`
           }).join(' | ')
+        } else if (typeof body.detail === 'object' && body.detail !== null) {
+          detail = body.detail.message || body.detail.reason || body.detail.error || JSON.stringify(body.detail)
+        } else if (typeof body.message === 'object' && body.message !== null) {
+          detail = body.message.message || JSON.stringify(body.message)
         } else {
           detail = body.detail || body.message || detail
         }

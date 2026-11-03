@@ -91,6 +91,8 @@ _WORKFLOW_APPLICABILITY: dict[str, dict] = {
     "content_factory":                     {"scope": "GLOBAL",   "industry": None},
     "ops_playbook":                        {"scope": "GLOBAL",   "industry": None},
     "meeting_intelligence_followup":       {"scope": "GLOBAL",   "industry": None},
+    "football_agent_os":                   {"scope": "GLOBAL",   "industry": None},
+    "football_intelligence":               {"scope": "GLOBAL",   "industry": None},
 }
 
 # ── Deprecated or Duplicate Workflow Keys to be Consolidated or Removed ───────

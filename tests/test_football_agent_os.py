@@ -427,3 +427,70 @@ async def test_end_to_end_football_opportunity_pipeline():
     }
     assert delta_analysis["vs_history"] == "better"
     assert delta_analysis["trend"] == "improving"
+
+
+@pytest.mark.asyncio
+async def test_football_workflow_global_access_authorization():
+    """Verify that football_agent_os is treated as GLOBAL and allows access across organizations."""
+    from unittest.mock import AsyncMock, MagicMock
+    import uuid
+    from api.crud import check_org_workflow_access
+
+    db = AsyncMock()
+    wf = MagicMock()
+    wf.id = uuid.uuid4()
+    wf.key = "football_agent_os"
+    wf.name = "Football Agent AI Operating System"
+    wf.active = True
+    wf.status = "published"
+    wf.scope = "GLOBAL"
+    wf.industry = None
+    wf.metadata_ = {}
+
+    org = MagicMock()
+    org.id = uuid.uuid4()
+    org.active = True
+    org.industry = "saas"  # Non-sports tenant
+
+    sub = MagicMock()
+    sub.status = "active"
+    sub.trial_ends_at = None
+    sub.plan_id = uuid.uuid4()
+
+    # Configure mock responses for queries
+    wf_res = MagicMock()
+    wf_res.scalar_one_or_none.return_value = wf
+    org_res = MagicMock()
+    org_res.scalar_one_or_none.return_value = org
+    sub_res = MagicMock()
+    sub_res.scalar_one_or_none.return_value = sub
+    empty_res = MagicMock()
+    empty_res.scalar_one_or_none.return_value = None
+    empty_res.scalars.return_value.all.return_value = []
+
+    def execute_side_effect(stmt):
+        s = str(stmt).lower()
+        if "workflow_catalog" in s:
+            return wf_res
+        if "organization_subscriptions" in s:
+            return sub_res
+        if "organization_workflow_assignments" in s:
+            return empty_res
+        if "organizations" in s:
+            return org_res
+        return empty_res
+
+    db.execute.side_effect = execute_side_effect
+
+    # 1. Standard key access
+    res1 = await check_org_workflow_access(db, str(org.id), "football_agent_os")
+    assert res1["allowed"] is True
+    assert res1["scope"] == "GLOBAL"
+
+    # 2. Case-insensitive key access (e.g. Football_agent_os from URL)
+    res2 = await check_org_workflow_access(db, str(org.id), "Football_agent_os")
+    assert res2["allowed"] is True
+
+    # 3. Alias access
+    res3 = await check_org_workflow_access(db, str(org.id), "football_intelligence")
+    assert res3["allowed"] is True

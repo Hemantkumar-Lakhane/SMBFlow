@@ -234,9 +234,14 @@ function NodePreviewModal({ workflow, onClose, onRun }) {
     'invoice_processing',
     'social_media_generator',
     'contract_risk_analyzer',
+    'football_agent_os',
+    'football_intelligence',
+    'football_agent',
+    'football_scouting',
   ]
   const isImplemented = IMPLEMENTED_KEYS.includes(workflow?.name) || IMPLEMENTED_KEYS.includes(workflow?.key)
-  const canDirectRun = workflow?.is_assigned || isImplemented
+  const isGlobal = (workflow?.scope || '').toUpperCase() === 'GLOBAL'
+  const canDirectRun = workflow?.is_assigned || isGlobal || isImplemented
 
   async function handleRequestAccess() {
     setIsRequestingAccess(true)
@@ -902,7 +907,8 @@ export default function WorkflowsPage() {
                     'social_media_generator',
                     'contract_risk_analyzer',
                   ].includes(wf.key)
-                  const isAssignedOrGlobal = wf.is_assigned || isImpl
+                  const isWfGlobal = (wf.scope || '').toUpperCase() === 'GLOBAL'
+                  const isAssignedOrGlobal = wf.is_assigned || isWfGlobal || isImpl
 
                   return (
                     <div
