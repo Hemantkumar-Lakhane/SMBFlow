@@ -50,10 +50,14 @@ export function WSProvider({ children }) {
       }, 25_000);
     };
 
-    ws.onclose = () => {
+    ws.onclose = (e) => {
       setStatus('disconnected');
       clearInterval(pingTimer.current);
-      // Auto-reconnect with back-off
+      // Auto-reconnect with back-off unless auth failed
+      if (e?.code === 4001 || e?.code === 4003 || e?.code === 1008 || e?.code === 4401) {
+        setStatus('error');
+        return;
+      }
       reconnTimer.current = setTimeout(connect, 3000);
     };
 

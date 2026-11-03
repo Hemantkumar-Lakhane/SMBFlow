@@ -13,12 +13,21 @@ import { onSessionExpired } from '../api/authEvents'
 const AuthContext = createContext(null)
 
 const USER_STORAGE_KEY = 'smbflow_user_profile'
+const TOKEN_STORAGE_KEY = 'smbflow_access_token'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || ''
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
 export const supabase = (supabaseUrl && supabaseAnonKey && !supabaseAnonKey.startsWith('YOUR_'))
   ? createClient(supabaseUrl, supabaseAnonKey)
   : null
+
+function loadStoredToken() {
+  try {
+    return localStorage.getItem(TOKEN_STORAGE_KEY) || null
+  } catch {
+    return null
+  }
+}
 
 function loadStoredUser() {
   try {
@@ -29,7 +38,7 @@ function loadStoredUser() {
 }
 
 export function AuthProvider({ children }) {
-  const [token, setToken] = useState(null)
+  const [token, setToken] = useState(() => loadStoredToken())
   const [user, setUser] = useState(() => loadStoredUser())
   const [loading, setLoading] = useState(true)
   const [sessionExpired, setSessionExpired] = useState(false)
@@ -40,6 +49,9 @@ export function AuthProvider({ children }) {
     setSessionExpired(false)
     try {
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(newUser))
+      if (newToken) {
+        localStorage.setItem(TOKEN_STORAGE_KEY, newToken)
+      }
     } catch (_) {}
   }, [])
 
@@ -51,6 +63,7 @@ export function AuthProvider({ children }) {
     setUser(null)
     try {
       localStorage.removeItem(USER_STORAGE_KEY)
+      localStorage.removeItem(TOKEN_STORAGE_KEY)
     } catch (_) {}
   }, [])
 
@@ -59,12 +72,19 @@ export function AuthProvider({ children }) {
   // Hydrate profile via FastAPI /auth/me or fallback to session metadata
   const processSession = useCallback(async (session) => {
     if (!session) {
-      setToken(null)
-      setUser(null)
-      try { localStorage.removeItem(USER_STORAGE_KEY) } catch (_) {}
+      const storedToken = loadStoredToken()
+      if (!storedToken) {
+        setToken(null)
+        setUser(null)
+        try { localStorage.removeItem(USER_STORAGE_KEY) } catch (_) {}
+      }
       setLoading(false)
       return
     }
+
+    try {
+      localStorage.setItem(TOKEN_STORAGE_KEY, session.access_token)
+    } catch (_) {}
 
     setToken(session.access_token)
     try {
@@ -146,6 +166,7 @@ export function AuthProvider({ children }) {
       setUser(null)
       try {
         localStorage.removeItem(USER_STORAGE_KEY)
+        localStorage.removeItem(TOKEN_STORAGE_KEY)
       } catch (_) {}
     })
   }, [])
