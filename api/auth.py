@@ -20,6 +20,7 @@ import structlog
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
+from jose.exceptions import JWKError, JOSEError
 from pydantic import BaseModel
 
 try:
@@ -274,7 +275,7 @@ def decode_token(token: str) -> TokenData:
 
     # 2. Attempt signature verification using SUPABASE_JWT_SECRET
     try:
-        payload = jwt.decode(token, key, algorithms=["HS256", "ES256", "RS256"], options={"verify_aud": False})
+        payload = jwt.decode(token, key, algorithms=["HS256"], options={"verify_aud": False})
         user_id = payload.get("sub") or payload.get("user_id")
         email = payload.get("email", "user@smbflow.com")
         role = payload.get("role") or payload.get("user_metadata", {}).get("role", "org_user")
@@ -293,13 +294,13 @@ def decode_token(token: str) -> TokenData:
             tenant_id=str(org_id) if org_id else None,
             full_name=full_name,
         )
-    except JWTError:
+    except (JWTError, JWKError, JOSEError, Exception):
         pass
 
     # 3. Attempt signature verification using local SECRET_KEY (if distinct from key)
     if key != SECRET_KEY:
         try:
-            payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256", "ES256", "RS256"], options={"verify_aud": False})
+            payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"], options={"verify_aud": False})
             role = payload.get("role", "org_user")
             if role == "super_admin":
                 role = "platform_admin"
@@ -314,7 +315,7 @@ def decode_token(token: str) -> TokenData:
                 tenant_id=str(org_id) if org_id else None,
                 full_name=full_name,
             )
-        except JWTError:
+        except (JWTError, JWKError, JOSEError, Exception):
             pass
 
     # 4. Server-side online validation against Supabase Auth API (/auth/v1/user)
