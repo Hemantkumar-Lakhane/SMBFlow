@@ -1,27 +1,28 @@
 {
   "_meta": {
-    "workflow_id": "football_agent_os",
     "name": "Football Agent AI Operating System",
-    "industry": "sports_and_entertainment",
-    "category": "sports_operations",
-    "version": "1.1.0",
     "description": "Centralized FIFA football agency hub: tracks player contracts, matches club squad needs across Asian and European transfer markets, generates tactical scouting dossiers, and automates club pitch outreach.",
-    "trigger_types": [
-      "manual",
-      "webhook",
-      "schedule"
-    ],
+    "category": "sports_operations",
+    "industry": "sports_and_entertainment",
     "sla_hours": 2,
-    "schedule_cron": "0 8 * * 1-5",
-    "estimated_duration_minutes": 3,
-    "default_tenant_config": "config/templates/sports_and_entertainment.json",
-    "max_a2a_attempts": 3
+    "estimated_duration_minutes": 2,
+    "trigger": {
+      "type": "manual",
+      "source": "visual_builder"
+    },
+    "trigger_types": [
+      "manual"
+    ],
+    "created_by": "admin@smbflow.com",
+    "created_at": "2026-11-03T14:16:13.581124",
+    "is_custom": true
   },
   "nodes": [
     {
       "id": "research",
       "agent": "research_agent",
       "name": "Scout & Club Intelligence Ingest",
+      "subtitle": "Response Text",
       "description": "Ingest player profile, contract expiration, tactical metrics, and candidate club squad vacancies across target markets.",
       "prompt_file": "sports_and_entertainment/research_football.txt",
       "tools": [
@@ -29,70 +30,105 @@
         "football_get_clubs",
         "football_get_coaches"
       ],
-      "timeout_seconds": 120
+      "timeout_seconds": 120,
+      "position": {
+        "x": -143.85645043302264,
+        "y": -150.9762922160469
+      },
+      "config": {}
     },
     {
       "id": "reasoning",
       "agent": "reasoning_agent",
       "name": "Contract Valuation & Explainable Matching",
+      "subtitle": "Response Text",
       "description": "Evaluate pre-contract transfer window leverage and run deterministic two-layer compatibility matching (hard blockers + weighted scoring).",
       "prompt_file": "sports_and_entertainment/reasoning_football.txt",
       "tools": [
         "football_match_player_club"
       ],
-      "timeout_seconds": 90
+      "timeout_seconds": 90,
+      "position": {
+        "x": 411.3623167413846,
+        "y": -147.4853340246876
+      },
+      "config": {}
     },
     {
       "id": "drafting",
       "agent": "drafting_agent",
       "name": "Scouting Dossier & Director Pitch",
+      "subtitle": "Response Text",
       "description": "Check director relationship cooldown and draft executive scouting presentation dossiers and personalized WhatsApp pitches under Immersa Experiences brand voice.",
       "prompt_file": "sports_and_entertainment/drafting_football.txt",
       "tools": [
         "football_get_relationship_history"
       ],
-      "timeout_seconds": 120
+      "timeout_seconds": 120,
+      "position": {
+        "x": 875.717380757633,
+        "y": -144.8025979810775
+      },
+      "config": {}
     },
     {
       "id": "verification",
       "agent": "verification_agent",
       "name": "Adversarial Quality & Compliance Audit",
+      "subtitle": "Response Text",
       "description": "Prosecutor-Judge audit verifying zero placeholders, exact ground-truth metrics, open foreign quota compliance, and budget limits.",
       "prompt_file": "sports_and_entertainment/verification_football.txt",
       "tools": [
         "football_get_relationship_history"
       ],
-      "timeout_seconds": 60
+      "timeout_seconds": 60,
+      "position": {
+        "x": -16.518170531833675,
+        "y": 214.32928194973584
+      },
+      "config": {}
     },
     {
       "id": "execution",
       "agent": "execution_agent",
       "name": "Action Center Approval Staging",
+      "subtitle": "Response Text",
       "description": "Package verified dossiers and WhatsApp pitches into approval_items for FIFA agent digital sign-off. External dispatch strictly gated.",
       "prompt_file": "sports_and_entertainment/execution_football.txt",
       "tools": [
         "db_write_outcome"
       ],
-      "timeout_seconds": 90
+      "timeout_seconds": 90,
+      "position": {
+        "x": 420.90708101580054,
+        "y": 217.15640507809363
+      },
+      "config": {}
     },
     {
       "id": "memory",
       "agent": "memory_agent",
       "name": "Relationship Memory & Delta Analysis",
+      "subtitle": "Response Text",
       "description": "Log director interactions into relationship memory, compute Delta Analysis against past transfer cycles, and store market intelligence patterns.",
       "prompt_file": "sports_and_entertainment/memory_football.txt",
       "tools": [
         "db_write_outcome",
         "db_update_pattern"
       ],
-      "timeout_seconds": 60
+      "timeout_seconds": 60,
+      "position": {
+        "x": 758.9334567052287,
+        "y": 215.6627799386048
+      },
+      "config": {}
     }
   ],
   "edges": [
     {
       "from": "research",
       "to": "reasoning",
-      "condition": null
+      "condition": "1 item"
     },
     {
       "from": "reasoning",
@@ -102,7 +138,7 @@
     {
       "from": "drafting",
       "to": "verification",
-      "condition": null
+      "condition": "1 item"
     },
     {
       "from": "verification",
@@ -112,7 +148,7 @@
     {
       "from": "execution",
       "to": "memory",
-      "condition": null
+      "condition": "1 item"
     }
   ],
   "escalation_config": {
