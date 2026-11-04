@@ -10,7 +10,7 @@ import uuid
 from datetime import datetime
 from typing import Any, Optional
 
-from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase, synonym
 
@@ -508,3 +508,53 @@ class WorkflowReleaseApproval(Base):
     created_at           = Column(DateTime, default=datetime.utcnow)
     updated_at           = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+
+
+# =============================================================================
+# Daily Briefing Model (Meeting Intelligence)
+# =============================================================================
+
+class DailyBriefing(Base):
+    __tablename__ = 'daily_briefings'
+
+    id               = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id  = Column(UUID(as_uuid=True), nullable=False, index=True)
+    briefing_date    = Column(String(10), nullable=False, index=True)
+    status           = Column(String(50), nullable=False, default='pending')
+    content          = Column(JSONB, nullable=False, default=dict)
+    idempotency_key  = Column(String(255), nullable=False, unique=True, index=True)
+    scheduled_time_utc = Column(String(10), nullable=True)
+    generated_at     = Column(DateTime, nullable=True)
+    error            = Column(Text, nullable=True)
+    created_at       = Column(DateTime, default=datetime.utcnow)
+    updated_at       = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+# =============================================================================
+# Conversation Ingestion Model (Meeting Intelligence - Automatic Ingestion)
+# =============================================================================
+
+class ConversationIngestionRecord(Base):
+    __tablename__ = 'conversation_ingestion_records'
+    __table_args__ = (
+        UniqueConstraint('organization_id', 'external_event_id', name='uq_conv_ingest_org_event'),
+    )
+
+    id                 = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id    = Column(UUID(as_uuid=True), nullable=False, index=True)
+    external_event_id  = Column(String(255), nullable=False, index=True)
+    source             = Column(String(100), default='webhook', nullable=False)
+    status             = Column(String(50), default='received', nullable=False)
+    conversation_title = Column(String(255), nullable=False)
+    contact_name       = Column(String(255), nullable=False)
+    conversation_type  = Column(String(100), default='Online Meeting', nullable=False)
+    conversation_date  = Column(String(50), nullable=False)
+    language           = Column(String(50), default='Auto Detect', nullable=False)
+    recording_data     = Column(JSONB, nullable=False, default=dict)
+    instance_id        = Column(UUID(as_uuid=True), nullable=True, index=True)
+    error_message      = Column(Text, nullable=True)
+    retry_count        = Column(Integer, default=0, nullable=False)
+    received_at        = Column(DateTime, default=datetime.utcnow, nullable=False)
+    completed_at       = Column(DateTime, nullable=True)
+    last_attempt_at    = Column(DateTime, nullable=True)
+    metadata_          = Column('metadata', JSONB, default=dict)

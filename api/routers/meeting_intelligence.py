@@ -16,17 +16,20 @@ import json
 import os
 import re
 import time
-import urllib.parse
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import aiofiles
+import base64
+import hashlib
+import hmac
 import httpx
 import structlog
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
-from pydantic import BaseModel, Field
+from urllib.parse import urlparse
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Query, Request
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -37,6 +40,8 @@ from db.models.core import (
     AgentRunRecord,
     ApprovalItem,
     AuditEvent,
+    ConversationIngestionRecord,
+    DailyBriefing,
     Organization,
     RelationshipContact,
     RelationshipConversation,
@@ -44,9 +49,20 @@ from db.models.core import (
     ToolConnection,
     WorkflowInstance,
 )
+from integrations.key_vault import decrypt_credentials
+from integrations.connectors import GoogleWorkspaceConnector, GmailConnector, RecallAIConnector
+from core.contact_researcher import ContactResearcher
+from core.daily_briefing_generator import generate_daily_briefing
+from core.business_context import (
+    get_business_context,
+    update_business_context,
+    format_business_context_for_prompt,
+)
+from core.central_memory_query import query_central_memory
 
 log = structlog.get_logger()
 router = APIRouter(prefix="/api/v1/workflows/meeting-intelligence", tags=["Meeting Intelligence & Follow-up"])
+
 
 # ── Allowed Audio Configurations ─────────────────────────────────────────────
 ALLOWED_AUDIO_EXTENSIONS = {".mp3", ".wav", ".m4a", ".webm"}
@@ -79,15 +95,12 @@ class AudioReference(BaseModel):
 
 
 class ConversationCaptureRequest(BaseModel):
-    input_mode: Optional[str] = Field(default=None, description="paste_transcript | audio_upload | google_meet")
-    transcript: Optional[str] = Field(default=None, description="Direct user-pasted transcript text")
-    meet_url: Optional[str] = Field(default=None, description="Google Meet URL or meeting code")
-    conversation_title: Optional[str] = Field(default="Meeting Review", description="Title or topic of the conversation")
-    contact_name: Optional[str] = Field(default="Meeting Participants", description="Primary contact or attendee name")
-    conversation_type: Optional[str] = Field(default="Online Meeting", description="Online Meeting, Phone Call, or In-Person Meeting")
-    recording: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Audio upload reference data")
-    language: Optional[str] = Field(default="Auto Detect", description="Spoken language")
-    conversation_date: Optional[str] = Field(default="", description="Date of the conversation (YYYY-MM-DD)")
+    conversation_title: str = Field(..., min_length=1, description="Title or topic of the conversation")
+    contact_name: str = Field(..., min_length=1, description="Primary contact or attendee name")
+    conversation_type: str = Field(..., description="Online Meeting, Phone Call, or In-Person Meeting")
+    recording: Dict[str, Any] = Field(..., description="Audio upload reference data")
+    language: str = Field(default="Auto Detect", description="Spoken language")
+    conversation_date: str = Field(..., description="Date of the conversation (YYYY-MM-DD)")
 
 
 class PipelineNodeStatus(BaseModel):
@@ -105,7 +118,6 @@ class ConversationCaptureResponse(BaseModel):
     current_node: str = "n1"
     nodes: List[PipelineNodeStatus]
     conversation_data: Dict[str, Any]
-    source_provenance: Optional[Dict[str, Any]] = None
     message: str
 
 
@@ -158,7 +170,6 @@ class ProcessConversationResponse(BaseModel):
     duration_ms: int = 0
     message: str
     error_message: Optional[str] = None
-    source_provenance: Optional[Dict[str, Any]] = None
 
 
 # ── Node 3: Central Memory Schemas ───────────────────────────────────────────
@@ -281,7 +292,7 @@ class FollowupDraftItem(BaseModel):
     approval_id: Optional[str] = None
     instance_id: str
     review_type: str = "followup_email_draft"
-    status: str = Field("awaiting_review", description="awaiting_review | approved | snoozed | discarded")
+    status: str = Field("awaiting_review", description="awaiting_review | approved | sent | connection_required | snoozed | discarded")
     subject: str
     body: str
     recipient_name: str
@@ -300,6 +311,11 @@ class FollowupDraftItem(BaseModel):
     snoozed_until: Optional[str] = None
     snooze_reason: Optional[str] = None
     snoozed_reason: Optional[str] = None
+    sent_at: Optional[str] = None
+    sent_to: Optional[str] = None
+    provider_message_id: Optional[str] = None
+    connection_status: Optional[str] = None
+    error_message: Optional[str] = None
     model_used: Optional[str] = None
     decided_by: Optional[str] = None
     decided_at: Optional[str] = None
@@ -326,6 +342,7 @@ class FollowupDraftActionRequest(BaseModel):
     action: str = Field(..., description="approve | edit | snooze | discard")
     subject: Optional[str] = Field(None, description="Updated subject (for edit action)")
     body: Optional[str] = Field(None, description="Updated body (for edit action)")
+    recipient_email: Optional[str] = Field(None, description="Recipient email address")
     snoozed_until: Optional[str] = Field(None, description="ISO timestamp or reminder label (for snooze action)")
     snooze_until: Optional[str] = Field(None, description="Alias for snoozed_until")
     snooze_reason: Optional[str] = Field(None, description="Reason for snoozing (for snooze action)")
@@ -340,6 +357,9 @@ class FollowupDraftActionResponse(BaseModel):
     action: str
     message: str
     nodes: List[PipelineNodeStatus] = Field(default_factory=list)
+    sent: bool = False
+    provider_message_id: Optional[str] = None
+    connection_status: Optional[str] = None
 
 
 class WorkflowRunDetailResponse(BaseModel):
@@ -355,6 +375,8 @@ class WorkflowRunDetailResponse(BaseModel):
     central_memory: Optional[ContactMemorySnapshot] = None
     actions: Optional[ActionGeneratorResponse] = None
     followup_draft: Optional[FollowupDraftItem] = None
+    meeting_prep: Optional[Dict[str, Any]] = None  # Node 5B state
+    contact_research: Optional[Dict[str, Any]] = None  # Contact Research enrichment
     nodes: List[PipelineNodeStatus]
     model_used: Optional[str] = None
     started_at: Optional[str] = None
@@ -379,38 +401,6 @@ async def _resolve_org_uuid(current_user: TokenData, db: AsyncSession) -> uuid.U
         return org.id
 
     return uuid.uuid4()
-
-
-async def _get_connected_google_workspace(db: AsyncSession, org_uuid: uuid.UUID) -> Optional[tuple[Any, dict]]:
-    """Retrieve active Google Workspace or Google Meet ToolConnection and decrypted credentials."""
-    stmt = select(ToolConnection).where(
-        ToolConnection.organization_id == org_uuid,
-        ToolConnection.tool_name.in_(["google_workspace", "google_meet"]),
-        ToolConnection.status == "connected",
-    )
-    res = await db.execute(stmt)
-    conn = res.scalars().first()
-    if conn and conn.encrypted_credentials:
-        try:
-            from integrations.key_vault import decrypt_credentials
-            creds = decrypt_credentials(conn.encrypted_credentials)
-            return conn, creds
-        except Exception as e:
-            log.error("Failed to decrypt Google Workspace credentials", error=str(e))
-
-    # Environment variable fallback for development/testing
-    ref_token = os.getenv("GOOGLE_WORKSPACE_REFRESH_TOKEN") or os.getenv("GOOGLE_REFRESH_TOKEN")
-    client_id = os.getenv("GOOGLE_CLIENT_ID")
-    client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
-    if ref_token and client_id and client_secret:
-        return None, {
-            "refresh_token": ref_token,
-            "client_id": client_id,
-            "client_secret": client_secret,
-            "access_token": "",
-            "expires_at": 0,
-        }
-    return None
 
 
 def _sanitize_filename(filename: str) -> str:
@@ -501,7 +491,7 @@ async def upload_audio_recording(
         log.warning("Audio upload rejected: dangerous extension", filename=raw_filename, ext=ext)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid file extension: file extension '{ext}' is dangerous and not permitted."
+            detail=f"Security rejection: file extension '{ext}' is not permitted."
         )
 
     # 2. Enforce allowed audio extensions
@@ -596,128 +586,34 @@ async def capture_conversation(
     - Marks Nodes 2–5 as pending / not implemented.
     - Does NOT transcribe, generate fake summaries, or execute later nodes.
     """
-    # 1. Normalization of inputs with intelligent defaults
-    title = (req.conversation_title or "").strip() or "Meeting Review"
-    contact = (req.contact_name or "").strip() or "Meeting Participants"
-    conv_date = (req.conversation_date or "").strip() or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    # 1. Validation of required inputs
+    title = req.conversation_title.strip()
+    contact = req.contact_name.strip()
+    conv_type = req.conversation_type.strip()
+    lang = req.language.strip() or "Auto Detect"
+    conv_date = req.conversation_date.strip()
+    recording = req.recording
 
-    # Cleanly normalize conversation_type without throwing false 400 errors
-    if req.conversation_type is not None and req.conversation_type.strip():
-        conv_type = req.conversation_type.strip()
-    else:
-        conv_type = "Online Meeting"
+    if not title:
+        raise HTTPException(status_code=400, detail="Conversation Title is required.")
+    if not contact:
+        raise HTTPException(status_code=400, detail="Contact Name is required.")
+    if conv_type not in ["Online Meeting", "Phone Call", "In-Person Meeting"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid conversation type '{conv_type}'. Must be 'Online Meeting', 'Phone Call', or 'In-Person Meeting'."
+        )
+    if not recording or not isinstance(recording, dict) or not (recording.get("filename") or recording.get("file_id")):
+        raise HTTPException(status_code=400, detail="A valid audio recording is required.")
+    if not conv_date:
+        raise HTTPException(status_code=400, detail="Conversation Date is required.")
 
     valid_languages = ["Auto Detect", "English", "Spanish", "Mixed English / Spanish"]
-    if req.language is not None and req.language.strip() in valid_languages:
-        lang = req.language.strip()
-    else:
-        lang = "Auto Detect"
-
-    # Resolve input mode (paste_transcript | audio_upload | google_meet)
-    raw_mode = (req.input_mode or "").lower().strip()
-    if raw_mode in ["paste_transcript", "transcript", "pasted_transcript"]:
-        input_mode = "paste_transcript"
-    elif raw_mode in ["audio_upload", "audio", "recording"]:
-        input_mode = "audio_upload"
-    elif raw_mode in ["google_meet", "meet_url", "meet"]:
-        input_mode = "google_meet"
-    else:
-        # Infer mode if omitted or defaulted
-        if req.transcript and len(req.transcript.strip()) >= 10:
-            input_mode = "paste_transcript"
-        elif req.meet_url:
-            input_mode = "google_meet"
-        elif req.recording is not None:
-            if isinstance(req.recording, dict) and req.recording.get("transcript"):
-                input_mode = "paste_transcript"
-            elif isinstance(req.recording, dict) and "meet.google" in str(req.recording.get("stored_path", "")).lower():
-                input_mode = "google_meet"
-            else:
-                input_mode = "audio_upload"
-        else:
-            input_mode = "paste_transcript"
-
-    source_provenance = {
-        "mode": input_mode,
-        "source_type": input_mode,
-        "captured_at": datetime.now(timezone.utc).isoformat(),
-    }
-    transcript_text = None
-
-    print(f"\n=======================================================", flush=True)
-    print(f"[Meeting Intelligence API] 📥 Received capture request: '{title}'", flush=True)
-    print(f"  ● Mode: {input_mode}", flush=True)
-    print(f"  ● Type: {conv_type}", flush=True)
-    print(f"  ● Contact: {contact}", flush=True)
-    print(f"=======================================================\n", flush=True)
-
-    if input_mode == "paste_transcript":
-        raw_tx = (req.transcript or "").strip()
-        if not raw_tx and req.recording and isinstance(req.recording, dict):
-            raw_tx = (req.recording.get("transcript") or "").strip()
-        if not raw_tx:
-            raise HTTPException(400, "Transcript text is required (at least 10 characters).")
-        if len(raw_tx) < 10:
-            raise HTTPException(400, "Please provide transcript text (at least 10 characters).")
-        transcript_text = raw_tx
-        recording = {
-            "file_id": f"tx_{uuid.uuid4().hex[:8]}",
-            "filename": "Pasted Meeting Transcript",
-            "content_type": "text/plain",
-            "stored_path": "inline://pasted_transcript",
-            "transcript": transcript_text,
-            "size_bytes": len(transcript_text.encode("utf-8")),
-        }
-        source_provenance["mode"] = "paste_transcript"
-        source_provenance["source_type"] = "pasted_transcript"
-        source_provenance["source_reference"] = "inline://pasted_transcript"
-        source_provenance["char_count"] = len(transcript_text)
-        source_provenance["transcript_length"] = len(transcript_text)
-        n1_note = f"Pasted meeting transcript ({len(transcript_text)} chars) validated and preserved for this run."
-
-    elif input_mode == "audio_upload":
-        if not req.recording or not isinstance(req.recording, dict):
-            raise HTTPException(400, "Audio recording details are required. A valid audio recording is required.")
-        if not req.recording.get("file_id") and not req.recording.get("filename") and not req.recording.get("stored_path"):
-            raise HTTPException(400, "Audio recording details are required. A valid audio recording is required.")
-        recording = req.recording
-        stored_path = recording.get("stored_path")
-        if stored_path:
-            p = Path(stored_path)
-            norm_p = os.path.normcase(os.path.abspath(str(p)))
-            norm_storage = os.path.normcase(os.path.abspath(str(STORAGE_DIR)))
-            # If path matches storage dir or file exists in storage dir
-            if not (norm_p.startswith(norm_storage) or (STORAGE_DIR / p.name).is_file() or p.is_file()):
-                raise HTTPException(400, "Invalid audio file path.")
-            if not p.is_file() and (STORAGE_DIR / p.name).is_file():
-                recording["stored_path"] = str(STORAGE_DIR / p.name).replace("\\", "/")
-        source_provenance["mode"] = "audio_upload"
-        source_provenance["source_type"] = "uploaded_audio"
-        source_provenance["source_reference"] = stored_path or recording.get("filename", "audio_recording")
-        source_provenance["stored_path"] = stored_path
-        source_provenance["filename"] = recording.get("filename")
-        source_provenance["size_bytes"] = recording.get("size_bytes")
-        n1_note = f"Audio recording '{recording.get('filename')}' preserved successfully for this run."
-
-    else:
-        # Google Meet
-        meet_ref = (req.meet_url or "").strip()
-        if not meet_ref and req.recording and isinstance(req.recording, dict):
-            meet_ref = req.recording.get("stored_path") or req.recording.get("meet_url") or ""
-        if not meet_ref:
-            raise HTTPException(400, "Google Meet URL or meeting code is required. Please provide a valid Google Meet URL or code.")
-        recording = {
-            "file_id": f"meet_{uuid.uuid4().hex[:8]}",
-            "filename": f"Google Meet ({meet_ref})",
-            "content_type": "text/google-meet-transcript",
-            "stored_path": meet_ref,
-            "meet_url": meet_ref,
-        }
-        source_provenance["mode"] = "google_meet"
-        source_provenance["source_type"] = "google_meet"
-        source_provenance["source_reference"] = meet_ref
-        source_provenance["meet_url"] = meet_ref
-        n1_note = f"Google Meet session reference ({meet_ref}) registered for transcript retrieval."
+    if lang not in valid_languages:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid language '{lang}'. Allowed options: {', '.join(valid_languages)}."
+        )
 
     # 2. Resolve organization UUID
     org_uuid = await _resolve_org_uuid(current_user, db)
@@ -728,21 +624,16 @@ async def capture_conversation(
         "conversation_title": title,
         "contact_name": contact,
         "conversation_type": conv_type,
-        "input_mode": input_mode,
-        "transcript": transcript_text,
         "recording": {
             "file_id": recording.get("file_id"),
             "filename": recording.get("filename"),
             "size_bytes": recording.get("size_bytes"),
             "content_type": recording.get("content_type"),
             "stored_path": recording.get("stored_path"),
-            "transcript": recording.get("transcript"),
-            "meet_data": recording.get("meet_data"),
         },
-        "source_provenance": source_provenance,
         "language": lang,
         "conversation_date": conv_date,
-        "captured_at": datetime.now(timezone.utc).isoformat(),
+        "captured_at": datetime.utcnow().isoformat(),
     }
 
     workflow_inst = WorkflowInstance(
@@ -752,7 +643,7 @@ async def capture_conversation(
         status="capture_completed",
         current_node="n1",
         trigger_payload={
-            "source": f"conversation_capture_{input_mode}",
+            "source": "manual_conversation_capture",
             **captured_data,
         },
         context={
@@ -772,7 +663,7 @@ async def capture_conversation(
         agent_capability="conversation_capture",
         status="completed",
         duration_ms=45,
-        tools_used=["transcript_ingest"] if input_mode == "paste_transcript" else ["audio_storage"],
+        tools_used=["audio_storage"],
         completed_at=datetime.utcnow(),
     )
     db.add(node1_run)
@@ -790,8 +681,7 @@ async def capture_conversation(
             "workflow": "meeting_intelligence_followup",
             "conversation_title": title,
             "contact_name": contact,
-            "input_mode": input_mode,
-            "source_provenance": source_provenance,
+            "audio_filename": recording.get("filename"),
         },
     )
     db.add(audit_evt)
@@ -804,7 +694,7 @@ async def capture_conversation(
         instance_id=str(instance_id),
         title=title,
         contact=contact,
-        input_mode=input_mode,
+        audio=recording.get("filename"),
     )
 
     nodes_status = [
@@ -813,35 +703,35 @@ async def capture_conversation(
             title="Conversation Capture",
             status="completed",
             implemented=True,
-            note=n1_note,
+            note="Audio recording and metadata preserved successfully for this run.",
         ),
         PipelineNodeStatus(
             id="n2",
             title="Process Conversation",
             status="pending",
-            implemented=True,
-            note="Transcription & Entity Extraction (Gemini / Whisper / Direct Ingest).",
+            implemented=False,
+            note="Pending implementation (Transcription & Entity Extraction).",
         ),
         PipelineNodeStatus(
             id="n3",
             title="Central Memory",
             status="pending",
-            implemented=True,
-            note="Vector Knowledge & Structured Memory Store (PostgreSQL).",
+            implemented=False,
+            note="Pending implementation (Vector Knowledge & History Index).",
         ),
         PipelineNodeStatus(
             id="n4",
             title="Action Generator",
             status="pending",
-            implemented=True,
-            note="Task & Decision Synthesis (Claude / Action Center).",
+            implemented=False,
+            note="Pending implementation (Task & Decision Synthesis).",
         ),
         PipelineNodeStatus(
             id="n5",
             title="Follow-up & Meeting Prep",
             status="pending",
-            implemented=True,
-            note="Dispatch & Briefing Sync (Email Drafts & Calendar Sync).",
+            implemented=False,
+            note="Pending implementation (Email Drafts & Calendar Briefings).",
         ),
     ]
 
@@ -852,8 +742,7 @@ async def capture_conversation(
         current_node="n1",
         nodes=nodes_status,
         conversation_data=captured_data,
-        source_provenance=source_provenance,
-        message=f"Conversation Capture executed successfully ({input_mode.replace('_', ' ').title()}). Source preserved for the run.",
+        message="Conversation Capture executed successfully. Audio recording and metadata preserved for the run. Nodes 2–5 remain pending implementation.",
     )
 
 
@@ -864,14 +753,11 @@ async def transcribe_audio_file(
     language_hint: Optional[str] = None,
 ) -> tuple[str, str, str, float]:
     """
-    Transcribe audio using Groq Whisper, OpenAI Whisper, Google Gemini, or speech acoustic fallback.
+    Transcribe audio using Groq Whisper (whisper-large-v3) with fallback to OpenAI Whisper (whisper-1).
     Returns: (transcript_text, detected_language, provider_model, duration_seconds)
-    Logs all API attempts visibly to the terminal.
+    Raises: HTTPException if file is missing, empty, or transcription fails.
+    Never fabricates a mock transcript.
     """
-    # Locate file on disk
-    if not file_path.is_file() and (STORAGE_DIR / file_path.name).is_file():
-        file_path = STORAGE_DIR / file_path.name
-
     if not file_path.is_file():
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -893,10 +779,6 @@ async def transcribe_audio_file(
             detail="Audio recording file is empty (0 bytes).",
         )
 
-    print(f"\n=======================================================", flush=True)
-    print(f"[Meeting Intelligence STT] 🎙️ Processing audio file: {file_path.name} ({round(len(audio_bytes)/1024, 1)} KB)", flush=True)
-    print(f"=======================================================", flush=True)
-
     # Map language preferences
     lang_code = None
     if language_hint:
@@ -905,6 +787,7 @@ async def transcribe_audio_file(
             lang_code = "en"
         elif "spanish" in normalized and "english" not in normalized:
             lang_code = "es"
+        # "Auto Detect" or "Mixed English / Spanish" leaves lang_code as None for automatic detection
 
     ext = file_path.suffix.lower()
     content_type_map = {
@@ -919,9 +802,8 @@ async def transcribe_audio_file(
     errors: List[str] = []
 
     # 1. Primary: Groq Whisper (whisper-large-v3)
-    groq_key = (os.getenv("GROQ_API_KEY") or "").strip()
+    groq_key = os.getenv("GROQ_API_KEY")
     if groq_key:
-        print(f"[Meeting Intelligence STT] 🌐 Calling Groq Whisper API (whisper-large-v3)...", flush=True)
         try:
             headers = {"Authorization": f"Bearer {groq_key}"}
             files = {"file": (file_path.name, audio_bytes, content_type)}
@@ -942,21 +824,16 @@ async def transcribe_audio_file(
                     if transcript:
                         detected_lang = res_json.get("language") or language_hint or "en"
                         duration_sec = round(time.time() - start_time, 2)
-                        print(f"[Meeting Intelligence STT] ✅ Groq Whisper succeeded: {len(transcript)} chars ({duration_sec}s)", flush=True)
                         return transcript, detected_lang, "groq_whisper-large-v3", duration_sec
                 else:
-                    err_msg = f"Groq API {resp.status_code}: {resp.text[:180]}"
-                    print(f"[Meeting Intelligence STT] ⚠️ {err_msg}", flush=True)
-                    errors.append(err_msg)
+                    errors.append(f"Groq API {resp.status_code}: {resp.text[:200]}")
         except Exception as groq_err:
-            print(f"[Meeting Intelligence STT] ⚠️ Groq Whisper error: {groq_err}", flush=True)
             log.warning("Groq Whisper transcription failed, attempting fallback", error=str(groq_err))
             errors.append(f"Groq error: {str(groq_err)}")
 
     # 2. Secondary: OpenAI Whisper (whisper-1)
-    openai_key = (os.getenv("OPENAI_API_KEY") or "").strip()
+    openai_key = os.getenv("OPENAI_API_KEY")
     if openai_key:
-        print(f"[Meeting Intelligence STT] 🌐 Calling OpenAI Whisper API (whisper-1)...", flush=True)
         try:
             headers = {"Authorization": f"Bearer {openai_key}"}
             files = {"file": (file_path.name, audio_bytes, content_type)}
@@ -977,69 +854,18 @@ async def transcribe_audio_file(
                     if transcript:
                         detected_lang = res_json.get("language") or language_hint or "en"
                         duration_sec = round(time.time() - start_time, 2)
-                        print(f"[Meeting Intelligence STT] ✅ OpenAI Whisper succeeded: {len(transcript)} chars ({duration_sec}s)", flush=True)
                         return transcript, detected_lang, "openai_whisper-1", duration_sec
                 else:
-                    err_msg = f"OpenAI API {resp.status_code}: {resp.text[:180]}"
-                    print(f"[Meeting Intelligence STT] ⚠️ {err_msg}", flush=True)
-                    errors.append(err_msg)
+                    errors.append(f"OpenAI API {resp.status_code}: {resp.text[:200]}")
         except Exception as openai_err:
-            print(f"[Meeting Intelligence STT] ⚠️ OpenAI Whisper error: {openai_err}", flush=True)
             log.warning("OpenAI Whisper transcription failed", error=str(openai_err))
             errors.append(f"OpenAI error: {str(openai_err)}")
 
-    # 3. Tertiary: Google Gemini Audio Transcription
-    google_key = (os.getenv("GOOGLE_API_KEY") or "").strip()
-    if google_key:
-        print(f"[Meeting Intelligence STT] 🌐 Calling Google Gemini Audio Transcription...", flush=True)
-        try:
-            import base64
-            b64_audio = base64.b64encode(audio_bytes).decode("utf-8")
-            gemini_payload = {
-                "contents": [{
-                    "parts": [
-                        {"inline_data": {"mime_type": content_type, "data": b64_audio}},
-                        {"text": "Transcribe this meeting audio recording verbatim. Provide speaker turns where identifiable. Output ONLY the clean transcribed conversation."}
-                    ]
-                }]
-            }
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                resp = await client.post(
-                    f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={google_key}",
-                    json=gemini_payload,
-                )
-                if resp.status_code == 200:
-                    res_json = resp.json()
-                    candidates = res_json.get("candidates", [])
-                    if candidates:
-                        parts = candidates[0].get("content", {}).get("parts", [])
-                        transcript = "".join(p.get("text", "") for p in parts).strip()
-                        if transcript:
-                            detected_lang = language_hint or "en"
-                            duration_sec = round(time.time() - start_time, 2)
-                            print(f"[Meeting Intelligence STT] ✅ Gemini Audio Transcription succeeded: {len(transcript)} chars ({duration_sec}s)", flush=True)
-                            return transcript, detected_lang, "google_gemini-1.5-flash", duration_sec
-                else:
-                    err_msg = f"Gemini API {resp.status_code}: {resp.text[:180]}"
-                    print(f"[Meeting Intelligence STT] ⚠️ {err_msg}", flush=True)
-                    errors.append(err_msg)
-        except Exception as gemini_err:
-            print(f"[Meeting Intelligence STT] ⚠️ Gemini audio transcription error: {gemini_err}", flush=True)
-            errors.append(f"Gemini error: {str(gemini_err)}")
-
-    # 4. Fallback Acoustic Speech Recognition
-    duration_sec = round(time.time() - start_time, 2)
-    print(f"[Meeting Intelligence STT] ⚠️ Remote STT providers unavailable ({'; '.join(errors)}). Using speech acoustic fallback transcript.", flush=True)
-    fallback_transcript = (
-        f"[Meeting Audio Recording: {file_path.name}]\n"
-        f"- Recorded Audio Size: {round(len(audio_bytes)/1024, 1)} KB\n"
-        f"- Audio Format: {ext}\n\n"
-        f"**Speaker 1 (Product Lead):** Welcome everyone. Let us begin our sprint review and align on deliverables for the platform rollout.\n"
-        f"**Speaker 2 (Backend Engineering):** The transcript extraction and AI model integration pipeline is active. Structured meeting summaries and follow-up generation are operating as expected.\n"
-        f"**Speaker 3 (Frontend Engineering):** The client workflow runner displays the execution pipeline nodes in real-time, highlighting transcription, intelligence synthesis, and action center items.\n"
-        f"**Speaker 1:** Excellent. Let us ensure the action items and follow-up drafts are reviewed and approved today."
+    error_summary = "; ".join(errors) if errors else "No transcription provider credentials available (GROQ_API_KEY / OPENAI_API_KEY)."
+    raise HTTPException(
+        status_code=status.HTTP_502_BAD_GATEWAY,
+        detail=f"Transcription failed: {error_summary}",
     )
-    return fallback_transcript, language_hint or "English", "acoustic_speech_processor", duration_sec
 
 
 EXTRACTION_SYSTEM_PROMPT = """You are an expert conversation intelligence analyst for SMBFlow.
@@ -1120,237 +946,57 @@ Extract structured intelligence following all rules and output strictly valid JS
         LLMMessage(role="user", content=user_prompt),
     ]
 
-    print(f"\n=======================================================", flush=True)
-    print(f"[Meeting Intelligence LLM] 🧠 Analyzing transcript ({len(transcript)} chars, {len(transcript.split())} words)...", flush=True)
-    print(f"=======================================================", flush=True)
-
-    raw_resp = None
-    model_name = "claude-haiku-4-5"
-    cost_usd = 0.001
-    tokens_in = len(transcript.split()) * 2
-    tokens_out = 450
-
-    # 1. Primary: LLMRouter
+    llm = LLMRouter()
     try:
-        print(f"[Meeting Intelligence LLM] 🌐 Calling LLMRouter (agent: reasoning_agent, tier: balanced)...", flush=True)
-        llm = LLMRouter()
         raw_resp, call_record = await llm.call(
             agent_name="reasoning_agent",
             messages=messages,
             tier_override="balanced",
         )
-        if raw_resp:
-            model_name = getattr(call_record, "model", "llm_router_balanced")
-            cost_usd = getattr(call_record, "cost_usd", 0.001)
-            tokens_in = getattr(call_record, "tokens_in", tokens_in)
-            tokens_out = getattr(call_record, "tokens_out", tokens_out)
-            print(f"[Meeting Intelligence LLM] ✅ LLMRouter response received ({len(raw_resp)} chars, model: {model_name})", flush=True)
     except Exception as llm_err:
-        print(f"[Meeting Intelligence LLM] ⚠️ LLMRouter failed: {llm_err}. Engaging provider fallback chain...", flush=True)
-        log.warning("LLMRouter failed during structured extraction", error=str(llm_err))
+        log.error("LLMRouter failed during structured extraction", error=str(llm_err))
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"LLM extraction service unavailable: {str(llm_err)}",
+        )
 
-    # 2. Fallback: Anthropic Claude Direct API
-    if not raw_resp:
-        anthropic_key = (os.getenv("ANTHROPIC_API_KEY") or "").strip()
-        if anthropic_key:
-            print(f"[Meeting Intelligence LLM] 🌐 Fallback 1: Calling Anthropic Claude API directly...", flush=True)
-            try:
-                async with httpx.AsyncClient(timeout=45.0) as client:
-                    resp = await client.post(
-                        "https://api.anthropic.com/v1/messages",
-                        headers={
-                            "x-api-key": anthropic_key,
-                            "anthropic-version": "2023-06-01",
-                            "content-type": "application/json",
-                        },
-                        json={
-                            "model": "claude-3-5-haiku-20241022",
-                            "max_tokens": 1500,
-                            "system": EXTRACTION_SYSTEM_PROMPT,
-                            "messages": [{"role": "user", "content": user_prompt}],
-                        },
-                    )
-                    if resp.status_code == 200:
-                        content_list = resp.json().get("content", [])
-                        raw_resp = "".join(c.get("text", "") for c in content_list if c.get("type") == "text")
-                        model_name = "claude-3-5-haiku-20241022"
-                        print(f"[Meeting Intelligence LLM] ✅ Anthropic Claude API succeeded ({len(raw_resp)} chars)", flush=True)
-                    else:
-                        print(f"[Meeting Intelligence LLM] ⚠️ Anthropic API returned {resp.status_code}: {resp.text[:160]}", flush=True)
-            except Exception as anth_err:
-                print(f"[Meeting Intelligence LLM] ⚠️ Anthropic API exception: {anth_err}", flush=True)
+    # Clean markdown code fences if present
+    cleaned = raw_resp.strip()
+    if cleaned.startswith("```json"):
+        cleaned = cleaned[7:]
+    if cleaned.startswith("```"):
+        cleaned = cleaned[3:]
+    if cleaned.endswith("```"):
+        cleaned = cleaned[:-3]
+    cleaned = cleaned.strip()
 
-    # 3. Fallback: OpenAI Direct API
-    if not raw_resp:
-        openai_key = (os.getenv("OPENAI_API_KEY") or "").strip()
-        if openai_key:
-            print(f"[Meeting Intelligence LLM] 🌐 Fallback 2: Calling OpenAI Chat API (gpt-4o-mini)...", flush=True)
-            try:
-                async with httpx.AsyncClient(timeout=45.0) as client:
-                    resp = await client.post(
-                        "https://api.openai.com/v1/chat/completions",
-                        headers={"Authorization": f"Bearer {openai_key}", "Content-Type": "application/json"},
-                        json={
-                            "model": "gpt-4o-mini",
-                            "messages": [
-                                {"role": "system", "content": EXTRACTION_SYSTEM_PROMPT},
-                                {"role": "user", "content": user_prompt},
-                            ],
-                            "response_format": {"type": "json_object"},
-                        },
-                    )
-                    if resp.status_code == 200:
-                        raw_resp = resp.json()["choices"][0]["message"]["content"]
-                        model_name = "openai_gpt-4o-mini"
-                        print(f"[Meeting Intelligence LLM] ✅ OpenAI gpt-4o-mini succeeded ({len(raw_resp)} chars)", flush=True)
-                    else:
-                        print(f"[Meeting Intelligence LLM] ⚠️ OpenAI API returned {resp.status_code}: {resp.text[:160]}", flush=True)
-            except Exception as oai_err:
-                print(f"[Meeting Intelligence LLM] ⚠️ OpenAI API exception: {oai_err}", flush=True)
-
-    # 4. Fallback: Google Gemini Direct API
-    if not raw_resp:
-        google_key = (os.getenv("GOOGLE_API_KEY") or "").strip()
-        if google_key:
-            print(f"[Meeting Intelligence LLM] 🌐 Fallback 3: Calling Google Gemini API (gemini-1.5-flash)...", flush=True)
-            try:
-                async with httpx.AsyncClient(timeout=45.0) as client:
-                    resp = await client.post(
-                        f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={google_key}",
-                        json={
-                            "contents": [{"parts": [{"text": f"{EXTRACTION_SYSTEM_PROMPT}\n\n{user_prompt}"}]}],
-                            "generationConfig": {"response_mime_type": "application/json"},
-                        },
-                    )
-                    if resp.status_code == 200:
-                        parts = resp.json().get("candidates", [])[0].get("content", {}).get("parts", [])
-                        raw_resp = "".join(p.get("text", "") for p in parts)
-                        model_name = "gemini-1.5-flash"
-                        print(f"[Meeting Intelligence LLM] ✅ Google Gemini succeeded ({len(raw_resp)} chars)", flush=True)
-                    else:
-                        print(f"[Meeting Intelligence LLM] ⚠️ Gemini API returned {resp.status_code}: {resp.text[:160]}", flush=True)
-            except Exception as gem_err:
-                print(f"[Meeting Intelligence LLM] ⚠️ Gemini API exception: {gem_err}", flush=True)
-
-    # 5. Fallback: Groq Direct API
-    if not raw_resp:
-        groq_key = (os.getenv("GROQ_API_KEY") or "").strip()
-        if groq_key:
-            print(f"[Meeting Intelligence LLM] 🌐 Fallback 4: Calling Groq API (llama-3.1-8b-instant)...", flush=True)
-            try:
-                async with httpx.AsyncClient(timeout=30.0) as client:
-                    resp = await client.post(
-                        "https://api.groq.com/openai/v1/chat/completions",
-                        headers={"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"},
-                        json={
-                            "model": "llama-3.1-8b-instant",
-                            "messages": [
-                                {"role": "system", "content": EXTRACTION_SYSTEM_PROMPT},
-                                {"role": "user", "content": user_prompt},
-                            ],
-                            "response_format": {"type": "json_object"},
-                        },
-                    )
-                    if resp.status_code == 200:
-                        raw_resp = resp.json()["choices"][0]["message"]["content"]
-                        model_name = "groq_llama-3.1-8b-instant"
-                        print(f"[Meeting Intelligence LLM] ✅ Groq API succeeded ({len(raw_resp)} chars)", flush=True)
-                    else:
-                        print(f"[Meeting Intelligence LLM] ⚠️ Groq API returned {resp.status_code}: {resp.text[:160]}", flush=True)
-            except Exception as grq_err:
-                print(f"[Meeting Intelligence LLM] ⚠️ Groq API exception: {grq_err}", flush=True)
-
-    parsed_dict = None
-    if raw_resp:
-        # Clean markdown code fences if present
-        cleaned = raw_resp.strip()
-        if cleaned.startswith("```json"):
-            cleaned = cleaned[7:]
-        if cleaned.startswith("```"):
-            cleaned = cleaned[3:]
-        if cleaned.endswith("```"):
-            cleaned = cleaned[:-3]
-        cleaned = cleaned.strip()
-
+    try:
+        parsed_dict = json.loads(cleaned)
+    except Exception as parse_err:
+        log.warning("JSON parse failed on raw LLM output, attempting repair", error=str(parse_err))
         try:
-            parsed_dict = json.loads(cleaned)
-        except Exception as parse_err:
-            print(f"[Meeting Intelligence LLM] ⚠️ JSON parse failed on raw output ({parse_err}). Attempting regex repair...", flush=True)
-            match = re.search(r"\{.*\}", cleaned, re.DOTALL)
-            if match:
-                try:
-                    parsed_dict = json.loads(match.group(0))
-                except Exception:
-                    pass
-
-    # 6. Fallback: Intelligent Local Semantic NLP Extraction Engine
-    if not parsed_dict or not isinstance(parsed_dict, dict):
-        print(f"[Meeting Intelligence LLM] ⚡ Executing High-Fidelity Local Semantic Extraction Engine...", flush=True)
-        model_name = "local_semantic_nlp_engine"
-        
-        # Extract participants from transcript lines (e.g. **Name:** or [00:00] Name:)
-        speaker_matches = re.findall(r"\*\*([A-Za-z\s]+)\*\*:|\[\d+:\d+\]\s+([A-Za-z\s]+):|([A-Za-z]+)\s*\(([^)]+)\):", transcript)
-        detected_names = set()
-        for sm in speaker_matches:
-            for part in sm:
-                if part and len(part.strip()) > 1 and not part.lower().startswith("speaker"):
-                    detected_names.add(part.strip())
-        
-        if contact_name and contact_name != "Meeting Participants":
-            for n in [x.strip() for x in contact_name.split(",") if x.strip()]:
-                detected_names.add(n)
-        if not detected_names:
-            detected_names = {"Elena Rostova", "Marcus Chen", "Sophia Williams"}
-
-        people_list_raw = []
-        for name in list(detected_names)[:4]:
-            people_list_raw.append({
-                "name": name,
-                "facts": [f"Active participant in {conversation_type}"],
-                "interests": ["Platform roadmap", "Quality assurance", "Team alignment"],
-                "needs": ["Clear milestone timelines", "Dependency visibility"],
-                "opportunities": ["Streamlined cross-team automated follow-ups"],
-            })
-
-        # Extract commitments from lines with commit keywords
-        commitments_raw = []
-        for line in transcript.split("\n"):
-            line_s = line.strip()
-            if any(kw in line_s.lower() for kw in ["will ", "commit", "promise", "by friday", "by wednesday", "complete", "publish", "prepare", "send"]):
-                clean_action = re.sub(r"^\*\*.*?\*\*:\s*|^\[.*?\]\s*.*?:?\s*", "", line_s)
-                owner_match = re.search(r"\*\*([A-Za-z]+)\*\*|\[\d+:\d+\]\s+([A-Za-z]+)", line_s)
-                owner = owner_match.group(1) or owner_match.group(2) if owner_match else "Team Lead"
-                if len(clean_action) > 10:
-                    commitments_raw.append({
-                        "owner": owner,
-                        "commitment": clean_action[:120],
-                        "due_date": "2026-10-24" if "friday" in line_s.lower() else "2026-10-22" if "wednesday" in line_s.lower() else conversation_date,
-                    })
-
-        if not commitments_raw:
-            commitments_raw = [
-                {"owner": "Rohan (Backend Lead)", "commitment": "Complete transcript processing and validation by Tuesday", "due_date": "2026-10-20"},
-                {"owner": "Meera (Frontend Lead)", "commitment": "Finalize workflow runner integration and pipeline visual state", "due_date": "2026-10-22"},
-                {"owner": "Ananya (Project Manager)", "commitment": "Prepare executive briefing and coordinate sprint demonstration", "due_date": "2026-10-23"},
+            repair_messages = [
+                LLMMessage(role="system", content="You fix invalid JSON strings so they conform strictly to valid JSON."),
+                LLMMessage(role="user", content=f"Fix and return ONLY valid JSON without markdown fences:\n{cleaned}"),
             ]
-
-        parsed_dict = {
-            "summary": (
-                f"Executive Discussion: The team reviewed key engineering milestones, architecture stabilization, and client demonstration readiness for {conversation_date}. "
-                f"Core backend and frontend integration pipelines are active with explicit ownership assigned for test coverage and platform deliverables."
-            ),
-            "people": people_list_raw,
-            "commitments": commitments_raw[:5],
-            "suggested_actions": [
-                {"action": "Deploy staging smoke tests for transcription and RAG memory indexing", "reason": "Verifies multi-provider fallback resilience under load"},
-                {"action": "Distribute automated action item briefing to all participants", "reason": "Ensures mutual accountability across engineering and product"},
-                {"action": "Verify Google Meet calendar synchronization before executive demonstration", "reason": "Guarantees live calendar links and attendance tracking"},
-            ],
-            "open_questions": [
-                "Are staging API keys rate-limited during high-frequency demonstration runs?",
-                "Will audio files above 25MB require chunked streaming transcription?",
-            ],
-        }
+            repaired_resp, _ = await llm.call(
+                agent_name="mini",
+                messages=repair_messages,
+                tier_override="mini",
+            )
+            r_cleaned = repaired_resp.strip()
+            if r_cleaned.startswith("```json"):
+                r_cleaned = r_cleaned[7:]
+            if r_cleaned.startswith("```"):
+                r_cleaned = r_cleaned[3:]
+            if r_cleaned.endswith("```"):
+                r_cleaned = r_cleaned[:-3]
+            parsed_dict = json.loads(r_cleaned.strip())
+        except Exception as repair_err:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"Failed to parse structured output from AI model: {str(parse_err)}",
+            )
 
     try:
         extraction = StructuredExtraction(**parsed_dict)
@@ -1466,75 +1112,25 @@ async def process_conversation(
     conversation_type = capture_data.get("conversation_type") or "Online Meeting"
     language_hint = capture_data.get("language") or "Auto Detect"
 
-    stored_path_str = str(recording_info.get("stored_path") or "")
-    direct_transcript = (
-        recording_info.get("transcript")
-        or (recording_info.get("meet_data") or {}).get("full_transcript")
+    # Check if pre-transcribed text or notes were provided directly (e.g. from text/notes webhook, Google Meet, or pasted transcript)
+    provided_transcript = (
+        capture_data.get("transcript_text")
         or capture_data.get("transcript")
-    )
-    input_mode = capture_data.get("input_mode") or capture_data.get("source_provenance", {}).get("source_type") or ""
+        or capture_data.get("notes")
+        or recording_info.get("transcript")
+        or (recording_info.get("meet_data") or {}).get("full_transcript")
+        or ""
+    ).strip()
 
-    if direct_transcript and (
-        input_mode in ["paste_transcript", "transcript", "pasted_transcript"]
-        or recording_info.get("content_type") in ["text/google-meet-transcript", "text/plain"]
-        or stored_path_str.startswith("http")
-        or stored_path_str.startswith("inline")
-        or stored_path_str in ["transcript", "pasted-transcript", "inline://pasted_transcript"]
-        or not stored_path_str
-    ):
-        transcript_text = direct_transcript.strip()
-        detected_lang = language_hint if language_hint and language_hint != "Auto Detect" else "English"
-        stt_provider = "google_meet_live_stt" if "google-meet" in str(recording_info.get("content_type", "")) else "direct_transcript_ingest"
-        stt_duration = 0.05
-
-    elif input_mode in ["google_meet", "meet_url"] or ("meet.google.com" in stored_path_str.lower()):
-        # Google Meet API v2 resolution via GoogleWorkspaceConnector
-        gw_tuple = await _get_connected_google_workspace(db, org_uuid)
-        if not gw_tuple:
-            workflow_inst.status = "failed"
-            fail_run = AgentRunRecord(
-                id=uuid.uuid4(),
-                instance_id=instance_uuid,
-                node_id="n2",
-                agent_capability="conversation_processing",
-                status="failed",
-                error="Google Workspace connection required to retrieve Google Meet transcripts. Please connect your Google account in Integrations.",
-                completed_at=datetime.utcnow(),
-            )
-            db.add(fail_run)
-            await db.commit()
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Google Workspace connection required to retrieve Google Meet transcripts. Please connect your Google account in Integrations.",
-            )
-        gw_conn, creds = gw_tuple
-        from integrations.connectors import GoogleWorkspaceConnector
-        connector = GoogleWorkspaceConnector(credentials=creds, config=(gw_conn.config if gw_conn else {}) or {})
-        meet_res = await connector.resolve_google_meet_transcript(stored_path_str or recording_info.get("meet_url") or "")
-        if meet_res.get("status") == "ready" and meet_res.get("full_transcript"):
-            transcript_text = meet_res["full_transcript"]
-            detected_lang = "English"
-            stt_provider = "google_meet_v2_api"
-            stt_duration = 0.4
-        else:
-            workflow_inst.status = "failed"
-            err_msg = meet_res.get("message") or f"Unable to retrieve transcript for Google Meet: {meet_res.get('status')}"
-            fail_run = AgentRunRecord(
-                id=uuid.uuid4(),
-                instance_id=instance_uuid,
-                node_id="n2",
-                agent_capability="conversation_processing",
-                status="failed",
-                error=err_msg,
-                completed_at=datetime.utcnow(),
-            )
-            db.add(fail_run)
-            await db.commit()
-            raise HTTPException(status_code=400 if meet_res.get("status") == "error" else 404, detail=err_msg)
-
+    if provided_transcript:
+        transcript_text = provided_transcript
+        detected_lang = language_hint if language_hint and language_hint != "Auto Detect" else "en"
+        stt_provider = "provided_transcript_notes"
+        stt_duration = round(len(transcript_text.split()) / 2.5, 2)
     else:
-        # Audio upload branch
+        stored_path_str = recording_info.get("stored_path")
         if not stored_path_str:
+            # Mark failure on instance
             workflow_inst.status = "failed"
             fail_run = AgentRunRecord(
                 id=uuid.uuid4(),
@@ -1550,9 +1146,9 @@ async def process_conversation(
             raise HTTPException(status_code=404, detail="No audio recording found for this workflow run.")
 
         audio_file_path = Path(stored_path_str)
-        norm_audio = os.path.normcase(os.path.abspath(str(audio_file_path)))
-        norm_storage = os.path.normcase(os.path.abspath(str(STORAGE_DIR)))
-        if not (norm_audio.startswith(norm_storage) or (STORAGE_DIR / audio_file_path.name).is_file() or audio_file_path.is_file()):
+        # Check directory boundary to prevent traversal
+        resolved_audio_path = audio_file_path.resolve()
+        if not str(resolved_audio_path).startswith(str(STORAGE_DIR.resolve())):
             workflow_inst.status = "failed"
             fail_run = AgentRunRecord(
                 id=uuid.uuid4(),
@@ -1566,9 +1162,6 @@ async def process_conversation(
             db.add(fail_run)
             await db.commit()
             raise HTTPException(status_code=400, detail="Invalid audio file path.")
-
-        if not audio_file_path.is_file() and (STORAGE_DIR / audio_file_path.name).is_file():
-            audio_file_path = STORAGE_DIR / audio_file_path.name
 
         if not audio_file_path.is_file():
             workflow_inst.status = "failed"
@@ -1756,30 +1349,24 @@ async def process_conversation(
             id="n3",
             title="Central Memory",
             status="pending",
-            implemented=True,
-            note="Structured relationship memory and context index ready.",
+            implemented=False,
+            note="Pending implementation (Vector Knowledge & History Index).",
         ),
         PipelineNodeStatus(
             id="n4",
             title="Action Generator",
             status="pending",
-            implemented=True,
-            note="Task & decision synthesis pipeline configured.",
+            implemented=False,
+            note="Pending implementation (Task & Decision Synthesis).",
         ),
         PipelineNodeStatus(
             id="n5",
             title="Follow-up & Meeting Prep",
             status="pending",
-            implemented=True,
-            note="Email drafts, calendar briefings, and action sync ready.",
+            implemented=False,
+            note="Pending implementation (Email Drafts & Calendar Briefings).",
         ),
     ]
-
-    source_prov = (
-        context_data.get("conversation_capture", {}).get("source_provenance")
-        or capture_data.get("source_provenance")
-        or {"mode": input_mode, "source_type": input_mode}
-    )
 
     return ProcessConversationResponse(
         instance_id=str(instance_uuid),
@@ -1795,8 +1382,7 @@ async def process_conversation(
         model_used=model_used,
         cost_usd=cost_usd,
         duration_ms=total_duration_ms,
-        source_provenance=source_prov,
-        message="Conversation transcribed and structured intelligence extracted successfully.",
+        message="Conversation transcribed and structured intelligence extracted successfully. Nodes 3–5 remain pending implementation.",
     )
 
 
@@ -1977,8 +1563,8 @@ async def process_central_memory(
             PipelineNodeStatus(id="n1", title="Conversation Capture", status="completed", implemented=True, note="Audio recording and metadata preserved successfully."),
             PipelineNodeStatus(id="n2", title="Process Conversation", status="completed", implemented=True, note="Transcription & Entity Extraction completed."),
             PipelineNodeStatus(id="n3", title="Central Memory", status="completed", implemented=True, note="Organization-scoped Relationship Memory persistent in PostgreSQL."),
-            PipelineNodeStatus(id="n4", title="Action Generator", status="pending", implemented=True, note="Task & decision synthesis pipeline configured."),
-            PipelineNodeStatus(id="n5", title="Follow-up & Meeting Prep", status="pending", implemented=True, note="Email drafts, calendar briefings, and action sync ready."),
+            PipelineNodeStatus(id="n4", title="Action Generator", status="pending", implemented=False, note="Pending implementation (Task & Decision Synthesis)."),
+            PipelineNodeStatus(id="n5", title="Follow-up & Meeting Prep", status="pending", implemented=False, note="Pending implementation (Email Drafts & Calendar Briefings)."),
         ]
         return CentralMemoryResponse(
             instance_id=str(instance_uuid),
@@ -2231,8 +1817,8 @@ async def process_central_memory(
         PipelineNodeStatus(id="n1", title="Conversation Capture", status="completed", implemented=True, note="Audio recording and metadata preserved successfully."),
         PipelineNodeStatus(id="n2", title="Process Conversation", status="completed", implemented=True, note="Transcription & Entity Extraction completed."),
         PipelineNodeStatus(id="n3", title="Central Memory", status="completed", implemented=True, note="Organization-scoped Relationship Memory persistent in PostgreSQL."),
-        PipelineNodeStatus(id="n4", title="Action Generator", status="pending", implemented=True, note="Task & decision synthesis pipeline configured."),
-        PipelineNodeStatus(id="n5", title="Follow-up & Meeting Prep", status="pending", implemented=True, note="Email drafts, calendar briefings, and action sync ready."),
+        PipelineNodeStatus(id="n4", title="Action Generator", status="pending", implemented=False, note="Pending implementation (Task & Decision Synthesis)."),
+        PipelineNodeStatus(id="n5", title="Follow-up & Meeting Prep", status="pending", implemented=False, note="Pending implementation (Email Drafts & Calendar Briefings)."),
     ]
 
     return CentralMemoryResponse(
@@ -2278,6 +1864,123 @@ async def get_contact_memory_history(
         raise HTTPException(status_code=403, detail="Access denied: contact belongs to another organization.")
 
     return await _build_contact_memory_snapshot(contact, None, org_uuid, db, None)
+
+
+# ── Central Memory Export Endpoint (Provider-Independent Repository) ──────────
+
+@router.get("/central-memory/export")
+@router.get("/memory/export")
+async def export_central_memory(
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(require_any_auth),
+):
+    """
+    Export the entire organization's Central Memory repository (contacts, conversations,
+    and structured memory items) in an open, portable, provider-independent JSON format.
+    Enforces strict organization-level tenant isolation and records an AuditEvent.
+    """
+    org_uuid = await _resolve_org_uuid(current_user, db)
+
+    # 1. Fetch contacts
+    stmt_contacts = (
+        select(RelationshipContact)
+        .where(RelationshipContact.organization_id == org_uuid)
+        .order_by(RelationshipContact.created_at.asc())
+    )
+    res_contacts = await db.execute(stmt_contacts)
+    contacts = list(res_contacts.scalars().all())
+
+    # 2. Fetch conversations
+    stmt_convs = (
+        select(RelationshipConversation)
+        .where(RelationshipConversation.organization_id == org_uuid)
+        .order_by(RelationshipConversation.created_at.asc())
+    )
+    res_convs = await db.execute(stmt_convs)
+    conversations = list(res_convs.scalars().all())
+
+    # 3. Fetch memory items
+    stmt_items = (
+        select(RelationshipMemoryItem)
+        .where(RelationshipMemoryItem.organization_id == org_uuid)
+        .order_by(RelationshipMemoryItem.created_at.asc())
+    )
+    res_items = await db.execute(stmt_items)
+    memory_items = list(res_items.scalars().all())
+
+    # 4. Record AuditEvent
+    audit = AuditEvent(
+        id=uuid.uuid4(),
+        organization_id=org_uuid,
+        actor_id=current_user.email,
+        action="central_memory_exported",
+        entity_type="RelationshipMemory",
+        entity_id=str(org_uuid),
+        metadata_={
+            "contacts_count": len(contacts),
+            "conversations_count": len(conversations),
+            "memory_items_count": len(memory_items),
+        },
+        created_at=datetime.utcnow(),
+    )
+    db.add(audit)
+    await db.commit()
+
+    return {
+        "export_format": "smbflow_central_memory_v1",
+        "provider_independent": True,
+        "organization_id": str(org_uuid),
+        "exported_at": datetime.utcnow().isoformat(),
+        "summary": {
+            "total_contacts": len(contacts),
+            "total_conversations": len(conversations),
+            "total_memory_items": len(memory_items),
+        },
+        "contacts": [
+            {
+                "id": str(c.id),
+                "name": c.name,
+                "normalized_name": c.normalized_name,
+                "role": c.role,
+                "company": c.company,
+                "metadata": c.metadata_ or {},
+                "created_at": c.created_at.isoformat() if c.created_at else None,
+                "updated_at": c.updated_at.isoformat() if c.updated_at else None,
+            }
+            for c in contacts
+        ],
+        "conversations": [
+            {
+                "id": str(cv.id),
+                "contact_id": str(cv.contact_id),
+                "workflow_instance_id": str(cv.workflow_instance_id),
+                "title": cv.title,
+                "conversation_type": cv.conversation_type,
+                "conversation_date": cv.conversation_date,
+                "detected_language": cv.detected_language,
+                "transcript": cv.transcript,
+                "summary": cv.summary,
+                "structured_memory": cv.structured_memory or {},
+                "created_at": cv.created_at.isoformat() if cv.created_at else None,
+            }
+            for cv in conversations
+        ],
+        "memory_items": [
+            {
+                "id": str(m.id),
+                "contact_id": str(m.contact_id),
+                "conversation_id": str(m.conversation_id),
+                "workflow_instance_id": str(m.workflow_instance_id),
+                "category": m.category,
+                "content": m.content,
+                "details": m.details or {},
+                "source_date": m.source_date,
+                "is_ai_generated": m.is_ai_generated,
+                "created_at": m.created_at.isoformat() if m.created_at else None,
+            }
+            for m in memory_items
+        ],
+    }
 
 
 # ── Workflow Run Detail / Rehydration Endpoint ────────────────────────────────
@@ -2362,22 +2065,22 @@ async def get_workflow_run_detail(
             id="n3",
             title="Central Memory",
             status=n3_status,
-            implemented=True,
-            note="Organization-scoped Relationship Memory persistent in PostgreSQL." if n3_status == "completed" else "Structured relationship memory and context index ready.",
+            implemented=True if n3_status == "completed" else False,
+            note="Organization-scoped Relationship Memory persistent in PostgreSQL." if n3_status == "completed" else "Pending implementation (Vector Knowledge & History Index).",
         ),
         PipelineNodeStatus(
             id="n4",
             title="Action Generator",
             status=ctx.get("node4_action_generator", {}).get("status") or "pending",
-            implemented=True,
-            note="Action items active and persisted in Action Center." if ctx.get("node4_action_generator", {}).get("status") == "completed" else "Task & decision synthesis pipeline configured.",
+            implemented=True if ctx.get("node4_action_generator", {}).get("status") == "completed" else False,
+            note="Action items active and persisted in Action Center." if ctx.get("node4_action_generator", {}).get("status") == "completed" else "Pending implementation (Task & Decision Synthesis).",
         ),
         PipelineNodeStatus(
             id="n5",
             title="Follow-up & Meeting Prep",
-            status=ctx.get("node5_followup_draft", {}).get("status") or "pending",
-            implemented=True,
-            note="Follow-up email drafts and meeting briefings ready." if ctx.get("node5_followup_draft") else "Email drafts, calendar briefings, and action sync ready.",
+            status="pending",
+            implemented=False,
+            note="Pending implementation (Email Drafts & Calendar Briefings).",
         ),
     ]
 
@@ -2494,6 +2197,7 @@ async def get_workflow_run_detail(
 
     # Rehydrate Node 5A Follow-up Draft if present
     followup_draft_snapshot = None
+    draft_status_for_n5 = None
     try:
         stmt_draft = select(ApprovalItem).where(
             ApprovalItem.organization_id == org_uuid,
@@ -2528,28 +2232,45 @@ async def get_workflow_run_detail(
                 snoozed_until=dp.get("snoozed_until"),
                 snooze_reason=dp.get("snooze_reason"),
                 snoozed_reason=dp.get("snooze_reason"),
+                sent_at=dp.get("sent_at"),
+                sent_to=dp.get("sent_to"),
+                provider_message_id=dp.get("provider_message_id"),
+                connection_status=dp.get("connection_status"),
+                error_message=dp.get("last_send_error"),
                 model_used=dp.get("model_used"),
                 decided_by=appr_draft.decided_by,
                 decided_at=appr_draft.decided_at.isoformat() if appr_draft.decided_at else None,
                 created_at=appr_draft.created_at.isoformat() if appr_draft.created_at else None,
                 provenance=dp.get("provenance") or {},
             )
+            draft_status_for_n5 = appr_draft.status
+
+            # Update Node 5 status using combined 5A + 5B logic
+            prep_ctx_rehydrate = ctx.get("node5b_meeting_prep") or {}
+            prep_block_status_rehydrate = prep_ctx_rehydrate.get("status") if prep_ctx_rehydrate else None
+            n5_status_rehydrate, n5_note_rehydrate = _compute_n5_status(draft_status_for_n5, prep_block_status_rehydrate)
+
             for n in nodes_status:
                 if n.id == "n5":
-                    n.status = "partial"
+                    n.status = n5_status_rehydrate
                     n.implemented = True
-                    if appr_draft.status == "approved":
-                        n.note = "Follow-up Email Draft: Approved (Sending Deferred) • Meeting Prep: Pending • Calendar Prep Block: Pending"
-                    elif appr_draft.status == "snoozed":
-                        n.note = f"Follow-up Email Draft: Snoozed ({dp.get('snoozed_until') or 'later'}) • Meeting Prep: Pending • Calendar Prep Block: Pending"
-                    elif appr_draft.status == "discarded":
-                        n.note = "Follow-up Email Draft: Discarded • Meeting Prep: Pending • Calendar Prep Block: Pending"
-                    else:
-                        n.note = "Follow-up Email Draft: Ready / Awaiting Review • Meeting Prep: Pending • Calendar Prep Block: Pending"
+                    n.note = n5_note_rehydrate
             if actions_snapshot:
                 actions_snapshot.nodes = nodes_status
     except Exception as e:
         log.warning("Failed to rehydrate follow-up draft snapshot", error=str(e))
+
+    # If no 5A draft was found but 5B prep state exists, still update Node 5 status
+    if not followup_draft_snapshot:
+        prep_ctx_no5a = ctx.get("node5b_meeting_prep") or {}
+        if prep_ctx_no5a:
+            prep_block_status_no5a = prep_ctx_no5a.get("status")
+            n5_status_no5a, n5_note_no5a = _compute_n5_status(None, prep_block_status_no5a)
+            for n in nodes_status:
+                if n.id == "n5":
+                    n.status = n5_status_no5a
+                    n.implemented = True
+                    n.note = n5_note_no5a
 
     return WorkflowRunDetailResponse(
         instance_id=str(workflow_inst.id),
@@ -2564,6 +2285,8 @@ async def get_workflow_run_detail(
         central_memory=central_memory_snapshot,
         actions=actions_snapshot,
         followup_draft=followup_draft_snapshot,
+        meeting_prep=ctx.get("node5b_meeting_prep"),
+        contact_research=ctx.get("contact_research"),
         nodes=nodes_status,
         model_used=node2_data.get("model_used"),
         started_at=workflow_inst.started_at.isoformat() if workflow_inst.started_at else None,
@@ -2577,7 +2300,6 @@ get_meeting_intelligence_run = get_workflow_run_detail
 # ── Node 4: Action Generator Endpoint ─────────────────────────────────────────
 
 @router.post("/action-generator", response_model=ActionGeneratorResponse)
-@router.post("/actions", response_model=ActionGeneratorResponse)
 async def process_action_generator(
     request: ActionGeneratorRequest,
     db: AsyncSession = Depends(get_db),
@@ -3031,7 +2753,7 @@ async def process_action_generator(
         PipelineNodeStatus(id="n2", title="Process Conversation", status="completed", implemented=True, note="Transcription & Entity Extraction completed."),
         PipelineNodeStatus(id="n3", title="Central Memory", status="completed", implemented=True, note="Organization-scoped Relationship Memory persistent in PostgreSQL."),
         PipelineNodeStatus(id="n4", title="Action Generator", status="completed", implemented=True, note=f"Action items active ({len(our_commitments)} Our Commitments, {len(contact_commitments)} Waiting on Contact)."),
-        PipelineNodeStatus(id="n5", title="Follow-up & Meeting Prep", status="pending", implemented=True, note="Email drafts, calendar briefings, and action sync ready."),
+        PipelineNodeStatus(id="n5", title="Follow-up & Meeting Prep", status="pending", implemented=False, note="Pending implementation (Email Drafts & Calendar Briefings)."),
     ]
 
     return ActionGeneratorResponse(
@@ -3194,6 +2916,11 @@ async def process_followup_draft(
             snoozed_until=ep.get("snoozed_until"),
             snooze_reason=ep.get("snooze_reason"),
             snoozed_reason=ep.get("snooze_reason"),
+            sent_at=ep.get("sent_at"),
+            sent_to=ep.get("sent_to"),
+            provider_message_id=ep.get("provider_message_id"),
+            connection_status=ep.get("connection_status"),
+            error_message=ep.get("last_send_error"),
             model_used=ep.get("model_used"),
             decided_by=existing_appr.decided_by,
             decided_at=existing_appr.decided_at.isoformat() if existing_appr.decided_at else None,
@@ -3201,20 +2928,16 @@ async def process_followup_draft(
             provenance=ep.get("provenance") or {},
         )
 
-        n5_note = "Follow-up Email Draft: Ready / Awaiting Review • Meeting Prep: Pending • Calendar Prep Block: Pending"
-        if existing_appr.status == "approved":
-            n5_note = "Follow-up Email Draft: Approved (Sending Deferred) • Meeting Prep: Pending • Calendar Prep Block: Pending"
-        elif existing_appr.status == "snoozed":
-            n5_note = f"Follow-up Email Draft: Snoozed ({ep.get('snoozed_until') or 'later'}) • Meeting Prep: Pending • Calendar Prep Block: Pending"
-        elif existing_appr.status == "discarded":
-            n5_note = "Follow-up Email Draft: Discarded • Meeting Prep: Pending • Calendar Prep Block: Pending"
+        prep_ctx_idemp = ctx.get("node5b_meeting_prep") or {}
+        prep_block_status_idemp = prep_ctx_idemp.get("status") if prep_ctx_idemp else None
+        n5_status_idemp, n5_note_idemp = _compute_n5_status(existing_appr.status, prep_block_status_idemp)
 
         nodes_status = [
             PipelineNodeStatus(id="n1", title="Conversation Capture", status="completed", implemented=True, note="Audio recording and metadata preserved successfully."),
             PipelineNodeStatus(id="n2", title="Process Conversation", status="completed", implemented=True, note="Transcription & Entity Extraction completed."),
             PipelineNodeStatus(id="n3", title="Central Memory", status="completed", implemented=True, note="Organization-scoped Relationship Memory persistent in PostgreSQL."),
             PipelineNodeStatus(id="n4", title="Action Generator", status="completed", implemented=True, note="Action items active and persisted in Action Center."),
-            PipelineNodeStatus(id="n5", title="Follow-up & Meeting Prep", status="partial", implemented=True, note=n5_note),
+            PipelineNodeStatus(id="n5", title="Follow-up & Meeting Prep", status=n5_status_idemp, implemented=True, note=n5_note_idemp),
         ]
 
         return FollowupDraftResponse(
@@ -3517,12 +3240,16 @@ Generate the concise professional follow-up email draft in strict JSON format.""
         provenance=draft_payload["provenance"],
     )
 
+    prep_ctx_new = ctx.get("node5b_meeting_prep") or {}
+    prep_block_status_new = prep_ctx_new.get("status") if prep_ctx_new else None
+    n5_status_new, n5_note_new = _compute_n5_status("awaiting_review", prep_block_status_new)
+
     nodes_status = [
         PipelineNodeStatus(id="n1", title="Conversation Capture", status="completed", implemented=True, note="Audio recording and metadata preserved successfully."),
         PipelineNodeStatus(id="n2", title="Process Conversation", status="completed", implemented=True, note="Transcription & Entity Extraction completed."),
         PipelineNodeStatus(id="n3", title="Central Memory", status="completed", implemented=True, note="Organization-scoped Relationship Memory persistent in PostgreSQL."),
         PipelineNodeStatus(id="n4", title="Action Generator", status="completed", implemented=True, note="Action items active and persisted in Action Center."),
-        PipelineNodeStatus(id="n5", title="Follow-up & Meeting Prep", status="partial", implemented=True, note="Follow-up Email Draft: Ready / Awaiting Review • Meeting Prep: Pending • Calendar Prep Block: Pending"),
+        PipelineNodeStatus(id="n5", title="Follow-up & Meeting Prep", status=n5_status_new, implemented=True, note=n5_note_new),
     ]
 
     return FollowupDraftResponse(
@@ -3547,7 +3274,11 @@ async def action_followup_draft(
     """
     Node 5A: Execute Human-in-the-Loop review actions on a Follow-up Email Draft.
     Supported actions:
-    - approve: Mark draft as approved for later sending. STRICTLY DOES NOT SEND EMAIL.
+    - approve: Explicit user approval to dispatch email via Google Workspace / Gmail connector.
+      - Strong double-send protection: idempotent handling for repeated approve calls.
+      - Anti-fabrication: blocks sending if recipient email is missing or invalid.
+      - Disconnected handling: returns clear connection-required state without crash.
+      - Provider failure: keeps draft unsent and safely retryable.
     - edit: Modify subject and body, retaining original text and keeping status awaiting_review.
     - snooze: Mark draft as snoozed with snooze timestamp and reason.
     - discard: Mark draft as discarded.
@@ -3562,7 +3293,7 @@ async def action_followup_draft(
     except (ValueError, TypeError):
         raise HTTPException(status_code=400, detail="Invalid draft_id format.")
 
-    stmt = select(ApprovalItem).where(ApprovalItem.id == draft_uuid)
+    stmt = select(ApprovalItem).where(ApprovalItem.id == draft_uuid).with_for_update()
     res = await db.execute(stmt)
     appr = res.scalars().first()
     if not appr:
@@ -3581,17 +3312,117 @@ async def action_followup_draft(
     actor_str = str(getattr(current_user, "email", None) or getattr(current_user, "user_id", "human_reviewer"))
     payload = dict(appr.payload or {})
     msg = ""
+    is_sent = False
+    provider_msg_id = None
+    conn_status = None
 
     if action_type == "approve":
-        appr.status = "approved"
-        appr.decided_by = actor_str
-        appr.decided_at = datetime.utcnow()
-        payload["approved_at"] = appr.decided_at.isoformat()
-        payload["approved_by"] = actor_str
-        if action_req.notes:
-            payload["decision_notes"] = action_req.notes
-        # Safe test mode execution boundary — zero email sending side effects
-        msg = "Follow-up email draft approved. Draft preserved for later sending."
+        # ── 1. Idempotency Guard: Double-Send Protection ───────────────────
+        if appr.status == "sent" or payload.get("status") == "sent":
+            is_sent = True
+            provider_msg_id = payload.get("provider_message_id")
+            sent_to = payload.get("sent_to") or payload.get("recipient_email")
+            msg = f"Follow-up email has already been sent to {sent_to} (Message ID: {provider_msg_id or 'sent'})."
+            appr.status = "sent"
+        else:
+            # ── 2. Check Recipient Email (Strict Anti-Fabrication) ────────
+            # If caller supplied a recipient email in request, validate and update payload
+            if action_req.recipient_email and action_req.recipient_email.strip():
+                req_email = action_req.recipient_email.strip()
+                if "@" in req_email and "." in req_email.split("@")[-1]:
+                    payload["recipient_email"] = req_email
+                    payload["recipient_email_available"] = True
+
+            recipient_email = (payload.get("recipient_email") or "").strip()
+            if not recipient_email or "@" not in recipient_email or "." not in recipient_email.split("@")[-1]:
+                # Block sending and clearly explain why
+                raise HTTPException(
+                    status_code=400,
+                    detail="Cannot send follow-up email: recipient email address is missing or invalid. Please provide a valid recipient email address before approving."
+                )
+
+            # ── 3. Check Google Workspace / Gmail ToolConnection ──────────
+            stmt_tools = select(ToolConnection).where(
+                ToolConnection.organization_id == org_uuid,
+                ToolConnection.tool_name.in_(["gmail", "google_workspace"]),
+                ToolConnection.status == "connected",
+            )
+            res_tools = await db.execute(stmt_tools)
+            tool_conns = res_tools.scalars().all()
+            g_conn = next((c for c in tool_conns if c.tool_name == "gmail"), None) or (tool_conns[0] if tool_conns else None)
+
+            if not g_conn or not g_conn.encrypted_credentials:
+                # Disconnected Google Workspace: do not crash, do not mark as sent, return connection-required state
+                appr.status = "connection_required"
+                conn_status = "connection_required"
+                payload["status"] = "connection_required"
+                payload["connection_status"] = "connection_required"
+                payload["connection_note"] = "Google Workspace / Gmail is not connected. Connect your Google account in Settings > Integrations to send follow-up emails."
+                if action_req.notes:
+                    payload["decision_notes"] = action_req.notes
+                appr.payload = payload
+                msg = "Google Workspace / Gmail account is not connected. Connect your account in Settings > Integrations before sending."
+            else:
+                # ── 4. Decrypt Credentials & Send Email ───────────────────
+                try:
+                    creds = decrypt_credentials(g_conn.encrypted_credentials)
+                except Exception as dec_err:
+                    log.error("Failed to decrypt Gmail credentials", org_id=str(org_uuid), error=str(dec_err))
+                    appr.status = "connection_required"
+                    conn_status = "connection_required"
+                    payload["connection_status"] = "connection_required"
+                    payload["connection_note"] = "Stored credentials could not be decrypted. Re-authorization required."
+                    appr.payload = payload
+                    msg = "Google Workspace connection credential error. Please reconnect in Settings > Integrations."
+                else:
+                    connector = GmailConnector(
+                        credentials=creds,
+                        config={**(g_conn.config or {}), "queue_for_approval": False}
+                    )
+                    try:
+                        send_result = await connector.send_email(
+                            to=recipient_email,
+                            subject=payload.get("subject", ""),
+                            body=payload.get("body", ""),
+                        )
+                        # Extract message ID
+                        provider_msg_id = (send_result or {}).get("id") or (send_result or {}).get("message_id") or f"msg_{uuid.uuid4().hex[:12]}"
+                        sent_at_iso = datetime.utcnow().isoformat()
+
+                        appr.status = "sent"
+                        appr.decided_by = actor_str
+                        appr.decided_at = datetime.utcnow()
+                        is_sent = True
+
+                        payload["status"] = "sent"
+                        payload["sent_at"] = sent_at_iso
+                        payload["sent_to"] = recipient_email
+                        payload["provider_message_id"] = provider_msg_id
+                        payload["approved_at"] = sent_at_iso
+                        payload["approved_by"] = actor_str
+                        payload["connection_status"] = "connected"
+                        payload.pop("last_send_error", None)
+                        if action_req.notes:
+                            payload["decision_notes"] = action_req.notes
+                        appr.payload = payload
+
+                        msg = f"Follow-up email successfully sent to {recipient_email} via Gmail (Message ID: {provider_msg_id})."
+                    except Exception as prov_err:
+                        # Provider API failure: keep draft safely retryable and unsent
+                        log.error("Gmail send failed during approved email dispatch", draft_id=str(draft_uuid), error=str(prov_err))
+                        payload["last_send_error"] = str(prov_err)
+                        payload["last_send_attempt_at"] = datetime.utcnow().isoformat()
+                        appr.payload = payload
+                        await db.commit()
+                        raise HTTPException(
+                            status_code=502,
+                            detail=f"Email dispatch failed via Google Workspace / Gmail API: {prov_err}. The draft remains unsent and can be safely retried."
+                        )
+                    finally:
+                        try:
+                            await connector.close()
+                        except Exception:
+                            pass
 
     elif action_type == "edit":
         if not action_req.subject or not action_req.subject.strip():
@@ -3610,9 +3441,15 @@ async def action_followup_draft(
         payload["body"] = action_req.body.strip()
         payload["edited_at"] = datetime.utcnow().isoformat()
         payload["edited_by"] = actor_str
+        if action_req.recipient_email and action_req.recipient_email.strip():
+            req_email = action_req.recipient_email.strip()
+            if "@" in req_email:
+                payload["recipient_email"] = req_email
+                payload["recipient_email_available"] = True
         if action_req.notes:
             payload["edit_notes"] = action_req.notes
         appr.status = "awaiting_review"
+        payload["status"] = "awaiting_review"
         msg = "Follow-up email draft updated successfully and remains in review."
 
     elif action_type == "snooze":
@@ -3626,6 +3463,7 @@ async def action_followup_draft(
         payload["snoozed_reason"] = reason_val
         payload["snoozed_at"] = appr.decided_at.isoformat()
         payload["snoozed_by"] = actor_str
+        payload["status"] = "snoozed"
         msg = f"Follow-up email draft snoozed ({payload['snoozed_until']})."
 
     elif action_type == "discard":
@@ -3634,6 +3472,7 @@ async def action_followup_draft(
         appr.decided_at = datetime.utcnow()
         payload["discarded_at"] = appr.decided_at.isoformat()
         payload["discarded_by"] = actor_str
+        payload["status"] = "discarded"
         if action_req.notes:
             payload["discard_reason"] = action_req.notes
         msg = "Follow-up email draft discarded."
@@ -3641,6 +3480,7 @@ async def action_followup_draft(
     appr.payload = payload
 
     # Synchronize WorkflowInstance context if linked
+    prep_block_status = None
     if appr.instance_id:
         stmt_w = select(WorkflowInstance).where(WorkflowInstance.id == appr.instance_id)
         res_w = await db.execute(stmt_w)
@@ -3652,17 +3492,26 @@ async def action_followup_draft(
             draft_ctx["subject"] = payload.get("subject")
             draft_ctx["body"] = payload.get("body")
             draft_ctx["updated_at"] = datetime.utcnow().isoformat()
+            if is_sent:
+                draft_ctx["sent_at"] = payload.get("sent_at")
+                draft_ctx["sent_to"] = payload.get("sent_to") or payload.get("recipient_email")
+                draft_ctx["provider_message_id"] = payload.get("provider_message_id")
+            if conn_status:
+                draft_ctx["connection_status"] = conn_status
             if action_type == "snooze":
                 draft_ctx["snoozed_until"] = payload.get("snoozed_until")
             w_ctx["node5_followup_draft"] = draft_ctx
             w_inst.context = w_ctx
+
+            prep_ctx = w_ctx.get("node5b_meeting_prep") or {}
+            prep_block_status = prep_ctx.get("status") if prep_ctx else None
 
     # Record AuditEvent for traceability
     audit_event = AuditEvent(
         id=uuid.uuid4(),
         organization_id=org_uuid,
         actor_id=actor_str,
-        action=f"followup_draft_{action_type}",
+        action="followup_draft_sent" if is_sent else f"followup_draft_{action_type}",
         entity_type="approval_item",
         entity_id=str(draft_id),
         metadata_={
@@ -3670,7 +3519,10 @@ async def action_followup_draft(
             "action": action_type,
             "status": appr.status,
             "subject": payload.get("subject"),
-            "email_sent": False,
+            "email_sent": is_sent,
+            "provider_message_id": payload.get("provider_message_id"),
+            "sent_at": payload.get("sent_at"),
+            "recipient_email": payload.get("sent_to") or payload.get("recipient_email"),
         },
         created_at=datetime.utcnow(),
     )
@@ -3696,6 +3548,8 @@ async def action_followup_draft(
             "action": action_type,
             "decided_by": appr.decided_by,
             "organization_id": str(appr.organization_id) if appr.organization_id else None,
+            "provider_message_id": payload.get("provider_message_id"),
+            "sent_at": payload.get("sent_at"),
         })
     except Exception:
         pass
@@ -3724,6 +3578,11 @@ async def action_followup_draft(
         snoozed_until=payload.get("snoozed_until"),
         snooze_reason=payload.get("snooze_reason"),
         snoozed_reason=payload.get("snooze_reason"),
+        sent_at=payload.get("sent_at"),
+        sent_to=payload.get("sent_to"),
+        provider_message_id=payload.get("provider_message_id"),
+        connection_status=payload.get("connection_status"),
+        error_message=payload.get("last_send_error"),
         model_used=payload.get("model_used"),
         decided_by=appr.decided_by,
         decided_at=appr.decided_at.isoformat() if appr.decided_at else None,
@@ -3731,20 +3590,14 @@ async def action_followup_draft(
         provenance=payload.get("provenance") or {},
     )
 
-    n5_note = "Follow-up Email Draft: Ready / Awaiting Review • Meeting Prep: Pending • Calendar Prep Block: Pending"
-    if appr.status == "approved":
-        n5_note = "Follow-up Email Draft: Approved (Sending Deferred) • Meeting Prep: Pending • Calendar Prep Block: Pending"
-    elif appr.status == "snoozed":
-        n5_note = f"Follow-up Email Draft: Snoozed ({payload.get('snoozed_until') or 'later'}) • Meeting Prep: Pending • Calendar Prep Block: Pending"
-    elif appr.status == "discarded":
-        n5_note = "Follow-up Email Draft: Discarded • Meeting Prep: Pending • Calendar Prep Block: Pending"
+    n5_status, n5_note = _compute_n5_status(appr.status, prep_block_status)
 
     nodes_status = [
         PipelineNodeStatus(id="n1", title="Conversation Capture", status="completed", implemented=True, note="Audio recording and metadata preserved successfully."),
         PipelineNodeStatus(id="n2", title="Process Conversation", status="completed", implemented=True, note="Transcription & Entity Extraction completed."),
         PipelineNodeStatus(id="n3", title="Central Memory", status="completed", implemented=True, note="Organization-scoped Relationship Memory persistent in PostgreSQL."),
         PipelineNodeStatus(id="n4", title="Action Generator", status="completed", implemented=True, note="Action items active and persisted in Action Center."),
-        PipelineNodeStatus(id="n5", title="Follow-up & Meeting Prep", status="partial", implemented=True, note=n5_note),
+        PipelineNodeStatus(id="n5", title="Follow-up & Meeting Prep", status=n5_status, implemented=True, note=n5_note),
     ]
 
     return FollowupDraftActionResponse(
@@ -3754,21 +3607,3307 @@ async def action_followup_draft(
         action=action_type,
         message=msg,
         nodes=nodes_status,
+        sent=is_sent,
+        provider_message_id=provider_msg_id,
+        connection_status=conn_status or payload.get("connection_status"),
     )
 generate_followup_draft = process_followup_draft
 handle_followup_draft_action = action_followup_draft
 
 
-# ── Google Meet Real-Time Integration & Transcript Extractor ─────────────────────
+# =============================================================================
+# NODE 5B — MEETING PREP BRIEF + PRIVATE CALENDAR PREP BLOCK
+# =============================================================================
 
-class GoogleMeetExtractRequest(BaseModel):
-    meet_url: str = Field(..., description="Google Meet URL (e.g. https://meet.google.com/abc-defg-hij) or meeting code")
-    meeting_title: Optional[str] = Field(default=None, description="Optional title or topic")
-    primary_contact: Optional[str] = Field(default=None, description="Primary attendee or contact name")
-    language: Optional[str] = Field(default="en", description="Spoken language")
-    raw_transcript: Optional[str] = Field(default=None, description="Optional user-provided raw transcript to structure")
+# ── Node 5B Pydantic Schemas ──────────────────────────────────────────────────
+
+class UpcomingMeetingInput(BaseModel):
+    """Upcoming meeting details provided by the user for Node 5B."""
+    title: str = Field(..., min_length=1, description="Title of the upcoming meeting")
+    start: str = Field(..., description="ISO 8601 meeting start datetime (timezone-aware preferred)")
+    end: str = Field(..., description="ISO 8601 meeting end datetime (timezone-aware preferred)")
+    timezone: str = Field(default="UTC", description="IANA timezone string e.g. 'America/New_York'")
+    source_event_id: Optional[str] = Field(None, description="Source calendar event ID if known")
+    calendar_provider: Optional[str] = Field(None, description="Calendar provider e.g. 'google'")
 
 
+class MeetingPrepRequest(BaseModel):
+    instance_id: str = Field(..., description="WorkflowInstance ID")
+    meeting: UpcomingMeetingInput
+
+
+class MeetingPrepCancelRequest(BaseModel):
+    instance_id: str = Field(..., description="WorkflowInstance ID")
+    reason: Optional[str] = Field(None, description="Optional cancellation reason")
+
+
+class MeetingPrepRescheduleRequest(BaseModel):
+    instance_id: str = Field(..., description="WorkflowInstance ID")
+    meeting: UpcomingMeetingInput
+
+
+class PrepBlockInfo(BaseModel):
+    prep_start: str
+    prep_end: str
+    meeting_start: str
+    meeting_end: str
+    meeting_title: str
+    timezone: str
+    event_title: str
+    status: str  # scheduled | calendar_connection_required | conflict_review_required | cancelled | pending
+    google_event_id: Optional[str] = None
+    conflict_metadata: Optional[Dict[str, Any]] = None
+    is_private: bool = True
+
+
+class MeetingPrepBrief(BaseModel):
+    contact_name: str
+    contact_role: Optional[str] = None
+    contact_company: Optional[str] = None
+    total_conversations: int = 0
+    last_conversation_date: Optional[str] = None
+    relationship_snapshot: Dict[str, List[str]] = Field(default_factory=dict)
+    recent_conversation_title: Optional[str] = None
+    recent_conversation_date: Optional[str] = None
+    recent_conversation_summary: Optional[str] = None
+    our_outstanding_commitments: List[Dict[str, Any]] = Field(default_factory=list)
+    waiting_on_contact: List[Dict[str, Any]] = Field(default_factory=list)
+    open_questions: List[str] = Field(default_factory=list)
+    ai_suggested_topics: List[Dict[str, str]] = Field(default_factory=list)
+    model_used: Optional[str] = None
+
+
+class MeetingPrepResponse(BaseModel):
+    instance_id: str
+    workflow_name: str = "meeting_intelligence_followup"
+    status: str
+    current_node: str = "n5"
+    brief: MeetingPrepBrief
+    prep_block: PrepBlockInfo
+    nodes: List[PipelineNodeStatus] = Field(default_factory=list)
+    message: str
+    idempotent_reused: bool = False
+
+
+class MeetingPrepCancelResponse(BaseModel):
+    instance_id: str
+    status: str = "cancelled"
+    message: str
+    nodes: List[PipelineNodeStatus] = Field(default_factory=list)
+
+
+# ── Node 5B Helper: datetime parsing / prep-block calculation ─────────────────
+
+def _parse_meeting_dt(dt_str: str, tz_str: str) -> datetime:
+    """
+    Parse a meeting datetime string into a timezone-aware datetime object.
+    Accepts ISO 8601 with or without offset. Falls back to attaching the named
+    timezone if no offset is present (naive datetime). Always returns UTC-aware.
+    """
+    import re as _re
+    dt_str = dt_str.strip()
+
+    # Try direct ISO parse with offset (e.g. "2026-10-05T15:00:00+05:30")
+    try:
+        dt = datetime.fromisoformat(dt_str)
+        if dt.tzinfo is None:
+            # Naive — attach UTC (caller should pass tz separately)
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc)
+    except Exception:
+        pass
+
+    # Try stripping Z suffix
+    try:
+        clean = dt_str.rstrip("Z")
+        dt = datetime.fromisoformat(clean)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc)
+    except Exception:
+        pass
+
+    raise ValueError(f"Cannot parse meeting datetime: {dt_str!r}")
+
+
+def _calculate_prep_block(meeting_start_utc: datetime, meeting_end_utc: datetime, tz_str: str) -> tuple[datetime, datetime]:
+    """
+    Calculate the 30-minute prep block immediately before the meeting start.
+    prep_end   = meeting_start
+    prep_start = meeting_start - 30 minutes
+    Both returned as UTC-aware datetimes.
+    """
+    prep_end = meeting_start_utc
+    prep_start = meeting_start_utc - timedelta(minutes=30)
+    return prep_start, prep_end
+
+
+def _to_iso(dt: datetime) -> str:
+    """Format a UTC datetime to ISO 8601 with Z suffix."""
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _build_prep_identity(org_uuid: uuid.UUID, instance_uuid: uuid.UUID, source_event_id: Optional[str], meeting_start_iso: str) -> str:
+    """
+    Build a deterministic idempotency key for a prep block.
+    Prefer source_event_id when available; fall back to org+instance+start.
+    """
+    if source_event_id:
+        return f"prep:org={org_uuid}:src_event={source_event_id}"
+    clean_start = meeting_start_iso.replace(":", "").replace("-", "")[:15]
+    return f"prep:org={org_uuid}:inst={instance_uuid}:start={clean_start}"
+
+
+# ── Node 5B Helper: Brief generation ─────────────────────────────────────────
+
+def _build_deterministic_meeting_brief(
+    contact_name: str,
+    contact_role: Optional[str],
+    contact_company: Optional[str],
+    total_conversations: int,
+    last_conv_date: Optional[str],
+    recent_title: Optional[str],
+    recent_date: Optional[str],
+    recent_summary: Optional[str],
+    facts: List[str],
+    interests: List[str],
+    needs: List[str],
+    opportunities: List[str],
+    our_cmts: List[Dict],
+    contact_cmts: List[Dict],
+    open_questions: List[str],
+    ai_suggestions_raw: List[str],
+) -> Dict[str, Any]:
+    """
+    Deterministic (non-LLM) meeting prep brief builder.
+    Used as fallback when LLM is unavailable or returns invalid output.
+    """
+    ai_topics = [
+        {"topic": s, "label": "AI Suggested — Not Previously Agreed"}
+        for s in ai_suggestions_raw if s
+    ]
+    return {
+        "brief_source": "deterministic_fallback",
+        "relationship_snapshot": {
+            "facts": facts,
+            "interests": interests,
+            "needs": needs,
+            "opportunities": opportunities,
+        },
+        "ai_suggested_topics": ai_topics,
+    }
+
+
+async def _generate_meeting_prep_brief(
+    contact: RelationshipContact,
+    current_conv: RelationshipConversation,
+    org_uuid: uuid.UUID,
+    instance_uuid: uuid.UUID,
+    db: AsyncSession,
+    our_cmts: List[Dict],
+    contact_cmts: List[Dict],
+    open_questions: List[str],
+) -> MeetingPrepBrief:
+    """
+    Generate a grounded Meeting Prep Brief from Central Memory.
+    Uses LLMRouter for AI suggested discussion topics only.
+    All relationship facts are sourced strictly from the database — never invented.
+    """
+    # 1. Pull all memory items for this contact (across all conversations)
+    stmt_mem = select(RelationshipMemoryItem).where(
+        RelationshipMemoryItem.organization_id == org_uuid,
+        RelationshipMemoryItem.contact_id == contact.id,
+    ).order_by(RelationshipMemoryItem.source_date.desc(), RelationshipMemoryItem.created_at.desc())
+    res_mem = await db.execute(stmt_mem)
+    all_memory = list(res_mem.scalars().all())
+
+    facts = [m.content for m in all_memory if m.category == "fact" and not m.is_ai_generated]
+    interests = [m.content for m in all_memory if m.category == "interest" and not m.is_ai_generated]
+    needs = [m.content for m in all_memory if m.category == "need" and not m.is_ai_generated]
+    opportunities = [m.content for m in all_memory if m.category == "opportunity" and not m.is_ai_generated]
+    ai_raw_suggestions = [m.content for m in all_memory if m.category == "suggested_action" or (m.category == "interest" and m.is_ai_generated)]
+
+    # 2. Pull all conversations for history metadata
+    stmt_convs = select(RelationshipConversation).where(
+        RelationshipConversation.organization_id == org_uuid,
+        RelationshipConversation.contact_id == contact.id,
+    ).order_by(RelationshipConversation.created_at.desc())
+    res_convs = await db.execute(stmt_convs)
+    all_convs = list(res_convs.scalars().all())
+
+    total_conversations = len(all_convs)
+    last_conv_date = None
+    for c in all_convs:
+        if c.conversation_date:
+            last_conv_date = c.conversation_date
+            break
+
+    # Recent conversation (most recent — should be current_conv)
+    recent_conv = all_convs[0] if all_convs else current_conv
+    recent_title = recent_conv.title if recent_conv else None
+    recent_date = recent_conv.conversation_date if recent_conv else None
+    recent_summary = recent_conv.summary if recent_conv else None
+
+    # 3. Contact metadata (strictly from DB — never fabricated)
+    c_meta = getattr(contact, "metadata_", {}) or {}
+    contact_role = (contact.role or "").strip() or None
+    contact_company = (contact.company or c_meta.get("company") or "").strip() or None
+
+    # 4. Open questions: combine passed-in list with any from memory
+    oq_from_memory = [m.content for m in all_memory if m.category == "open_question"]
+    all_open_q = list(dict.fromkeys(open_questions + oq_from_memory))  # deduplicate preserving order
+
+    # 5. LLM: AI suggested discussion topics ONLY (clearly labelled)
+    model_used = "deterministic_fallback"
+    ai_topics: List[Dict[str, str]] = []
+
+    llm_system = """You are a meeting preparation assistant. Based on the provided relationship context, generate 2–4 concise, specific discussion topics to raise in the upcoming meeting.
+
+CRITICAL RULES:
+1. Output ONLY a JSON array of objects: [{"topic": "...", "rationale": "..."}]
+2. Topics must be grounded in the provided context (interests, needs, opportunities, open questions).
+3. Do NOT invent facts, commitments, dates, people, companies, or meeting details.
+4. Do NOT repeat explicit commitments — those are listed separately.
+5. Label intent: these are suggestions, not confirmed agenda items.
+6. Keep each topic to one concise sentence."""
+
+    context_lines = []
+    if facts:
+        context_lines.append("KNOWN FACTS:\n" + "\n".join(f"- {f}" for f in facts[:5]))
+    if interests:
+        context_lines.append("INTERESTS:\n" + "\n".join(f"- {i}" for i in interests[:5]))
+    if needs:
+        context_lines.append("NEEDS / PAIN POINTS:\n" + "\n".join(f"- {n}" for n in needs[:5]))
+    if opportunities:
+        context_lines.append("OPPORTUNITIES:\n" + "\n".join(f"- {o}" for o in opportunities[:5]))
+    if all_open_q:
+        context_lines.append("OPEN QUESTIONS:\n" + "\n".join(f"- {q}" for q in all_open_q[:5]))
+    if recent_summary:
+        context_lines.append(f"LAST CONVERSATION SUMMARY: {recent_summary[:400]}")
+
+    llm_user = f"Contact: {contact.name}\n\n" + "\n\n".join(context_lines) if context_lines else f"Contact: {contact.name}"
+
+    try:
+        llm = LLMRouter()
+        raw_resp, call_record = await llm.call(
+            agent_name="drafting_agent",
+            messages=[
+                LLMMessage(role="system", content=llm_system),
+                LLMMessage(role="user", content=llm_user),
+            ],
+            tier_override="mini",
+        )
+        if call_record:
+            model_used = getattr(call_record, "model", None) or getattr(call_record, "model_used", None) or "mini"
+
+        cleaned = (raw_resp or "").strip()
+        if cleaned.startswith("```json"):
+            cleaned = cleaned[7:]
+        if cleaned.startswith("```"):
+            cleaned = cleaned[3:]
+        if cleaned.endswith("```"):
+            cleaned = cleaned[:-3]
+        parsed = json.loads(cleaned.strip())
+        if isinstance(parsed, list):
+            for item in parsed:
+                if isinstance(item, dict) and item.get("topic"):
+                    ai_topics.append({
+                        "topic": str(item["topic"]).strip(),
+                        "rationale": str(item.get("rationale") or item.get("reason") or "").strip(),
+                        "label": "AI Suggested — Not Previously Agreed",
+                    })
+    except Exception as llm_err:
+        log.warning("LLM meeting prep topics failed, using raw suggestions from memory", error=str(llm_err))
+        # Deterministic fallback: use AI suggestions already stored in memory
+        for s in ai_raw_suggestions[:4]:
+            ai_topics.append({
+                "topic": s,
+                "rationale": "",
+                "label": "AI Suggested — Not Previously Agreed",
+            })
+
+    return MeetingPrepBrief(
+        contact_name=contact.name,
+        contact_role=contact_role,
+        contact_company=contact_company,
+        total_conversations=total_conversations,
+        last_conversation_date=last_conv_date,
+        relationship_snapshot={
+            "facts": facts,
+            "interests": interests,
+            "needs": needs,
+            "opportunities": opportunities,
+        },
+        recent_conversation_title=recent_title,
+        recent_conversation_date=recent_date,
+        recent_conversation_summary=recent_summary,
+        our_outstanding_commitments=our_cmts,
+        waiting_on_contact=contact_cmts,
+        open_questions=all_open_q,
+        ai_suggested_topics=ai_topics,
+        model_used=model_used,
+    )
+
+
+# ── Node 5B: _compute_n5_status helper ───────────────────────────────────────
+
+def _compute_n5_status(draft_status: Optional[str], prep_block_status: Optional[str]) -> tuple[str, str]:
+    """
+    Returns (node5_status, node5_note) based on both 5A and 5B state.
+    Node 5 is COMPLETED only when 5A is available AND 5B prep block is "scheduled".
+    All other combinations yield PARTIAL with a descriptive note.
+    """
+    # 5A component
+    if draft_status == "sent":
+        draft_note = "Follow-up Email Sent"
+    elif draft_status == "approved":
+        draft_note = "Follow-up Draft Approved"
+    elif draft_status == "connection_required":
+        draft_note = "Follow-up Draft: Google Workspace / Gmail Connection Required"
+    elif draft_status == "snoozed":
+        draft_note = "Follow-up Draft Snoozed"
+    elif draft_status == "discarded":
+        draft_note = "Follow-up Draft Discarded"
+    elif draft_status in ("awaiting_review", None):
+        draft_note = "Follow-up Draft Ready / Awaiting Review"
+    else:
+        draft_note = f"Follow-up Draft: {draft_status}"
+
+    # 5B component
+    if prep_block_status == "scheduled":
+        prep_note = "Private Prep Block Scheduled"
+    elif prep_block_status == "calendar_connection_required":
+        prep_note = "Calendar Connection Required"
+    elif prep_block_status == "conflict_review_required":
+        prep_note = "Calendar Conflict — Review Required"
+    elif prep_block_status == "cancelled":
+        prep_note = "Prep Block Cancelled"
+    elif prep_block_status == "meeting_details_required" or prep_block_status is None:
+        prep_note = "Meeting Prep Pending — Upcoming meeting required"
+    else:
+        prep_note = f"Meeting Prep: {prep_block_status}"
+
+    # Combined
+    n5_note = f"{draft_note} • {prep_note}"
+
+    # COMPLETED: 5A present (any terminal/ready state including sent) AND prep block scheduled
+    if prep_block_status == "scheduled" and draft_status in ("sent", "approved", "snoozed", "discarded", "awaiting_review"):
+        return "completed", n5_note
+
+    return "partial", n5_note
+
+
+# ── Node 5B: Main Endpoint ────────────────────────────────────────────────────
+
+@router.post("/meeting-prep", response_model=MeetingPrepResponse)
+async def process_meeting_prep(
+    req: MeetingPrepRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(require_any_auth),
+):
+    """
+    Node 5B: Meeting Prep Brief + Private Calendar Prep Block.
+
+    1. Validates prerequisite: Node 4 must be completed.
+    2. Resolves contact and Central Memory.
+    3. Generates a grounded Meeting Prep Brief from stored relationship memory.
+    4. Calculates a 30-minute private prep block (prep_start = meeting_start - 30min).
+    5. Checks for calendar conflicts in the prep window.
+    6. Creates a PRIVATE Google Calendar event if connected; stores intent if not.
+    7. Enforces idempotency: repeated calls with same meeting return existing prep block.
+    8. Never fabricates contact facts, emails, companies, or meeting details.
+    """
+    start_time = time.perf_counter()
+    org_uuid = await _resolve_org_uuid(current_user, db)
+    actor_str = str(getattr(current_user, "email", None) or getattr(current_user, "user_id", "system"))
+
+    # 1. Parse and validate instance
+    try:
+        instance_uuid = uuid.UUID(req.instance_id)
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=400, detail="Invalid instance_id format.")
+
+    stmt = select(WorkflowInstance).where(WorkflowInstance.id == instance_uuid)
+    res = await db.execute(stmt)
+    workflow_inst = res.scalars().first()
+    if not workflow_inst:
+        raise HTTPException(status_code=404, detail="Workflow run instance not found.")
+    if workflow_inst.organization_id != org_uuid:
+        raise HTTPException(status_code=403, detail="Access denied: workflow run belongs to another organization.")
+
+    ctx = workflow_inst.context or {}
+
+    # 2. Prerequisite: Node 4 must be complete
+    node4_data = ctx.get("node4_action_generator") or {}
+    if not node4_data or node4_data.get("status") != "completed":
+        # Fallback: check if any n4 approval items exist
+        stmt_n4 = select(ApprovalItem).where(
+            ApprovalItem.organization_id == org_uuid,
+            ApprovalItem.instance_id == instance_uuid,
+            ApprovalItem.node_id == "n4",
+        ).limit(1)
+        res_n4 = await db.execute(stmt_n4)
+        if not res_n4.scalars().first():
+            raise HTTPException(
+                status_code=400,
+                detail="Node 4 (Action Generator) has not completed for this run. Node 5B requires classified action items.",
+            )
+
+    # 3. Resolve contact from Node 3 context
+    node3_data = ctx.get("node3_central_memory") or {}
+    contact_id_str = node3_data.get("contact_id")
+    if not contact_id_str:
+        raise HTTPException(status_code=400, detail="Central Memory contact not resolved. Run Node 3 first.")
+
+    try:
+        contact_uuid = uuid.UUID(contact_id_str)
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=400, detail="Invalid contact_id in Central Memory context.")
+
+    stmt_c = select(RelationshipContact).where(
+        RelationshipContact.id == contact_uuid,
+        RelationshipContact.organization_id == org_uuid,
+    )
+    res_c = await db.execute(stmt_c)
+    contact = res_c.scalars().first()
+    if not contact:
+        raise HTTPException(status_code=400, detail="Contact not found for this organization.")
+
+    # Current conversation
+    stmt_conv = select(RelationshipConversation).where(
+        RelationshipConversation.organization_id == org_uuid,
+        RelationshipConversation.workflow_instance_id == instance_uuid,
+    )
+    res_conv = await db.execute(stmt_conv)
+    current_conv = res_conv.scalars().first()
+
+    # 4. Parse meeting datetimes and calculate prep block
+    meeting_input = req.meeting
+    try:
+        meeting_start_utc = _parse_meeting_dt(meeting_input.start, meeting_input.timezone)
+        meeting_end_utc = _parse_meeting_dt(meeting_input.end, meeting_input.timezone)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid meeting datetime: {e}")
+
+    prep_start_utc, prep_end_utc = _calculate_prep_block(meeting_start_utc, meeting_end_utc, meeting_input.timezone)
+    prep_start_iso = _to_iso(prep_start_utc)
+    prep_end_iso = _to_iso(prep_end_utc)
+    meeting_start_iso = _to_iso(meeting_start_utc)
+    meeting_end_iso = _to_iso(meeting_end_utc)
+
+    # 5. Build idempotency key
+    prep_identity = _build_prep_identity(org_uuid, instance_uuid, meeting_input.source_event_id, meeting_start_iso)
+
+    # 6. Idempotency check — look for existing prep block in context
+    existing_prep = ctx.get("node5b_meeting_prep") or {}
+    if existing_prep.get("prep_identity") == prep_identity and existing_prep.get("status") not in (None, ""):
+        # Return existing — no new LLM call, no new DB write
+        existing_brief_data = existing_prep.get("brief") or {}
+        brief = MeetingPrepBrief(**existing_brief_data) if existing_brief_data else MeetingPrepBrief(
+            contact_name=contact.name,
+            model_used="rehydrated",
+        )
+        prep_block = PrepBlockInfo(
+            prep_start=existing_prep.get("prep_start", prep_start_iso),
+            prep_end=existing_prep.get("prep_end", prep_end_iso),
+            meeting_start=existing_prep.get("meeting_start", meeting_start_iso),
+            meeting_end=existing_prep.get("meeting_end", meeting_end_iso),
+            meeting_title=existing_prep.get("meeting_title", meeting_input.title),
+            timezone=existing_prep.get("timezone", meeting_input.timezone),
+            event_title=existing_prep.get("event_title", f"Prep: {meeting_input.title}"),
+            status=existing_prep.get("status", "pending"),
+            google_event_id=existing_prep.get("google_event_id"),
+            conflict_metadata=existing_prep.get("conflict_metadata"),
+            is_private=True,
+        )
+
+        draft_status = None
+        try:
+            stmt_d = select(ApprovalItem).where(
+                ApprovalItem.organization_id == org_uuid,
+                ApprovalItem.instance_id == instance_uuid,
+                ApprovalItem.review_type == "followup_email_draft",
+            ).order_by(ApprovalItem.created_at.desc())
+            res_d = await db.execute(stmt_d)
+            ad = res_d.scalars().first()
+            if ad:
+                draft_status = ad.status
+        except Exception:
+            pass
+
+        n5_status, n5_note = _compute_n5_status(draft_status, existing_prep.get("status"))
+        nodes_status = [
+            PipelineNodeStatus(id="n1", title="Conversation Capture", status="completed", implemented=True, note="Audio recording and metadata preserved successfully."),
+            PipelineNodeStatus(id="n2", title="Process Conversation", status="completed", implemented=True, note="Transcription & Entity Extraction completed."),
+            PipelineNodeStatus(id="n3", title="Central Memory", status="completed", implemented=True, note="Organization-scoped Relationship Memory persistent in PostgreSQL."),
+            PipelineNodeStatus(id="n4", title="Action Generator", status="completed", implemented=True, note="Action items active and persisted in Action Center."),
+            PipelineNodeStatus(id="n5", title="Follow-up & Meeting Prep", status=n5_status, implemented=True, note=n5_note),
+        ]
+        return MeetingPrepResponse(
+            instance_id=str(instance_uuid),
+            status=existing_prep.get("status", "pending"),
+            brief=brief,
+            prep_block=prep_block,
+            nodes=nodes_status,
+            message="Meeting prep block retrieved (idempotent reuse).",
+            idempotent_reused=True,
+        )
+
+    # 7. Gather action items for brief
+    our_cmts_raw: List[Dict] = list(node4_data.get("our_commitments") or [])
+    contact_cmts_raw: List[Dict] = list(node4_data.get("contact_commitments") or [])
+    open_q_raw: List = list(node4_data.get("open_questions") or [])
+
+    if not our_cmts_raw and not contact_cmts_raw:
+        stmt_a = select(ApprovalItem).where(
+            ApprovalItem.organization_id == org_uuid,
+            ApprovalItem.instance_id == instance_uuid,
+            ApprovalItem.node_id == "n4",
+        )
+        res_a = await db.execute(stmt_a)
+        for it in res_a.scalars().all():
+            ip = it.payload or {}
+            at = ip.get("action_type")
+            act_d = {
+                "action": ip.get("action") or it.reason,
+                "due_date": ip.get("due_date"),
+                "due_date_display": ip.get("due_date_display"),
+                "owner_display": ip.get("owner_display"),
+            }
+            if at == "our_commitment":
+                our_cmts_raw.append(act_d)
+            elif at == "contact_commitment":
+                contact_cmts_raw.append(act_d)
+
+    open_q_strs = [q.get("question") if isinstance(q, dict) else str(q) for q in open_q_raw if q]
+
+    # 8. Generate Meeting Prep Brief from Central Memory
+    brief = await _generate_meeting_prep_brief(
+        contact=contact,
+        current_conv=current_conv,
+        org_uuid=org_uuid,
+        instance_uuid=instance_uuid,
+        db=db,
+        our_cmts=our_cmts_raw,
+        contact_cmts=contact_cmts_raw,
+        open_questions=open_q_strs,
+    )
+
+    # 9. Calendar: look up ToolConnection (reuse product_launch pattern)
+    stmt_tools = select(ToolConnection).where(
+        ToolConnection.organization_id == org_uuid,
+        ToolConnection.tool_name.in_(["google_workspace", "google_calendar"]),
+    )
+    res_tools = await db.execute(stmt_tools)
+    g_conn = res_tools.scalars().first()
+    calendar_connected = bool(g_conn and g_conn.status == "connected" and g_conn.encrypted_credentials)
+
+    # 10. Conflict detection (only when calendar is connected)
+    conflict_metadata = None
+    block_status = "calendar_connection_required"
+    google_event_id = None
+
+    event_title = f"Prep: {meeting_input.title}" if meeting_input.title else f"Prep: Meeting with {contact.name}"
+
+    if calendar_connected:
+        try:
+            creds = decrypt_credentials(g_conn.encrypted_credentials)
+            connector = GoogleWorkspaceConnector(credentials=creds, config=g_conn.config or {})
+
+            # Read events in the prep window
+            existing_events = await connector.read("events", {
+                "calendar_id": "primary",
+                "limit": 20,
+            })
+
+            # Filter for conflicts in the prep window
+            conflicting = []
+            for ev in (existing_events or []):
+                ev_start_raw = (ev.get("start") or {}).get("dateTime") or (ev.get("start") or {}).get("date")
+                ev_end_raw = (ev.get("end") or {}).get("dateTime") or (ev.get("end") or {}).get("date")
+                ev_id = ev.get("id", "")
+                # Skip the source meeting itself
+                if meeting_input.source_event_id and ev_id == meeting_input.source_event_id:
+                    continue
+                if not ev_start_raw or not ev_end_raw:
+                    continue
+                try:
+                    ev_start = _parse_meeting_dt(ev_start_raw, "UTC")
+                    ev_end = _parse_meeting_dt(ev_end_raw, "UTC")
+                    # Overlap: ev_start < prep_end AND ev_end > prep_start
+                    if ev_start < prep_end_utc and ev_end > prep_start_utc:
+                        conflicting.append({
+                            "event_id": ev_id,
+                            "summary": ev.get("summary", "Untitled event"),
+                            "start": ev_start_raw,
+                            "end": ev_end_raw,
+                        })
+                except Exception:
+                    continue
+
+            if conflicting:
+                # Conflict found — do NOT create the prep block automatically
+                block_status = "conflict_review_required"
+                conflict_metadata = {"conflicting_events": conflicting}
+                log.info(
+                    "Meeting prep conflict detected",
+                    instance_id=str(instance_uuid),
+                    conflicts=len(conflicting),
+                )
+                await connector.close()
+            else:
+                # No conflict — create the PRIVATE prep block
+                try:
+                    description = (
+                        f"SMBFlow Meeting Preparation Block\n"
+                        f"Upcoming meeting: {meeting_input.title}\n"
+                        f"Contact: {contact.name}\n"
+                        f"Use this time to review your meeting prep brief in SMBFlow."
+                    )
+                    api_event = await connector.schedule_event(
+                        summary=event_title,
+                        description=description,
+                        start_iso=prep_start_iso,
+                        end_iso=prep_end_iso,
+                        attendees=[],  # Private — no attendees
+                    )
+                    google_event_id = api_event.get("id")
+
+                    # Patch visibility to private (schedule_event doesn't expose it)
+                    if google_event_id:
+                        try:
+                            await connector.update_event(
+                                event_id=google_event_id,
+                                visibility="private",
+                            )
+                        except Exception as vis_err:
+                            log.warning("Could not set prep event visibility to private", error=str(vis_err))
+
+                    block_status = "scheduled"
+                    log.info(
+                        "Private prep block created on Google Calendar",
+                        instance_id=str(instance_uuid),
+                        google_event_id=google_event_id,
+                        prep_start=prep_start_iso,
+                        prep_end=prep_end_iso,
+                    )
+                except Exception as cal_err:
+                    log.warning("Google Calendar create failed, falling back to stored intent", error=str(cal_err))
+                    block_status = "calendar_connection_required"
+                finally:
+                    try:
+                        await connector.close()
+                    except Exception:
+                        pass
+        except Exception as outer_err:
+            log.warning("Calendar credential resolution failed", error=str(outer_err))
+            block_status = "calendar_connection_required"
+    else:
+        # No calendar connection — persist intent, no external call
+        block_status = "calendar_connection_required"
+
+    # 11. Get current draft status for Node 5 note
+    draft_status_val = None
+    try:
+        stmt_d = select(ApprovalItem).where(
+            ApprovalItem.organization_id == org_uuid,
+            ApprovalItem.instance_id == instance_uuid,
+            ApprovalItem.review_type == "followup_email_draft",
+        ).order_by(ApprovalItem.created_at.desc())
+        res_d = await db.execute(stmt_d)
+        ad = res_d.scalars().first()
+        if ad:
+            draft_status_val = ad.status
+    except Exception:
+        pass
+
+    # 12. Persist Node 5B state into WorkflowInstance context
+    brief_dict = brief.model_dump()
+    prep_ctx = {
+        "prep_identity": prep_identity,
+        "status": block_status,
+        "meeting_title": meeting_input.title,
+        "meeting_start": meeting_start_iso,
+        "meeting_end": meeting_end_iso,
+        "timezone": meeting_input.timezone,
+        "source_event_id": meeting_input.source_event_id,
+        "calendar_provider": meeting_input.calendar_provider,
+        "prep_start": prep_start_iso,
+        "prep_end": prep_end_iso,
+        "event_title": event_title,
+        "google_event_id": google_event_id,
+        "conflict_metadata": conflict_metadata,
+        "brief": brief_dict,
+        "generated_at": datetime.utcnow().isoformat(),
+        "is_private": True,
+    }
+
+    updated_ctx = dict(ctx)
+    updated_ctx["node5b_meeting_prep"] = prep_ctx
+    workflow_inst.context = updated_ctx
+    workflow_inst.current_node = "n5"
+
+    duration_ms = int((time.perf_counter() - start_time) * 1000)
+
+    # 13. AgentRunRecord
+    agent_record = AgentRunRecord(
+        id=uuid.uuid4(),
+        instance_id=instance_uuid,
+        node_id="n5b",
+        agent_capability="meeting_prep_brief",
+        status="completed",
+        model_used=brief.model_used or "mini",
+        duration_ms=duration_ms,
+        completed_at=datetime.utcnow(),
+        tools_used=["llm_router", "central_memory", "google_calendar"] if calendar_connected else ["llm_router", "central_memory"],
+    )
+    db.add(agent_record)
+
+    # 14. AuditEvent
+    audit_event = AuditEvent(
+        id=uuid.uuid4(),
+        organization_id=org_uuid,
+        actor_id=actor_str,
+        action="meeting_prep_generated",
+        entity_type="workflow_instance",
+        entity_id=str(instance_uuid),
+        metadata_={
+            "contact_name": contact.name,
+            "meeting_title": meeting_input.title,
+            "prep_start": prep_start_iso,
+            "prep_end": prep_end_iso,
+            "block_status": block_status,
+            "google_event_id": google_event_id,
+            "calendar_connected": calendar_connected,
+            "conflict_detected": bool(conflict_metadata),
+        },
+        created_at=datetime.utcnow(),
+    )
+    db.add(audit_event)
+
+    await db.commit()
+
+    # 15. Optional Redis pub/sub broadcast
+    try:
+        from core.redis_pubsub import pubsub as redis_pubsub
+        await redis_pubsub.publish_event("meeting_prep_created", {
+            "instance_id": str(instance_uuid),
+            "organization_id": str(org_uuid),
+            "status": block_status,
+            "contact_name": contact.name,
+        })
+    except Exception:
+        pass
+
+    prep_block = PrepBlockInfo(
+        prep_start=prep_start_iso,
+        prep_end=prep_end_iso,
+        meeting_start=meeting_start_iso,
+        meeting_end=meeting_end_iso,
+        meeting_title=meeting_input.title,
+        timezone=meeting_input.timezone,
+        event_title=event_title,
+        status=block_status,
+        google_event_id=google_event_id,
+        conflict_metadata=conflict_metadata,
+        is_private=True,
+    )
+
+    n5_status, n5_note = _compute_n5_status(draft_status_val, block_status)
+    nodes_status = [
+        PipelineNodeStatus(id="n1", title="Conversation Capture", status="completed", implemented=True, note="Audio recording and metadata preserved successfully."),
+        PipelineNodeStatus(id="n2", title="Process Conversation", status="completed", implemented=True, note="Transcription & Entity Extraction completed."),
+        PipelineNodeStatus(id="n3", title="Central Memory", status="completed", implemented=True, note="Organization-scoped Relationship Memory persistent in PostgreSQL."),
+        PipelineNodeStatus(id="n4", title="Action Generator", status="completed", implemented=True, note="Action items active and persisted in Action Center."),
+        PipelineNodeStatus(id="n5", title="Follow-up & Meeting Prep", status=n5_status, implemented=True, note=n5_note),
+    ]
+
+    if block_status == "scheduled":
+        msg = f"Meeting prep brief generated and private prep block scheduled on Google Calendar ({prep_start_iso} → {prep_end_iso})."
+    elif block_status == "conflict_review_required":
+        msg = f"Meeting prep brief generated. Calendar conflict detected in prep window — review required before scheduling."
+    else:
+        msg = "Meeting prep brief generated and stored. Connect Google Calendar to schedule the private prep block."
+
+    return MeetingPrepResponse(
+        instance_id=str(instance_uuid),
+        status=block_status,
+        brief=brief,
+        prep_block=prep_block,
+        nodes=nodes_status,
+        message=msg,
+        idempotent_reused=False,
+    )
+
+
+# ── Node 5B: Reschedule Endpoint ──────────────────────────────────────────────
+
+@router.post("/meeting-prep/reschedule", response_model=MeetingPrepResponse)
+async def reschedule_meeting_prep(
+    req: MeetingPrepRescheduleRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(require_any_auth),
+):
+
+    org_uuid = await _resolve_org_uuid(current_user, db)
+    actor_str = str(getattr(current_user, "email", None) or getattr(current_user, "user_id", "system"))
+
+    try:
+        instance_uuid = uuid.UUID(req.instance_id)
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=400, detail="Invalid instance_id format.")
+
+    stmt = select(WorkflowInstance).where(WorkflowInstance.id == instance_uuid)
+    res = await db.execute(stmt)
+    workflow_inst = res.scalars().first()
+    if not workflow_inst:
+        raise HTTPException(status_code=404, detail="Workflow run instance not found.")
+    if workflow_inst.organization_id != org_uuid:
+        raise HTTPException(status_code=403, detail="Access denied: workflow run belongs to another organization.")
+
+    ctx = workflow_inst.context or {}
+    existing_prep = ctx.get("node5b_meeting_prep") or {}
+    if not existing_prep:
+        raise HTTPException(status_code=400, detail="No existing prep block found for this run. Call /meeting-prep first.")
+
+    node3_data = ctx.get("node3_central_memory") or {}
+    contact_id_str = node3_data.get("contact_id")
+    contact = None
+    if contact_id_str:
+        try:
+            stmt_c = select(RelationshipContact).where(
+                RelationshipContact.id == uuid.UUID(contact_id_str),
+                RelationshipContact.organization_id == org_uuid,
+            )
+            res_c = await db.execute(stmt_c)
+            contact = res_c.scalars().first()
+        except Exception:
+            pass
+
+    contact_name = (contact.name if contact else None) or existing_prep.get("brief", {}).get("contact_name", "Contact")
+
+    # Parse new datetimes
+    meeting_input = req.meeting
+    try:
+        meeting_start_utc = _parse_meeting_dt(meeting_input.start, meeting_input.timezone)
+        meeting_end_utc = _parse_meeting_dt(meeting_input.end, meeting_input.timezone)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid meeting datetime: {e}")
+
+    prep_start_utc, prep_end_utc = _calculate_prep_block(meeting_start_utc, meeting_end_utc, meeting_input.timezone)
+    prep_start_iso = _to_iso(prep_start_utc)
+    prep_end_iso = _to_iso(prep_end_utc)
+    meeting_start_iso = _to_iso(meeting_start_utc)
+    meeting_end_iso = _to_iso(meeting_end_utc)
+
+    old_google_event_id = existing_prep.get("google_event_id")
+    event_title = existing_prep.get("event_title") or f"Prep: {meeting_input.title}"
+    block_status = existing_prep.get("status", "calendar_connection_required")
+    new_google_event_id = old_google_event_id
+
+    # Update existing Google Calendar event if present
+    if old_google_event_id:
+        stmt_tools = select(ToolConnection).where(
+            ToolConnection.organization_id == org_uuid,
+            ToolConnection.tool_name.in_(["google_workspace", "google_calendar"]),
+        )
+        res_tools = await db.execute(stmt_tools)
+        g_conn = res_tools.scalars().first()
+
+        if g_conn and g_conn.status == "connected" and g_conn.encrypted_credentials:
+            try:
+                creds = decrypt_credentials(g_conn.encrypted_credentials)
+                connector = GoogleWorkspaceConnector(credentials=creds, config=g_conn.config or {})
+                await connector.update_event(
+                    event_id=old_google_event_id,
+                    start_iso=prep_start_iso,
+                    end_iso=prep_end_iso,
+                    visibility="private",
+                )
+                new_google_event_id = old_google_event_id  # Same event, updated
+                block_status = "scheduled"
+                log.info(
+                    "Prep block rescheduled on Google Calendar",
+                    event_id=old_google_event_id,
+                    new_prep_start=prep_start_iso,
+                )
+                try:
+                    await connector.close()
+                except Exception:
+                    pass
+            except Exception as cal_err:
+                log.warning("Google Calendar reschedule failed", error=str(cal_err))
+                block_status = "calendar_connection_required"
+
+    # Update context
+    updated_prep = dict(existing_prep)
+    updated_prep.update({
+        "meeting_title": meeting_input.title,
+        "meeting_start": meeting_start_iso,
+        "meeting_end": meeting_end_iso,
+        "timezone": meeting_input.timezone,
+        "source_event_id": meeting_input.source_event_id or existing_prep.get("source_event_id"),
+        "prep_start": prep_start_iso,
+        "prep_end": prep_end_iso,
+        "google_event_id": new_google_event_id,
+        "status": block_status,
+        "rescheduled_at": datetime.utcnow().isoformat(),
+        "conflict_metadata": None,
+    })
+    # Rebuild identity for new time
+    updated_prep["prep_identity"] = _build_prep_identity(org_uuid, instance_uuid, meeting_input.source_event_id, meeting_start_iso)
+
+    updated_ctx = dict(ctx)
+    updated_ctx["node5b_meeting_prep"] = updated_prep
+    workflow_inst.context = updated_ctx
+
+    # AuditEvent
+    audit_event = AuditEvent(
+        id=uuid.uuid4(),
+        organization_id=org_uuid,
+        actor_id=actor_str,
+        action="meeting_prep_rescheduled",
+        entity_type="workflow_instance",
+        entity_id=str(instance_uuid),
+        metadata_={
+            "old_prep_start": existing_prep.get("prep_start"),
+            "new_prep_start": prep_start_iso,
+            "google_event_id": new_google_event_id,
+            "block_status": block_status,
+        },
+        created_at=datetime.utcnow(),
+    )
+    db.add(audit_event)
+    await db.commit()
+
+    # Fetch draft status for N5 note
+    draft_status_val = None
+    try:
+        stmt_d = select(ApprovalItem).where(
+            ApprovalItem.organization_id == org_uuid,
+            ApprovalItem.instance_id == instance_uuid,
+            ApprovalItem.review_type == "followup_email_draft",
+        ).order_by(ApprovalItem.created_at.desc())
+        res_d = await db.execute(stmt_d)
+        ad = res_d.scalars().first()
+        if ad:
+            draft_status_val = ad.status
+    except Exception:
+        pass
+
+    n5_status, n5_note = _compute_n5_status(draft_status_val, block_status)
+    nodes_status = [
+        PipelineNodeStatus(id="n1", title="Conversation Capture", status="completed", implemented=True, note="Audio recording and metadata preserved successfully."),
+        PipelineNodeStatus(id="n2", title="Process Conversation", status="completed", implemented=True, note="Transcription & Entity Extraction completed."),
+        PipelineNodeStatus(id="n3", title="Central Memory", status="completed", implemented=True, note="Organization-scoped Relationship Memory persistent in PostgreSQL."),
+        PipelineNodeStatus(id="n4", title="Action Generator", status="completed", implemented=True, note="Action items active and persisted in Action Center."),
+        PipelineNodeStatus(id="n5", title="Follow-up & Meeting Prep", status=n5_status, implemented=True, note=n5_note),
+    ]
+
+    brief_data = updated_prep.get("brief") or {}
+    brief = MeetingPrepBrief(**brief_data) if brief_data else MeetingPrepBrief(contact_name=contact_name, model_used="rehydrated")
+    prep_block = PrepBlockInfo(
+        prep_start=prep_start_iso,
+        prep_end=prep_end_iso,
+        meeting_start=meeting_start_iso,
+        meeting_end=meeting_end_iso,
+        meeting_title=meeting_input.title,
+        timezone=meeting_input.timezone,
+        event_title=event_title,
+        status=block_status,
+        google_event_id=new_google_event_id,
+        conflict_metadata=None,
+        is_private=True,
+    )
+
+    return MeetingPrepResponse(
+        instance_id=str(instance_uuid),
+        status=block_status,
+        brief=brief,
+        prep_block=prep_block,
+        nodes=nodes_status,
+        message=f"Prep block rescheduled to {prep_start_iso} → {prep_end_iso}.",
+        idempotent_reused=False,
+    )
+
+
+# ── Node 5B: Cancel Endpoint ──────────────────────────────────────────────────
+
+@router.post("/meeting-prep/cancel", response_model=MeetingPrepCancelResponse)
+async def cancel_meeting_prep(
+    req: MeetingPrepCancelRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(require_any_auth),
+):
+    """
+    Cancel the prep block for a workflow run.
+    - Deactivates the prep block in context (status = "cancelled").
+    - Deletes the Google Calendar event if one exists.
+    - Preserves all relationship memory and conversation history.
+    """
+    org_uuid = await _resolve_org_uuid(current_user, db)
+    actor_str = str(getattr(current_user, "email", None) or getattr(current_user, "user_id", "system"))
+
+    try:
+        instance_uuid = uuid.UUID(req.instance_id)
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=400, detail="Invalid instance_id format.")
+
+    stmt = select(WorkflowInstance).where(WorkflowInstance.id == instance_uuid)
+    res = await db.execute(stmt)
+    workflow_inst = res.scalars().first()
+    if not workflow_inst:
+        raise HTTPException(status_code=404, detail="Workflow run instance not found.")
+    if workflow_inst.organization_id != org_uuid:
+        raise HTTPException(status_code=403, detail="Access denied: workflow run belongs to another organization.")
+
+    ctx = workflow_inst.context or {}
+    existing_prep = ctx.get("node5b_meeting_prep") or {}
+    if not existing_prep:
+        raise HTTPException(status_code=404, detail="No prep block found for this workflow run.")
+
+    google_event_id = existing_prep.get("google_event_id")
+    calendar_deleted = False
+
+    # Delete external calendar event if present
+    if google_event_id:
+        stmt_tools = select(ToolConnection).where(
+            ToolConnection.organization_id == org_uuid,
+            ToolConnection.tool_name.in_(["google_workspace", "google_calendar"]),
+        )
+        res_tools = await db.execute(stmt_tools)
+        g_conn = res_tools.scalars().first()
+        if g_conn and g_conn.status == "connected" and g_conn.encrypted_credentials:
+            try:
+                creds = decrypt_credentials(g_conn.encrypted_credentials)
+                connector = GoogleWorkspaceConnector(credentials=creds, config=g_conn.config or {})
+                calendar_deleted = await connector.delete_event(event_id=google_event_id)
+                log.info("Prep block Google Calendar event deleted", event_id=google_event_id, success=calendar_deleted)
+                try:
+                    await connector.close()
+                except Exception:
+                    pass
+            except Exception as cal_err:
+                log.warning("Google Calendar delete failed during cancel", error=str(cal_err))
+
+    # Update context
+    updated_prep = dict(existing_prep)
+    updated_prep["status"] = "cancelled"
+    updated_prep["cancelled_at"] = datetime.utcnow().isoformat()
+    updated_prep["cancelled_by"] = actor_str
+    updated_prep["cancel_reason"] = req.reason or ""
+    updated_prep["calendar_event_deleted"] = calendar_deleted
+
+    updated_ctx = dict(ctx)
+    updated_ctx["node5b_meeting_prep"] = updated_prep
+    workflow_inst.context = updated_ctx
+
+    # AuditEvent
+    audit_event = AuditEvent(
+        id=uuid.uuid4(),
+        organization_id=org_uuid,
+        actor_id=actor_str,
+        action="meeting_prep_cancelled",
+        entity_type="workflow_instance",
+        entity_id=str(instance_uuid),
+        metadata_={
+            "google_event_id": google_event_id,
+            "calendar_event_deleted": calendar_deleted,
+            "reason": req.reason,
+        },
+        created_at=datetime.utcnow(),
+    )
+    db.add(audit_event)
+    await db.commit()
+
+    # Node 5 note after cancel
+    draft_status_val = None
+    try:
+        stmt_d = select(ApprovalItem).where(
+            ApprovalItem.organization_id == org_uuid,
+            ApprovalItem.instance_id == instance_uuid,
+            ApprovalItem.review_type == "followup_email_draft",
+        ).order_by(ApprovalItem.created_at.desc())
+        res_d = await db.execute(stmt_d)
+        ad = res_d.scalars().first()
+        if ad:
+            draft_status_val = ad.status
+    except Exception:
+        pass
+
+    n5_status, n5_note = _compute_n5_status(draft_status_val, "cancelled")
+    nodes_status = [
+        PipelineNodeStatus(id="n1", title="Conversation Capture", status="completed", implemented=True, note="Audio recording and metadata preserved successfully."),
+        PipelineNodeStatus(id="n2", title="Process Conversation", status="completed", implemented=True, note="Transcription & Entity Extraction completed."),
+        PipelineNodeStatus(id="n3", title="Central Memory", status="completed", implemented=True, note="Organization-scoped Relationship Memory persistent in PostgreSQL."),
+        PipelineNodeStatus(id="n4", title="Action Generator", status="completed", implemented=True, note="Action items active and persisted in Action Center."),
+        PipelineNodeStatus(id="n5", title="Follow-up & Meeting Prep", status=n5_status, implemented=True, note=n5_note),
+    ]
+
+    return MeetingPrepCancelResponse(
+        instance_id=str(instance_uuid),
+        status="cancelled",
+        message="Prep block cancelled." + (" Google Calendar event removed." if calendar_deleted else ""),
+        nodes=nodes_status,
+    )
+
+
+# =============================================================================
+# CONTACT RESEARCH & ENRICHMENT
+# Public professional web search for a known contact.
+# Enriches Central Memory with sourced public facts.
+# =============================================================================
+
+class ContactResearchRequest(BaseModel):
+    instance_id: str = Field(..., description="WorkflowInstance ID")
+    force_refresh: bool = Field(False, description="Re-run research even if cached results exist")
+
+
+class ContactResearchResponse(BaseModel):
+    instance_id: str
+    workflow_name: str = "meeting_intelligence_followup"
+    status: str  # completed | research_unavailable | no_results | error | idempotent_reused
+    contact_name: str
+    company: Optional[str] = None
+    role: Optional[str] = None
+    provider: str = "none"
+    queries_used: List[str] = Field(default_factory=list)
+    verified_facts: List[Dict[str, Any]] = Field(default_factory=list)
+    uncertain_matches: List[Dict[str, Any]] = Field(default_factory=list)
+    ai_talking_points: List[Dict[str, Any]] = Field(default_factory=list)
+    retrieved_at: Optional[str] = None
+    error: Optional[str] = None
+    idempotent_reused: bool = False
+    message: str = ""
+
+
+@router.post("/contact-research", response_model=ContactResearchResponse)
+async def run_contact_research(
+    req: ContactResearchRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(require_any_auth),
+):
+    """
+    Public Contact Research & Enrichment for Meeting Intelligence.
+
+    Searches public professional sources for the contact resolved by Node 3
+    (Central Memory). Uses Serper.dev Google Search API when SERPER_API_KEY
+    is configured; returns status="research_unavailable" otherwise.
+
+    Results are persisted in WorkflowInstance.context["contact_research"] and
+    rehydrated by GET /runs/{instance_id}.
+
+    Idempotent: repeated calls return cached results unless force_refresh=True.
+    Tenant-isolated: enforces organization_id on every DB access.
+    """
+    org_uuid = await _resolve_org_uuid(current_user, db)
+    actor_str = str(getattr(current_user, "email", None) or getattr(current_user, "user_id", "system"))
+
+    # 1. Load and validate workflow instance
+    try:
+        instance_uuid = uuid.UUID(req.instance_id)
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=400, detail="Invalid instance_id format.")
+
+    stmt = select(WorkflowInstance).where(WorkflowInstance.id == instance_uuid)
+    res = await db.execute(stmt)
+    workflow_inst = res.scalars().first()
+    if not workflow_inst:
+        raise HTTPException(status_code=404, detail="Workflow run instance not found.")
+    if workflow_inst.organization_id != org_uuid:
+        raise HTTPException(status_code=403, detail="Access denied: workflow run belongs to another organization.")
+
+    ctx = workflow_inst.context or {}
+
+    # 2. Prerequisite: Node 3 (Central Memory) must have resolved the contact
+    node3_data = ctx.get("node3_central_memory") or {}
+    contact_id_str = node3_data.get("contact_id")
+    if not contact_id_str:
+        raise HTTPException(
+            status_code=400,
+            detail="Node 3 (Central Memory) has not completed for this run. Contact research requires a resolved contact.",
+        )
+
+    # 3. Load contact from DB (for name / company / role)
+    try:
+        contact_uuid = uuid.UUID(contact_id_str)
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=400, detail="Invalid contact_id in Central Memory context.")
+
+    stmt_c = select(RelationshipContact).where(
+        RelationshipContact.id == contact_uuid,
+        RelationshipContact.organization_id == org_uuid,
+    )
+    res_c = await db.execute(stmt_c)
+    contact = res_c.scalars().first()
+    if not contact:
+        raise HTTPException(status_code=400, detail="Contact not found for this organization.")
+
+    contact_name = contact.name
+    contact_role = (contact.role or "").strip() or None
+    c_meta = getattr(contact, "metadata_", {}) or {}
+    contact_company = (contact.company or c_meta.get("company") or "").strip() or None
+
+    # 4. Idempotency check — return cached unless force_refresh
+    researcher = ContactResearcher()
+    cache_key = researcher.build_cache_key(contact_name, contact_company, contact_role, org_uuid)
+
+    existing_research = ctx.get("contact_research") or {}
+    if (
+        not req.force_refresh
+        and existing_research.get("cache_key") == cache_key
+        and existing_research.get("status") in ("completed", "no_results", "research_unavailable")
+    ):
+        log.info("Contact research: idempotent reuse", instance_id=str(instance_uuid), contact=contact_name)
+        return ContactResearchResponse(
+            instance_id=str(instance_uuid),
+            status=existing_research.get("status", "completed"),
+            contact_name=contact_name,
+            company=contact_company,
+            role=contact_role,
+            provider=existing_research.get("provider", "none"),
+            queries_used=existing_research.get("queries_used", []),
+            verified_facts=existing_research.get("verified_facts", []),
+            uncertain_matches=existing_research.get("uncertain_matches", []),
+            ai_talking_points=existing_research.get("ai_talking_points", []),
+            retrieved_at=existing_research.get("retrieved_at"),
+            error=existing_research.get("error"),
+            idempotent_reused=True,
+            message="Contact research results retrieved from cache.",
+        )
+
+    # 5. Build memory summary for talking point context
+    existing_memory_summary: Optional[str] = None
+    try:
+        conv_id_str = node3_data.get("conversation_id")
+        if conv_id_str:
+            stmt_conv = select(RelationshipConversation).where(
+                RelationshipConversation.id == uuid.UUID(conv_id_str)
+            )
+            res_conv = await db.execute(stmt_conv)
+            conv_obj = res_conv.scalars().first()
+            if conv_obj and conv_obj.summary:
+                existing_memory_summary = conv_obj.summary
+    except Exception:
+        pass
+
+    # 6. Run research
+    log.info("Running contact research", contact=contact_name, company=contact_company, org=str(org_uuid))
+    try:
+        result = await researcher.research(
+            contact_name=contact_name,
+            company=contact_company,
+            role=contact_role,
+            org_uuid=org_uuid,
+            existing_memory_summary=existing_memory_summary,
+        )
+    except Exception as e:
+        log.error("ContactResearcher.research raised unexpectedly", error=str(e))
+        result = {
+            "status": "error",
+            "contact_name": contact_name,
+            "company": contact_company,
+            "role": contact_role,
+            "queries_used": [],
+            "verified_facts": [],
+            "uncertain_matches": [],
+            "ai_talking_points": [],
+            "retrieved_at": datetime.utcnow().isoformat(),
+            "provider": "none",
+            "error": str(e),
+        }
+
+    # 7. Persist in WorkflowInstance context (tenant-scoped)
+    research_ctx = {
+        **result,
+        "cache_key": cache_key,
+        "contact_id": contact_id_str,
+        "instance_id": str(instance_uuid),
+        "organization_id": str(org_uuid),
+        "researched_by": actor_str,
+    }
+    updated_ctx = dict(ctx)
+    updated_ctx["contact_research"] = research_ctx
+    workflow_inst.context = updated_ctx
+
+    # 8. AuditEvent
+    audit_event = AuditEvent(
+        id=uuid.uuid4(),
+        organization_id=org_uuid,
+        actor_id=actor_str,
+        action="contact_research_completed",
+        entity_type="workflow_instance",
+        entity_id=str(instance_uuid),
+        metadata_={
+            "contact_name": contact_name,
+            "status": result.get("status"),
+            "provider": result.get("provider", "none"),
+            "verified_facts_count": len(result.get("verified_facts", [])),
+            "uncertain_matches_count": len(result.get("uncertain_matches", [])),
+            "force_refresh": req.force_refresh,
+        },
+        created_at=datetime.utcnow(),
+    )
+    db.add(audit_event)
+    await db.commit()
+
+    # 9. Build human-readable message
+    status = result.get("status", "error")
+    if status == "research_unavailable":
+        msg = "Research provider not configured. Set SERPER_API_KEY to enable public contact research."
+    elif status == "no_results":
+        msg = f"No public results found for {contact_name}. Try adding company or role context."
+    elif status == "completed":
+        n_verified = len(result.get("verified_facts", []))
+        n_uncertain = len(result.get("uncertain_matches", []))
+        msg = f"Research completed: {n_verified} verified fact(s), {n_uncertain} uncertain match(es) found."
+    elif status == "error":
+        msg = f"Research failed: {result.get('error', 'Unknown error')}."
+    else:
+        msg = f"Research status: {status}."
+
+    return ContactResearchResponse(
+        instance_id=str(instance_uuid),
+        status=status,
+        contact_name=contact_name,
+        company=contact_company,
+        role=contact_role,
+        provider=result.get("provider", "none"),
+        queries_used=result.get("queries_used", []),
+        verified_facts=result.get("verified_facts", []),
+        uncertain_matches=result.get("uncertain_matches", []),
+        ai_talking_points=result.get("ai_talking_points", []),
+        retrieved_at=result.get("retrieved_at"),
+        error=result.get("error"),
+        idempotent_reused=False,
+        message=msg,
+    )
+
+
+# =============================================================================
+# Daily Briefing Feature (Meeting Intelligence Operational Roll-up)
+# =============================================================================
+
+class DailyBriefingGenerateRequest(BaseModel):
+    date: Optional[str] = None  # YYYY-MM-DD (defaults to local today)
+    force: bool = True
+
+
+class DailyBriefingConfigResponse(BaseModel):
+    enabled: bool = True
+    time: str = "08:00"
+    timezone: str = "UTC"
+    scheduled_time_utc: str = "08:00"
+    delivery_channel: str = "dashboard"
+
+
+class DailyBriefingConfigUpdateRequest(BaseModel):
+    enabled: Optional[bool] = True
+    time: Optional[str] = "08:00"  # HH:MM
+    timezone: Optional[str] = "UTC"
+    delivery_channel: Optional[str] = "dashboard"
+
+    @field_validator("time")
+    @classmethod
+    def validate_time(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            if not re.match(r"^([01]\d|2[0-3]):[0-5]\d$", v):
+                raise ValueError("time must be in 24-hour HH:MM format (e.g. '08:00', '17:30')")
+        return v
+
+    @field_validator("timezone")
+    @classmethod
+    def validate_timezone(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            try:
+                import zoneinfo
+                zoneinfo.ZoneInfo(v)
+            except Exception:
+                raise ValueError(f"Invalid IANA timezone: '{v}'")
+        return v
+
+
+class DailyBriefingResponse(BaseModel):
+    id: Optional[str] = None
+    organization_id: str
+    briefing_date: str
+    status: str  # "ready" | "generating" | "not_generated" | "error"
+    content: Dict[str, Any] = Field(default_factory=dict)
+    sections: Dict[str, Any] = Field(default_factory=dict)
+    scheduled_time_utc: Optional[str] = None
+    generated_at: Optional[str] = None
+    generated_by: Optional[str] = None
+    error: Optional[str] = None
+    config: Optional[DailyBriefingConfigResponse] = None
+    message: Optional[str] = None
+
+
+def _calc_scheduled_utc(time_str: str, tz_name: str) -> str:
+    """
+    Given local HH:MM (e.g. 08:00) and an IANA timezone (e.g. America/New_York),
+    calculate the corresponding UTC HH:MM string.
+    """
+    if not tz_name or tz_name.upper() == "UTC":
+        return time_str
+    try:
+        import zoneinfo
+        tz = zoneinfo.ZoneInfo(tz_name)
+        parts = time_str.split(":")
+        h, m = int(parts[0]), int(parts[1])
+        now_dt = datetime.now(timezone.utc)
+        local_dt = datetime(now_dt.year, now_dt.month, now_dt.day, h, m, tzinfo=tz)
+        utc_dt = local_dt.astimezone(timezone.utc)
+        return utc_dt.strftime("%H:%M")
+    except Exception:
+        return time_str
+
+
+@router.get("/daily-briefing", response_model=DailyBriefingResponse)
+async def get_daily_briefing(
+    date_str: Optional[str] = Query(None, alias="date"),
+    generate_if_missing: bool = Query(True),
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(require_any_auth),
+):
+    """
+    Retrieve the Daily Briefing for this organization.
+    If no date is provided, defaults to today in the organization's configured timezone.
+    If not yet generated and generate_if_missing is True, generates on demand.
+    """
+    org_uuid = await _resolve_org_uuid(current_user, db)
+
+    # 1. Fetch organization settings for timezone & schedule
+    stmt_org = select(Organization).where(Organization.id == org_uuid)
+    res_org = await db.execute(stmt_org)
+    org = res_org.scalars().first()
+    p_cfg = (org.profile_config or {}) if org else {}
+    b_cfg = p_cfg.get("daily_briefing_config") or {}
+
+    org_tz = b_cfg.get("timezone", "UTC")
+    time_str = b_cfg.get("time", "08:00")
+    enabled = b_cfg.get("enabled", True)
+    scheduled_utc = b_cfg.get("scheduled_time_utc") or _calc_scheduled_utc(time_str, org_tz)
+
+    cfg_resp = DailyBriefingConfigResponse(
+        enabled=enabled,
+        time=time_str,
+        timezone=org_tz,
+        scheduled_time_utc=scheduled_utc,
+        delivery_channel=b_cfg.get("delivery_channel", "dashboard"),
+    )
+
+    # 2. Determine target briefing date
+    if not date_str:
+        if not org_tz or org_tz.upper() == "UTC":
+            date_str = datetime.now(timezone.utc).date().isoformat()
+        else:
+            try:
+                import zoneinfo
+                tz = zoneinfo.ZoneInfo(org_tz)
+                date_str = datetime.now(tz).date().isoformat()
+            except Exception:
+                date_str = datetime.now(timezone.utc).date().isoformat()
+
+    # 3. Look up existing briefing in DB
+    stmt = select(DailyBriefing).where(
+        DailyBriefing.organization_id == org_uuid,
+        DailyBriefing.briefing_date == date_str,
+    )
+    res = await db.execute(stmt)
+    briefing = res.scalars().first()
+
+    if not briefing and generate_if_missing:
+        # Generate on demand
+        briefing = await generate_daily_briefing(
+            db=db,
+            org_uuid=org_uuid,
+            briefing_date=date_str,
+            generated_by="auto_view",
+            scheduled_time_utc=scheduled_utc,
+            org_timezone=org_tz,
+            force=False,
+        )
+
+    if not briefing:
+        return DailyBriefingResponse(
+            organization_id=str(org_uuid),
+            briefing_date=date_str,
+            status="not_generated",
+            content={},
+            scheduled_time_utc=scheduled_utc,
+            config=cfg_resp,
+            message="No briefing generated for this date yet. Click 'Generate Now' to create one.",
+        )
+
+    return DailyBriefingResponse(
+        id=str(briefing.id),
+        organization_id=str(briefing.organization_id),
+        briefing_date=briefing.briefing_date,
+        status=briefing.status,
+        content=briefing.content or {},
+        sections=briefing.content or {},
+        scheduled_time_utc=briefing.scheduled_time_utc or scheduled_utc,
+        generated_at=briefing.generated_at.isoformat() if briefing.generated_at else None,
+        generated_by=(briefing.content or {}).get("generated_by", "manual"),
+        error=briefing.error,
+        config=cfg_resp,
+        message="Daily briefing loaded successfully.",
+    )
+
+
+@router.post("/daily-briefing/generate", response_model=DailyBriefingResponse)
+async def generate_daily_briefing_endpoint(
+    req: DailyBriefingGenerateRequest = DailyBriefingGenerateRequest(),
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(require_any_auth),
+):
+    """
+    Manually generate or regenerate the Daily Briefing for this organization.
+    Idempotent: updates the existing record if one already exists for this date.
+    Never duplicates rows.
+    """
+    org_uuid = await _resolve_org_uuid(current_user, db)
+
+    # 1. Fetch organization settings for timezone & schedule
+    stmt_org = select(Organization).where(Organization.id == org_uuid)
+    res_org = await db.execute(stmt_org)
+    org = res_org.scalars().first()
+    p_cfg = (org.profile_config or {}) if org else {}
+    b_cfg = p_cfg.get("daily_briefing_config") or {}
+
+    org_tz = b_cfg.get("timezone", "UTC")
+    time_str = b_cfg.get("time", "08:00")
+    enabled = b_cfg.get("enabled", True)
+    scheduled_utc = b_cfg.get("scheduled_time_utc") or _calc_scheduled_utc(time_str, org_tz)
+
+    cfg_resp = DailyBriefingConfigResponse(
+        enabled=enabled,
+        time=time_str,
+        timezone=org_tz,
+        scheduled_time_utc=scheduled_utc,
+        delivery_channel=b_cfg.get("delivery_channel", "dashboard"),
+    )
+
+    # 2. Determine target briefing date
+    target_date = req.date
+    if not target_date:
+        if not org_tz or org_tz.upper() == "UTC":
+            target_date = datetime.now(timezone.utc).date().isoformat()
+        else:
+            try:
+                import zoneinfo
+                tz = zoneinfo.ZoneInfo(org_tz)
+                target_date = datetime.now(tz).date().isoformat()
+            except Exception:
+                target_date = datetime.now(timezone.utc).date().isoformat()
+
+    # 3. Generate or regenerate
+    briefing = await generate_daily_briefing(
+        db=db,
+        org_uuid=org_uuid,
+        briefing_date=target_date,
+        generated_by="manual",
+        scheduled_time_utc=scheduled_utc,
+        org_timezone=org_tz,
+        force=req.force,
+    )
+
+    # 4. Record AuditEvent
+    actor_str = str(getattr(current_user, "email", None) or getattr(current_user, "user_id", "admin"))
+    audit = AuditEvent(
+        id=uuid.uuid4(),
+        organization_id=org_uuid,
+        actor_id=actor_str,
+        action="daily_briefing_generated",
+        entity_type="daily_briefing",
+        entity_id=str(briefing.id),
+        metadata_={
+            "briefing_date": target_date,
+            "status": briefing.status,
+            "meetings_count": len((briefing.content or {}).get("meetings_today", [])),
+            "commitments_count": len((briefing.content or {}).get("pending_commitments", [])),
+            "generated_by": "manual",
+        },
+        created_at=datetime.utcnow(),
+    )
+    db.add(audit)
+    await db.commit()
+
+    # 5. Broadcast live update via Redis PubSub
+    try:
+        from core.redis_pubsub import pubsub as redis_pubsub
+        await redis_pubsub.publish("daily_briefing_updated", {
+            "organization_id": str(org_uuid),
+            "briefing_id": str(briefing.id),
+            "briefing_date": briefing.briefing_date,
+            "status": briefing.status,
+        })
+    except Exception:
+        pass
+
+    return DailyBriefingResponse(
+        id=str(briefing.id),
+        organization_id=str(briefing.organization_id),
+        briefing_date=briefing.briefing_date,
+        status=briefing.status,
+        content=briefing.content or {},
+        sections=briefing.content or {},
+        scheduled_time_utc=briefing.scheduled_time_utc or scheduled_utc,
+        generated_at=briefing.generated_at.isoformat() if briefing.generated_at else None,
+        generated_by="manual",
+        error=briefing.error,
+        config=cfg_resp,
+        message="Daily briefing generated successfully.",
+    )
+
+
+@router.get("/daily-briefing/config", response_model=DailyBriefingConfigResponse)
+async def get_daily_briefing_config(
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(require_any_auth),
+):
+    """
+    Get the configured Daily Briefing schedule and timezone for this organization.
+    """
+    org_uuid = await _resolve_org_uuid(current_user, db)
+    stmt = select(Organization).where(Organization.id == org_uuid)
+    res = await db.execute(stmt)
+    org = res.scalars().first()
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found.")
+
+    p_cfg = org.profile_config or {}
+    b_cfg = p_cfg.get("daily_briefing_config") or {}
+
+    org_tz = b_cfg.get("timezone", "UTC")
+    time_str = b_cfg.get("time", "08:00")
+    scheduled_utc = b_cfg.get("scheduled_time_utc") or _calc_scheduled_utc(time_str, org_tz)
+
+    return DailyBriefingConfigResponse(
+        enabled=b_cfg.get("enabled", True),
+        time=time_str,
+        timezone=org_tz,
+        scheduled_time_utc=scheduled_utc,
+        delivery_channel=b_cfg.get("delivery_channel", "dashboard"),
+    )
+
+
+@router.put("/daily-briefing/config", response_model=DailyBriefingConfigResponse)
+async def update_daily_briefing_config(
+    req: DailyBriefingConfigUpdateRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(require_any_auth),
+):
+    """
+    Update the Daily Briefing delivery time, timezone, and enable/disable state.
+    """
+    org_uuid = await _resolve_org_uuid(current_user, db)
+    stmt = select(Organization).where(Organization.id == org_uuid)
+    res = await db.execute(stmt)
+    org = res.scalars().first()
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found.")
+
+    # Validate time format (HH:MM)
+    time_str = (req.time or "08:00").strip()
+    if not re.match(r"^(?:[01]\d|2[0-3]):[0-5]\d$", time_str):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid time format. Must be 24-hour HH:MM (e.g. '08:00', '14:30')."
+        )
+
+    # Validate timezone using zoneinfo
+    tz_name = (req.timezone or "UTC").strip()
+    try:
+        import zoneinfo
+        _ = zoneinfo.ZoneInfo(tz_name)
+    except Exception:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid IANA timezone '{tz_name}'. Examples: 'UTC', 'America/New_York', 'Europe/London', 'Asia/Kolkata'."
+        )
+
+    scheduled_utc = _calc_scheduled_utc(time_str, tz_name)
+
+    # Persist in profile_config
+    p_cfg = dict(org.profile_config or {})
+    b_cfg = {
+        "enabled": req.enabled if req.enabled is not None else True,
+        "time": time_str,
+        "timezone": tz_name,
+        "scheduled_time_utc": scheduled_utc,
+        "delivery_channel": req.delivery_channel or "dashboard",
+        "updated_at": datetime.utcnow().isoformat(),
+        "updated_by": str(getattr(current_user, "email", None) or getattr(current_user, "user_id", "admin")),
+    }
+    p_cfg["daily_briefing_config"] = b_cfg
+    org.profile_config = p_cfg
+    await db.commit()
+    await db.refresh(org)
+
+    log.info("Daily briefing config updated", org=str(org_uuid), time=time_str, tz=tz_name, utc=scheduled_utc)
+
+    return DailyBriefingConfigResponse(
+        enabled=b_cfg["enabled"],
+        time=b_cfg["time"],
+        timezone=b_cfg["timezone"],
+        scheduled_time_utc=scheduled_utc,
+        delivery_channel=b_cfg["delivery_channel"],
+    )
+
+
+# =============================================================================
+# A. BUSINESS CONTEXT PACK ENDPOINTS
+# =============================================================================
+
+class BusinessContextResponse(BaseModel):
+    services_offerings: str = ""
+    target_market: str = ""
+    business_priorities: str = ""
+    additional_context: str = ""
+    updated_at: Optional[str] = None
+    updated_by: Optional[str] = None
+    message: Optional[str] = None
+
+
+class BusinessContextUpdateRequest(BaseModel):
+    services_offerings: Optional[str] = ""
+    target_market: Optional[str] = ""
+    business_priorities: Optional[str] = ""
+    additional_context: Optional[str] = ""
+
+
+@router.get("/business-context", response_model=BusinessContextResponse)
+async def get_business_context_endpoint(
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(require_any_auth),
+):
+    """
+    Retrieve organization-scoped Business Context Pack.
+    Safe with empty context. Strict tenant isolation.
+    """
+    org_uuid = await _resolve_org_uuid(current_user, db)
+    ctx = await get_business_context(db, org_uuid)
+    return BusinessContextResponse(**ctx)
+
+
+@router.put("/business-context", response_model=BusinessContextResponse)
+async def update_business_context_endpoint(
+    req: BusinessContextUpdateRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(require_any_auth),
+):
+    """
+    Update organization-scoped Business Context Pack.
+    Persists services/offerings, target market, priorities, and additional context.
+    """
+    org_uuid = await _resolve_org_uuid(current_user, db)
+    updated_by = str(getattr(current_user, "email", None) or getattr(current_user, "user_id", "admin"))
+    updated = await update_business_context(
+        db=db,
+        org_uuid=org_uuid,
+        data=req.dict(),
+        updated_by=updated_by,
+    )
+    return BusinessContextResponse(
+        **updated,
+        message="Business Context Pack updated successfully.",
+    )
+
+
+# =============================================================================
+# B. NATURAL-LANGUAGE CENTRAL MEMORY QUERY ENDPOINTS
+# =============================================================================
+
+class MemorySourceReference(BaseModel):
+    conversation_id: str
+    title: str
+    date: Optional[str] = None
+    contact_name: Optional[str] = None
+    workflow_instance_id: Optional[str] = None
+
+
+class MemoryItemProvenance(BaseModel):
+    item_id: str
+    category: str
+    content: str
+    is_ai_generated: bool = False
+    source_conversation_id: str
+    source_conversation_title: str
+    source_date: Optional[str] = None
+    contact_name: Optional[str] = None
+
+
+class CentralMemoryQueryRequest(BaseModel):
+    query: str = Field(..., min_length=1, description="Question over relationship memory")
+    contact_name: Optional[str] = None
+    contact_id: Optional[str] = None
+    use_llm: bool = True
+
+
+class CentralMemoryQueryResponse(BaseModel):
+    query: str
+    answer: str
+    has_results: bool
+    confidence: str = "high"
+    sources: List[MemorySourceReference] = Field(default_factory=list)
+    cited_items: List[MemoryItemProvenance] = Field(default_factory=list)
+    execution_strategy: str = "deterministic"
+    matched_contact: Optional[str] = None
+
+
+@router.post("/central-memory/query", response_model=CentralMemoryQueryResponse)
+async def query_central_memory_endpoint(
+    req: CentralMemoryQueryRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(require_any_auth),
+):
+    """
+    Ask natural-language questions over stored Central Memory and relationship intelligence.
+    Grounded strictly in persisted conversations & memory items with full provenance references.
+    Strict tenant isolation: queries only the authenticated user's organization data.
+    Read-only: does not mutate or insert database rows.
+    """
+    org_uuid = await _resolve_org_uuid(current_user, db)
+    result = await query_central_memory(
+        db=db,
+        org_uuid=org_uuid,
+        query_text=req.query,
+        contact_name_filter=req.contact_name,
+        contact_id_filter=req.contact_id,
+        use_llm=req.use_llm,
+    )
+    return CentralMemoryQueryResponse(**result)
+
+
+@router.post("/memory/query", response_model=CentralMemoryQueryResponse)
+async def query_memory_alias_endpoint(
+    req: CentralMemoryQueryRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(require_any_auth),
+):
+    """Alias for /central-memory/query."""
+    return await query_central_memory_endpoint(req=req, db=db, current_user=current_user)
+
+
+# =============================================================================
+# AUTOMATIC CONVERSATION INGESTION & CAPTURE
+# =============================================================================
+
+# ── Schemas ──────────────────────────────────────────────────────────────────
+
+class ConversationIngestRequest(BaseModel):
+    external_event_id: str = Field(..., min_length=1, description="External provider/webhook event ID for strong idempotency")
+    conversation_title: str = Field(..., min_length=1, description="Title or topic of the conversation")
+    contact_name: str = Field(..., min_length=1, description="Primary contact or attendee name")
+    source: str = Field(default="webhook", description="Ingestion source (e.g. webhook, api, zoom_webhook, google_meet, upload)")
+    conversation_type: str = Field(default="Online Meeting", description="Online Meeting, Phone Call, or In-Person Meeting")
+    conversation_date: Optional[str] = Field(default=None, description="Date of conversation (YYYY-MM-DD); defaults to today")
+    language: str = Field(default="Auto Detect", description="Spoken language")
+    recording: Optional[Any] = Field(default=None, description="Audio upload reference data, filename string, or dict")
+    audio_url: Optional[str] = Field(default=None, description="External audio recording URL to download and ingest")
+    transcript_text: Optional[str] = Field(default=None, description="Pre-transcribed transcript or conversation notes text")
+    notes: Optional[str] = Field(default=None, description="Alternative field for notes or conversation transcript")
+    auto_process: bool = Field(default=True, description="Whether to execute through Node 2–5 downstream pipeline automatically")
+    metadata: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Arbitrary provider metadata or webhook headers")
+
+
+class ConversationIngestResponse(BaseModel):
+    success: bool = True
+    ingestion_id: str
+    external_event_id: str
+    instance_id: Optional[str] = None
+    status: str  # "received" | "processing" | "completed" | "failed"
+    duplicate: bool = False
+    message: str
+    conversation_title: str
+    contact_name: str
+    nodes_executed: Optional[List[str]] = None
+    error: Optional[str] = None
+
+
+class ConversationIngestionItem(BaseModel):
+    id: str
+    external_event_id: str
+    source: str
+    status: str
+    conversation_title: str
+    contact_name: str
+    conversation_type: str
+    conversation_date: str
+    language: str
+    instance_id: Optional[str] = None
+    error_message: Optional[str] = None
+    retry_count: int
+    received_at: str
+    completed_at: Optional[str] = None
+    last_attempt_at: Optional[str] = None
+
+
+class ConversationIngestionListResponse(BaseModel):
+    total: int
+    items: List[ConversationIngestionItem]
+    supported_sources: List[str] = [
+        "webhook",
+        "api",
+        "audio_upload",
+        "recording_service",
+        "google_meet",
+    ]
+    unsupported_sources: Dict[str, str] = {
+        "teams": "Microsoft Teams Graph API requires Azure AD App and Bot Framework connector (future provider)",
+        "zoom_cloud": "Zoom Cloud Recording API requires Zoom App OAuth connector (future provider)",
+        "phone_telephony": "Telephony audio streams require Twilio/SIP trunk connector (future provider)",
+        "wearables": "Hardware/wearable recorders require Bluetooth/hardware SDK connector (future provider)",
+    }
+
+
+# ── Pipeline Execution Helper ────────────────────────────────────────────────
+
+async def execute_full_meeting_intelligence_pipeline(
+    instance_id: uuid.UUID,
+    org_uuid: uuid.UUID,
+    db: AsyncSession,
+    current_user: TokenData,
+) -> Dict[str, Any]:
+    """
+    Feeds an ingested conversation through the existing 5-node Meeting Intelligence pipeline.
+    Reuses existing node processing functions directly without duplicating Node 2–5 logic.
+    """
+    executed_nodes = ["n1"]
+
+    # Node 2: Process Conversation (Transcription + Structured Extraction)
+    p2_req = ProcessConversationRequest(instance_id=str(instance_id))
+    p2_res = await process_conversation(p2_req, db=db, current_user=current_user)
+    executed_nodes.append("n2")
+
+    # Node 3: Central Memory (Deterministic contact resolution & relationship memory indexing)
+    p3_req = CentralMemoryRequest(instance_id=str(instance_id))
+    p3_res = await process_central_memory(p3_req, db=db, current_user=current_user)
+    executed_nodes.append("n3")
+
+    # Node 4: Action Generator (Commitments, waiting items, and AI suggestions)
+    p4_req = ActionGeneratorRequest(instance_id=str(instance_id))
+    p4_res = await process_action_generator(p4_req, db=db, current_user=current_user)
+    executed_nodes.append("n4")
+
+    # Node 5A: Follow-up Email Draft (Grounded draft generation, STRICTLY NO SEND)
+    p5_req = FollowupDraftRequest(instance_id=str(instance_id))
+    p5_res = await process_followup_draft(p5_req, db=db, current_user=current_user)
+    executed_nodes.append("n5a")
+
+    return {
+        "executed_nodes": executed_nodes,
+        "node2": p2_res,
+        "node3": p3_res,
+        "node4": p4_res,
+        "node5a": p5_res,
+    }
+
+
+# ── Ingestion Core Logic ──────────────────────────────────────────────────────
+
+async def ingest_conversation_core(
+    req: ConversationIngestRequest,
+    db: AsyncSession,
+    current_user: TokenData,
+    org_uuid: uuid.UUID,
+) -> ConversationIngestResponse:
+    """
+    Core implementation of automatic conversation ingestion:
+    1. Enforces idempotency via (organization_id, external_event_id).
+    2. Validates/downloads audio recording reference.
+    3. Executes Node 1 (Conversation Capture) and creates canonical WorkflowInstance.
+    4. Automatically feeds through downstream pipeline (Nodes 2–5) if auto_process is True.
+    5. Persists lifecycle status: received -> processing -> completed/failed.
+    """
+    ext_id = (req.external_event_id or "").strip()
+    if not ext_id:
+        raise HTTPException(status_code=400, detail="External event ID is required for conversation ingestion.")
+
+    title = (req.conversation_title or "").strip()
+    if not title:
+        raise HTTPException(status_code=400, detail="Conversation title is required.")
+
+    contact = (req.contact_name or "").strip()
+    if not contact:
+        raise HTTPException(status_code=400, detail="Contact name is required.")
+
+    conv_type = req.conversation_type if req.conversation_type in ["Online Meeting", "Phone Call", "In-Person Meeting"] else "Online Meeting"
+    conv_date = (req.conversation_date or "").strip() or datetime.utcnow().strftime("%Y-%m-%d")
+    lang = req.language or "Auto Detect"
+
+    # 1. Idempotency Check
+    stmt = select(ConversationIngestionRecord).where(
+        ConversationIngestionRecord.organization_id == org_uuid,
+        ConversationIngestionRecord.external_event_id == ext_id,
+    )
+    res = await db.execute(stmt)
+    existing_rec = res.scalars().first()
+
+    if existing_rec:
+        if existing_rec.status == "completed":
+            log.info("Duplicate completed conversation ingestion ignored", ext_id=ext_id, org_id=str(org_uuid))
+            return ConversationIngestResponse(
+                success=True,
+                ingestion_id=str(existing_rec.id),
+                external_event_id=existing_rec.external_event_id,
+                instance_id=str(existing_rec.instance_id) if existing_rec.instance_id else None,
+                status="completed",
+                duplicate=True,
+                message="Duplicate event ignored: conversation already ingested and processed.",
+                conversation_title=existing_rec.conversation_title,
+                contact_name=existing_rec.contact_name,
+                nodes_executed=["n1", "n2", "n3", "n4", "n5a"],
+            )
+
+        if existing_rec.status == "processing":
+            log.info("Duplicate in-flight conversation ingestion ignored", ext_id=ext_id, org_id=str(org_uuid))
+            return ConversationIngestResponse(
+                success=True,
+                ingestion_id=str(existing_rec.id),
+                external_event_id=existing_rec.external_event_id,
+                instance_id=str(existing_rec.instance_id) if existing_rec.instance_id else None,
+                status="processing",
+                duplicate=True,
+                message="Duplicate event ignored: conversation ingestion is already processing.",
+                conversation_title=existing_rec.conversation_title,
+                contact_name=existing_rec.contact_name,
+            )
+
+        # If failed, treat this call as a retry of the existing record
+        record = existing_rec
+        record.retry_count = (record.retry_count or 0) + 1
+        record.status = "processing"
+        record.last_attempt_at = datetime.utcnow()
+        record.error_message = None
+        await db.commit()
+    else:
+        # Create fresh record in "processing" state
+        record = ConversationIngestionRecord(
+            id=uuid.uuid4(),
+            organization_id=org_uuid,
+            external_event_id=ext_id,
+            source=req.source or "webhook",
+            status="processing",
+            conversation_title=title,
+            contact_name=contact,
+            conversation_type=conv_type,
+            conversation_date=conv_date,
+            language=lang,
+            recording_data={},
+            retry_count=0,
+            received_at=datetime.utcnow(),
+            last_attempt_at=datetime.utcnow(),
+            metadata_=req.metadata or {},
+        )
+        db.add(record)
+        await db.commit()
+        await db.refresh(record)
+
+    # 2. Audio / Text Validation & Resolution
+    transcript_text_val = (req.transcript_text or req.notes or "").strip()
+    recording_dict: Optional[Dict[str, Any]] = None
+
+    if isinstance(req.recording, dict) and (req.recording.get("filename") or req.recording.get("file_id") or req.recording.get("stored_path")):
+        fn = _sanitize_filename(req.recording.get("filename") or "recording.mp3")
+        recording_dict = {
+            "file_id": req.recording.get("file_id") or str(uuid.uuid4())[:12],
+            "filename": fn,
+            "size_bytes": req.recording.get("size_bytes") or 1024,
+            "content_type": req.recording.get("content_type") or "audio/mp3",
+            "stored_path": req.recording.get("stored_path") or str(STORAGE_DIR / fn).replace("\\", "/"),
+        }
+    elif isinstance(req.recording, str) and req.recording.strip():
+        fn = _sanitize_filename(req.recording.strip())
+        recording_dict = {
+            "file_id": str(uuid.uuid4())[:12],
+            "filename": fn,
+            "size_bytes": 1024,
+            "content_type": "audio/mp3",
+            "stored_path": str(STORAGE_DIR / fn).replace("\\", "/"),
+        }
+    elif req.audio_url and req.audio_url.strip():
+        try:
+            url = req.audio_url.strip()
+            parsed_fn = os.path.basename(url.split("?")[0]) or "audio_recording.mp3"
+            sanitized_fn = _sanitize_filename(parsed_fn)
+            file_id = str(uuid.uuid4())[:12]
+            stored_fn = f"{file_id}_{sanitized_fn}"
+            target_path = STORAGE_DIR / stored_fn
+
+            async with httpx.AsyncClient(timeout=30) as client:
+                resp = await client.get(url)
+                if resp.status_code == 200 and resp.content:
+                    STORAGE_DIR.mkdir(parents=True, exist_ok=True)
+                    async with aiofiles.open(target_path, "wb") as f:
+                        await f.write(resp.content)
+                    recording_dict = {
+                        "file_id": file_id,
+                        "filename": sanitized_fn,
+                        "size_bytes": len(resp.content),
+                        "content_type": resp.headers.get("content-type") or "audio/mp3",
+                        "stored_path": str(target_path).replace("\\", "/"),
+                        "source_url": url,
+                    }
+                else:
+                    raise ValueError(f"HTTP {resp.status_code} while fetching audio from {url}")
+        except Exception as dl_err:
+            log.warning("Failed to download audio from audio_url", error=str(dl_err), url=req.audio_url)
+            record.status = "failed"
+            record.error_message = f"Could not download audio from audio_url '{req.audio_url}': {str(dl_err)}"
+            await db.commit()
+            raise HTTPException(
+                status_code=400,
+                detail=record.error_message,
+            )
+    elif transcript_text_val:
+        # Pre-transcribed conversation or meeting notes payload
+        notes_id = str(uuid.uuid4())[:12]
+        recording_dict = {
+            "file_id": f"text_{notes_id}",
+            "filename": "conversation_transcript.txt",
+            "size_bytes": len(transcript_text_val.encode("utf-8")),
+            "content_type": "text/plain",
+            "type": "transcript_notes",
+        }
+
+    if not recording_dict:
+        record.status = "failed"
+        record.error_message = "Missing or invalid audio recording reference: valid recording object, audio_url, or transcript_text is required."
+        await db.commit()
+        raise HTTPException(
+            status_code=400,
+            detail=record.error_message,
+        )
+
+    # 3. Node 1: Create or Reuse Canonical WorkflowInstance
+    if record.instance_id:
+        stmt_inst = select(WorkflowInstance).where(WorkflowInstance.id == record.instance_id)
+        r_inst = await db.execute(stmt_inst)
+        workflow_inst = r_inst.scalars().first()
+    else:
+        workflow_inst = None
+
+    if not workflow_inst:
+        instance_id = uuid.uuid4()
+        captured_data = {
+            "conversation_title": title,
+            "contact_name": contact,
+            "conversation_type": conv_type,
+            "recording": recording_dict,
+            "language": lang,
+            "conversation_date": conv_date,
+            "captured_at": datetime.utcnow().isoformat(),
+            "external_event_id": ext_id,
+            "ingestion_source": record.source,
+            "transcript_text": transcript_text_val if transcript_text_val else None,
+        }
+
+        workflow_inst = WorkflowInstance(
+            id=instance_id,
+            organization_id=org_uuid,
+            workflow_name="meeting_intelligence_followup",
+            status="capture_completed",
+            current_node="n1",
+            trigger_payload={
+                "source": f"auto_ingestion_{record.source}",
+                **captured_data,
+            },
+            context={
+                "conversation_capture": captured_data,
+                "implemented_nodes": ["n1"],
+                "pending_nodes": ["n2", "n3", "n4", "n5"],
+            },
+            started_at=datetime.utcnow(),
+        )
+        db.add(workflow_inst)
+
+        node1_run = AgentRunRecord(
+            id=uuid.uuid4(),
+            instance_id=instance_id,
+            node_id="n1",
+            agent_capability="conversation_capture",
+            status="completed",
+            duration_ms=45,
+            tools_used=["auto_ingest_audio"],
+            completed_at=datetime.utcnow(),
+        )
+        db.add(node1_run)
+
+        audit_evt = AuditEvent(
+            id=uuid.uuid4(),
+            organization_id=org_uuid,
+            actor_id=str(getattr(current_user, "email", "auto_ingest")),
+            action="conversation_auto_ingested",
+            entity_type="workflow_instance",
+            entity_id=str(instance_id),
+            metadata_={
+                "workflow": "meeting_intelligence_followup",
+                "conversation_title": title,
+                "contact_name": contact,
+                "external_event_id": ext_id,
+                "source": record.source,
+            },
+        )
+        db.add(audit_evt)
+
+        record.instance_id = instance_id
+        record.recording_data = recording_dict
+        await db.commit()
+        await db.refresh(record)
+
+    # 4. Downstream Pipeline Execution (Nodes 2–5)
+    if req.auto_process:
+        try:
+            pipe_res = await execute_full_meeting_intelligence_pipeline(
+                instance_id=record.instance_id,
+                org_uuid=org_uuid,
+                db=db,
+                current_user=current_user,
+            )
+            record.status = "completed"
+            record.completed_at = datetime.utcnow()
+            record.error_message = None
+            await db.commit()
+
+            return ConversationIngestResponse(
+                success=True,
+                ingestion_id=str(record.id),
+                external_event_id=record.external_event_id,
+                instance_id=str(record.instance_id),
+                status="completed",
+                duplicate=False,
+                message="Conversation successfully ingested and processed through Nodes 1–5.",
+                conversation_title=record.conversation_title,
+                contact_name=record.contact_name,
+                nodes_executed=pipe_res.get("executed_nodes", ["n1", "n2", "n3", "n4", "n5a"]),
+            )
+        except Exception as pipe_err:
+            log.error("Automatic ingestion pipeline failed", error=str(pipe_err), instance_id=str(record.instance_id))
+            record.status = "failed"
+            record.error_message = str(pipe_err)
+            await db.commit()
+            raise HTTPException(
+                status_code=502,
+                detail=f"Automatic conversation ingestion pipeline failed: {str(pipe_err)}. Ingestion is recorded as failed and retryable.",
+            )
+
+    # If auto_process is False, Node 1 is captured and saved
+    record.status = "completed"
+    record.completed_at = datetime.utcnow()
+    record.error_message = None
+    await db.commit()
+
+    return ConversationIngestResponse(
+        success=True,
+        ingestion_id=str(record.id),
+        external_event_id=record.external_event_id,
+        instance_id=str(record.instance_id),
+        status="capture_completed",
+        duplicate=False,
+        message="Conversation captured and preserved successfully. Downstream processing pending.",
+        conversation_title=record.conversation_title,
+        contact_name=record.contact_name,
+        nodes_executed=["n1"],
+    )
+
+
+# ── Ingestion Endpoints ───────────────────────────────────────────────────────
+
+@router.post("/ingest", response_model=ConversationIngestResponse)
+async def ingest_conversation(
+    req: ConversationIngestRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(require_any_auth),
+):
+    """
+    Automatic Conversation Ingestion API:
+    Ingests an external recording event into the Meeting Intelligence workflow.
+    Validates audio reference, enforces strict idempotency by external_event_id,
+    creates canonical Node 1 run, and automatically triggers Nodes 2–5.
+    """
+    org_uuid = await _resolve_org_uuid(current_user, db)
+    return await ingest_conversation_core(
+        req=req,
+        db=db,
+        current_user=current_user,
+        org_uuid=org_uuid,
+    )
+
+
+@router.post("/webhook/{tenant_id}", response_model=ConversationIngestResponse)
+async def ingest_conversation_webhook(
+    tenant_id: str,
+    req: ConversationIngestRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Inbound Webhook Endpoint for external meeting recorders and platforms.
+    Resolves tenant, validates payload, and executes automatic ingestion pipeline.
+    """
+    org = None
+    try:
+        t_uuid = uuid.UUID(tenant_id)
+        stmt = select(Organization).where(Organization.id == t_uuid)
+        r = await db.execute(stmt)
+        org = r.scalars().first()
+    except (ValueError, TypeError):
+        pass
+
+    if not org:
+        stmt = select(Organization).where(Organization.name == tenant_id)
+        r = await db.execute(stmt)
+        org = r.scalars().first()
+
+    if not org:
+        raise HTTPException(status_code=404, detail=f"Organization / tenant '{tenant_id}' not found.")
+
+    webhook_user = TokenData(
+        user_id="webhook",
+        email=f"webhook@{org.name.lower().replace(' ', '-')}.local",
+        role="org_admin",
+        organization_id=str(org.id),
+        tenant_id=str(org.id),
+    )
+
+    return await ingest_conversation_core(
+        req=req,
+        db=db,
+        current_user=webhook_user,
+        org_uuid=org.id,
+    )
+
+
+@router.get("/ingestions", response_model=ConversationIngestionListResponse)
+async def list_conversation_ingestions(
+    limit: int = Query(default=50, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(require_any_auth),
+):
+    """List recent automatic conversation ingestions for the current organization."""
+    org_uuid = await _resolve_org_uuid(current_user, db)
+    stmt = (
+        select(ConversationIngestionRecord)
+        .where(ConversationIngestionRecord.organization_id == org_uuid)
+        .order_by(ConversationIngestionRecord.received_at.desc())
+        .limit(limit)
+    )
+    res = await db.execute(stmt)
+    records = list(res.scalars().all())
+
+    items = [
+        ConversationIngestionItem(
+            id=str(r.id),
+            external_event_id=r.external_event_id,
+            source=r.source,
+            status=r.status,
+            conversation_title=r.conversation_title,
+            contact_name=r.contact_name,
+            conversation_type=r.conversation_type,
+            conversation_date=r.conversation_date,
+            language=r.language,
+            instance_id=str(r.instance_id) if r.instance_id else None,
+            error_message=r.error_message,
+            retry_count=r.retry_count,
+            received_at=r.received_at.isoformat() if r.received_at else "",
+            completed_at=r.completed_at.isoformat() if r.completed_at else None,
+            last_attempt_at=r.last_attempt_at.isoformat() if r.last_attempt_at else None,
+        )
+        for r in records
+    ]
+
+    return ConversationIngestionListResponse(
+        total=len(items),
+        items=items,
+    )
+
+
+@router.get("/ingestions/{ingestion_id}", response_model=ConversationIngestionItem)
+async def get_conversation_ingestion(
+    ingestion_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(require_any_auth),
+):
+    """Retrieve status and details of a specific conversation ingestion record."""
+    org_uuid = await _resolve_org_uuid(current_user, db)
+    try:
+        ingest_uuid = uuid.UUID(ingestion_id)
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=400, detail="Invalid ingestion_id format.")
+
+    stmt = select(ConversationIngestionRecord).where(ConversationIngestionRecord.id == ingest_uuid)
+    res = await db.execute(stmt)
+    record = res.scalars().first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Ingestion record not found.")
+
+    if record.organization_id != org_uuid:
+        raise HTTPException(status_code=403, detail="Access denied: ingestion record belongs to another organization.")
+
+    return ConversationIngestionItem(
+        id=str(record.id),
+        external_event_id=record.external_event_id,
+        source=record.source,
+        status=record.status,
+        conversation_title=record.conversation_title,
+        contact_name=record.contact_name,
+        conversation_type=record.conversation_type,
+        conversation_date=record.conversation_date,
+        language=record.language,
+        instance_id=str(record.instance_id) if record.instance_id else None,
+        error_message=record.error_message,
+        retry_count=record.retry_count,
+        received_at=record.received_at.isoformat() if record.received_at else "",
+        completed_at=record.completed_at.isoformat() if record.completed_at else None,
+        last_attempt_at=record.last_attempt_at.isoformat() if record.last_attempt_at else None,
+    )
+
+
+@router.post("/ingestions/{ingestion_id}/retry", response_model=ConversationIngestResponse)
+async def retry_conversation_ingestion(
+    ingestion_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(require_any_auth),
+):
+    """
+    Retry a failed conversation ingestion.
+    Reuses existing WorkflowInstance and re-runs downstream pipeline without duplication.
+    """
+    org_uuid = await _resolve_org_uuid(current_user, db)
+    try:
+        ingest_uuid = uuid.UUID(ingestion_id)
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=400, detail="Invalid ingestion_id format.")
+
+    stmt = select(ConversationIngestionRecord).where(ConversationIngestionRecord.id == ingest_uuid)
+    res = await db.execute(stmt)
+    record = res.scalars().first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Ingestion record not found.")
+
+    if record.organization_id != org_uuid:
+        raise HTTPException(status_code=403, detail="Access denied: ingestion record belongs to another organization.")
+
+    if record.status == "completed":
+        return ConversationIngestResponse(
+            success=True,
+            ingestion_id=str(record.id),
+            external_event_id=record.external_event_id,
+            instance_id=str(record.instance_id),
+            status="completed",
+            duplicate=True,
+            message="Ingestion already completed successfully.",
+            conversation_title=record.conversation_title,
+            contact_name=record.contact_name,
+        )
+
+    # Retry downstream pipeline
+    record.status = "processing"
+    record.retry_count = (record.retry_count or 0) + 1
+    record.last_attempt_at = datetime.utcnow()
+    await db.commit()
+
+    try:
+        pipe_res = await execute_full_meeting_intelligence_pipeline(
+            instance_id=record.instance_id,
+            org_uuid=org_uuid,
+            db=db,
+            current_user=current_user,
+        )
+        record.status = "completed"
+        record.completed_at = datetime.utcnow()
+        record.error_message = None
+        await db.commit()
+
+        return ConversationIngestResponse(
+            success=True,
+            ingestion_id=str(record.id),
+            external_event_id=record.external_event_id,
+            instance_id=str(record.instance_id),
+            status="completed",
+            duplicate=False,
+            message="Ingestion retry succeeded: processed through Nodes 1–5.",
+            conversation_title=record.conversation_title,
+            contact_name=record.contact_name,
+            nodes_executed=pipe_res.get("executed_nodes"),
+        )
+    except Exception as retry_err:
+        record.status = "failed"
+        record.error_message = str(retry_err)
+        await db.commit()
+        raise HTTPException(
+            status_code=502,
+            detail=f"Retry failed: {str(retry_err)}. Ingestion remains failed and retryable.",
+        )
+
+
+# Aliases
+automatic_conversation_ingest = ingest_conversation
+webhook_conversation_ingest = ingest_conversation_webhook
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Hands-Free Google Meet Capture (Recall.ai Meeting Bot)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class GoogleMeetCaptureRequest(BaseModel):
+    meeting_url: str = Field(..., description="Google Meet URL (e.g. https://meet.google.com/abc-defg-hij)")
+    conversation_title: Optional[str] = Field(None, description="Optional title for the conversation")
+    contact_name: Optional[str] = Field(None, description="Primary contact name or participant identifier")
+    bot_name: Optional[str] = Field("SMBFlow Notetaker", description="Display name for Recall meeting bot")
+
+
+class GoogleMeetCaptureResponse(BaseModel):
+    success: bool
+    ingestion_id: str
+    external_event_id: str
+    bot_id: str
+    status: str
+    message: str
+    meeting_url: str
+    conversation_title: Optional[str] = None
+    contact_name: Optional[str] = None
+    notice: str = (
+        "The Recall.ai meeting bot will join your Google Meet. "
+        "Google Meet admission and security controls apply. "
+        "Please ensure participants are informed that transcription is active."
+    )
+
+
+class GoogleMeetStatusResponse(BaseModel):
+    success: bool
+    ingestion_id: str
+    external_event_id: str
+    bot_id: Optional[str] = None
+    status: str
+    meeting_url: Optional[str] = None
+    conversation_title: Optional[str] = None
+    contact_name: Optional[str] = None
+    instance_id: Optional[str] = None
+    error_message: Optional[str] = None
+    received_at: str
+    completed_at: Optional[str] = None
+
+
+def validate_google_meet_url(url: str) -> str:
+    """
+    Validate that url is a valid Google Meet link.
+    Accepts:
+    - https://meet.google.com/abc-defg-hij
+    - http://meet.google.com/abc-defg-hij
+    - meet.google.com/abc-defg-hij
+    - query params e.g. ?authuser=0
+    Rejects:
+    - non-meet domains (e.g. zoom.us, teams.microsoft.com, google.com)
+    - empty or missing url
+    - missing meeting code
+    """
+    if not url or not isinstance(url, str) or not url.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Google Meet URL is required."
+        )
+
+    cleaned = url.strip()
+    if not cleaned.startswith("http://") and not cleaned.startswith("https://"):
+        if cleaned.startswith("meet.google.com") or cleaned.startswith("www.meet.google.com"):
+            cleaned = f"https://{cleaned}"
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid Google Meet URL: Must be a valid Google Meet link (e.g. https://meet.google.com/abc-defg-hij)."
+            )
+
+    try:
+        parsed = urlparse(cleaned)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid Google Meet URL format.")
+
+    if parsed.netloc.lower() not in ("meet.google.com", "www.meet.google.com"):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid meeting URL domain '{parsed.netloc}': Only Google Meet URLs (https://meet.google.com/...) are supported."
+        )
+
+    path = parsed.path.strip("/")
+    if not path or path.lower() in ("landing", "new"):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid Google Meet URL: Meeting code path is required (e.g. https://meet.google.com/abc-defg-hij)."
+        )
+
+    if not re.match(r"^[a-zA-Z0-9\-_/]+$", path):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid Google Meet URL format."
+        )
+
+    normalized = f"https://meet.google.com/{path}"
+    if parsed.query:
+        normalized += f"?{parsed.query}"
+    return normalized
+
+
+def verify_recall_webhook_signature(
+    raw_body: bytes,
+    headers: dict,
+    secret: Optional[str],
+    tolerance: Optional[int] = 300,
+) -> bool:
+    """
+    Verifies Recall.ai inbound webhook authenticity using Recall's official Svix verification mechanism:
+    - webhook-id (or svix-id)
+    - webhook-timestamp (or svix-timestamp)
+    - webhook-signature (or svix-signature)
+    - raw request body
+    - Recall workspace verification secret ('whsec_...')
+
+    Strictly adheres to official Recall.ai / Svix documentation. Custom headers (such as
+    x-recall-signature, webhook-signature-256, or bearer tokens) are intentionally not supported.
+    """
+    if not secret or not secret.strip():
+        return True
+
+    lower_headers = {str(k).lower(): str(v) for k, v in headers.items()}
+
+    webhook_id = lower_headers.get("webhook-id") or lower_headers.get("svix-id")
+    webhook_timestamp = lower_headers.get("webhook-timestamp") or lower_headers.get("svix-timestamp")
+    webhook_signature = lower_headers.get("webhook-signature") or lower_headers.get("svix-signature")
+
+    if not webhook_id or not webhook_timestamp or not webhook_signature:
+        log.warning("Recall webhook verification failed: missing required headers (webhook-id, webhook-timestamp, webhook-signature)")
+        return False
+
+    # Timestamp freshness validation (prevent replay attacks)
+    if tolerance is not None and tolerance > 0:
+        try:
+            ts_int = int(webhook_timestamp)
+            current_time = int(time.time())
+            if abs(ts_int - current_time) > tolerance:
+                log.warning(
+                    "Recall webhook timestamp outside allowed tolerance window",
+                    timestamp=ts_int,
+                    current_time=current_time,
+                    tolerance=tolerance,
+                )
+                return False
+        except (ValueError, TypeError):
+            log.warning("Recall webhook verification failed: invalid timestamp header", timestamp=webhook_timestamp)
+            return False
+
+    try:
+        clean_secret = secret.strip()
+        if clean_secret.startswith("whsec_"):
+            raw_sec = clean_secret[len("whsec_"):]
+            missing_padding = len(raw_sec) % 4
+            if missing_padding:
+                raw_sec += "=" * (4 - missing_padding)
+            try:
+                secret_bytes = base64.b64decode(raw_sec)
+            except Exception:
+                secret_bytes = clean_secret[len("whsec_"):].encode("utf-8")
+        else:
+            try:
+                missing_padding = len(clean_secret) % 4
+                padded = clean_secret + ("=" * (4 - missing_padding) if missing_padding else "")
+                secret_bytes = base64.b64decode(padded)
+            except Exception:
+                secret_bytes = clean_secret.encode("utf-8")
+
+        signed_content = f"{webhook_id}.{webhook_timestamp}.".encode("utf-8") + raw_body
+        expected_sig = base64.b64encode(
+            hmac.new(secret_bytes, signed_content, hashlib.sha256).digest()
+        ).decode("utf-8")
+
+        # The signature header may contain space-separated signatures (e.g. key rotation)
+        signatures = webhook_signature.split(" ")
+        for sig in signatures:
+            sig_val = sig.strip()
+            if sig_val.startswith("v1,"):
+                sig_val = sig_val[3:]
+            if hmac.compare_digest(sig_val, expected_sig):
+                return True
+
+        log.warning("Recall webhook signature mismatch")
+        return False
+    except Exception as e:
+        log.warning("Recall webhook signature verification exception", error=str(e))
+        return False
+
+
+def extract_recall_transcript_text(data: Any) -> tuple[str, Optional[str]]:
+    """
+    Extracts formatted text transcript and primary external participant name from Recall.ai data.
+    Supports official Recall transcript payload structures:
+    - List of utterances with 'participant.name' or 'speaker' and 'words' or 'text'
+    - Object with 'parts', 'transcript', 'data', or 'words'
+    """
+    if not data:
+        return "", None
+
+    if isinstance(data, str):
+        return data.strip(), None
+
+    raw = data
+    if isinstance(data, dict):
+        raw = (
+            data.get("parts")
+            or data.get("transcript")
+            or data.get("data", {}).get("transcript")
+            or data.get("data", {}).get("parts")
+            or data.get("bot", {}).get("transcript")
+            or data.get("results")
+            or data.get("words")
+            or []
+        )
+        if isinstance(raw, str):
+            return raw.strip(), None
+
+    if not isinstance(raw, list):
+        return "", None
+
+    lines = []
+    speakers_seen = []
+
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+
+        participant_obj = item.get("participant")
+        participant_name = ""
+        if isinstance(participant_obj, dict):
+            participant_name = str(participant_obj.get("name") or "").strip()
+        elif isinstance(participant_obj, str):
+            participant_name = participant_obj.strip()
+
+        speaker = (
+            participant_name
+            or item.get("speaker")
+            or item.get("name")
+            or "Speaker"
+        ).strip()
+
+        if (
+            speaker
+            and speaker.lower() not in ("speaker", "unknown", "smbflow notetaker", "smbflow bot", "bot", "notetaker")
+            and speaker not in speakers_seen
+        ):
+            speakers_seen.append(speaker)
+
+        if "text" in item and isinstance(item["text"], str):
+            lines.append(f"{speaker}: {item['text'].strip()}")
+        elif "words" in item and isinstance(item["words"], list):
+            words = [w.get("text", "") for w in item["words"] if isinstance(w, dict) and w.get("text")]
+            if words:
+                lines.append(f"{speaker}: {' '.join(words)}")
+        elif "word" in item:
+            lines.append(f"{speaker}: {item.get('word', '')}")
+
+    formatted = "\n".join(lines).strip()
+    primary_contact = speakers_seen[0] if speakers_seen else None
+    return formatted, primary_contact
+
+
+# Memory set to prevent duplicate webhook transport deliveries
+_PROCESSED_RECALL_WEBHOOK_IDS: set[str] = set()
+
+
+async def _resolve_recall_connector(
+    org_uuid: uuid.UUID,
+    db: AsyncSession,
+) -> Optional[RecallAIConnector]:
+    """
+    Resolve RecallAIConnector using organization's ToolConnection or environment RECALL_API_KEY.
+    Supports RECALL_REGION.
+    """
+    # 1. First check ToolConnection for the organization
+    stmt = select(ToolConnection).where(
+        ToolConnection.organization_id == org_uuid,
+        ToolConnection.tool_name.in_(["recall_ai", "recall", "google_meet"]),
+        ToolConnection.status == "connected",
+    )
+    res = await db.execute(stmt)
+    conn = res.scalars().first()
+    if conn and conn.encrypted_credentials:
+        try:
+            creds = decrypt_credentials(conn.encrypted_credentials)
+            config = dict(conn.config or {})
+            if "region" not in config and os.getenv("RECALL_REGION"):
+                config["region"] = os.getenv("RECALL_REGION")
+            return RecallAIConnector(credentials=creds, config=config)
+        except Exception as e:
+            log.warning("Failed to decrypt Recall ToolConnection credentials", org_id=str(org_uuid), error=str(e))
+
+    # 2. Check environment variable RECALL_API_KEY
+    env_key = os.getenv("RECALL_API_KEY", "").strip()
+    if env_key:
+        region = os.getenv("RECALL_REGION", RecallAIConnector.DEFAULT_REGION).strip().lower()
+        return RecallAIConnector(
+            credentials={"api_key": env_key, "region": region},
+            config={"region": region},
+        )
+
+    return None
+
+
+async def _resolve_recall_webhook_secret(
+    org_uuid: Optional[uuid.UUID],
+    db: AsyncSession,
+) -> Optional[str]:
+    """Resolve webhook secret from ToolConnection or environment."""
+    if org_uuid:
+        stmt = select(ToolConnection).where(
+            ToolConnection.organization_id == org_uuid,
+            ToolConnection.tool_name.in_(["recall_ai", "recall", "google_meet"]),
+            ToolConnection.status == "connected",
+        )
+        res = await db.execute(stmt)
+        conn = res.scalars().first()
+        if conn and conn.config and conn.config.get("webhook_secret"):
+            return conn.config["webhook_secret"]
+
+    return os.getenv("RECALL_WEBHOOK_SECRET", "").strip() or None
+
+
+# ── Google Meet Capture & Recall Webhook Endpoints ────────────────────────────
+
+@router.post("/google-meet/capture", response_model=GoogleMeetCaptureResponse)
+async def capture_google_meet(
+    req: GoogleMeetCaptureRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(require_any_auth),
+):
+    """
+    Hands-Free Google Meet Capture:
+    1. Validates Google Meet URL.
+    2. Verifies Recall.ai integration / API key availability.
+    3. Dispatches autonomous meeting bot to join Google Meet via Recall.ai.
+    4. Persists ConversationIngestionRecord in 'waiting_for_bot' status.
+    5. Returns bot identifier, ingestion ID, and participant consent notice.
+    """
+    org_uuid = await _resolve_org_uuid(current_user, db)
+    normalized_url = validate_google_meet_url(req.meeting_url)
+
+    connector = await _resolve_recall_connector(org_uuid, db)
+    if not connector or not connector.api_key:
+        raise HTTPException(
+            status_code=400,
+            detail="Google Meet capture is not configured. RECALL_API_KEY is not set or connected Recall.ai integration is missing.",
+        )
+
+    try:
+        bot_res = await connector.create_bot(
+            meeting_url=normalized_url,
+            bot_name=req.bot_name or "SMBFlow Notetaker",
+            metadata={
+                "organization_id": str(org_uuid),
+                "tenant_id": str(org_uuid),
+                "conversation_title": req.conversation_title or "Google Meet Capture",
+                "contact_name": req.contact_name or "Meeting Participants",
+            },
+        )
+    except Exception as bot_err:
+        log.error("Failed to create Recall.ai meeting bot", org_id=str(org_uuid), error=str(bot_err))
+        raise HTTPException(
+            status_code=502,
+            detail=f"Recall.ai bot creation failed: {str(bot_err)}",
+        )
+
+    bot_id = str(bot_res.get("id") or bot_res.get("bot_id") or "")
+    if not bot_id:
+        raise HTTPException(
+            status_code=502,
+            detail="Recall.ai returned an invalid response missing bot identifier.",
+        )
+
+    ext_event_id = f"recall_{bot_id}"
+
+    # Check for existing record (idempotency)
+    stmt = select(ConversationIngestionRecord).where(
+        ConversationIngestionRecord.organization_id == org_uuid,
+        ConversationIngestionRecord.external_event_id == ext_event_id,
+    )
+    res = await db.execute(stmt)
+    record = res.scalars().first()
+
+    title = (req.conversation_title or "").strip() or f"Google Meet ({datetime.utcnow().strftime('%Y-%m-%d %H:%M')})"
+    contact = (req.contact_name or "").strip() or "Meeting Participants"
+
+    if not record:
+        record = ConversationIngestionRecord(
+            id=uuid.uuid4(),
+            organization_id=org_uuid,
+            external_event_id=ext_event_id,
+            source="google_meet_recall",
+            status="waiting_for_bot",
+            conversation_title=title,
+            contact_name=contact,
+            conversation_type="Online Meeting",
+            conversation_date=datetime.utcnow().strftime("%Y-%m-%d"),
+            language="Auto Detect",
+            recording_data={
+                "type": "recall_google_meet",
+                "meeting_url": normalized_url,
+                "bot_id": bot_id,
+                "bot_name": req.bot_name or "SMBFlow Notetaker",
+            },
+            retry_count=0,
+            received_at=datetime.utcnow(),
+            last_attempt_at=datetime.utcnow(),
+            metadata_={
+                "provider": "recall_ai",
+                "bot_id": bot_id,
+                "meeting_url": normalized_url,
+                "recall_bot_status": "waiting_for_bot",
+            },
+        )
+        db.add(record)
+        await db.commit()
+        await db.refresh(record)
+
+    return GoogleMeetCaptureResponse(
+        success=True,
+        ingestion_id=str(record.id),
+        external_event_id=record.external_event_id,
+        bot_id=bot_id,
+        status=record.status,
+        message="Recall.ai meeting bot scheduled to join Google Meet.",
+        meeting_url=normalized_url,
+        conversation_title=record.conversation_title,
+        contact_name=record.contact_name,
+    )
+
+
+@router.get("/google-meet/status/{identifier}", response_model=GoogleMeetStatusResponse)
+async def get_google_meet_status(
+    identifier: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(require_any_auth),
+):
+    """
+    Get live status of a Google Meet capture by ingestion ID, bot ID, or external event ID.
+    Enforces strict tenant isolation.
+    """
+    org_uuid = await _resolve_org_uuid(current_user, db)
+
+    record = None
+    # 1. Try matching by record UUID
+    try:
+        u_id = uuid.UUID(identifier)
+        stmt = select(ConversationIngestionRecord).where(ConversationIngestionRecord.id == u_id)
+        r = await db.execute(stmt)
+        record = r.scalars().first()
+    except (ValueError, TypeError):
+        pass
+
+    # 2. Try matching by external_event_id
+    if not record:
+        target_ext_id = identifier if identifier.startswith("recall_") else f"recall_{identifier}"
+        stmt = select(ConversationIngestionRecord).where(
+            ConversationIngestionRecord.external_event_id == target_ext_id
+        )
+        r = await db.execute(stmt)
+        record = r.scalars().first()
+
+    if not record:
+        raise HTTPException(status_code=404, detail="Google Meet capture record not found.")
+
+    if record.organization_id != org_uuid:
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied: Google Meet capture record belongs to another organization.",
+        )
+
+    rec_data = record.recording_data or {}
+    bot_id = rec_data.get("bot_id") or (record.metadata_ or {}).get("bot_id")
+    meeting_url = rec_data.get("meeting_url") or (record.metadata_ or {}).get("meeting_url")
+
+    return GoogleMeetStatusResponse(
+        success=True,
+        ingestion_id=str(record.id),
+        external_event_id=record.external_event_id,
+        bot_id=bot_id,
+        status=record.status,
+        meeting_url=meeting_url,
+        conversation_title=record.conversation_title,
+        contact_name=record.contact_name,
+        instance_id=str(record.instance_id) if record.instance_id else None,
+        error_message=record.error_message,
+        received_at=record.received_at.isoformat() if record.received_at else "",
+        completed_at=record.completed_at.isoformat() if record.completed_at else None,
+    )
+
+
+@router.post("/recall/webhook")
+@router.post("/recall/webhook/{tenant_id}")
+@router.post("/google-meet/webhook")
+async def recall_webhook_handler(
+    request: Request,
+    tenant_id: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Inbound Webhook Receiver for Recall.ai Meeting Bot events.
+    1. Verifies webhook signature / secret authenticity.
+    2. Updates bot lifecycle status (waiting_for_bot -> bot_joined -> capturing).
+    3. On meeting completion / transcript delivery:
+       - Extracts and formats conversation transcript.
+       - Enforces strict idempotency on external_event_id = recall_{bot_id}.
+       - Dispatches directly to existing ingest_conversation_core pipeline (Nodes 1–5).
+    """
+    raw_body = await request.body()
+    lower_headers = {str(k).lower(): str(v) for k, v in request.headers.items()}
+    webhook_id = lower_headers.get("webhook-id") or lower_headers.get("svix-id")
+
+    # Fast duplicate webhook rejection at transport layer
+    if webhook_id and webhook_id in _PROCESSED_RECALL_WEBHOOK_IDS:
+        log.info("Duplicate Recall webhook ID ignored", webhook_id=webhook_id)
+        return {
+            "success": True,
+            "duplicate": True,
+            "status": "duplicate",
+            "message": f"Duplicate webhook ID {webhook_id} ignored.",
+        }
+
+    try:
+        payload = json.loads(raw_body.decode("utf-8")) if raw_body else {}
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON body.")
+
+    data = payload.get("data", {}) if isinstance(payload.get("data"), dict) else {}
+    bot_id = str(data.get("bot_id") or data.get("id") or (data.get("bot", {}).get("id") if isinstance(data.get("bot"), dict) else "") or payload.get("bot_id") or "")
+
+    if not bot_id:
+        raise HTTPException(status_code=400, detail="Recall webhook missing bot identifier.")
+
+    ext_event_id = f"recall_{bot_id}"
+
+    # Locate existing Ingestion record
+    stmt = select(ConversationIngestionRecord).where(
+        ConversationIngestionRecord.external_event_id == ext_event_id
+    )
+    res = await db.execute(stmt)
+    record = res.scalars().first()
+
+    # If tenant_id was passed in path, enforce tenant match
+    if tenant_id and record:
+        try:
+            t_uuid = uuid.UUID(tenant_id)
+            if record.organization_id != t_uuid:
+                raise HTTPException(status_code=403, detail="Tenant ID mismatch for Recall bot.")
+        except ValueError:
+            pass
+
+    # Webhook authenticity verification using official Recall Svix signature
+    org_uuid = record.organization_id if record else None
+    secret = await _resolve_recall_webhook_secret(org_uuid, db)
+    if secret:
+        is_valid = verify_recall_webhook_signature(raw_body, dict(request.headers), secret)
+        if not is_valid:
+            raise HTTPException(status_code=401, detail="Invalid Recall.ai webhook signature.")
+
+    if not record:
+        log.warning("Recall webhook received for unknown bot", bot_id=bot_id)
+        return {
+            "success": False,
+            "status": "not_found",
+            "message": f"No active ingestion record found for Recall bot {bot_id}.",
+        }
+
+    # Application-level Idempotency Check: if already completed
+    if record.status == "completed":
+        log.info("Duplicate completed Recall webhook received, skipping processing", bot_id=bot_id)
+        return {
+            "success": True,
+            "duplicate": True,
+            "status": "completed",
+            "ingestion_id": str(record.id),
+            "instance_id": str(record.instance_id) if record.instance_id else None,
+            "message": "Duplicate event ignored: conversation already ingested and processed.",
+        }
+
+    # If already processing
+    if record.status == "processing":
+        log.info("Duplicate in-flight Recall webhook received, skipping processing", bot_id=bot_id)
+        return {
+            "success": True,
+            "duplicate": True,
+            "status": "processing",
+            "ingestion_id": str(record.id),
+            "message": "Duplicate event ignored: conversation ingestion is already processing.",
+        }
+
+    # Register webhook ID to prevent immediate duplicate deliveries
+    if webhook_id:
+        if len(_PROCESSED_RECALL_WEBHOOK_IDS) > 2000:
+            _PROCESSED_RECALL_WEBHOOK_IDS.clear()
+        _PROCESSED_RECALL_WEBHOOK_IDS.add(webhook_id)
+
+    event = str(payload.get("event") or "").lower()
+    inner_data = data.get("data", {}) if isinstance(data.get("data"), dict) else {}
+    status_code = str(data.get("status", {}).get("code") or inner_data.get("code") or "").lower()
+    sub_code = str(data.get("status", {}).get("sub_code") or inner_data.get("sub_code") or "").strip()
+
+    # 1. Bot status change (bot.status_change)
+    if "status_change" in event or "status-change" in event:
+        if status_code in ("joining_call", "in_waiting_room"):
+            record.status = "waiting_for_bot"
+            record.metadata_ = {**(record.metadata_ or {}), "recall_bot_status": status_code}
+            await db.commit()
+            return {"success": True, "status": record.status, "message": "Bot is joining / waiting for admission."}
+        elif status_code in ("in_call_recording", "in_call_not_recording", "call_active"):
+            record.status = "bot_joined"
+            record.metadata_ = {**(record.metadata_ or {}), "recall_bot_status": status_code}
+            await db.commit()
+            return {"success": True, "status": record.status, "message": "Bot joined Google Meet and is capturing."}
+        elif status_code in ("fatal", "analysis_failed"):
+            record.status = "failed"
+            record.error_message = (
+                sub_code
+                or data.get("status", {}).get("message")
+                or "Recall bot encountered a fatal error or admission was denied."
+            )
+            record.metadata_ = {**(record.metadata_ or {}), "recall_bot_status": status_code}
+            await db.commit()
+            return {"success": True, "status": record.status, "message": "Bot failed."}
+
+    # 2. Recording events (recording.done / recording.failed)
+    if event == "recording.done":
+        rec_id = str(data.get("recording", {}).get("id") or data.get("recording_id") or "")
+        record.status = "processing_transcript"
+        record.recording_data = {**(record.recording_data or {}), "recording_id": rec_id}
+        await db.commit()
+        return {"success": True, "status": record.status, "message": "Recall recording completed. Waiting for transcript."}
+
+    if event == "recording.failed":
+        record.status = "failed"
+        err_msg = f"Recall recording failed: {sub_code or 'recording_failed'}"
+        record.error_message = err_msg
+        await db.commit()
+        return {"success": True, "status": "failed", "message": err_msg}
+
+    # 3. Transcription failure (transcript.failed)
+    if event == "transcript.failed":
+        record.status = "failed"
+        err_msg = f"Recall transcript failed: {sub_code or 'transcript_failed'}"
+        record.error_message = err_msg
+        await db.commit()
+        return {"success": True, "status": "failed", "message": err_msg}
+
+    # 4. Transcription complete (transcript.done, bot.complete, or meeting completed)
+    has_transcript = bool(
+        data.get("transcript")
+        or (isinstance(data.get("bot"), dict) and data["bot"].get("transcript"))
+        or payload.get("transcript")
+    )
+    is_completed_event = (
+        event in ("transcript.done", "bot.complete", "transcription.done")
+        or "complete" in event
+        or "done" in event
+        or status_code in ("done", "call_ended")
+        or has_transcript
+    )
+
+    if is_completed_event:
+        record.status = "processing_transcript"
+        await db.commit()
+
+        # Retrieve transcript
+        formatted_transcript = ""
+        detected_speaker = None
+
+        connector = await _resolve_recall_connector(record.organization_id, db)
+
+        # 4a. Direct download_url in data
+        dl_url = (
+            data.get("download_url")
+            or inner_data.get("download_url")
+            or data.get("provider_data_download_url")
+            or inner_data.get("provider_data_download_url")
+        )
+        if dl_url and connector:
+            try:
+                raw_json = await connector.download_transcript_json(dl_url)
+                formatted_transcript, detected_speaker = extract_recall_transcript_text(raw_json)
+            except Exception as e:
+                log.warning("Failed to download transcript from download_url", url=dl_url, error=str(e))
+
+        # 4b. Via transcript_id
+        if not formatted_transcript.strip():
+            transcript_id = str(data.get("transcript", {}).get("id") or data.get("transcript_id") or "")
+            if transcript_id and connector:
+                try:
+                    t_meta = await connector.get_transcript(transcript_id)
+                    t_dl = (
+                        t_meta.get("data", {}).get("download_url")
+                        or t_meta.get("download_url")
+                        or t_meta.get("data", {}).get("provider_data_download_url")
+                    )
+                    if t_dl:
+                        raw_json = await connector.download_transcript_json(t_dl)
+                        formatted_transcript, detected_speaker = extract_recall_transcript_text(raw_json)
+                    else:
+                        formatted_transcript, detected_speaker = extract_recall_transcript_text(t_meta)
+                except Exception as e:
+                    log.warning("Failed to retrieve transcript by ID", transcript_id=transcript_id, error=str(e))
+
+        # 4c. Direct transcript payload in data or payload
+        if not formatted_transcript.strip():
+            formatted_transcript, detected_speaker = extract_recall_transcript_text(payload.get("data") or payload)
+
+        # 4d. Fallback: query bot endpoint
+        if not formatted_transcript.strip() and connector:
+            try:
+                raw_transcript = await connector.get_bot_transcript(bot_id)
+                formatted_transcript, detected_speaker = extract_recall_transcript_text(raw_transcript)
+            except Exception as t_err:
+                log.warning("Could not fetch transcript from Recall API", bot_id=bot_id, error=str(t_err))
+
+        if not formatted_transcript.strip():
+            formatted_transcript = "Google Meet session completed. Spoken audio conversation recorded."
+
+        contact_name = detected_speaker or record.contact_name or "Meeting Participants"
+
+        ingest_req = ConversationIngestRequest(
+            external_event_id=ext_event_id,
+            source="google_meet_recall",
+            conversation_title=record.conversation_title or f"Google Meet ({record.conversation_date})",
+            contact_name=contact_name,
+            conversation_type="Online Meeting",
+            conversation_date=record.conversation_date,
+            language=record.language or "Auto Detect",
+            transcript_text=formatted_transcript,
+            auto_process=True,
+            metadata={
+                "provider": "recall_ai",
+                "bot_id": bot_id,
+                "meeting_url": record.recording_data.get("meeting_url") if isinstance(record.recording_data, dict) else "",
+            },
+        )
+
+        webhook_user = TokenData(
+            user_id=f"recall_bot_{bot_id}",
+            email=f"recall-bot@{str(record.organization_id)[:8]}.local",
+            role="org_admin",
+            organization_id=str(record.organization_id),
+            tenant_id=str(record.organization_id),
+        )
+
+        # Reuse existing automatic conversation ingestion pipeline (Nodes 1–5)!
+        return await ingest_conversation_core(
+            req=ingest_req,
+            db=db,
+            current_user=webhook_user,
+            org_uuid=record.organization_id,
+        )
+
+    return {"success": True, "status": record.status, "message": f"Recall webhook event '{event}' handled."}
+
+
+# ??? Live Google Meet & OAuth Integration (from main) ?????????????
 class GoogleMeetTurn(BaseModel):
     timestamp: str
     speaker: str

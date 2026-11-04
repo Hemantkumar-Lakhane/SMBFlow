@@ -1115,3 +1115,166 @@ class GenericRESTConnector(BaseConnector):
 
     async def health_check(self) -> bool:
         return bool(self._base_url and self._api_key)
+
+
+class RecallAIConnector(BaseConnector):
+    """
+    Recall.ai Meeting Bot Connector.
+    Dispatches autonomous meeting bots to Google Meet (and other platforms) to
+    record, transcribe, and stream meeting audio into SMBFlow.
+    Uses RECALL_API_KEY and RECALL_REGION from environment or credentials dict.
+    Official base URL structure: https://{RECALL_REGION}.recall.ai/api/v1
+    """
+
+    DEFAULT_REGION = "us-west-2"
+    DEFAULT_BASE_URL = "https://us-west-2.recall.ai/api/v1"
+
+    def __init__(self, credentials: dict = None, config: dict = None):
+        credentials = credentials or {}
+        config = config or {}
+        super().__init__(credentials, config)
+        self.api_key = (
+            credentials.get("api_key")
+            or credentials.get("recall_api_key")
+            or os.getenv("RECALL_API_KEY", "")
+        )
+        self.region = (
+            config.get("region")
+            or credentials.get("region")
+            or os.getenv("RECALL_REGION")
+            or self.DEFAULT_REGION
+        ).strip().lower()
+
+        if config.get("base_url") or os.getenv("RECALL_API_URL"):
+            self.base_url = (config.get("base_url") or os.getenv("RECALL_API_URL")).rstrip("/")
+        else:
+            self.base_url = f"https://{self.region}.recall.ai/api/v1"
+
+        self.bot_name = config.get("bot_name") or "SMBFlow Notetaker"
+
+    async def authenticate(self) -> bool:
+        return bool(self.api_key and self.api_key.strip())
+
+    async def _get_client(self) -> httpx.AsyncClient:
+        if not self._client:
+            self._client = httpx.AsyncClient(timeout=30)
+        return self._client
+
+    async def _request(self, method: str, endpoint: str, data: dict = None, params: dict = None) -> dict:
+        url = f"{self.base_url}{endpoint}"
+        key_val = self.api_key.strip()
+        auth_header = key_val if key_val.startswith("Token ") else f"Token {key_val}"
+        headers = {
+            "Authorization": auth_header,
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
+        client = await self._get_client()
+        try:
+            if method.upper() == "POST":
+                resp = await client.post(url, headers=headers, json=data or {}, params=params)
+            elif method.upper() == "GET":
+                resp = await client.get(url, headers=headers, params=params)
+            else:
+                resp = await client.request(method, url, headers=headers, json=data, params=params)
+            resp.raise_for_status()
+            return resp.json()
+        except httpx.HTTPStatusError as e:
+            self._log.error("Recall API request error", endpoint=endpoint, status_code=e.response.status_code, error=str(e))
+            raise
+        except Exception as e:
+            self._log.error("Recall API call failed", endpoint=endpoint, error=str(e))
+            raise
+
+    async def create_bot(
+        self,
+        meeting_url: str,
+        bot_name: Optional[str] = None,
+        transcription_options: Optional[dict] = None,
+        metadata: Optional[dict] = None,
+    ) -> dict:
+        """
+        Create and dispatch a Recall.ai meeting bot to join a meeting.
+        """
+        if not self.api_key:
+            raise ValueError("RECALL_API_KEY is not configured.")
+
+        payload = {
+            "meeting_url": meeting_url,
+            "bot_name": bot_name or self.bot_name,
+            "transcription_options": transcription_options or {"provider": "default"},
+        }
+        if metadata:
+            payload["metadata"] = metadata
+
+        return await self._request("POST", "/bot", data=payload)
+
+    async def get_bot(self, bot_id: str) -> dict:
+        """Get bot status and details by bot_id from /api/v1/bot/{bot_id}."""
+        return await self._request("GET", f"/bot/{bot_id}")
+
+    async def get_transcript(self, transcript_id: str) -> dict:
+        """Retrieve transcript metadata and download URL from /api/v1/transcript/{transcript_id}."""
+        return await self._request("GET", f"/transcript/{transcript_id}")
+
+    async def download_transcript_json(self, download_url: str) -> list[dict] | dict:
+        """Download raw transcript JSON from pre-signed download_url."""
+        client = await self._get_client()
+        resp = await client.get(download_url)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def get_bot_transcript(self, bot_id: str) -> list[dict] | dict:
+        """
+        Fetch transcript for a completed bot session.
+        Checks bot recordings for transcript download_url, or queries transcript endpoint.
+        """
+        try:
+            bot = await self.get_bot(bot_id)
+            recordings = bot.get("recordings", [])
+            for rec in recordings:
+                ms = rec.get("media_shortcuts", {})
+                t_shortcut = ms.get("transcript", {})
+                t_data = t_shortcut.get("data", {}) if isinstance(t_shortcut, dict) else {}
+                dl_url = t_data.get("download_url") or t_shortcut.get("download_url")
+                if dl_url:
+                    return await self.download_transcript_json(dl_url)
+                if t_data.get("parts") or t_data.get("words"):
+                    return t_data.get("parts") or t_data.get("words")
+        except Exception as e:
+            self._log.warning("Could not extract transcript from bot recordings shortcut", bot_id=bot_id, error=str(e))
+
+        # Fallback to direct /bot/{bot_id}/transcript
+        try:
+            res = await self._request("GET", f"/bot/{bot_id}/transcript")
+            if isinstance(res, list):
+                return res
+            return res.get("data", res.get("transcript", []))
+        except Exception:
+            return []
+
+    async def read(self, resource: str, filters: dict = None) -> list[dict]:
+        if resource == "bot":
+            res = await self._request("GET", "/bot", params=filters)
+            results = res.get("results", res) if isinstance(res, dict) else res
+            return results if isinstance(results, list) else [results]
+        return []
+
+    async def write(self, resource: str, data: dict) -> dict:
+        if resource == "bot":
+            return await self.create_bot(
+                meeting_url=data.get("meeting_url"),
+                bot_name=data.get("bot_name"),
+                metadata=data.get("metadata"),
+            )
+        raise NotImplementedError(f"Resource '{resource}' not supported by RecallAIConnector")
+
+    async def health_check(self) -> bool:
+        if not self.api_key:
+            return False
+        try:
+            await self._request("GET", "/bot", params={"limit": 1})
+            return True
+        except Exception:
+            return False
+
