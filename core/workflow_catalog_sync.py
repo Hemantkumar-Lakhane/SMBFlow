@@ -131,10 +131,28 @@ _DEPRECATED_OR_DUPLICATE_KEYS: dict[str, dict] = {
 
 # Manually curated metadata for workflows where the DAG _meta is sparse
 _CATALOG_OVERRIDES: dict[str, dict] = {
+    "football_agent_os": {
+        "category": "sports",
+        "status": "active",
+        "requires_explicit_assignment": False,
+        "supported_modules": ["sports", "scouting"],
+        "required_integrations": ["airtable"],
+        "required_capabilities": ["llm_analysis", "scouting_matching", "contract_valuation"],
+        "execution_handler": "api.routers.industry_workflows:execute_football_agent_os",
+    },
+    "football_intelligence": {
+        "category": "sports",
+        "status": "active",
+        "requires_explicit_assignment": False,
+        "supported_modules": ["sports", "scouting"],
+        "required_integrations": ["airtable"],
+        "required_capabilities": ["llm_analysis", "scouting_matching", "contract_valuation"],
+        "execution_handler": "api.routers.industry_workflows:execute_football_agent_os",
+    },
     "meeting_intelligence_followup": {
         "category": "productivity",
         "status": "active",
-        "requires_explicit_assignment": True,
+        "requires_explicit_assignment": False,
         "supported_modules": ["meetings", "productivity"],
         "required_integrations": ["google_workspace"],
         "required_capabilities": ["meet_transcript", "audio_transcription", "llm_analysis"],
@@ -550,9 +568,11 @@ async def sync_workflow_catalog(db: AsyncSession) -> dict:
     # ── 2. Back-fill metadata, schemas, and capabilities on existing rows ─────
     backfilled = 0
     try:
-        for wf_key, override in _CATALOG_OVERRIDES.items():
+        combined_keys = sorted(set(_CATALOG_OVERRIDES.keys()) | set(_WORKFLOW_APPLICABILITY.keys()))
+        for wf_key in combined_keys:
+            override = _CATALOG_OVERRIDES.get(wf_key, {})
             wf_result = await db.execute(
-                select(WorkflowCatalog).where(WorkflowCatalog.key == wf_key)
+                select(WorkflowCatalog).where(func.lower(WorkflowCatalog.key) == wf_key.lower())
             )
             existing_wf = wf_result.scalar_one_or_none()
             if existing_wf is None:
@@ -562,7 +582,7 @@ async def sync_workflow_catalog(db: AsyncSession) -> dict:
             correct_category = override.get("category")
             correct_scope    = applicability["scope"]
             correct_industry = applicability["industry"]
-            correct_explicit = bool(override.get("requires_explicit_assignment", False))
+            correct_explicit = False if correct_scope == "GLOBAL" else bool(override.get("requires_explicit_assignment", False))
 
             needs_update = False
             if correct_category and existing_wf.category != correct_category:
@@ -642,13 +662,15 @@ async def sync_plan_entitlements_for_new_workflows(db: AsyncSession) -> None:
     )
     existing_entitlements: set[tuple] = {(str(r[0]), str(r[1])) for r in ent_result.all()}
 
-    starter_categories = {"productivity", "sales", "marketing"}
-    free_keys = {"email_summarizer", "product_launch_sprint", "meeting_intelligence_followup"}
+    starter_categories = {"productivity", "sales", "marketing", "sports"}
+    free_keys = {"email_summarizer", "product_launch_sprint", "meeting_intelligence_followup", "football_agent_os", "football_intelligence"}
 
     to_add = []
     for wf in workflows:
         wid = str(wf.id)
-        is_global = (getattr(wf, "scope", "GLOBAL") == "GLOBAL")
+        raw_scope = (getattr(wf, "scope", "GLOBAL") or "GLOBAL").strip().upper()
+        clean_key = (getattr(wf, "key", "") or "").strip().lower()
+        is_global = (raw_scope == "GLOBAL") or (clean_key in free_keys)
 
         if growth and (str(growth.id), wid) not in existing_entitlements:
             to_add.append(PlanWorkflowEntitlement(plan_id=growth.id, workflow_id=wf.id))

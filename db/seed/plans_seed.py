@@ -25,6 +25,18 @@ from db.models.core import BillingPlan, WorkflowCatalog, PlanWorkflowEntitlement
 
 DEFAULT_CATALOG_ITEMS = [
     {
+        "name": "Football Agent AI Operating System",
+        "key": "football_agent_os",
+        "description": "Multi-country scouting & representation intelligence: contract expiry evaluation, squad tactical fit matching across Europe and Asia, and executive WhatsApp/dossier pitch drafting.",
+        "category": "sports",
+        "version": "1.0.0",
+        "pricing_model": "included",
+        "supported_modules": ["sports", "scouting"],
+        "required_integrations": ["airtable"],
+        "scope": "GLOBAL",
+        "industry": None,
+    },
+    {
         "name": "Product Launch Sprint",
         "key": "product_launch_sprint",
         "description": "Multi-channel product launch campaign builder with authentic copy & visual asset generation.",

@@ -494,3 +494,44 @@ async def test_football_workflow_global_access_authorization():
     # 3. Alias access
     res3 = await check_org_workflow_access(db, str(org.id), "football_intelligence")
     assert res3["allowed"] is True
+
+    # 4. Global workflow with legacy requires_explicit_assignment metadata flag must STILL be granted access
+    wf.metadata_ = {"requires_explicit_assignment": True}
+    res4 = await check_org_workflow_access(db, str(org.id), "football_agent_os")
+    assert res4["allowed"] is True, "Global workflow should never be blocked by requires_explicit_assignment"
+    assert res4["scope"] == "GLOBAL"
+
+    # 5. Non-global workflow without assignment must be denied and prompt for admin assignment
+    wf_custom = MagicMock()
+    wf_custom.id = uuid.uuid4()
+    wf_custom.key = "custom_enterprise_audit"
+    wf_custom.name = "Custom Enterprise Audit"
+    wf_custom.active = True
+    wf_custom.status = "published"
+    wf_custom.scope = "INDUSTRY"
+    wf_custom.industry = "saas"
+    wf_custom.metadata_ = {}
+    wf_custom_res = MagicMock()
+    wf_custom_res.scalar_one_or_none.return_value = wf_custom
+
+    ent_res = MagicMock()
+    ent_res.scalars.return_value.all.return_value = [wf_custom.id]
+
+    def custom_execute_side_effect(stmt):
+        s = str(stmt).lower()
+        if "workflow_catalog" in s:
+            return wf_custom_res
+        if "organization_subscriptions" in s:
+            return sub_res
+        if "plan_workflow_entitlements" in s:
+            return ent_res
+        if "organization_workflow_assignments" in s:
+            return empty_res
+        if "organizations" in s:
+            return org_res
+        return empty_res
+
+    db.execute.side_effect = custom_execute_side_effect
+    res5 = await check_org_workflow_access(db, str(org.id), "custom_enterprise_audit")
+    assert res5["allowed"] is False
+    assert "has not been assigned to this organization. Please request admin assignment." in res5["reason"]
