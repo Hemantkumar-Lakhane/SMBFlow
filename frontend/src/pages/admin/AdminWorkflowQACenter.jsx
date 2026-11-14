@@ -475,11 +475,10 @@ export default function AdminWorkflowQACenter() {
       <div className="flex border-b border-slate-200 dark:border-slate-800 gap-6 select-text">
         <button
           onClick={() => setActiveTab('inventory')}
-          className={`pb-3 text-sm font-semibold flex items-center gap-2 border-b-2 transition-colors select-text ${
-            activeTab === 'inventory'
-              ? 'border-blue-600 text-blue-600 dark:text-blue-400'
-              : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-          }`}
+          className={`pb-3 text-sm font-semibold flex items-center gap-2 border-b-2 transition-colors select-text ${activeTab === 'inventory'
+            ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+            : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
         >
           <Layers className="w-4 h-4" />
           <span>Workflow Testing Inventory ({filteredInventory.length !== inventory.length ? `${filteredInventory.length} of ${inventory.length}` : inventory.length})</span>
@@ -487,11 +486,10 @@ export default function AdminWorkflowQACenter() {
 
         <button
           onClick={() => setActiveTab('defects')}
-          className={`pb-3 text-sm font-semibold flex items-center gap-2 border-b-2 transition-colors select-text ${
-            activeTab === 'defects'
-              ? 'border-blue-600 text-blue-600 dark:text-blue-400'
-              : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-          }`}
+          className={`pb-3 text-sm font-semibold flex items-center gap-2 border-b-2 transition-colors select-text ${activeTab === 'defects'
+            ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+            : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
         >
           <Bug className="w-4 h-4" />
           <span>Defect & Dev Feedback Queue</span>
@@ -504,11 +502,10 @@ export default function AdminWorkflowQACenter() {
 
         <button
           onClick={() => setActiveTab('retest')}
-          className={`pb-3 text-sm font-semibold flex items-center gap-2 border-b-2 transition-colors select-text ${
-            activeTab === 'retest'
-              ? 'border-blue-600 text-blue-600 dark:text-blue-400'
-              : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-          }`}
+          className={`pb-3 text-sm font-semibold flex items-center gap-2 border-b-2 transition-colors select-text ${activeTab === 'retest'
+            ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+            : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
         >
           <RotateCcw className="w-4 h-4" />
           <span>Retest Queue ({retestQueue.length})</span>
@@ -674,11 +671,10 @@ export default function AdminWorkflowQACenter() {
                               return (
                                 <span
                                   key={t}
-                                  className={`inline-flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded-md border select-text ${
-                                    isMissing
-                                      ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
-                                      : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200/60 dark:border-slate-700/60'
-                                  }`}
+                                  className={`inline-flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded-md border select-text ${isMissing
+                                    ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200/60 dark:border-slate-700/60'
+                                    }`}
                                   title={isMissing ? `Missing credentials for ${t}` : `Configured: ${t}`}
                                 >
                                   {t}
@@ -712,16 +708,14 @@ export default function AdminWorkflowQACenter() {
                           <div className="space-y-0.5 select-text">
                             <div className="flex items-center gap-1.5 select-text">
                               <span
-                                className={`w-1.5 h-1.5 rounded-full ${
-                                  wf.latest_test.status === 'passed' ? 'bg-emerald-500' : 'bg-rose-500'
-                                }`}
+                                className={`w-1.5 h-1.5 rounded-full ${wf.latest_test.status === 'passed' ? 'bg-emerald-500' : 'bg-rose-500'
+                                  }`}
                               />
                               <span
-                                className={`text-xs font-semibold capitalize select-text ${
-                                  wf.latest_test.status === 'passed'
-                                    ? 'text-emerald-600 dark:text-emerald-400'
-                                    : 'text-rose-600 dark:text-rose-400'
-                                }`}
+                                className={`text-xs font-semibold capitalize select-text ${wf.latest_test.status === 'passed'
+                                  ? 'text-emerald-600 dark:text-emerald-400'
+                                  : 'text-rose-600 dark:text-rose-400'
+                                  }`}
                               >
                                 {wf.latest_test.status}
                               </span>
@@ -820,11 +814,10 @@ export default function AdminWorkflowQACenter() {
                   <div className="flex items-start justify-between gap-4 select-text">
                     <div className="select-text">
                       <div className="flex items-center gap-2 flex-wrap select-text">
-                        <span className={`text-xs uppercase font-bold px-2 py-0.5 rounded-full select-text ${
-                          def.severity === 'critical' ? 'bg-red-500/10 text-red-600 border border-red-500/20' :
+                        <span className={`text-xs uppercase font-bold px-2 py-0.5 rounded-full select-text ${def.severity === 'critical' ? 'bg-red-500/10 text-red-600 border border-red-500/20' :
                           def.severity === 'high' ? 'bg-orange-500/10 text-orange-600 border border-orange-500/20' :
-                          'bg-amber-500/10 text-amber-600'
-                        }`}>
+                            'bg-amber-500/10 text-amber-600'
+                          }`}>
                           {def.severity}
                         </span>
                         <h4 className="font-bold text-slate-900 dark:text-white text-base select-text">{def.title}</h4>
@@ -971,11 +964,10 @@ export default function AdminWorkflowQACenter() {
               <button
                 type="button"
                 onClick={() => setTestMode('unit')}
-                className={`p-2.5 rounded-lg border text-xs font-semibold text-left transition-all ${
-                  testMode === 'unit'
-                    ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400 ring-2 ring-blue-500/20'
-                    : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50'
-                }`}
+                className={`p-2.5 rounded-lg border text-xs font-semibold text-left transition-all ${testMode === 'unit'
+                  ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400 ring-2 ring-blue-500/20'
+                  : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50'
+                  }`}
               >
                 <div className="font-bold mb-0.5">1. Unit Test (Mock)</div>
                 <div className="text-[10px] text-slate-400 font-normal">Pure mock simulation with synthetic latencies and zero side effects.</div>
@@ -984,11 +976,10 @@ export default function AdminWorkflowQACenter() {
               <button
                 type="button"
                 onClick={() => setTestMode('integration')}
-                className={`p-2.5 rounded-lg border text-xs font-semibold text-left transition-all ${
-                  testMode === 'integration'
-                    ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400 ring-2 ring-blue-500/20'
-                    : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50'
-                }`}
+                className={`p-2.5 rounded-lg border text-xs font-semibold text-left transition-all ${testMode === 'integration'
+                  ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400 ring-2 ring-blue-500/20'
+                  : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50'
+                  }`}
               >
                 <div className="font-bold mb-0.5">2. Integration (Fixtures)</div>
                 <div className="text-[10px] text-slate-400 font-normal">Ingests real test fixtures through live LLM reasoning pipeline.</div>
@@ -997,11 +988,10 @@ export default function AdminWorkflowQACenter() {
               <button
                 type="button"
                 onClick={() => setTestMode('real_provider')}
-                className={`p-2.5 rounded-lg border text-xs font-semibold text-left transition-all ${
-                  testMode === 'real_provider'
-                    ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 ring-2 ring-emerald-500/20'
-                    : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50'
-                }`}
+                className={`p-2.5 rounded-lg border text-xs font-semibold text-left transition-all ${testMode === 'real_provider'
+                  ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 ring-2 ring-emerald-500/20'
+                  : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50'
+                  }`}
               >
                 <div className="font-bold mb-0.5">3. Real Provider Test</div>
                 <div className="text-[10px] text-slate-400 font-normal">Authorized tool bindings (Meet, Whisper, Mailgun). Refuses fake success.</div>
@@ -1138,11 +1128,10 @@ export default function AdminWorkflowQACenter() {
                         <td className="px-3 py-2 font-medium text-slate-800 dark:text-slate-200">{step.label}</td>
                         <td className="px-3 py-2 text-slate-500 font-mono text-[11px]">{step.provider}</td>
                         <td className="px-3 py-2">
-                          <span className={`px-1.5 py-0.5 rounded text-[11px] font-semibold ${
-                            step.status === 'completed' ? 'bg-emerald-500/10 text-emerald-600' :
+                          <span className={`px-1.5 py-0.5 rounded text-[11px] font-semibold ${step.status === 'completed' ? 'bg-emerald-500/10 text-emerald-600' :
                             step.status === 'preview_simulated' ? 'bg-blue-500/10 text-blue-600' :
-                            'bg-rose-500/10 text-rose-600'
-                          }`}>
+                              'bg-rose-500/10 text-rose-600'
+                            }`}>
                             {step.status}
                           </span>
                         </td>
@@ -1338,9 +1327,8 @@ export default function AdminWorkflowQACenter() {
                         <div className="text-[11px] text-slate-500">{gateSpec.details}</div>
                       </div>
                     </div>
-                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                      gateSpec.passed ? 'bg-emerald-500/10 text-emerald-600' : 'bg-rose-500/10 text-rose-600'
-                    }`}>
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${gateSpec.passed ? 'bg-emerald-500/10 text-emerald-600' : 'bg-rose-500/10 text-rose-600'
+                      }`}>
                       {gateSpec.passed ? 'PASSED' : 'BLOCKED'}
                     </span>
                   </div>
