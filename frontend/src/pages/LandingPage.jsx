@@ -37,13 +37,7 @@ import {
   History,
   Terminal,
   ExternalLink,
-  ChevronRight,
-  Maximize2,
-  Minimize2,
-  Move,
-  ZoomIn,
-  ZoomOut,
-  RotateCcw
+  ChevronRight
 } from 'lucide-react'
 
 import ToolLogo from '../components/common/ToolLogo'
@@ -126,15 +120,10 @@ export default function LandingPage() {
       : `radial-gradient(500px circle at ${x}px ${y}px, rgba(37, 99, 235, 0.08) 0%, transparent 60%)`
   }
 
-  // Interactive Canvas State (Pan, Drag & Zoom)
+  // Interactive Canvas State
   const [activeWorkflowId, setActiveWorkflowId] = useState('invoices')
   const currentWorkflow = LANDING_WORKFLOWS.find(w => w.id === activeWorkflowId) || LANDING_WORKFLOWS[0]
   const [selectedNode, setSelectedNode] = useState(currentWorkflow.nodes[0])
-  const [pan, setPan] = useState({ x: 0, y: 0 })
-  const [zoom, setZoom] = useState(1)
-  const [isPanning, setIsPanning] = useState(false)
-  const panStartRef = useRef({ x: 0, y: 0 })
-  const dragDistRef = useRef(0)
 
   // Compute bounding box for auto-centering current workflow
   const minX = Math.min(...currentWorkflow.nodes.map(n => n.x))
@@ -144,49 +133,12 @@ export default function LandingPage() {
   const graphCenterX = (minX + maxX) / 2
   const graphCenterY = (minY + maxY) / 2
 
-  // Update selected node and reset view when workflow switches
+  // Update selected node when workflow switches
   const handleSelectWorkflow = (wfId) => {
     setActiveWorkflowId(wfId)
     const wf = LANDING_WORKFLOWS.find(w => w.id === wfId) || LANDING_WORKFLOWS[0]
     setSelectedNode(wf.nodes[0])
-    setPan({ x: 0, y: 0 })
-    setZoom(1)
   }
-
-  // Mouse pan handlers: supports BOTH left-click drag AND right-click drag
-  const handleCanvasMouseDown = (e) => {
-    if (e.button === 0 || e.button === 2) {
-      setIsPanning(true)
-      panStartRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y }
-      dragDistRef.current = 0
-    }
-  }
-
-  const handleCanvasMouseMove = (e) => {
-    if (!isPanning) return
-    const newX = e.clientX - panStartRef.current.x
-    const newY = e.clientY - panStartRef.current.y
-    dragDistRef.current += Math.abs(e.movementX || 0) + Math.abs(e.movementY || 0)
-    setPan({ x: newX, y: newY })
-  }
-
-  const handleCanvasMouseUp = () => {
-    setIsPanning(false)
-  }
-
-  const handleCanvasWheel = (e) => {
-    e.preventDefault()
-    const delta = e.deltaY > 0 ? -0.08 : 0.08
-    setZoom(z => Math.min(1.8, Math.max(0.65, parseFloat((z + delta).toFixed(2)))))
-  }
-
-  const resetCanvas = () => {
-    setPan({ x: 0, y: 0 })
-    setZoom(1)
-  }
-
-  const zoomIn = () => setZoom(z => Math.min(1.8, parseFloat((z + 0.15).toFixed(2))))
-  const zoomOut = () => setZoom(z => Math.max(0.65, parseFloat((z - 0.15).toFixed(2))))
 
   // Pricing state
   const [billingCycle, setBillingCycle] = useState('monthly')
@@ -476,50 +428,17 @@ export default function LandingPage() {
               </Link>
             </div>
 
-            {/* Live SVG Graph Canvas (Interactive, Auto-Centered, Pan & Zoom) */}
+            {/* Live SVG Graph Canvas (Clean Auto-Centered Diagram, Click Node to Inspect) */}
             <div className="p-4 sm:p-6 bg-slate-50/40 dark:bg-[#0b0f17]/40">
               <div
                 className={`relative w-full h-[280px] sm:h-[300px] rounded-xl border overflow-hidden select-none transition-colors ${
-                  isPanning ? 'cursor-grabbing' : 'cursor-grab'
-                } ${
                   isDark ? 'bg-[#0b0f17] border-[#233048]' : 'bg-slate-50/70 border-slate-200'
                 }`}
-                onMouseDown={handleCanvasMouseDown}
-                onMouseMove={handleCanvasMouseMove}
-                onMouseUp={handleCanvasMouseUp}
-                onMouseLeave={handleCanvasMouseUp}
-                onContextMenu={(e) => e.preventDefault()}
-                onWheel={handleCanvasWheel}
               >
-                {/* Floating Canvas Controls */}
-                <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-white/90 dark:bg-[#121826]/90 backdrop-blur border border-slate-200 dark:border-[#233048] p-1 rounded-xl shadow-xs z-20">
-                  <button
-                    onClick={zoomIn}
-                    title="Zoom In"
-                    className="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#182234] transition-colors cursor-pointer"
-                  >
-                    <ZoomIn className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={zoomOut}
-                    title="Zoom Out"
-                    className="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#182234] transition-colors cursor-pointer"
-                  >
-                    <ZoomOut className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={resetCanvas}
-                    title="Reset & Center"
-                    className="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#182234] transition-colors cursor-pointer"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-
-                {/* Interaction Hint Pill */}
-                <div className="absolute bottom-3 left-3 text-[11px] text-slate-500 dark:text-slate-400 bg-white/80 dark:bg-[#121826]/80 backdrop-blur px-2.5 py-1 rounded-lg border border-slate-200 dark:border-[#233048] flex items-center gap-1.5 shadow-2xs pointer-events-none z-20">
-                  <Move className="w-3 h-3 text-blue-500" />
-                  <span>Left or Right Click + Drag to pan · Scroll to zoom</span>
+                {/* Visual inspection indicator */}
+                <div className="absolute top-3 right-3 text-[10px] text-slate-400 dark:text-slate-500 bg-white/70 dark:bg-[#121826]/70 backdrop-blur px-2.5 py-1 rounded-lg border border-slate-200/60 dark:border-[#233048]/60 flex items-center gap-1.5 shadow-2xs pointer-events-none z-10">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                  <span>Click node to inspect details</span>
                 </div>
 
                 <svg className="w-full h-full overflow-hidden" viewBox="0 0 1000 280">
@@ -532,8 +451,8 @@ export default function LandingPage() {
                   {/* Subtle Grid Canvas Layer */}
                   <rect width="100%" height="100%" fill="url(#canvas-grid-pattern)" opacity="0.6" />
 
-                  {/* Centered & Panned Graph Group */}
-                  <g transform={`translate(${500 + pan.x}, ${140 + pan.y}) scale(${zoom}) translate(${-graphCenterX}, ${-graphCenterY})`}>
+                  {/* Centered Graph Group */}
+                  <g transform={`translate(500, 140) translate(${-graphCenterX}, ${-graphCenterY})`}>
                     {/* Connectors */}
                     {currentWorkflow.edges.map((edge, idx) => {
                       const fromNode = currentWorkflow.nodes.find(n => n.id === edge.from)
@@ -571,11 +490,7 @@ export default function LandingPage() {
                         <g
                           key={node.id}
                           transform={`translate(${node.x}, ${node.y})`}
-                          onClick={() => {
-                            if (dragDistRef.current < 6) {
-                              setSelectedNode(node)
-                            }
-                          }}
+                          onClick={() => setSelectedNode(node)}
                           className="cursor-pointer group"
                         >
                           <rect
