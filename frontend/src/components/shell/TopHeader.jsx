@@ -6,7 +6,7 @@
 //   • live WebSocket connection status from the EXISTING WSContext
 // ─────────────────────────────────────────────────────────────────────────────
 import { Link, useLocation } from 'react-router-dom'
-import { ChevronRight, Sun, Moon } from 'lucide-react'
+import { ChevronRight, Sun, Moon, Menu } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useWebSocket } from '../../contexts/WSContext'
 import { useTheme } from '../../contexts/ThemeContext'
@@ -49,14 +49,14 @@ function WSDot({ status }) {
   const color =
     status === 'connected' ? 'bg-green-500' : status === 'error' ? 'bg-red-500' : 'bg-slate-300'
   return (
-    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80">
+    <div className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 shrink-0">
       <span className={`w-1.5 h-1.5 rounded-full ${color} ${status === 'connected' ? 'animate-pulse' : ''}`} />
       <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 capitalize hidden sm:inline">{status}</span>
     </div>
   )
 }
 
-export function TopHeader() {
+export function TopHeader({ onMenuToggle, mobileMenuOpen = false }) {
   const location = useLocation()
   const { user, isAdmin } = useAuth()
   const { status } = useWebSocket()
@@ -78,28 +78,50 @@ export function TopHeader() {
     .toUpperCase()
 
   const avatarUrl = user?.avatar_url || localStorage.getItem(`avatar_${user?.id}`) || localStorage.getItem('smbflow_avatar')
+  const currentTitle = crumbs.length > 0 ? crumbs[crumbs.length - 1].label : (isAdmin ? 'Platform Overview' : 'Dashboard')
 
   return (
-    <header className="h-14 shrink-0 flex items-center justify-between px-6 bg-white dark:bg-[#0b0f17] border-b border-slate-200 dark:border-[#233048] transition-colors">
-      <nav className="flex items-center gap-1.5">
-        <Link to={home} className="text-sm text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 transition-colors">
-          Isolate
-        </Link>
-        {crumbs.map(crumb => (
-          <span key={crumb.to} className="flex items-center gap-1.5">
-            <ChevronRight size={13} className="text-slate-300 dark:text-slate-600" />
-            {crumb.isLast ? (
-              <span className="text-sm font-medium text-slate-900 dark:text-slate-100">{crumb.label}</span>
-            ) : (
-              <Link to={crumb.to} className="text-sm text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 transition-colors">
-                {crumb.label}
-              </Link>
-            )}
-          </span>
-        ))}
-      </nav>
+    <header className="h-14 shrink-0 flex items-center justify-between px-3 sm:px-6 bg-white dark:bg-[#0b0f17] border-b border-slate-200 dark:border-[#233048] transition-colors">
+      <div className="flex items-center min-w-0 mr-2">
+        {/* Mobile Hamburger Menu Toggle */}
+        <button
+          type="button"
+          onClick={onMenuToggle}
+          className="md:hidden p-1.5 -ml-1 mr-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#182234] focus:outline-none transition-colors cursor-pointer shrink-0"
+          aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+          title="Toggle navigation"
+        >
+          <Menu size={20} />
+        </button>
 
-      <div className="flex items-center gap-2.5">
+        {/* Desktop Breadcrumbs (sm+) */}
+        <nav className="hidden sm:flex items-center gap-1.5 min-w-0" aria-label="Breadcrumb">
+          <Link to={home} className="text-sm text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 transition-colors shrink-0">
+            Isolate
+          </Link>
+          {crumbs.map(crumb => (
+            <span key={crumb.to} className="flex items-center gap-1.5 min-w-0">
+              <ChevronRight size={13} className="text-slate-300 dark:text-slate-600 shrink-0" />
+              {crumb.isLast ? (
+                <span className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">{crumb.label}</span>
+              ) : (
+                <Link to={crumb.to} className="text-sm text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 transition-colors truncate">
+                  {crumb.label}
+                </Link>
+              )}
+            </span>
+          ))}
+        </nav>
+
+        {/* Mobile Single Active Title (<sm) */}
+        <div className="sm:hidden flex items-center min-w-0">
+          <span className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
+            {currentTitle}
+          </span>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
         {/* Global + Personal Notification Center */}
         <NotificationCenter />
 
@@ -107,7 +129,7 @@ export function TopHeader() {
         <button
           type="button"
           onClick={toggle}
-          className="w-8 h-8 rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
+          className="w-8 h-8 rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 transition-colors cursor-pointer shrink-0"
           title={`Switch to ${isDark ? 'Light' : 'Dark'} Mode`}
         >
           {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
@@ -118,7 +140,7 @@ export function TopHeader() {
         {/* Clickable Profile Avatar */}
         <Link
           to="/settings/general"
-          className="w-8 h-8 rounded-full bg-blue-600 hover:ring-2 hover:ring-blue-400 overflow-hidden flex items-center justify-center shadow-xs transition-all cursor-pointer"
+          className="w-8 h-8 rounded-full bg-blue-600 hover:ring-2 hover:ring-blue-400 overflow-hidden flex items-center justify-center shadow-xs transition-all cursor-pointer shrink-0"
           title={`View Profile (${user?.full_name || user?.email || 'User'})`}
         >
           {avatarUrl ? (

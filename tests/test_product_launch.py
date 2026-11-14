@@ -782,12 +782,14 @@ async def test_image_router_gemini_success_no_fallback():
     }
 
     with patch.object(router, "_generate_gemini", new_callable=AsyncMock) as mock_gem, \
-         patch.object(router, "_generate_pollinations", new_callable=AsyncMock) as mock_poll:
+         patch.object(router, "_generate_pollinations", new_callable=AsyncMock) as mock_poll, \
+         patch.dict("os.environ", {"GEMINI_API_KEY": "test_gemini_key", "POLLINATIONS_API_KEY": "test_poll_key"}):
         
         mock_gem.return_value = mock_gemini_success
 
         res = await router.generate(
             prompt="Product hero graphic",
+            enhanced_prompt="Photorealistic product photography of product hero",
             visual_role="Product Hero",
             aspect_ratio="16:9"
         )
@@ -831,6 +833,7 @@ async def test_image_router_gemini_quota_error_pollinations_fallback_success():
 
         res = await router.generate(
             prompt="Product hero graphic",
+            enhanced_prompt="Photorealistic product photography of product hero",
             visual_role="Product Hero",
             aspect_ratio="16:9"
         )
@@ -873,6 +876,7 @@ async def test_image_router_both_providers_fail():
 
         res = await router.generate(
             prompt="Product hero graphic",
+            enhanced_prompt="Photorealistic product photography of product hero",
             visual_role="Product Hero",
             aspect_ratio="16:9"
         )
@@ -959,14 +963,15 @@ async def test_prompt_enhancer_styles_and_tones():
     """Verify PromptEnhancer synthesizes correct positive, negative, and caption hooks."""
     from core.prompt_enhancer import enhance_image_prompt, STYLE_PRESETS, TONE_PRESETS
 
-    res = await enhance_image_prompt(
-        product_brief={"productName": "EduSpark AI", "industry": "EdTech", "primaryBenefit": "Master math with 3D concepts"},
-        visual_role="Product Hero",
-        raw_prompt="Smartphone running EduSpark app",
-        style="3d",
-        tone="witty",
-        platform="LinkedIn"
-    )
+    with patch.dict("os.environ", {"GROQ_API_KEY": "", "OPENAI_API_KEY": "", "GEMINI_API_KEY": ""}):
+        res = await enhance_image_prompt(
+            product_brief={"productName": "EduSpark AI", "industry": "EdTech", "primaryBenefit": "Master math with 3D concepts"},
+            visual_role="Product Hero",
+            raw_prompt="Smartphone running EduSpark app",
+            style="3d",
+            tone="witty",
+            platform="LinkedIn"
+        )
 
     assert res["style"] == "3d"
     assert res["tone"] == "witty"
@@ -1016,13 +1021,26 @@ async def test_enhance_campaign_visual_prompt_endpoint(mock_db):
         aspect_ratio="16:9"
     )
 
-    data = await enhance_campaign_visual_prompt(
-        instance_id=str(inst_id),
-        visual_id=vis_id,
-        req=req,
-        db=mock_db,
-        current_user=MOCK_USER
-    )
+    with patch("core.prompt_enhancer.enhance_image_prompt", new_callable=AsyncMock) as mock_enh:
+        mock_enh.return_value = {
+            "positive_prompt": "Cinematic 8k view of CloudMetrics",
+            "negative_prompt": "blurry, low quality",
+            "suggested_caption": "Bold CloudMetrics caption hook",
+            "style": "cinematic",
+            "tone": "bold",
+            "width": 1280,
+            "height": 720,
+            "enhancement_used": True,
+            "model_used": "mock_enhancer"
+        }
+
+        data = await enhance_campaign_visual_prompt(
+            instance_id=str(inst_id),
+            visual_id=vis_id,
+            req=req,
+            db=mock_db,
+            current_user=MOCK_USER
+        )
 
     assert data["visual_id"] == vis_id
     assert data["style"] == "cinematic"

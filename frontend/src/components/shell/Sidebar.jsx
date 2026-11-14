@@ -1,10 +1,11 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useEffect } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
   Inbox, Workflow, Plug, CreditCard, FileSearch, LayoutDashboard, Users,
   Activity, LogOut, Building2, GitBranch, FileText, Cpu,
   ReceiptText, Layers, Zap, User, Cloud, Box, ChevronRight, Plus, Search,
-  Terminal, AlertTriangle, DollarSign, Receipt, Compass, Settings, ShieldCheck
+  Terminal, AlertTriangle, DollarSign, Receipt, Compass, Settings, ShieldCheck,
+  X
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 
@@ -74,7 +75,7 @@ const adminNav = [
   },
 ]
 
-export function Sidebar({ isAdmin = false, getBadge, onNavClick }) {
+function SidebarContent({ isAdmin = false, getBadge, onNavClick, onClose, isMobile = false }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
 
@@ -91,7 +92,13 @@ export function Sidebar({ isAdmin = false, getBadge, onNavClick }) {
 
   function handleLogout() {
     logout()
+    if (isMobile) onClose?.()
     navigate('/auth', { replace: true })
+  }
+
+  const handleItemClick = () => {
+    onNavClick?.()
+    if (isMobile) onClose?.()
   }
 
   const rawName = user?.full_name || user?.email || 'Account'
@@ -101,11 +108,14 @@ export function Sidebar({ isAdmin = false, getBadge, onNavClick }) {
   const avatarUrl = user?.avatar_url || (user?.id ? localStorage.getItem(`avatar_${user.id}`) : null) || localStorage.getItem('smbflow_avatar')
 
   return (
-    <aside className="w-[230px] shrink-0 flex flex-col bg-white dark:bg-[#0b0f17] border-r border-slate-200 dark:border-[#233048] h-full select-none transition-colors">
+    <div className="flex flex-col h-full w-full select-none">
       {/* ── Brand / Logo Header ────────────────────────────────────────────── */}
       <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-100 dark:border-[#233048]">
         <div
-          onClick={() => navigate(isAdmin ? '/admin/copilot' : '/copilot')}
+          onClick={() => {
+            navigate(isAdmin ? '/admin/copilot' : '/copilot')
+            if (isMobile) onClose?.()
+          }}
           className="flex items-center gap-2 cursor-pointer group"
         >
           {/* Clean enterprise logo mark */}
@@ -124,19 +134,35 @@ export function Sidebar({ isAdmin = false, getBadge, onNavClick }) {
         {/* Quick action icons */}
         <div className="flex items-center gap-1 text-slate-400 dark:text-slate-500">
           <button
-            onClick={() => navigate('/workflows')}
+            onClick={() => {
+              navigate('/workflows')
+              if (isMobile) onClose?.()
+            }}
             className="w-6 h-6 rounded hover:bg-slate-100 dark:hover:bg-[#182234] flex items-center justify-center hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer"
             title="Create Workflow"
           >
             <Plus className="w-3.5 h-3.5" />
           </button>
           <button
-            onClick={() => navigate('/workflow-library')}
+            onClick={() => {
+              navigate('/workflow-library')
+              if (isMobile) onClose?.()
+            }}
             className="w-6 h-6 rounded hover:bg-slate-100 dark:hover:bg-[#182234] flex items-center justify-center hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer"
             title="Search Templates"
           >
             <Search className="w-3.5 h-3.5" />
           </button>
+          {isMobile && (
+            <button
+              onClick={onClose}
+              className="w-7 h-7 ml-1 rounded-lg hover:bg-slate-100 dark:hover:bg-[#182234] flex items-center justify-center text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors cursor-pointer"
+              title="Close navigation"
+              aria-label="Close navigation"
+            >
+              <X size={16} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -156,7 +182,7 @@ export function Sidebar({ isAdmin = false, getBadge, onNavClick }) {
                       <NavLink
                         to={item.to}
                         end={item.to === '/admin'}
-                        onClick={onNavClick}
+                        onClick={handleItemClick}
                         className={({ isActive }) =>
                           `flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium transition-all ${
                             isActive
@@ -200,7 +226,7 @@ export function Sidebar({ isAdmin = false, getBadge, onNavClick }) {
                     key={item.label}
                     to={item.to}
                     end={item.to === '/dashboard'}
-                    onClick={onNavClick}
+                    onClick={handleItemClick}
                     className={({ isActive }) =>
                       `flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium transition-all ${
                         isActive
@@ -235,6 +261,7 @@ export function Sidebar({ isAdmin = false, getBadge, onNavClick }) {
               {isAdmin && (
                 <NavLink
                   to="/admin"
+                  onClick={handleItemClick}
                   className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100/70 dark:hover:bg-[#182234]/60 hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
                 >
                   <Cloud size={15} className="shrink-0 text-blue-500" />
@@ -246,7 +273,7 @@ export function Sidebar({ isAdmin = false, getBadge, onNavClick }) {
                 <NavLink
                   key={item.label}
                   to={item.to}
-                  onClick={onNavClick}
+                  onClick={handleItemClick}
                   className={({ isActive }) =>
                     `flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium transition-all ${
                       isActive
@@ -271,7 +298,10 @@ export function Sidebar({ isAdmin = false, getBadge, onNavClick }) {
       <div className="border-t border-slate-100 dark:border-[#233048] p-2.5">
         <div className="flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#182234] transition-colors">
           <div
-            onClick={() => navigate('/settings/general')}
+            onClick={() => {
+              navigate('/settings/general')
+              if (isMobile) onClose?.()
+            }}
             className="flex items-center gap-2.5 flex-1 min-w-0 cursor-pointer group"
             title="Click to view and edit profile"
           >
@@ -300,6 +330,59 @@ export function Sidebar({ isAdmin = false, getBadge, onNavClick }) {
           </button>
         </div>
       </div>
-    </aside>
+    </div>
+  )
+}
+
+export function Sidebar({ isAdmin = false, getBadge, onNavClick, mobileOpen = false, onCloseMobile }) {
+  // Close drawer on Escape key press
+  useEffect(() => {
+    if (!mobileOpen) return
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onCloseMobile?.()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [mobileOpen, onCloseMobile])
+
+  return (
+    <>
+      {/* ── Desktop Sidebar: hidden on mobile (<md), fixed flex column on desktop (md+) ── */}
+      <aside className="hidden md:flex md:w-[230px] md:shrink-0 flex-col bg-white dark:bg-[#0b0f17] border-r border-slate-200 dark:border-[#233048] h-full select-none transition-colors">
+        <SidebarContent
+          isAdmin={isAdmin}
+          getBadge={getBadge}
+          onNavClick={onNavClick}
+        />
+      </aside>
+
+      {/* ── Mobile Off-Canvas Drawer (visible only on mobile) ── */}
+      <div className="md:hidden">
+        {/* Dimmed Backdrop */}
+        {mobileOpen && (
+          <div
+            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-xs transition-opacity duration-300"
+            onClick={onCloseMobile}
+            aria-hidden="true"
+          />
+        )}
+
+        {/* Slide-out Drawer */}
+        <aside
+          className={`fixed inset-y-0 left-0 z-50 w-[280px] max-w-[85vw] flex flex-col bg-white dark:bg-[#0b0f17] border-r border-slate-200 dark:border-[#233048] h-full shadow-2xl transition-transform duration-300 ease-in-out ${
+            mobileOpen ? 'translate-x-0' : '-translate-x-full pointer-events-none'
+          }`}
+          aria-label="Mobile navigation drawer"
+        >
+          <SidebarContent
+            isAdmin={isAdmin}
+            getBadge={getBadge}
+            onNavClick={onNavClick}
+            onClose={onCloseMobile}
+            isMobile={true}
+          />
+        </aside>
+      </div>
+    </>
   )
 }

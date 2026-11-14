@@ -12,6 +12,7 @@
 // (Phase 3+); until then existing pages render inside this shell unchanged.
 // ─────────────────────────────────────────────────────────────────────────────
 import { useEffect, useCallback, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useWebSocket } from '../../contexts/WSContext'
 import { useBadgeStore } from '../../utils/appStore'
@@ -22,6 +23,13 @@ export function AppShell({ children }) {
   const { user, isAdmin, api } = useAuth()
   const { subscribe } = useWebSocket()
   const [accessRequestsCount, setAccessRequestsCount] = useState(0)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const location = useLocation()
+
+  // Auto-close mobile drawer when user navigates
+  useEffect(() => {
+    setMobileMenuOpen(false)
+  }, [location.pathname])
 
   const {
     escalations, a2a, emails, patterns,
@@ -79,9 +87,18 @@ export function AppShell({ children }) {
 
   return (
     <div className="flex h-screen bg-slate-50 dark:bg-[#0b0f17] text-slate-900 dark:text-slate-100 overflow-hidden transition-colors">
-      <Sidebar isAdmin={isAdmin} getBadge={getBadge} />
+      <Sidebar
+        isAdmin={isAdmin}
+        getBadge={getBadge}
+        mobileOpen={mobileMenuOpen}
+        onCloseMobile={() => setMobileMenuOpen(false)}
+        onNavClick={() => setMobileMenuOpen(false)}
+      />
       <div className="flex flex-col flex-1 min-w-0">
-        <TopHeader />
+        <TopHeader
+          onMenuToggle={() => setMobileMenuOpen(prev => !prev)}
+          mobileMenuOpen={mobileMenuOpen}
+        />
         <main className="flex-1 overflow-y-auto bg-slate-50 dark:bg-[#0b0f17] bg-dot-pattern transition-colors">{children}</main>
       </div>
     </div>
