@@ -91,7 +91,7 @@ _PRIMARY_MANIFESTS: dict[str, dict] = {
                 "audio_file": {
                     "type": "string",
                     "title": "Audio File Path",
-                    "description": "Path to uploaded audio file (.mp3, .wav, .m4a)"
+                    "description": "Path to uploaded audio file (.mp3, .wav, .m4a, .webm, .mpeg)"
                 },
                 "transcript": {
                     "type": "string",

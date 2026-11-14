@@ -80,6 +80,9 @@ async def test_upload_audio_valid_formats():
         ("interview.wav", b"RIFF" + b"\x00" * 4 + b"WAVE" + b"\x00" * 100, "audio/wav"),
         ("sync_notes.m4a", b"\x00\x00\x00\x20ftypM4A " + b"\x00" * 100, "audio/mp4"),
         ("meeting.webm", b"\x1a\x45\xdf\xa3" + b"\x00" * 100, "video/webm"),
+        ("standup_discussion.mpeg", b"\xff\xfb\x90\x64" + b"\x00" * 100, "audio/mpeg"),
+        ("voice_briefing.mpg", b"\xff\xfb\x90\x64" + b"\x00" * 100, "audio/mpeg"),
+        ("keynote_audio.mpga", b"\xff\xfb\x90\x64" + b"\x00" * 100, "audio/mpeg"),
     ]
 
     for filename, content, content_type in valid_samples:

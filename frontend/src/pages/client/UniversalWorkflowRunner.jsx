@@ -490,7 +490,7 @@ function MeetingIntelligenceInputModes({ formData, onChange, api, synthesizing, 
     message: null,
   })
 
-  const allowedExtensions = ['.mp3', '.wav', '.m4a', '.webm']
+  const allowedExtensions = ['.mp3', '.wav', '.m4a', '.webm', '.mpeg', '.mpg', '.mpga']
   const maxSizeBytes = 50 * 1024 * 1024
 
   const handleModeChange = (mode) => {
@@ -579,7 +579,7 @@ function MeetingIntelligenceInputModes({ formData, onChange, api, synthesizing, 
 
     const ext = '.' + file.name.split('.').pop().toLowerCase()
     if (!allowedExtensions.includes(ext)) {
-      setErrorMsg(`Invalid file type "${ext}". Supported: .mp3, .wav, .m4a, .webm`)
+      setErrorMsg(`Invalid file type "${ext}". Supported: .mp3, .wav, .m4a, .webm, .mpeg`)
       return
     }
 
@@ -825,7 +825,7 @@ function MeetingIntelligenceInputModes({ formData, onChange, api, synthesizing, 
               Audio File Upload
             </div>
             <div className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 mt-0.5">
-              Upload .mp3, .wav, or .m4a audio file for speech normalization & transcription.
+              Upload .mp3, .wav, .m4a, or .mpeg audio file for speech normalization & transcription.
             </div>
           </div>
         </button>
@@ -933,7 +933,7 @@ function MeetingIntelligenceInputModes({ formData, onChange, api, synthesizing, 
           <input
             ref={fileInputRef}
             type="file"
-            accept=".mp3,.wav,.m4a,.webm,audio/*"
+            accept=".mp3,.wav,.m4a,.webm,.mpeg,.mpg,.mpga,audio/*,video/mpeg"
             className="hidden"
             onChange={(e) => {
               if (e.target.files && e.target.files[0]) {
@@ -952,6 +952,7 @@ function MeetingIntelligenceInputModes({ formData, onChange, api, synthesizing, 
               <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-[#182234]">.MP3</span>
               <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-[#182234]">.WAV</span>
               <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-[#182234]">.M4A</span>
+              <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-[#182234]">.MPEG</span>
               <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-[#182234]">Max 50MB</span>
             </div>
           </div>
@@ -1025,7 +1026,7 @@ function MeetingIntelligenceInputModes({ formData, onChange, api, synthesizing, 
                     <span className="text-violet-600 dark:text-violet-400 font-bold underline">Click to upload audio</span> or drag and drop file here
                   </div>
                   <div className="text-[11px] text-slate-400">
-                    Supports MP3, WAV, M4A, WebM (up to 50MB)
+                    Supports MP3, WAV, M4A, WebM, MPEG (up to 50MB)
                   </div>
                 </div>
               )}
@@ -3268,7 +3269,7 @@ export default function UniversalWorkflowRunner() {
         missingReason = 'Please paste a transcript of at least 10 characters.'
       } else if (mode === 'audio_upload') {
         valid = Boolean(currentData.recording?.stored_path || currentData.recording?.filename)
-        missingReason = 'Please upload a valid audio recording (.mp3, .wav, .m4a, .webm).'
+        missingReason = 'Please upload a valid audio recording (.mp3, .wav, .m4a, .webm, .mpeg).'
       } else if (mode === 'google_meet') {
         valid = typeof currentData.meet_url === 'string' && currentData.meet_url.trim().length >= 3
         missingReason = 'Please enter a valid Google Meet URL or meeting code.'

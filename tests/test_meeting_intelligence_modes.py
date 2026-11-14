@@ -222,6 +222,43 @@ def test_audio_upload_valid_wav_file():
     assert cap_data["source_provenance"]["stored_path"] == data["stored_path"]
 
 
+def test_audio_upload_valid_mpeg_file():
+    """Verify uploading a valid .mpeg voice/audio file is accepted, preserved, and capturable."""
+    mpeg_payload = b"\xff\xfb\x90\x64" + b"\x00" * 200
+    fake_mpeg = io.BytesIO(mpeg_payload)
+    resp = client.post(
+        "/api/v1/workflows/meeting-intelligence/upload-audio",
+        files={"file": ("team_standup.mpeg", fake_mpeg, "audio/mpeg")},
+    )
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+    assert "stored_path" in data
+    assert data["stored_path"].endswith(".mpeg")
+    assert data["filename"] == "team_standup.mpeg"
+    assert data["content_type"] == "audio/mpeg"
+
+    # Now verify capture using this valid MPEG recording
+    capture_resp = client.post(
+        "/api/v1/workflows/meeting-intelligence/capture",
+        json={
+            "conversation_title": "Team Standup Review",
+            "contact_name": "Project Lead",
+            "conversation_type": "Online Meeting",
+            "input_mode": "audio_upload",
+            "recording": {
+                "file_id": data["file_id"],
+                "filename": data["filename"],
+                "stored_path": data["stored_path"],
+                "content_type": data["content_type"],
+            },
+        },
+    )
+    assert capture_resp.status_code == 200, capture_resp.text
+    cap_data = capture_resp.json()
+    assert cap_data["source_provenance"]["mode"] == "audio_upload"
+    assert cap_data["source_provenance"]["stored_path"] == data["stored_path"]
+
+
 def test_audio_upload_missing_recording_rejected():
     """Verify audio_upload mode without recording object is rejected."""
     resp = client.post(

@@ -168,7 +168,7 @@ _CATALOG_OVERRIDES: dict[str, dict] = {
                 "audio_file": {
                     "type": "string",
                     "title": "Audio File",
-                    "description": "Path or upload of meeting audio recording (.mp3, .wav, .m4a)"
+                    "description": "Path or upload of meeting audio recording (.mp3, .wav, .m4a, .webm, .mpeg)"
                 },
                 "transcript": {
                     "type": "string",
