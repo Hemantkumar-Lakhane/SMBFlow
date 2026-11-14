@@ -4,7 +4,7 @@ api/routers/meeting_intelligence.py
 Backend endpoints for SMBFlow Meeting Intelligence & Follow-up workflow.
 
 Phase 1 (Node 1 — Conversation Capture):
-- Secure audio file upload & validation (.mp3, .wav, .m4a, .webm, max 50MB)
+- Secure audio file upload & validation (.mp3, .wav, .m4a, .webm, .mpeg, .mpg, .mpga, max 50MB)
 - Audio preservation in uploads/audio/
 - Conversation capture ingestion & workflow run record creation
 - Explicit pending status for unimplemented Nodes 2–5
@@ -66,9 +66,19 @@ router = APIRouter(prefix="/api/v1/workflows/meeting-intelligence", tags=["Meeti
 
 
 # ── Allowed Audio Configurations ─────────────────────────────────────────────
-ALLOWED_AUDIO_EXTENSIONS = {".mp3", ".wav", ".m4a", ".webm"}
+ALLOWED_AUDIO_EXTENSIONS = {".mp3", ".wav", ".m4a", ".webm", ".mpeg", ".mpg", ".mpga"}
 MAX_AUDIO_SIZE_BYTES = 50 * 1024 * 1024  # 50 MB
 STORAGE_DIR = Path("uploads/audio")
+
+AUDIO_CONTENT_TYPES = {
+    ".mp3": "audio/mpeg",
+    ".mpeg": "audio/mpeg",
+    ".mpg": "audio/mpeg",
+    ".mpga": "audio/mpeg",
+    ".wav": "audio/wav",
+    ".m4a": "audio/mp4",
+    ".webm": "audio/webm",
+}
 
 DANGEROUS_EXTENSIONS = {
     ".exe", ".bat", ".cmd", ".sh", ".php", ".py", ".js", ".dll",
@@ -516,7 +526,7 @@ async def upload_audio_recording(
 ):
     """
     Upload and securely preserve an audio recording for Meeting Intelligence.
-    Validates file extension (.mp3, .wav, .m4a, .webm) and maximum size (50MB).
+    Validates file extension (.mp3, .wav, .m4a, .webm, .mpeg, .mpg, .mpga) and maximum size (50MB).
     Does NOT transcribe or send audio to an LLM.
     """
     raw_filename = file.filename or ""
@@ -535,12 +545,15 @@ async def upload_audio_recording(
     if ext not in ALLOWED_AUDIO_EXTENSIONS:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid file type '{ext}'. Supported audio formats: .mp3, .wav, .m4a, .webm"
+            detail=f"Invalid file type '{ext}'. Supported audio formats: .mp3, .wav, .m4a, .webm, .mpeg, .mpg, .mpga"
         )
 
     # 3. Read content and validate size
     try:
-        content = await file.read()
+        if hasattr(file, "file") and hasattr(file.file, "read"):
+            content = file.file.read()
+        else:
+            content = await file.read()
     except Exception as read_err:
         log.error("Failed to read uploaded audio file", error=str(read_err))
         raise HTTPException(
@@ -580,8 +593,7 @@ async def upload_audio_recording(
         raise HTTPException(status_code=400, detail="Invalid storage path resolution.")
 
     try:
-        async with aiofiles.open(target_path, "wb") as f:
-            await f.write(content)
+        target_path.write_bytes(content)
     except Exception as write_err:
         log.error("Failed to write audio file to storage", error=str(write_err), path=str(target_path))
         raise HTTPException(
@@ -589,7 +601,7 @@ async def upload_audio_recording(
             detail="Failed to preserve audio file on storage."
         )
 
-    content_type = file.content_type or f"audio/{ext.lstrip('.')}"
+    content_type = file.content_type if (file.content_type and file.content_type != "application/octet-stream") else AUDIO_CONTENT_TYPES.get(ext, f"audio/{ext.lstrip('.')}")
 
     log.info(
         "Audio recording preserved for Meeting Intelligence",
@@ -916,11 +928,14 @@ async def transcribe_audio_file(
     ext = file_path.suffix.lower()
     content_type_map = {
         ".mp3": "audio/mpeg",
+        ".mpeg": "audio/mpeg",
+        ".mpg": "audio/mpeg",
+        ".mpga": "audio/mpeg",
         ".wav": "audio/wav",
         ".m4a": "audio/mp4",
         ".webm": "audio/webm",
     }
-    content_type = content_type_map.get(ext, "audio/mpeg")
+    content_type = content_type_map.get(ext, AUDIO_CONTENT_TYPES.get(ext, "audio/mpeg"))
 
     start_time = time.time()
     errors: List[str] = []
@@ -6923,12 +6938,9 @@ async def recall_webhook_handler(
             return {"success": True, "status": record.status, "message": "Bot failed."}
 
     # 2. Recording events (recording.done / recording.failed)
-    if event == "recording.done":
+    if event in ("recording.done", "recording_done") or status_code == "recording_done":
         rec_id = str(data.get("recording", {}).get("id") or data.get("recording_id") or "")
-        record.status = "processing_transcript"
         record.recording_data = {**(record.recording_data or {}), "recording_id": rec_id}
-        await db.commit()
-        return {"success": True, "status": record.status, "message": "Recall recording completed. Waiting for transcript."}
 
     if event == "recording.failed":
         record.status = "failed"
@@ -6945,17 +6957,17 @@ async def recall_webhook_handler(
         await db.commit()
         return {"success": True, "status": "failed", "message": err_msg}
 
-    # 4. Transcription complete (transcript.done, bot.complete, or meeting completed)
+    # 4. Transcription complete or Recording ready (transcript.done, recording.done, bot.complete, or meeting completed)
     has_transcript = bool(
         data.get("transcript")
         or (isinstance(data.get("bot"), dict) and data["bot"].get("transcript"))
         or payload.get("transcript")
     )
     is_completed_event = (
-        event in ("transcript.done", "bot.complete", "transcription.done")
+        event in ("transcript.done", "bot.complete", "transcription.done", "recording.done", "recording_done")
         or "complete" in event
         or "done" in event
-        or status_code in ("done", "call_ended")
+        or status_code in ("done", "call_ended", "recording_done")
         or has_transcript
     )
 
@@ -7013,6 +7025,36 @@ async def recall_webhook_handler(
                 formatted_transcript, detected_speaker = extract_recall_transcript_text(raw_transcript)
             except Exception as t_err:
                 log.warning("Could not fetch transcript from Recall API", bot_id=bot_id, error=str(t_err))
+
+        # 4e. Fallback: transcribe recording video/audio directly using SMBFlow Whisper AI
+        if not formatted_transcript.strip() and connector:
+            try:
+                bot_info = await connector.get_bot(bot_id)
+                recs = bot_info.get("recordings", [])
+                for r_item in recs:
+                    ms = r_item.get("media_shortcuts", {})
+                    rec_dl = (
+                        ms.get("audio_mixed", {}).get("data", {}).get("download_url")
+                        or ms.get("video_mixed", {}).get("data", {}).get("download_url")
+                    )
+                    if rec_dl:
+                        STORAGE_DIR.mkdir(parents=True, exist_ok=True)
+                        temp_rec_path = STORAGE_DIR / f"recall_{bot_id}_{uuid.uuid4().hex[:8]}.mp4"
+                        async with httpx.AsyncClient(timeout=60) as dl_client:
+                            r_stream = await dl_client.get(rec_dl)
+                            if r_stream.status_code == 200 and r_stream.content:
+                                async with aiofiles.open(temp_rec_path, "wb") as f_out:
+                                    await f_out.write(r_stream.content)
+                                w_text, w_lang, _, _ = await transcribe_audio_file(temp_rec_path)
+                                try:
+                                    temp_rec_path.unlink(missing_ok=True)
+                                except Exception:
+                                    pass
+                                if w_text and w_text.strip():
+                                    formatted_transcript = w_text.strip()
+                                    break
+            except Exception as w_err:
+                log.warning("Whisper recording transcription fallback failed", bot_id=bot_id, error=str(w_err))
 
         if not formatted_transcript.strip():
             formatted_transcript = "Google Meet session completed. Spoken audio conversation recorded."
