@@ -938,6 +938,7 @@ async def transcribe_audio_file(
         ".mpga": "audio/mpeg",
         ".wav": "audio/wav",
         ".m4a": "audio/mp4",
+        ".mp4": "audio/mp4",
         ".webm": "audio/webm",
     }
     content_type = content_type_map.get(ext, AUDIO_CONTENT_TYPES.get(ext, "audio/mpeg"))
@@ -955,7 +956,7 @@ async def transcribe_audio_file(
             if lang_code:
                 data["language"] = lang_code
 
-            async with httpx.AsyncClient(timeout=45.0) as client:
+            async with httpx.AsyncClient(timeout=90.0) as client:
                 resp = await client.post(
                     "https://api.groq.com/openai/v1/audio/transcriptions",
                     headers=headers,
@@ -6648,7 +6649,7 @@ async def _resolve_recall_connector(
     # 1. First check ToolConnection for the organization
     stmt = select(ToolConnection).where(
         ToolConnection.organization_id == org_uuid,
-        ToolConnection.tool_name.in_(["recall_ai", "recall", "google_meet"]),
+        ToolConnection.tool_name.in_(["recall_ai", "recall"]),
         ToolConnection.status == "connected",
     )
     res = await db.execute(stmt)
@@ -6656,10 +6657,11 @@ async def _resolve_recall_connector(
     if conn and conn.encrypted_credentials:
         try:
             creds = decrypt_credentials(conn.encrypted_credentials)
-            config = dict(conn.config or {})
-            if "region" not in config and os.getenv("RECALL_REGION"):
-                config["region"] = os.getenv("RECALL_REGION")
-            return RecallAIConnector(credentials=creds, config=config)
+            if creds.get("api_key") or creds.get("recall_api_key"):
+                config = dict(conn.config or {})
+                if "region" not in config and os.getenv("RECALL_REGION"):
+                    config["region"] = os.getenv("RECALL_REGION")
+                return RecallAIConnector(credentials=creds, config=config)
         except Exception as e:
             log.warning("Failed to decrypt Recall ToolConnection credentials", org_id=str(org_uuid), error=str(e))
 
@@ -6683,15 +6685,27 @@ async def _resolve_recall_webhook_secret(
     if org_uuid:
         stmt = select(ToolConnection).where(
             ToolConnection.organization_id == org_uuid,
-            ToolConnection.tool_name.in_(["recall_ai", "recall", "google_meet"]),
+            ToolConnection.tool_name.in_(["recall_ai", "recall"]),
             ToolConnection.status == "connected",
         )
         res = await db.execute(stmt)
         conn = res.scalars().first()
         if conn and conn.config and conn.config.get("webhook_secret"):
             return conn.config["webhook_secret"]
+        if conn and conn.encrypted_credentials:
+            try:
+                creds = decrypt_credentials(conn.encrypted_credentials)
+                sec = creds.get("webhook_secret") or creds.get("recall_webhook_secret")
+                if sec:
+                    return sec.strip()
+            except Exception:
+                pass
 
-    return os.getenv("RECALL_WEBHOOK_SECRET", "").strip() or None
+    return (
+        os.getenv("RECALL_WEBHOOK_SECRET")
+        or os.getenv("RECALL_AI_WEBHOOK_SECRET")
+        or ""
+    ).strip() or None
 
 
 # ── Google Meet Capture & Recall Webhook Endpoints ────────────────────────────
@@ -6803,6 +6817,185 @@ async def capture_google_meet(
     )
 
 
+async def _process_recall_recording_core(
+    record: ConversationIngestionRecord,
+    bot_id: str,
+    db: AsyncSession,
+) -> Optional[dict]:
+    """
+    Core engine to check Recall.ai bot status, download recording when ready,
+    transcribe via Groq Whisper AI, and execute Nodes 1-5 through ingest_conversation_core.
+    Safe to call repeatedly from both webhooks and status polling.
+    """
+    if not bot_id or not record:
+        return None
+
+    # If already completed with an active workflow instance, return immediately
+    if record.status == "completed" and record.instance_id:
+        return {
+            "status": "completed",
+            "instance_id": str(record.instance_id),
+            "conversation_title": record.conversation_title,
+        }
+
+    connector = await _resolve_recall_connector(record.organization_id, db)
+    if not connector or not connector.api_key:
+        log.warning("Cannot process Recall recording: connector not found or missing API key", org_id=str(record.organization_id))
+        return None
+
+    try:
+        bot_info = await connector.get_bot(bot_id)
+    except Exception as e:
+        log.warning("Failed to fetch Recall bot status", bot_id=bot_id, error=str(e))
+        return None
+
+    status_changes = bot_info.get("status_changes", [])
+    last_change = status_changes[-1] if status_changes else {}
+    code = str(last_change.get("code") or "").lower()
+    sub_code = str(last_change.get("sub_code") or "").strip()
+
+    if code in ("joining_call", "in_waiting_room"):
+        if record.status != "waiting_for_bot":
+            record.status = "waiting_for_bot"
+            record.metadata_ = {**(record.metadata_ or {}), "recall_bot_status": code}
+            await db.commit()
+        return {"status": "waiting_for_bot"}
+
+    if code in ("in_call_recording", "in_call_not_recording", "call_active"):
+        if record.status != "bot_joined":
+            record.status = "bot_joined"
+            record.metadata_ = {**(record.metadata_ or {}), "recall_bot_status": code}
+            await db.commit()
+        return {"status": "bot_joined"}
+
+    if code in ("fatal", "analysis_failed"):
+        record.status = "failed"
+        record.error_message = sub_code or last_change.get("message") or "Meeting bot encountered a fatal error or admission was denied."
+        record.metadata_ = {**(record.metadata_ or {}), "recall_bot_status": code}
+        await db.commit()
+        return {"status": "failed", "error": record.error_message}
+
+    # If call ended or bot is done, check recordings
+    recordings = bot_info.get("recordings", [])
+    rec_dl = None
+    for r_item in recordings:
+        ms = r_item.get("media_shortcuts", {})
+        rec_dl = (
+            ms.get("audio_mixed", {}).get("data", {}).get("download_url")
+            or ms.get("video_mixed", {}).get("data", {}).get("download_url")
+            or ms.get("audio_mixed", {}).get("download_url")
+            or ms.get("video_mixed", {}).get("download_url")
+            or (r_item.get("audio_mixed") or {}).get("download_url")
+            or (r_item.get("video_mixed") or {}).get("download_url")
+        )
+        if rec_dl:
+            break
+
+    # If recording is not ready yet, set status to recording_processing and wait
+    if not rec_dl:
+        if code in ("done", "call_ended", "recording_done") or recordings:
+            if record.status != "recording_processing":
+                record.status = "recording_processing"
+                record.metadata_ = {**(record.metadata_ or {}), "recall_bot_status": "encoding_recording"}
+                await db.commit()
+            return {"status": "recording_processing"}
+        return {"status": record.status}
+
+    # Recording is available! Download and transcribe via Groq Whisper AI
+    record.status = "processing_transcript"
+    await db.commit()
+
+    temp_rec_path = None
+    transcript_text = ""
+    detected_speaker = None
+    try:
+        STORAGE_DIR.mkdir(parents=True, exist_ok=True)
+        temp_rec_path = STORAGE_DIR / f"recall_{bot_id}_{uuid.uuid4().hex[:8]}.mp4"
+        async with httpx.AsyncClient(timeout=120.0) as dl_client:
+            r_stream = await dl_client.get(rec_dl)
+            if r_stream.status_code == 200 and r_stream.content:
+                async with aiofiles.open(temp_rec_path, "wb") as f_out:
+                    await f_out.write(r_stream.content)
+                w_text, w_lang, _, _ = await transcribe_audio_file(temp_rec_path)
+                if w_text and w_text.strip():
+                    transcript_text = w_text.strip()
+    except Exception as dl_err:
+        log.error("Failed to download or transcribe Recall audio/video", bot_id=bot_id, error=str(dl_err))
+    finally:
+        if temp_rec_path:
+            try:
+                temp_rec_path.unlink(missing_ok=True)
+            except Exception:
+                pass
+
+    if not transcript_text:
+        try:
+            raw_t = await connector.get_bot_transcript(bot_id)
+            extracted, spk = extract_recall_transcript_text(raw_t)
+            if extracted and extracted.strip():
+                transcript_text = extracted.strip()
+                detected_speaker = spk
+        except Exception:
+            pass
+
+    if not transcript_text:
+        log.warning("Recall recording ready but no speech detected", bot_id=bot_id)
+        transcript_text = "Google Meet recording audio was captured, but no spoken speech was detected."
+
+    contact_name = detected_speaker or record.contact_name or "Meeting Participants"
+    title = record.conversation_title or f"Google Meet ({record.conversation_date})"
+    ext_event_id = f"recall_{bot_id}"
+
+    ingest_req = ConversationIngestRequest(
+        external_event_id=ext_event_id,
+        source="google_meet_recall",
+        conversation_title=title,
+        contact_name=contact_name,
+        conversation_type="Online Meeting",
+        conversation_date=record.conversation_date or datetime.utcnow().strftime("%Y-%m-%d"),
+        language=record.language or "Auto Detect",
+        transcript_text=transcript_text,
+        auto_process=True,
+        metadata={
+            "provider": "recall_ai",
+            "bot_id": bot_id,
+            "meeting_url": (record.recording_data or {}).get("meeting_url") or "",
+        },
+    )
+
+    webhook_user = TokenData(
+        user_id=f"recall_bot_{bot_id}",
+        email=f"recall-bot@{str(record.organization_id)[:8]}.local",
+        role="org_admin",
+        organization_id=str(record.organization_id),
+        tenant_id=str(record.organization_id),
+    )
+
+    pipe_res = await ingest_conversation_core(
+        req=ingest_req,
+        db=db,
+        current_user=webhook_user,
+        org_uuid=record.organization_id,
+    )
+
+    record.status = "completed"
+    if pipe_res.instance_id:
+        try:
+            record.instance_id = uuid.UUID(pipe_res.instance_id) if isinstance(pipe_res.instance_id, str) else pipe_res.instance_id
+        except Exception:
+            pass
+    record.completed_at = datetime.utcnow()
+    record.error_message = None
+    await db.commit()
+    await db.refresh(record)
+
+    return {
+        "status": "completed",
+        "instance_id": str(record.instance_id) if record.instance_id else None,
+        "nodes_executed": pipe_res.nodes_executed or ["n1", "n2", "n3", "n4", "n5a"],
+    }
+
+
 @router.get("/google-meet/status/{identifier}", response_model=GoogleMeetStatusResponse)
 async def get_google_meet_status(
     identifier: str,
@@ -6812,6 +7005,7 @@ async def get_google_meet_status(
     """
     Get live status of a Google Meet capture by ingestion ID, bot ID, or external event ID.
     Enforces strict tenant isolation.
+    Proactively checks Recall bot status and auto-transcribes recordings when ready.
     """
     org_uuid = await _resolve_org_uuid(current_user, db)
 
@@ -6846,6 +7040,14 @@ async def get_google_meet_status(
     rec_data = record.recording_data or {}
     bot_id = rec_data.get("bot_id") or (record.metadata_ or {}).get("bot_id")
     meeting_url = rec_data.get("meeting_url") or (record.metadata_ or {}).get("meeting_url")
+
+    # Proactive sync with Recall.ai: If not completed, poll Recall status and auto-process recording if ready!
+    if record.status not in ("completed", "failed") and bot_id:
+        try:
+            await _process_recall_recording_core(record, bot_id, db)
+            await db.refresh(record)
+        except Exception as e:
+            log.warning("Proactive Recall bot status poll failed", bot_id=bot_id, error=str(e))
 
     return GoogleMeetStatusResponse(
         success=True,
@@ -7017,141 +7219,21 @@ async def recall_webhook_handler(
         return {"success": True, "status": "failed", "message": err_msg}
 
     # 4. Transcription complete or Recording ready (transcript.done, recording.done, bot.complete, or meeting completed)
-    has_transcript = bool(
-        data.get("transcript")
-        or (isinstance(data.get("bot"), dict) and data["bot"].get("transcript"))
-        or payload.get("transcript")
-    )
     is_completed_event = (
         event in ("transcript.done", "bot.complete", "transcription.done", "recording.done", "recording_done")
         or "complete" in event
         or "done" in event
         or status_code in ("done", "call_ended", "recording_done")
-        or has_transcript
     )
 
     if is_completed_event:
-        record.status = "processing_transcript"
-        await db.commit()
-
-        # Retrieve transcript
-        formatted_transcript = ""
-        detected_speaker = None
-
-        connector = await _resolve_recall_connector(record.organization_id, db)
-
-        # 4a. Direct download_url in data
-        dl_url = (
-            data.get("download_url")
-            or inner_data.get("download_url")
-            or data.get("provider_data_download_url")
-            or inner_data.get("provider_data_download_url")
-        )
-        if dl_url and connector:
-            try:
-                raw_json = await connector.download_transcript_json(dl_url)
-                formatted_transcript, detected_speaker = extract_recall_transcript_text(raw_json)
-            except Exception as e:
-                log.warning("Failed to download transcript from download_url", url=dl_url, error=str(e))
-
-        # 4b. Via transcript_id
-        if not formatted_transcript.strip():
-            transcript_id = str(data.get("transcript", {}).get("id") or data.get("transcript_id") or "")
-            if transcript_id and connector:
-                try:
-                    t_meta = await connector.get_transcript(transcript_id)
-                    t_dl = (
-                        t_meta.get("data", {}).get("download_url")
-                        or t_meta.get("download_url")
-                        or t_meta.get("data", {}).get("provider_data_download_url")
-                    )
-                    if t_dl:
-                        raw_json = await connector.download_transcript_json(t_dl)
-                        formatted_transcript, detected_speaker = extract_recall_transcript_text(raw_json)
-                    else:
-                        formatted_transcript, detected_speaker = extract_recall_transcript_text(t_meta)
-                except Exception as e:
-                    log.warning("Failed to retrieve transcript by ID", transcript_id=transcript_id, error=str(e))
-
-        # 4c. Direct transcript payload in data or payload
-        if not formatted_transcript.strip():
-            formatted_transcript, detected_speaker = extract_recall_transcript_text(payload.get("data") or payload)
-
-        # 4d. Fallback: query bot endpoint
-        if not formatted_transcript.strip() and connector:
-            try:
-                raw_transcript = await connector.get_bot_transcript(bot_id)
-                formatted_transcript, detected_speaker = extract_recall_transcript_text(raw_transcript)
-            except Exception as t_err:
-                log.warning("Could not fetch transcript from Recall API", bot_id=bot_id, error=str(t_err))
-
-        # 4e. Fallback: transcribe recording video/audio directly using SMBFlow Whisper AI
-        if not formatted_transcript.strip() and connector:
-            try:
-                bot_info = await connector.get_bot(bot_id)
-                recs = bot_info.get("recordings", [])
-                for r_item in recs:
-                    ms = r_item.get("media_shortcuts", {})
-                    rec_dl = (
-                        ms.get("audio_mixed", {}).get("data", {}).get("download_url")
-                        or ms.get("video_mixed", {}).get("data", {}).get("download_url")
-                    )
-                    if rec_dl:
-                        STORAGE_DIR.mkdir(parents=True, exist_ok=True)
-                        temp_rec_path = STORAGE_DIR / f"recall_{bot_id}_{uuid.uuid4().hex[:8]}.mp4"
-                        async with httpx.AsyncClient(timeout=60) as dl_client:
-                            r_stream = await dl_client.get(rec_dl)
-                            if r_stream.status_code == 200 and r_stream.content:
-                                async with aiofiles.open(temp_rec_path, "wb") as f_out:
-                                    await f_out.write(r_stream.content)
-                                w_text, w_lang, _, _ = await transcribe_audio_file(temp_rec_path)
-                                try:
-                                    temp_rec_path.unlink(missing_ok=True)
-                                except Exception:
-                                    pass
-                                if w_text and w_text.strip():
-                                    formatted_transcript = w_text.strip()
-                                    break
-            except Exception as w_err:
-                log.warning("Whisper recording transcription fallback failed", bot_id=bot_id, error=str(w_err))
-
-        if not formatted_transcript.strip():
-            formatted_transcript = "Google Meet session completed. Spoken audio conversation recorded."
-
-        contact_name = detected_speaker or record.contact_name or "Meeting Participants"
-
-        ingest_req = ConversationIngestRequest(
-            external_event_id=ext_event_id,
-            source="google_meet_recall",
-            conversation_title=record.conversation_title or f"Google Meet ({record.conversation_date})",
-            contact_name=contact_name,
-            conversation_type="Online Meeting",
-            conversation_date=record.conversation_date,
-            language=record.language or "Auto Detect",
-            transcript_text=formatted_transcript,
-            auto_process=True,
-            metadata={
-                "provider": "recall_ai",
-                "bot_id": bot_id,
-                "meeting_url": record.recording_data.get("meeting_url") if isinstance(record.recording_data, dict) else "",
-            },
-        )
-
-        webhook_user = TokenData(
-            user_id=f"recall_bot_{bot_id}",
-            email=f"recall-bot@{str(record.organization_id)[:8]}.local",
-            role="org_admin",
-            organization_id=str(record.organization_id),
-            tenant_id=str(record.organization_id),
-        )
-
-        # Reuse existing automatic conversation ingestion pipeline (Nodes 1–5)!
-        return await ingest_conversation_core(
-            req=ingest_req,
-            db=db,
-            current_user=webhook_user,
-            org_uuid=record.organization_id,
-        )
+        await _process_recall_recording_core(record, bot_id, db)
+        return {
+            "success": True,
+            "status": record.status,
+            "instance_id": str(record.instance_id) if record.instance_id else None,
+            "message": f"Processed Recall event: {record.status}",
+        }
 
     return {"success": True, "status": record.status, "message": f"Recall webhook event '{event}' handled."}
 

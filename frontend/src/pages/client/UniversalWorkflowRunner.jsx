@@ -507,11 +507,17 @@ function MeetingIntelligenceInputModes({ formData, onChange, api, synthesizing, 
           if (res.instance_id && onSelectRunId) {
             onSelectRunId(res.instance_id)
           }
-        } else if (res.status === 'in_call') {
+        } else if (res.status === 'in_call' || res.status === 'bot_joined') {
           setBotState(prev => ({
             ...prev,
             status: 'in_call',
             message: '🟢 Notetaker is currently inside the Google Meet recording live audio...',
+          }))
+        } else if (res.status === 'recording_processing' || res.status === 'processing_transcript' || res.status === 'processing') {
+          setBotState(prev => ({
+            ...prev,
+            status: 'recording_processing',
+            message: '⏳ Call ended. Transcribing meeting audio with Whisper AI & executing pipeline (Nodes 1–5)...',
           }))
         } else if (res.status === 'failed') {
           setBotState(prev => ({
@@ -1148,8 +1154,10 @@ function MeetingIntelligenceInputModes({ formData, onChange, api, synthesizing, 
             <div className={`p-3.5 rounded-xl border text-xs space-y-2 transition-all ${
               botState.status === 'completed'
                 ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800'
-                : botState.status === 'in_call'
+                : (botState.status === 'in_call' || botState.status === 'bot_joined')
                 ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-300 dark:border-blue-800'
+                : (botState.status === 'recording_processing' || botState.status === 'processing_transcript')
+                ? 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-800'
                 : 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800'
             }`}>
               <div className="flex items-center justify-between">
@@ -1157,15 +1165,19 @@ function MeetingIntelligenceInputModes({ formData, onChange, api, synthesizing, 
                   <span className={`w-2.5 h-2.5 rounded-full ${
                     botState.status === 'completed'
                       ? 'bg-emerald-500'
-                      : botState.status === 'in_call'
+                      : (botState.status === 'in_call' || botState.status === 'bot_joined')
                       ? 'bg-blue-500 animate-pulse'
+                      : (botState.status === 'recording_processing' || botState.status === 'processing_transcript')
+                      ? 'bg-indigo-500 animate-pulse'
                       : 'bg-amber-500 animate-pulse'
                   }`} />
                   <span>
                     {botState.status === 'completed'
                       ? 'Meeting Recording Complete'
-                      : botState.status === 'in_call'
+                      : (botState.status === 'in_call' || botState.status === 'bot_joined')
                       ? 'Notetaker Active in Meeting'
+                      : (botState.status === 'recording_processing' || botState.status === 'processing_transcript')
+                      ? 'Processing Audio & Generating Deliverables'
                       : 'Bot Dispatched to Meet'}
                   </span>
                   <span className="text-[10px] font-mono text-slate-400">({botState.botId.slice(0, 8)}...)</span>
@@ -1182,8 +1194,10 @@ function MeetingIntelligenceInputModes({ formData, onChange, api, synthesizing, 
                 {botState.message || (
                   botState.status === 'completed'
                     ? 'Call ended. Conversation audio downloaded, transcribed with Whisper AI, and processed into Central Memory & Action Items!'
-                    : botState.status === 'in_call'
+                    : (botState.status === 'in_call' || botState.status === 'bot_joined')
                     ? '🟢 SMBFlow Notetaker is recording audio inside your Google Meet call. When you hang up, processing begins automatically.'
+                    : (botState.status === 'recording_processing' || botState.status === 'processing_transcript')
+                    ? '⏳ Call ended. Transcribing meeting audio with Whisper AI & executing pipeline across Nodes 1–5...'
                     : '👉 Next Step: Check your Google Meet tab and click "Admit" when "SMBFlow Notetaker" asks to join. Once you finish the meeting and hang up, the transcript and deliverables will generate automatically!'
                 )}
               </p>
