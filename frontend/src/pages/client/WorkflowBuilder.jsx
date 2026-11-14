@@ -2024,7 +2024,7 @@ function FlowCanvas({
   )
 
   return (
-    <div className="flex flex-col h-full bg-slate-50 dark:bg-[#0d1117] text-slate-900 dark:text-white relative select-none">
+    <div className="flex flex-col h-full bg-slate-50 dark:bg-[#0d1117] text-slate-900 dark:text-white relative">
       
       {/* ── Top Bar ── */}
       <div className="px-5 py-2.5 bg-white dark:bg-[#121824] border-b border-slate-200 dark:border-[#233048] flex items-center justify-between shrink-0 z-20 shadow-sm">

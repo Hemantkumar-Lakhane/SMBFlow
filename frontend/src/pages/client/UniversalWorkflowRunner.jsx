@@ -4554,6 +4554,7 @@ export default function UniversalWorkflowRunner() {
                 return (
                   <div
                     key={node.id}
+                    data-node-id={node.id}
                     onClick={() => setSelectedNodeId(node.id)}
                     style={{
                       left: `${node.x}px`,
@@ -4561,7 +4562,7 @@ export default function UniversalWorkflowRunner() {
                       width: '170px',
                       height: '70px',
                     }}
-                    className={`absolute rounded-xl bg-white dark:bg-[#121826] border p-2.5 flex items-center justify-between cursor-pointer transition-all duration-300 shadow-xs ${
+                    className={`absolute rounded-xl bg-white dark:bg-[#121826] border p-2.5 flex items-center justify-between cursor-pointer transition-all duration-300 shadow-xs select-text ${
                       isRunning
                         ? 'ring-2 ring-emerald-500 border-emerald-500 shadow-[0_0_16px_rgba(16,185,129,0.5)] bg-emerald-50/20 dark:bg-emerald-950/20'
                         : isCompleted

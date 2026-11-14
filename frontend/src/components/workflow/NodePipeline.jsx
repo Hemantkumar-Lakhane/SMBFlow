@@ -116,7 +116,7 @@ function PipelineNode({ data }) {
     <>
       <div
         className={cn(
-          'relative rounded-2xl transition-all duration-300 select-none',
+          'relative rounded-2xl transition-all duration-300 select-text',
           isClickable && 'cursor-pointer hover:-translate-y-0.5',
         )}
         style={{

@@ -42,6 +42,42 @@ export default function AdminWorkflowQACenter() {
   const [qaStatusFilter, setQaStatusFilter] = useState('')
   const [integrationFilter, setIntegrationFilter] = useState('')
 
+  // Dynamic category options from loaded inventory
+  const availableCategories = useMemo(() => {
+    const cats = new Set()
+    inventory.forEach((wf) => {
+      if (wf.category) cats.add(wf.category.toLowerCase())
+    })
+    return Array.from(cats).sort()
+  }, [inventory])
+
+  // Real filtered inventory
+  const filteredInventory = useMemo(() => {
+    return inventory.filter((wf) => {
+      if (search.trim()) {
+        const query = search.toLowerCase().trim()
+        const matchName = wf.name?.toLowerCase().includes(query)
+        const matchKey = wf.workflow_key?.toLowerCase().includes(query)
+        const matchDesc = wf.description?.toLowerCase().includes(query)
+        const matchCat = wf.category?.toLowerCase().includes(query)
+        const matchInd = wf.industry?.toLowerCase().includes(query)
+        if (!matchName && !matchKey && !matchDesc && !matchCat && !matchInd) {
+          return false
+        }
+      }
+
+      if (categoryFilter && wf.category?.toLowerCase() !== categoryFilter.toLowerCase()) {
+        return false
+      }
+
+      if (qaStatusFilter && wf.qa_status?.toLowerCase() !== qaStatusFilter.toLowerCase()) {
+        return false
+      }
+
+      return true
+    })
+  }, [inventory, search, categoryFilter, qaStatusFilter])
+
   // Modals
   const [selectedWorkflow, setSelectedWorkflow] = useState(null)
   const [workflowManifest, setWorkflowManifest] = useState(null)
@@ -291,11 +327,37 @@ export default function AdminWorkflowQACenter() {
     }
   }
 
+  // Helper to render QA status badges with live indicators
+  const renderQaStatusBadge = (status) => {
+    const s = status || 'not_tested'
+    const dotColor = {
+      published: 'bg-emerald-500',
+      approved: 'bg-blue-500',
+      passed: 'bg-teal-500',
+      in_testing: 'bg-cyan-500 animate-pulse',
+      changes_required: 'bg-rose-500',
+      failed: 'bg-red-500',
+      not_tested: 'bg-slate-400',
+      draft: 'bg-purple-500',
+      disabled: 'bg-slate-400',
+    }[s] || 'bg-slate-400'
+
+    const label = s.replace(/_/g, ' ')
+    const style = QA_STATUS_STYLES[s] || QA_STATUS_STYLES.not_tested
+
+    return (
+      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold capitalize select-text ${style}`}>
+        <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
+        <span>{label}</span>
+      </span>
+    )
+  }
+
   // Metrics
   const metrics = dashboard?.metrics || {}
 
   return (
-    <div className="space-y-6 pb-20">
+    <div className="space-y-6 pb-20 select-text">
       {/* ── Header ───────────────────────────────────────────────────────────── */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
         <div>
@@ -335,70 +397,106 @@ export default function AdminWorkflowQACenter() {
       </div>
 
       {/* ── Live Database Metrics Dashboard ──────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-          <div className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Registered</div>
-          <div className="text-2xl font-bold text-slate-900 dark:text-white">{metrics.total_registered || 0}</div>
-          <div className="text-xs text-slate-400 mt-1">Discovered DAGs</div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5 select-text">
+        {/* Registered */}
+        <div className="group relative p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-slate-300 dark:hover:border-slate-700 transition-all select-text">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider select-text">Registered</span>
+            <span className="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600" />
+          </div>
+          <div className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white select-text">
+            {metrics.total_registered ?? inventory.length}
+          </div>
+          <div className="text-xs text-slate-400 mt-1 font-medium select-text">Discovered DAGs</div>
         </div>
 
-        <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-          <div className="text-xs font-medium text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-1">Passed Tests</div>
-          <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{metrics.passed || 0}</div>
-          <div className="text-xs text-slate-400 mt-1">Verified runs</div>
+        {/* Passed Tests */}
+        <div className="group relative p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-emerald-300 dark:hover:border-emerald-900/40 transition-all select-text">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider select-text">Passed Tests</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+          </div>
+          <div className="text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 select-text">
+            {metrics.passed || 0}
+          </div>
+          <div className="text-xs text-slate-400 mt-1 font-medium select-text">Verified runs</div>
         </div>
 
-        <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-          <div className="text-xs font-medium text-rose-600 dark:text-rose-400 uppercase tracking-wider mb-1">Open Defects</div>
-          <div className="text-2xl font-bold text-rose-600 dark:text-rose-400">{metrics.reported_defects || 0}</div>
-          <div className="text-xs text-slate-400 mt-1">{metrics.awaiting_fixes || 0} awaiting dev</div>
+        {/* Open Defects */}
+        <div className="group relative p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-rose-300 dark:hover:border-rose-900/40 transition-all select-text">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] font-semibold text-rose-600 dark:text-rose-400 uppercase tracking-wider select-text">Open Defects</span>
+            <span className={`w-2 h-2 rounded-full ${(metrics.reported_defects || 0) > 0 ? 'bg-rose-500 animate-pulse' : 'bg-slate-300 dark:bg-slate-700'}`} />
+          </div>
+          <div className={`text-2xl font-bold tracking-tight select-text ${(metrics.reported_defects || 0) > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-white'}`}>
+            {metrics.reported_defects || 0}
+          </div>
+          <div className="text-xs text-slate-400 mt-1 font-medium select-text">{metrics.awaiting_fixes || 0} awaiting dev</div>
         </div>
 
-        <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-          <div className="text-xs font-medium text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-1">Retest Queue</div>
-          <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">{metrics.retest_queue || 0}</div>
-          <div className="text-xs text-slate-400 mt-1">Fix ready to verify</div>
+        {/* Retest Queue */}
+        <div className="group relative p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-amber-300 dark:hover:border-amber-900/40 transition-all select-text">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider select-text">Retest Queue</span>
+            <span className={`w-2 h-2 rounded-full ${(metrics.retest_queue || 0) > 0 ? 'bg-amber-500 animate-pulse' : 'bg-slate-300 dark:bg-slate-700'}`} />
+          </div>
+          <div className={`text-2xl font-bold tracking-tight select-text ${(metrics.retest_queue || 0) > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-900 dark:text-white'}`}>
+            {metrics.retest_queue || 0}
+          </div>
+          <div className="text-xs text-slate-400 mt-1 font-medium select-text">Fix ready to verify</div>
         </div>
 
-        <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-          <div className="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-1">Approved</div>
-          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{metrics.approved || 0}</div>
-          <div className="text-xs text-slate-400 mt-1">Ready to publish</div>
+        {/* Approved */}
+        <div className="group relative p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-blue-300 dark:hover:border-blue-900/40 transition-all select-text">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider select-text">Approved</span>
+            <span className={`w-2 h-2 rounded-full ${(metrics.approved || 0) > 0 ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-700'}`} />
+          </div>
+          <div className={`text-2xl font-bold tracking-tight select-text ${(metrics.approved || 0) > 0 ? 'text-blue-600 dark:text-blue-400' : 'text-slate-900 dark:text-white'}`}>
+            {metrics.approved || 0}
+          </div>
+          <div className="text-xs text-slate-400 mt-1 font-medium select-text">Ready to publish</div>
         </div>
 
-        <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-          <div className="text-xs font-medium text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-1">Published Live</div>
-          <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{metrics.published || 0}</div>
-          <div className="text-xs text-slate-400 mt-1">Accessible to clients</div>
+        {/* Published Live */}
+        <div className="group relative p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-emerald-300 dark:hover:border-emerald-900/40 transition-all select-text">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider select-text">Published Live</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+          </div>
+          <div className="text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 select-text">
+            {metrics.published || 0}
+          </div>
+          <div className="text-xs text-slate-400 mt-1 font-medium select-text">Accessible to clients</div>
         </div>
       </div>
 
       {/* ── Navigation Tabs ──────────────────────────────────────────────────── */}
-      <div className="flex border-b border-slate-200 dark:border-slate-800 gap-6">
+      <div className="flex border-b border-slate-200 dark:border-slate-800 gap-6 select-text">
         <button
           onClick={() => setActiveTab('inventory')}
-          className={`pb-3 text-sm font-semibold flex items-center gap-2 border-b-2 transition-colors ${
+          className={`pb-3 text-sm font-semibold flex items-center gap-2 border-b-2 transition-colors select-text ${
             activeTab === 'inventory'
               ? 'border-blue-600 text-blue-600 dark:text-blue-400'
               : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
           }`}
         >
           <Layers className="w-4 h-4" />
-          Workflow Testing Inventory ({inventory.length})
+          <span>Workflow Testing Inventory ({filteredInventory.length !== inventory.length ? `${filteredInventory.length} of ${inventory.length}` : inventory.length})</span>
         </button>
 
         <button
           onClick={() => setActiveTab('defects')}
-          className={`pb-3 text-sm font-semibold flex items-center gap-2 border-b-2 transition-colors ${
+          className={`pb-3 text-sm font-semibold flex items-center gap-2 border-b-2 transition-colors select-text ${
             activeTab === 'defects'
               ? 'border-blue-600 text-blue-600 dark:text-blue-400'
               : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
           }`}
         >
           <Bug className="w-4 h-4" />
-          Defect & Dev Feedback Queue
+          <span>Defect & Dev Feedback Queue</span>
           {metrics.reported_defects > 0 && (
-            <span className="px-1.5 py-0.5 text-xs rounded-full bg-rose-500/10 text-rose-600 font-bold">
+            <span className="px-1.5 py-0.5 text-xs rounded-full bg-rose-500/10 text-rose-600 font-bold select-text">
               {metrics.reported_defects}
             </span>
           )}
@@ -406,14 +504,14 @@ export default function AdminWorkflowQACenter() {
 
         <button
           onClick={() => setActiveTab('retest')}
-          className={`pb-3 text-sm font-semibold flex items-center gap-2 border-b-2 transition-colors ${
+          className={`pb-3 text-sm font-semibold flex items-center gap-2 border-b-2 transition-colors select-text ${
             activeTab === 'retest'
               ? 'border-blue-600 text-blue-600 dark:text-blue-400'
               : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
           }`}
         >
           <RotateCcw className="w-4 h-4" />
-          Retest Queue ({retestQueue.length})
+          <span>Retest Queue ({retestQueue.length})</span>
         </button>
       </div>
 
@@ -421,175 +519,246 @@ export default function AdminWorkflowQACenter() {
           TAB 1: WORKFLOW TESTING INVENTORY
       ──────────────────────────────────────────────────────────────────────── */}
       {activeTab === 'inventory' && (
-        <div className="space-y-4">
+        <div className="space-y-4 select-text">
           {/* Filter Bar */}
-          <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
-            <div className="relative w-full sm:w-96">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <div className="p-3 rounded-xl bg-slate-50/80 dark:bg-slate-850/60 border border-slate-200/80 dark:border-slate-800 flex flex-col sm:flex-row gap-3 items-center justify-between select-text">
+            <div className="relative w-full sm:w-96 select-text">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               <input
                 type="text"
                 placeholder="Search workflows by key, name, or purpose..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-9 pr-8 py-2 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all select-text"
               />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs p-0.5"
+                  title="Clear search"
+                >
+                  ✕
+                </button>
+              )}
             </div>
 
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <select
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-                className="px-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300"
-              >
-                <option value="">All Categories</option>
-                <option value="productivity">Productivity</option>
-                <option value="marketing">Marketing</option>
-                <option value="sales">Sales</option>
-                <option value="healthcare">Healthcare</option>
-                <option value="finance">Finance</option>
-                <option value="legal">Legal</option>
-                <option value="operations">Operations</option>
-              </select>
+            <div className="flex items-center gap-2.5 w-full sm:w-auto">
+              <div className="relative">
+                <select
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                  className="appearance-none pl-3 pr-8 py-2 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                >
+                  <option value="">All Categories</option>
+                  {availableCategories.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                    </option>
+                  ))}
+                  {availableCategories.length === 0 && (
+                    <>
+                      <option value="productivity">Productivity</option>
+                      <option value="marketing">Marketing</option>
+                      <option value="sales">Sales</option>
+                      <option value="healthcare">Healthcare</option>
+                      <option value="finance">Finance</option>
+                      <option value="legal">Legal</option>
+                      <option value="operations">Operations</option>
+                    </>
+                  )}
+                </select>
+                <Filter className="w-3.5 h-3.5 absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              </div>
 
-              <select
-                value={qaStatusFilter}
-                onChange={(e) => setQaStatusFilter(e.target.value)}
-                className="px-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300"
-              >
-                <option value="">All QA States</option>
-                <option value="not_tested">Not Tested</option>
-                <option value="in_testing">In Testing</option>
-                <option value="passed">Passed</option>
-                <option value="changes_required">Changes Required</option>
-                <option value="approved">Approved</option>
-                <option value="published">Published</option>
-                <option value="disabled">Disabled</option>
-              </select>
+              <div className="relative">
+                <select
+                  value={qaStatusFilter}
+                  onChange={(e) => setQaStatusFilter(e.target.value)}
+                  className="appearance-none pl-3 pr-8 py-2 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                >
+                  <option value="">All QA States</option>
+                  <option value="published">Published</option>
+                  <option value="approved">Approved</option>
+                  <option value="passed">Passed</option>
+                  <option value="in_testing">In Testing</option>
+                  <option value="not_tested">Not Tested</option>
+                  <option value="changes_required">Changes Required</option>
+                  <option value="disabled">Disabled</option>
+                </select>
+                <Sliders className="w-3.5 h-3.5 absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              </div>
+
+              {(search || categoryFilter || qaStatusFilter) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearch('')
+                    setCategoryFilter('')
+                    setQaStatusFilter('')
+                  }}
+                  className="px-2.5 py-1.5 text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
+                >
+                  Reset
+                </button>
+              )}
             </div>
           </div>
 
           {/* Workflow Table / Grid */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl overflow-hidden shadow-xs">
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 text-xs uppercase font-semibold border-b border-slate-200 dark:border-slate-800">
+              <table className="w-full text-left text-sm select-text">
+                <thead className="bg-slate-50/80 dark:bg-slate-800/60 text-slate-500 text-[11px] uppercase tracking-wider font-semibold border-b border-slate-200 dark:border-slate-800 select-text">
                   <tr>
-                    <th className="px-4 py-3">Workflow Name & Purpose</th>
-                    <th className="px-4 py-3">Category & Scope</th>
-                    <th className="px-4 py-3">QA Status</th>
-                    <th className="px-4 py-3">Required Tools</th>
-                    <th className="px-4 py-3">Defects</th>
-                    <th className="px-4 py-3">Latest Test</th>
-                    <th className="px-4 py-3 text-right">Actions</th>
+                    <th className="px-5 py-3.5 select-text">Workflow Name & Purpose</th>
+                    <th className="px-5 py-3.5 select-text">Category & Scope</th>
+                    <th className="px-5 py-3.5 select-text">QA Status</th>
+                    <th className="px-5 py-3.5 select-text">Required Tools</th>
+                    <th className="px-5 py-3.5 select-text">Defects</th>
+                    <th className="px-5 py-3.5 select-text">Latest Test</th>
+                    <th className="px-5 py-3.5 text-right select-text">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {inventory.map((wf) => (
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 select-text">
+                  {filteredInventory.map((wf) => (
                     <tr
                       key={wf.workflow_key}
-                      onClick={() => navigate(`/workflows/${wf.workflow_key}?qa_test=true&return_to=/admin/workflows/qa-center`)}
-                      className="cursor-pointer hover:bg-indigo-50/30 dark:hover:bg-slate-800/50 transition-colors group"
-                      title="Click to open live workflow test runner"
+                      className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors select-text"
                     >
-                      <td className="px-4 py-3.5">
-                        <div className="font-semibold text-slate-900 dark:text-white flex items-center gap-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                          {wf.name}
-                          <span className="text-xs px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 font-mono">
-                            v{wf.version}
-                          </span>
-                          <ExternalLink size={12} className="opacity-0 group-hover:opacity-100 text-indigo-500 transition-opacity" />
-                        </div>
-                        <div className="text-xs text-slate-500 line-clamp-1 mt-0.5">
-                          {wf.description}
-                        </div>
-                      </td>
-
-                      <td className="px-4 py-3.5">
-                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                          {wf.category}
-                        </span>
-                        <div className="text-[11px] text-slate-400 mt-1">
-                          {wf.scope === 'INDUSTRY' ? `Industry: ${wf.industry}` : 'Global Scope'}
-                        </div>
-                      </td>
-
-                      <td className="px-4 py-3.5">
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold capitalize ${QA_STATUS_STYLES[wf.qa_status] || QA_STATUS_STYLES.not_tested}`}>
-                          {wf.qa_status?.replace('_', ' ')}
-                        </span>
-                      </td>
-
-                      <td className="px-4 py-3.5">
-                        {wf.required_integrations?.length > 0 ? (
-                          <div className="flex flex-wrap gap-1">
-                            {wf.required_integrations.map((t) => (
-                              <span
-                                key={t}
-                                className={`text-[11px] px-1.5 py-0.5 rounded font-mono ${
-                                  wf.missing_integrations?.includes(t)
-                                    ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
-                                    : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                                }`}
+                      <td className="px-5 py-4 align-top select-text">
+                        <div className="flex items-start gap-2.5 select-text">
+                          <div className="min-w-0 flex-1 select-text">
+                            <div className="flex items-center gap-2 flex-wrap select-text">
+                              <button
+                                type="button"
+                                onClick={() => navigate(`/workflows/${wf.workflow_key}?qa_test=true&return_to=/admin/workflows/qa-center`)}
+                                className="font-semibold text-slate-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left flex items-center gap-1.5 group/title select-text"
+                                title="Open live workflow test runner"
                               >
-                                {t}
+                                <span className="select-text">{wf.name}</span>
+                                <ExternalLink size={13} className="text-slate-400 group-hover/title:text-blue-500 opacity-60 group-hover/title:opacity-100 transition-opacity shrink-0" />
+                              </button>
+                              <span className="text-[11px] font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200/60 dark:border-slate-700/60 select-text">
+                                v{wf.version || '1.0.0'}
                               </span>
-                            ))}
+                            </div>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2 leading-relaxed select-text" title={wf.description}>
+                              {wf.description}
+                            </p>
+                            <div className="text-[11px] font-mono text-slate-400 mt-1 select-text">
+                              {wf.workflow_key}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+
+                      <td className="px-5 py-4 align-top select-text whitespace-nowrap">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700/60 capitalize select-text">
+                          {wf.category || 'general'}
+                        </span>
+                        <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-1.5 select-text">
+                          {wf.scope === 'INDUSTRY' ? `Industry: ${wf.industry || 'Custom'}` : 'Global Scope'}
+                        </div>
+                      </td>
+
+                      <td className="px-5 py-4 align-top select-text whitespace-nowrap">
+                        {renderQaStatusBadge(wf.qa_status)}
+                      </td>
+
+                      <td className="px-5 py-4 align-top select-text">
+                        {wf.required_integrations && wf.required_integrations.length > 0 ? (
+                          <div className="flex flex-wrap gap-1.5 max-w-[200px] select-text">
+                            {wf.required_integrations.map((t) => {
+                              const isMissing = wf.missing_integrations?.includes(t)
+                              return (
+                                <span
+                                  key={t}
+                                  className={`inline-flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded-md border select-text ${
+                                    isMissing
+                                      ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                                      : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200/60 dark:border-slate-700/60'
+                                  }`}
+                                  title={isMissing ? `Missing credentials for ${t}` : `Configured: ${t}`}
+                                >
+                                  {t}
+                                </span>
+                              )
+                            })}
                           </div>
                         ) : (
-                          <span className="text-xs text-slate-400">None (Native)</span>
+                          <span className="text-xs text-slate-400 italic select-text">None (Native)</span>
                         )}
                       </td>
 
-                      <td className="px-4 py-3.5">
+                      <td className="px-5 py-4 align-top select-text whitespace-nowrap">
                         {wf.open_defects_count > 0 ? (
                           <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setActiveTab('defects')
-                            }}
-                            className="px-2 py-0.5 rounded-full text-xs font-bold bg-rose-500/10 text-rose-600 hover:bg-rose-500/20"
+                            type="button"
+                            onClick={() => setActiveTab('defects')}
+                            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 transition-colors select-text"
+                            title="View open defects in queue"
                           >
-                            {wf.open_defects_count} open
+                            <Bug size={12} />
+                            <span>{wf.open_defects_count} open</span>
                           </button>
                         ) : (
-                          <span className="text-xs text-slate-400">0</span>
+                          <span className="text-xs text-slate-400 font-mono select-text">0</span>
                         )}
                       </td>
 
-                      <td className="px-4 py-3.5 text-xs">
+                      <td className="px-5 py-4 align-top select-text whitespace-nowrap">
                         {wf.latest_test ? (
-                          <div>
-                            <span className={`font-semibold capitalize ${wf.latest_test.status === 'passed' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                              {wf.latest_test.status} ({wf.latest_test.test_mode})
-                            </span>
-                            <div className="text-[11px] text-slate-400">{wf.latest_test.duration_ms}ms</div>
+                          <div className="space-y-0.5 select-text">
+                            <div className="flex items-center gap-1.5 select-text">
+                              <span
+                                className={`w-1.5 h-1.5 rounded-full ${
+                                  wf.latest_test.status === 'passed' ? 'bg-emerald-500' : 'bg-rose-500'
+                                }`}
+                              />
+                              <span
+                                className={`text-xs font-semibold capitalize select-text ${
+                                  wf.latest_test.status === 'passed'
+                                    ? 'text-emerald-600 dark:text-emerald-400'
+                                    : 'text-rose-600 dark:text-rose-400'
+                                }`}
+                              >
+                                {wf.latest_test.status}
+                              </span>
+                              <span className="text-[11px] text-slate-400 select-text">
+                                ({wf.latest_test.test_mode?.replace('_', ' ') || 'unit'})
+                              </span>
+                            </div>
+                            <div className="text-[11px] text-slate-400 font-mono pl-3 select-text">
+                              {wf.latest_test.duration_ms}ms
+                            </div>
                           </div>
                         ) : (
-                          <span className="text-slate-400 italic">Never tested</span>
+                          <span className="text-xs text-slate-400 italic select-text">Never tested</span>
                         )}
                       </td>
 
-                      <td className="px-4 py-3.5 text-right" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-1.5">
-                          <Button
-                            size="sm"
-                            variant="primary"
-                            icon={<Play size={13} />}
+                      <td className="px-5 py-4 align-top text-right select-text whitespace-nowrap">
+                        <div className="inline-flex items-center justify-end gap-2">
+                          <button
+                            type="button"
                             onClick={() => navigate(`/workflows/${wf.workflow_key}?qa_test=true&return_to=/admin/workflows/qa-center`)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-600 hover:bg-blue-700 text-white shadow-xs hover:shadow transition-all"
                             title="Open live workflow screen and run real test"
                           >
-                            Test Live
-                          </Button>
+                            <Play size={12} className="fill-current" />
+                            <span>Test Live</span>
+                          </button>
 
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            icon={<ShieldCheck size={13} />}
+                          <button
+                            type="button"
                             onClick={() => handleOpenReleaseModal(wf)}
-                            title="Release Gates & Approval"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 shadow-xs transition-all"
+                            title="Release Gates & Governance Sign-off"
                           >
-                            Release
-                          </Button>
+                            <ShieldCheck size={13} className="text-blue-500" />
+                            <span>Release</span>
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -597,6 +766,27 @@ export default function AdminWorkflowQACenter() {
                 </tbody>
               </table>
             </div>
+
+            {filteredInventory.length === 0 && (
+              <div className="p-12 text-center bg-white dark:bg-slate-900 space-y-3 select-text">
+                <Search className="w-10 h-10 text-slate-400 mx-auto" />
+                <h3 className="text-base font-bold text-slate-900 dark:text-white select-text">No Matching Workflows Found</h3>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto select-text">
+                  No workflows match your search query &ldquo;{search}&rdquo; and active filter parameters.
+                </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setSearch('')
+                    setCategoryFilter('')
+                    setQaStatusFilter('')
+                  }}
+                >
+                  Clear All Filters
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -605,46 +795,46 @@ export default function AdminWorkflowQACenter() {
           TAB 2: DEFECT & DEV FEEDBACK QUEUE
       ──────────────────────────────────────────────────────────────────────── */}
       {activeTab === 'defects' && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+        <div className="space-y-4 select-text">
+          <div className="flex items-center justify-between select-text">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 select-text">
               <Bug className="w-5 h-5 text-rose-500" />
-              Active Defects & Developer Feedback Queue
+              <span>Active Defects & Developer Feedback Queue</span>
             </h2>
-            <span className="text-sm text-slate-500">{defects.length} total defect reports</span>
+            <span className="text-sm text-slate-500 select-text">{defects.length} total defect reports</span>
           </div>
 
           {defects.length === 0 ? (
-            <div className="p-12 text-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
+            <div className="p-12 text-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl select-text">
               <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto mb-3" />
-              <h3 className="text-base font-bold text-slate-900 dark:text-white">Zero Active Defects Reported</h3>
-              <p className="text-sm text-slate-500 mt-1">All tested workflow nodes are operating within declared specifications.</p>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white select-text">Zero Active Defects Reported</h3>
+              <p className="text-sm text-slate-500 mt-1 select-text">All tested workflow nodes are operating within declared specifications.</p>
             </div>
           ) : (
-            <div className="grid gap-3">
+            <div className="grid gap-3 select-text">
               {defects.map((def) => (
                 <div
                   key={def.id}
-                  className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3"
+                  className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-3 select-text"
                 >
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className={`text-xs uppercase font-bold px-2 py-0.5 rounded-full ${
+                  <div className="flex items-start justify-between gap-4 select-text">
+                    <div className="select-text">
+                      <div className="flex items-center gap-2 flex-wrap select-text">
+                        <span className={`text-xs uppercase font-bold px-2 py-0.5 rounded-full select-text ${
                           def.severity === 'critical' ? 'bg-red-500/10 text-red-600 border border-red-500/20' :
                           def.severity === 'high' ? 'bg-orange-500/10 text-orange-600 border border-orange-500/20' :
                           'bg-amber-500/10 text-amber-600'
                         }`}>
                           {def.severity}
                         </span>
-                        <h4 className="font-bold text-slate-900 dark:text-white text-base">{def.title}</h4>
-                        <span className="text-xs px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 font-mono text-slate-500">
+                        <h4 className="font-bold text-slate-900 dark:text-white text-base select-text">{def.title}</h4>
+                        <span className="text-xs px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 font-mono text-slate-500 select-text">
                           {def.workflow_key}
                         </span>
                       </div>
-                      <div className="text-xs text-slate-500 mt-1">
-                        Reported by <span className="font-medium text-slate-700 dark:text-slate-300">{def.reported_by}</span> on node{' '}
-                        <span className="font-mono text-blue-600">{def.node_name || def.node_id || 'Pipeline'}</span>
+                      <div className="text-xs text-slate-500 mt-1 select-text">
+                        Reported by <span className="font-medium text-slate-700 dark:text-slate-300 select-text">{def.reported_by}</span> on node{' '}
+                        <span className="font-mono text-blue-600 select-text">{def.node_name || def.node_id || 'Pipeline'}</span>
                       </div>
                     </div>
 
@@ -666,19 +856,19 @@ export default function AdminWorkflowQACenter() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border border-slate-200/50 dark:border-slate-700/50">
-                    <div>
-                      <span className="font-semibold text-slate-600 dark:text-slate-400 block mb-0.5">Expected Behavior:</span>
-                      <p className="text-slate-700 dark:text-slate-300">{def.expected_behavior}</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border border-slate-200/50 dark:border-slate-700/50 select-text">
+                    <div className="select-text">
+                      <span className="font-semibold text-slate-600 dark:text-slate-400 block mb-0.5 select-text">Expected Behavior:</span>
+                      <p className="text-slate-700 dark:text-slate-300 select-text">{def.expected_behavior}</p>
                     </div>
-                    <div>
-                      <span className="font-semibold text-slate-600 dark:text-slate-400 block mb-0.5">Actual Behavior:</span>
-                      <p className="text-rose-600 dark:text-rose-400">{def.actual_behavior}</p>
+                    <div className="select-text">
+                      <span className="font-semibold text-slate-600 dark:text-slate-400 block mb-0.5 select-text">Actual Behavior:</span>
+                      <p className="text-rose-600 dark:text-rose-400 select-text">{def.actual_behavior}</p>
                     </div>
                   </div>
 
                   {def.sanitized_error && (
-                    <div className="p-2.5 rounded bg-red-50 dark:bg-red-950/20 text-xs font-mono text-red-700 dark:text-red-300 border border-red-200 dark:border-red-900/30">
+                    <div className="p-2.5 rounded bg-red-50 dark:bg-red-950/20 text-xs font-mono text-red-700 dark:text-red-300 border border-red-200 dark:border-red-900/30 select-text">
                       {def.sanitized_error}
                     </div>
                   )}
@@ -693,33 +883,33 @@ export default function AdminWorkflowQACenter() {
           TAB 3: RETEST QUEUE
       ──────────────────────────────────────────────────────────────────────── */}
       {activeTab === 'retest' && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+        <div className="space-y-4 select-text">
+          <div className="flex items-center justify-between select-text">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 select-text">
               <RotateCcw className="w-5 h-5 text-amber-500" />
-              Retest Queue (Fixes Ready for Verification)
+              <span>Retest Queue (Fixes Ready for Verification)</span>
             </h2>
           </div>
 
           {retestQueue.length === 0 ? (
-            <div className="p-12 text-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
+            <div className="p-12 text-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl select-text">
               <CheckCircle className="w-12 h-12 text-teal-500 mx-auto mb-3" />
-              <h3 className="text-base font-bold text-slate-900 dark:text-white">Retest Queue is Clear</h3>
-              <p className="text-sm text-slate-500 mt-1">There are no pending developer fixes awaiting re-verification.</p>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white select-text">Retest Queue is Clear</h3>
+              <p className="text-sm text-slate-500 mt-1 select-text">There are no pending developer fixes awaiting re-verification.</p>
             </div>
           ) : (
-            <div className="grid gap-3">
+            <div className="grid gap-3 select-text">
               {retestQueue.map((item) => (
-                <div key={item.id} className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-4">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-amber-500/10 text-amber-600">
+                <div key={item.id} className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-4 select-text">
+                  <div className="select-text">
+                    <div className="flex items-center gap-2 select-text">
+                      <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-amber-500/10 text-amber-600 select-text">
                         {item.status.replace('_', ' ')}
                       </span>
-                      <h4 className="font-bold text-slate-900 dark:text-white">{item.title}</h4>
+                      <h4 className="font-bold text-slate-900 dark:text-white select-text">{item.title}</h4>
                     </div>
-                    <div className="text-xs text-slate-500 mt-1">
-                      Workflow: <span className="font-mono text-blue-600">{item.workflow_key}</span> • Node: {item.node_name}
+                    <div className="text-xs text-slate-500 mt-1 select-text">
+                      Workflow: <span className="font-mono text-blue-600 select-text">{item.workflow_key}</span> • Node: <span className="select-text">{item.node_name}</span>
                     </div>
                   </div>
 
