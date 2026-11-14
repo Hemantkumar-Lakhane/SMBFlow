@@ -471,7 +471,7 @@ function formatBytes(bytes) {
 }
 
 // ── Dedicated Mode-Specific Meeting Intelligence Input Form ──────────────────
-function MeetingIntelligenceInputModes({ formData, onChange, api, synthesizing, onExecute, onOpenLiveHub }) {
+function MeetingIntelligenceInputModes({ formData, onChange, api, synthesizing, onExecute, onOpenLiveHub, onSelectRunId }) {
   const activeMode = formData.input_mode || 'paste_transcript'
   const [isUploading, setIsUploading] = useState(false)
   const [googleStatus, setGoogleStatus] = useState({ connected: false, loading: true })
@@ -489,6 +489,44 @@ function MeetingIntelligenceInputModes({ formData, onChange, api, synthesizing, 
     status: null,
     message: null,
   })
+
+  // Live Bot Status Polling & Auto Deliverables Trigger
+  useEffect(() => {
+    if (!botState.botId || botState.status === 'completed' || botState.status === 'failed') return
+    let isMounted = true
+    const interval = setInterval(async () => {
+      try {
+        const res = await api.get(`/workflows/meeting-intelligence/google-meet/status/${botState.botId}`)
+        if (!isMounted || !res) return
+        if (res.status === 'completed') {
+          setBotState(prev => ({
+            ...prev,
+            status: 'completed',
+            message: 'Call ended and audio processed! Staging deliverables...',
+          }))
+          if (res.instance_id && onSelectRunId) {
+            onSelectRunId(res.instance_id)
+          }
+        } else if (res.status === 'in_call') {
+          setBotState(prev => ({
+            ...prev,
+            status: 'in_call',
+            message: '🟢 Notetaker is currently inside the Google Meet recording live audio...',
+          }))
+        } else if (res.status === 'failed') {
+          setBotState(prev => ({
+            ...prev,
+            status: 'failed',
+            message: res.error_message || 'Bot encountered an issue.',
+          }))
+        }
+      } catch (_) {}
+    }, 4000)
+    return () => {
+      isMounted = false
+      clearInterval(interval)
+    }
+  }, [botState.botId, botState.status, api, onSelectRunId])
 
   const allowedExtensions = ['.mp3', '.wav', '.m4a', '.webm', '.mpeg', '.mpg', '.mpga']
   const maxSizeBytes = 50 * 1024 * 1024
@@ -1107,19 +1145,74 @@ function MeetingIntelligenceInputModes({ formData, onChange, api, synthesizing, 
 
           {/* Live Bot Feedback Box */}
           {botState.botId && (
-            <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-xs space-y-1.5">
+            <div className={`p-3.5 rounded-xl border text-xs space-y-2 transition-all ${
+              botState.status === 'completed'
+                ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800'
+                : botState.status === 'in_call'
+                ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-300 dark:border-blue-800'
+                : 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800'
+            }`}>
               <div className="flex items-center justify-between">
-                <span className="font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-                  <span>Bot Dispatched (ID: {botState.botId})</span>
+                <span className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <span className={`w-2.5 h-2.5 rounded-full ${
+                    botState.status === 'completed'
+                      ? 'bg-emerald-500'
+                      : botState.status === 'in_call'
+                      ? 'bg-blue-500 animate-pulse'
+                      : 'bg-amber-500 animate-pulse'
+                  }`} />
+                  <span>
+                    {botState.status === 'completed'
+                      ? 'Meeting Recording Complete'
+                      : botState.status === 'in_call'
+                      ? 'Notetaker Active in Meeting'
+                      : 'Bot Dispatched to Meet'}
+                  </span>
+                  <span className="text-[10px] font-mono text-slate-400">({botState.botId.slice(0, 8)}...)</span>
                 </span>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200 font-bold uppercase">
+                <span className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold uppercase border ${
+                  botState.status === 'completed'
+                    ? 'bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200 border-emerald-300 dark:border-emerald-700'
+                    : 'bg-white dark:bg-[#121826] text-slate-700 dark:text-slate-300 border-slate-200 dark:border-[#233048]'
+                }`}>
                   {botState.status}
                 </span>
               </div>
-              <p className="text-[11px] text-amber-800 dark:text-amber-300 leading-relaxed">
-                👉 <strong>Next Step:</strong> Check your Google Meet tab! Click <strong>"Admit"</strong> when <em>"SMBFlow Notetaker"</em> requests to join. Once you finish the meeting and hang up, the transcript is posted to SMBFlow automatically!
+              <p className="text-[11px] text-slate-700 dark:text-slate-300 leading-relaxed">
+                {botState.message || (
+                  botState.status === 'completed'
+                    ? 'Call ended. Conversation audio downloaded, transcribed with Whisper AI, and processed into Central Memory & Action Items!'
+                    : botState.status === 'in_call'
+                    ? '🟢 SMBFlow Notetaker is recording audio inside your Google Meet call. When you hang up, processing begins automatically.'
+                    : '👉 Next Step: Check your Google Meet tab and click "Admit" when "SMBFlow Notetaker" asks to join. Once you finish the meeting and hang up, the transcript and deliverables will generate automatically!'
+                )}
               </p>
+              {botState.status !== 'completed' && (
+                <div className="flex items-center gap-2 pt-0.5">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const res = await api.get(`/workflows/meeting-intelligence/google-meet/status/${botState.botId}`)
+                        if (res) {
+                          setBotState(prev => ({
+                            ...prev,
+                            status: res.status,
+                            message: res.status === 'completed' ? 'Call ended! Staging deliverables...' : prev.message,
+                          }))
+                          if (res.status === 'completed' && res.instance_id && onSelectRunId) {
+                            onSelectRunId(res.instance_id)
+                          }
+                        }
+                      } catch (_) {}
+                    }}
+                    className="px-2.5 py-1 text-[11px] font-semibold bg-white dark:bg-[#121826] hover:bg-slate-100 dark:hover:bg-[#1e2a3f] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#233048] rounded-lg transition-colors cursor-pointer flex items-center gap-1"
+                  >
+                    <RefreshCw className="w-3 h-3 text-slate-400" />
+                    <span>Check Live Bot Status</span>
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -1226,9 +1319,19 @@ function MeetingIntelligenceInputModes({ formData, onChange, api, synthesizing, 
       </div>
 
       {errorMsg && (
-        <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 text-xs text-red-600 dark:text-red-400 animate-in fade-in">
-          <AlertCircle className="w-4 h-4 shrink-0" />
-          <span>{errorMsg}</span>
+        <div className="flex items-center justify-between gap-2 p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 text-xs text-red-600 dark:text-red-400 animate-in fade-in">
+          <div className="flex items-center gap-2 min-w-0">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span className="break-words">{errorMsg}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setErrorMsg('')}
+            className="p-1 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg cursor-pointer shrink-0 transition-colors"
+            title="Dismiss error message"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
         </div>
       )}
     </div>
@@ -2782,6 +2885,7 @@ export default function UniversalWorkflowRunner() {
     if (!run) return
     setSelectedRunId(run.runId)
     setExecutionResult(run)
+    setShowFormWhenDone(false)
     if (run.outputs || run.conversationData) {
       setFormData(run.outputs || run.conversationData)
     }
@@ -2809,6 +2913,16 @@ export default function UniversalWorkflowRunner() {
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       fieldIndex: workflow.fields.length,
     })
+
+    setTimeout(() => {
+      const delivEl = document.getElementById('workflow-deliverables-container')
+      if (delivEl) {
+        delivEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      } else {
+        const mainEl = document.querySelector('main')
+        if (mainEl) mainEl.scrollTo({ top: 0, behavior: 'smooth' })
+      }
+    }, 150)
   }
 
   // Synchronize meeting intelligence run with PostgreSQL backend state
@@ -3022,8 +3136,6 @@ export default function UniversalWorkflowRunner() {
       }
 
       if (workflow.key === 'meeting_intelligence_followup' || targetKey === 'meeting_intelligence_followup') {
-        // Start fresh with clean interactive input modes form ready for human interaction
-        // Clean out any stale failed mock runs from previous development/testing
         const historyKey = `smbflow_runs_history_${workflow.key}`
         const savedHistory = JSON.parse(localStorage.getItem(historyKey) || '[]')
         const cleanedHistory = savedHistory.filter(h => h.status !== 'failed' && !h.errorMessage?.includes('Invalid audio') && !h.objective?.includes('Executive Client Architecture'))
@@ -3034,6 +3146,26 @@ export default function UniversalWorkflowRunner() {
         setFormData(initialDefaults)
         setPipelineNodes(workflow.nodes.map((n, idx) => ({ ...n, status: idx === 0 ? 'active' : 'idle' })))
         setSelectedNodeId(workflow.nodes[0]?.id || 'n1')
+
+        // Fetch remote PostgreSQL runs for meeting intelligence to restore real completed runs
+        api.get('/workflows/meeting-intelligence/runs').then(remoteRuns => {
+          if (Array.isArray(remoteRuns) && remoteRuns.length > 0) {
+            setRunsHistory(prev => {
+              const map = new Map()
+              prev.forEach(r => map.set(r.runId || r.instance_id, r))
+              remoteRuns.forEach(r => {
+                const id = r.runId || r.instance_id
+                if (!map.has(id)) map.set(id, r)
+              })
+              const merged = Array.from(map.values()).slice(0, 20)
+              try {
+                localStorage.setItem(historyKey, JSON.stringify(merged))
+              } catch (_) {}
+              return merged
+            })
+          }
+        }).catch(() => {})
+
         return
       }
 
@@ -3325,6 +3457,45 @@ export default function UniversalWorkflowRunner() {
         const effectiveContact = currentData.contact_name?.trim() || 'Meeting Attendees'
         const effectiveType = currentData.conversation_type?.trim() || 'Online Meeting'
         const effectiveRecording = activeMode === 'audio_upload' ? currentData.recording : null
+
+        if (activeMode === 'google_meet') {
+          setActivePrompt({
+            content: `**Dispatching Recall.ai Meeting Bot**\n\nConnecting bot to Google Meet room (${currentData.meet_url})...`,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            fieldIndex: workflow.fields.length,
+          })
+          try {
+            const botRes = await api.post('/workflows/meeting-intelligence/google-meet/capture', {
+              meeting_url: currentData.meet_url,
+              conversation_title: effectiveTitle,
+              contact_name: effectiveContact,
+            })
+            setSynthesizing(false)
+            if (botRes && botRes.bot_id) {
+              setPipelineNodes([
+                { ...workflow.nodes[0], status: 'running', subtitle: `Bot Dispatched (${botRes.bot_id.slice(0, 8)})` },
+                { ...workflow.nodes[1], status: 'pending', subtitle: 'Awaiting Call End & Audio Ingest' },
+                { ...workflow.nodes[2], status: 'pending', subtitle: 'Central Memory Store' },
+                { ...workflow.nodes[3], status: 'pending', subtitle: 'Action Item Extraction' },
+                { ...workflow.nodes[4], status: 'pending', subtitle: 'Follow-up Email Draft' },
+              ])
+              setActivePrompt({
+                content: `🤖 **Notetaker Bot Successfully Dispatched!**\n\n**Next Steps:**\n1. Open your Google Meet call (**${currentData.meet_url}**).\n2. Click **"Admit"** when **SMBFlow Notetaker** requests to join.\n3. Conduct your meeting. When you hang up, the audio recording will automatically be transcribed with Whisper AI and processed into your 5-node deliverables dashboard!\n\n*(Bot Reference: ${botRes.bot_id})*`,
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                fieldIndex: workflow.fields.length,
+              })
+            }
+            return
+          } catch (dispatchErr) {
+            setSynthesizing(false)
+            setActivePrompt({
+              content: `⚠️ **Could Not Dispatch Bot**: ${dispatchErr?.response?.data?.detail || dispatchErr.message || 'Check Recall API key or Meet URL'}\n\nTip: You can also paste your dialogue notes directly in the "Paste Transcript" tab for instant analysis.`,
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              fieldIndex: workflow.fields.length,
+            })
+            return
+          }
+        }
 
         setActivePrompt({
           content: `**Executing Node 1: Conversation Ingest**\n\nIngesting meeting source (${activeMode}) and metadata for "${effectiveTitle}"...`,
@@ -3676,6 +3847,7 @@ export default function UniversalWorkflowRunner() {
       }
 
       setExecutionResult(meetingResult)
+      setShowFormWhenDone(false)
 
       try {
         const historyKey = `smbflow_runs_history_${workflow.key}`
@@ -3693,7 +3865,14 @@ export default function UniversalWorkflowRunner() {
       })
 
       setTimeout(() => {
-        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
+        const delivEl = document.getElementById('workflow-deliverables-container')
+        if (delivEl) {
+          delivEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        } else {
+          const mainEl = document.querySelector('main')
+          if (mainEl) mainEl.scrollTo({ top: 0, behavior: 'smooth' })
+          else window.scrollTo({ top: 0, behavior: 'smooth' })
+        }
       }, 150)
       return
     } catch (unhandledMeetingErr) {
@@ -5555,7 +5734,7 @@ export default function UniversalWorkflowRunner() {
       )}
 
       {/* ── Section 3: Interactive Configuration Form (Placed BELOW AI Chat Assistant) ── */}
-      {(!synthesizing && (!executionResult || showFormWhenDone || isMeetingIntelligence)) ? (
+      {(!synthesizing && (!executionResult || showFormWhenDone)) ? (
       <div className="max-w-5xl mx-auto w-full px-4 md:px-6 pt-5 space-y-4">
         {/* ── Tool Integration Readiness & In-Screen Connect Bar ── */}
         <div>
@@ -5684,6 +5863,16 @@ export default function UniversalWorkflowRunner() {
             </div>
 
             <div className="flex items-center gap-2">
+              {executionResult && (
+                <button
+                  type="button"
+                  onClick={() => setShowFormWhenDone(false)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-[#182234] dark:hover:bg-[#233048] text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold shadow-2xs transition-all cursor-pointer border border-slate-200 dark:border-[#233048]"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                  <span>View Deliverables</span>
+                </button>
+              )}
               {isMeetingIntelligence && (
                 <button
                   type="button"
@@ -5728,6 +5917,11 @@ export default function UniversalWorkflowRunner() {
               synthesizing={synthesizing}
               onExecute={() => executeActivePipeline()}
               onOpenLiveHub={() => setShowAutoIngestionModal(true)}
+              onSelectRunId={async (id) => {
+                const synced = await syncMeetingRun(id)
+                if (synced) applyMeetingRunState(synced)
+                setShowFormWhenDone(false)
+              }}
             />
           ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -6070,7 +6264,13 @@ export default function UniversalWorkflowRunner() {
                 ) : (
                   <>
                     <Play className="w-3.5 h-3.5 fill-white" />
-                    <span>{isMeetingIntelligence ? 'Summarize Meeting' : 'Start Workflow'}</span>
+                    <span>
+                      {isMeetingIntelligence
+                        ? formData.input_mode === 'google_meet'
+                          ? 'Dispatch Meeting Bot'
+                          : 'Summarize Meeting'
+                        : 'Start Workflow'}
+                    </span>
                   </>
                 )}
               </button>
@@ -6144,7 +6344,7 @@ export default function UniversalWorkflowRunner() {
         {/* ── Real Deliverables & Multi-Platform Campaign Execution Results ─────── */}
         {executionResult && (
           executionResult.isMeetingIntelligence ? (
-            <div className="bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-2xl p-5 shadow-xs transition-colors flex flex-col space-y-5 animate-in fade-in duration-200">
+            <div id="workflow-deliverables-container" className="bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-2xl p-5 shadow-xs transition-colors flex flex-col space-y-5 animate-in fade-in duration-200">
               {/* Header with Run Switcher */}
               <div className="flex items-center justify-between border-b border-slate-200 dark:border-[#233048] pb-3 flex-wrap gap-3">
                 <div className="flex items-center gap-2.5">

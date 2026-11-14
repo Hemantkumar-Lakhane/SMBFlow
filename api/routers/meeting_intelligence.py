@@ -2152,6 +2152,60 @@ async def export_central_memory(
 
 # ── Workflow Run Detail / Rehydration Endpoint ────────────────────────────────
 
+@router.get("/runs")
+async def list_meeting_runs(
+    limit: int = 20,
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(require_any_auth),
+):
+    """
+    List recent Meeting Intelligence workflow runs for the organization.
+    """
+    org_uuid = await _resolve_org_uuid(current_user, db)
+    stmt = (
+        select(WorkflowInstance)
+        .where(
+            WorkflowInstance.organization_id == org_uuid,
+            WorkflowInstance.workflow_name == "meeting_intelligence_followup",
+        )
+        .order_by(WorkflowInstance.created_at.desc())
+        .limit(limit)
+    )
+    res = await db.execute(stmt)
+    instances = res.scalars().all()
+    out = []
+    for inst in instances:
+        ctx = inst.context or {}
+        capture_data = ctx.get("conversation_capture") or inst.trigger_payload or {}
+        node2_data = ctx.get("node2_process_conversation") or {}
+        node3_data = ctx.get("node3_central_memory") or {}
+        node4_data = ctx.get("node4_action_generator") or {}
+        node5_data = ctx.get("node5_followup_draft") or {}
+        draft_item = node5_data.get("draft")
+
+        title = capture_data.get("conversation_title") or inst.trigger_payload.get("conversation_title") or "Meeting Run"
+        contact = capture_data.get("contact_name") or inst.trigger_payload.get("contact_name") or "Contact"
+
+        out.append({
+            "runId": str(inst.id),
+            "instance_id": str(inst.id),
+            "timestamp": inst.created_at.isoformat() if inst.created_at else "",
+            "status": inst.status,
+            "isMeetingIntelligence": True,
+            "objective": title,
+            "contact_name": contact,
+            "conversationData": capture_data,
+            "transcriptText": node2_data.get("transcript_text") or capture_data.get("transcript"),
+            "detectedLanguage": node2_data.get("detected_language") or "en",
+            "extraction": node2_data.get("extraction"),
+            "centralMemory": node3_data.get("memory"),
+            "actions": node4_data,
+            "followupDraft": draft_item,
+            "sourceProvenance": capture_data.get("source_provenance"),
+        })
+    return out
+
+
 @router.get("/runs/{instance_id}", response_model=WorkflowRunDetailResponse)
 async def get_workflow_run_detail(
     instance_id: str,
