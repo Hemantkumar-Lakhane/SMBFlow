@@ -50,7 +50,7 @@ const adminNav = [
       { label: 'QA & Release Center',  to: '/admin/workflows/qa-center',     icon: ShieldCheck },
       { label: 'Workflow DAG Builder', to: '/workflows/builder',            icon: Workflow },
       { label: 'Workflow Catalog',     to: '/admin/workflows/catalog',     icon: Layers },
-      { label: 'Workflow Assignments', to: '/admin/workflows/assignments', icon: GitBranch },
+      { label: 'Workflow Assignments', to: '/admin/workflows/assignments', icon: GitBranch, badgeKey: 'workflow_assignments' },
       { label: 'Execution Runs',        to: '/admin/runs',                  icon: Zap },
     ],
   },
@@ -172,6 +172,11 @@ export function Sidebar({ isAdmin = false, getBadge, onNavClick }) {
                         {item.badge === 'preview' && (
                           <span className="text-[9px] uppercase font-bold px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
                             Preview
+                          </span>
+                        )}
+                        {item.badgeKey && getBadge && getBadge(item.badgeKey) > 0 && (
+                          <span className="min-w-[18px] h-[18px] flex items-center justify-center px-1.5 bg-amber-500 text-white text-[10px] rounded-full font-bold animate-pulse">
+                            {getBadge(item.badgeKey)}
                           </span>
                         )}
                         {item.hasArrow && <ChevronRight size={13} className="text-slate-400" />}

@@ -1,6 +1,6 @@
 // AdminWorkflowAssignments — Cross-org workflow assignment manager
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   RefreshCw, XCircle, Search, CheckCircle2, Globe,
   Plus, Minus, Building2, Layers, AlertCircle, ChevronRight,
@@ -473,8 +473,10 @@ export default function AdminWorkflowAssignments() {
   const [loading,        setLoading]        = useState(true)
   const [search,         setSearch]         = useState('')
   const [workflowSearch, setWorkflowSearch] = useState('')
+  const [searchParams] = useSearchParams()
+  const initialMode = searchParams.get('tab') === 'requests' ? 'requests' : 'org'
   const [pendingCells,   setPending]        = useState(new Set())
-  const [viewMode,       setViewMode]       = useState('org')    // 'org' | 'matrix' | 'requests'
+  const [viewMode,       setViewMode]       = useState(initialMode)    // 'org' | 'matrix' | 'requests'
   const [selectedOrg,    setSelectedOrg]    = useState(null)
   const [actionBusyId,   setActionBusyId]   = useState(null)
   const [toastMsg,       setToastMsg]       = useState(null)
@@ -690,6 +692,31 @@ export default function AdminWorkflowAssignments() {
         <div className="flex items-center gap-2 px-4 py-3 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 rounded-xl text-xs font-semibold animate-in fade-in duration-150">
           <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
           <span>{toastMsg}</span>
+        </div>
+      )}
+
+      {/* Pending Access Requests Action Banner */}
+      {pendingRequestsCount > 0 && viewMode !== 'requests' && (
+        <div className="flex items-center justify-between p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-xs text-amber-900 dark:text-amber-200 shadow-xs animate-in fade-in">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+              <ShieldAlert className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="font-bold text-sm">
+                {pendingRequestsCount} Pending Workflow Access Request{pendingRequestsCount > 1 ? 's' : ''}
+              </div>
+              <p className="text-amber-700 dark:text-amber-400 text-xs">
+                Client workspaces have requested permission to use unassigned workflows.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setViewMode('requests')}
+            className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl font-bold text-xs shadow-sm transition-all cursor-pointer"
+          >
+            Review & Approve Requests ({pendingRequestsCount}) →
+          </button>
         </div>
       )}
 

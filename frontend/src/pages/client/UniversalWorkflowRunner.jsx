@@ -1610,7 +1610,8 @@ export default function UniversalWorkflowRunner() {
   const [searchParams] = useSearchParams()
   const location = useLocation()
   const navigate = useNavigate()
-  const { user, api } = useAuth()
+  const { user, api, isAdmin: authIsAdmin } = useAuth()
+  const isAdmin = authIsAdmin || user?.role === 'super_admin' || user?.role === 'platform_admin'
 
   // Extract key from route path (e.g. /workflows/meeting_intelligence_followup -> meeting_intelligence_followup)
   const pathKey = useMemo(() => {
@@ -1781,6 +1782,7 @@ export default function UniversalWorkflowRunner() {
       setMarkingQa(true)
       await api.post(`/admin/qa/workflows/${targetKey}/review`, {
         verdict: 'passed',
+        status: 'passed',
         notes: `Validated and verified in live workflow runner by ${user?.email || 'Platform Admin'}.`,
       })
       setQaPassed(true)
@@ -1790,6 +1792,32 @@ export default function UniversalWorkflowRunner() {
       console.error('Failed to mark workflow as QA passed', err)
       const detail = err?.response?.data?.detail || err.message || 'Failed to submit QA review.'
       setQaToast(typeof detail === 'string' ? detail : 'Failed to submit QA verification')
+      setTimeout(() => setQaToast(null), 4000)
+    } finally {
+      setMarkingQa(false)
+    }
+  }
+
+  const handleSendForEdit = async () => {
+    const feedback = window.prompt(
+      `Enter feedback or required changes for "${workflow.displayTitle || workflow.title}":`,
+      'Output verification failed or requires modifications.'
+    )
+    if (feedback === null) return
+    try {
+      setMarkingQa(true)
+      await api.post(`/admin/qa/workflows/${targetKey}/review`, {
+        status: 'changes_required',
+        verdict: 'changes_required',
+        notes: feedback || 'Changes requested by Platform Admin during live QA session.',
+      })
+      setQaPassed(false)
+      setQaToast('⚠ Workflow marked as Changes Required and sent back to developer queue.')
+      setTimeout(() => navigate('/admin/workflows/qa-center'), 1500)
+    } catch (err) {
+      console.error('Failed to send workflow for edit', err)
+      const detail = err?.response?.data?.detail || err.message || 'Failed to request changes.'
+      setQaToast(typeof detail === 'string' ? detail : 'Failed to request changes')
       setTimeout(() => setQaToast(null), 4000)
     } finally {
       setMarkingQa(false)
@@ -4203,13 +4231,32 @@ export default function UniversalWorkflowRunner() {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-2 shrink-0 flex-wrap">
               <button
                 type="button"
                 onClick={() => navigate('/admin/workflows/qa-center')}
                 className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
               >
                 Back to QA Center
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate(`/workflows/builder?workflow=${targetKey}`)}
+                className="px-3 py-1.5 rounded-xl border border-blue-200 dark:border-blue-800 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors flex items-center gap-1.5 cursor-pointer"
+                title="Open and edit DAG in Workflow Builder"
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+                <span>Edit in Builder</span>
+              </button>
+              <button
+                type="button"
+                disabled={markingQa}
+                onClick={handleSendForEdit}
+                className="px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                title="Reject or flag issues and send back to developer queue for edits"
+              >
+                <AlertTriangle className="w-3.5 h-3.5" />
+                <span>Send for Edit</span>
               </button>
               <button
                 type="button"
@@ -4257,26 +4304,50 @@ export default function UniversalWorkflowRunner() {
             )}
           </div>
 
-          {/* Right Action: Request Workflow Assignment & Status */}
-          <div className="flex items-center gap-2.5 shrink-0 pt-1">
-            {assignmentPending ? (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/60 text-xs font-semibold shadow-2xs">
-                <Clock className="w-3.5 h-3.5" />
-                <span>Assignment Requested • Pending Admin Review</span>
-              </span>
-            ) : (
+          {/* Right Action: Request Workflow Assignment & Status (For Clients) OR Admin Controls */}
+          {isAdmin ? (
+            <div className="flex items-center gap-2 shrink-0 pt-1">
               <button
                 type="button"
-                onClick={handleRequestWorkflowAssignment}
-                disabled={requesting}
+                onClick={() => navigate(`/workflows/builder?workflow=${targetKey}`)}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-[#182234] hover:bg-slate-50 dark:hover:bg-[#233048] text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-[#233048] text-xs font-semibold shadow-2xs transition-all cursor-pointer"
-                title="Request organization workflow assignment from platform administrator"
+                title="Edit workflow definition in DAG Builder"
               >
-                <Shield className="w-3.5 h-3.5 text-blue-500" />
-                <span>{requesting ? 'Submitting Request...' : 'Request Workflow Assignment'}</span>
+                <Edit3 className="w-3.5 h-3.5 text-blue-500" />
+                <span>Edit in Builder</span>
               </button>
-            )}
-          </div>
+
+              <button
+                type="button"
+                onClick={() => navigate(`/admin/workflows/assignments`)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-[#182234] hover:bg-slate-50 dark:hover:bg-[#233048] text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-[#233048] text-xs font-semibold shadow-2xs transition-all cursor-pointer"
+                title="Manage organization assignments for this workflow"
+              >
+                <GitBranch className="w-3.5 h-3.5 text-indigo-500" />
+                <span>Manage Assignments</span>
+              </button>
+            </div>
+          ) : !isQaTest && (
+            <div className="flex items-center gap-2.5 shrink-0 pt-1">
+              {assignmentPending ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/60 text-xs font-semibold shadow-2xs">
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>Assignment Requested • Pending Admin Review</span>
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleRequestWorkflowAssignment}
+                  disabled={requesting}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-[#182234] hover:bg-slate-50 dark:hover:bg-[#233048] text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-[#233048] text-xs font-semibold shadow-2xs transition-all cursor-pointer"
+                  title="Request organization workflow assignment from platform administrator"
+                >
+                  <Shield className="w-3.5 h-3.5 text-blue-500" />
+                  <span>{requesting ? 'Submitting Request...' : 'Request Workflow Assignment'}</span>
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {assignmentRequestedToast && (

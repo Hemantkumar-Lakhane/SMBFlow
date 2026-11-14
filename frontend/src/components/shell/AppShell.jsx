@@ -11,7 +11,7 @@
 // This is the presentation frame only. Individual pages are migrated later
 // (Phase 3+); until then existing pages render inside this shell unchanged.
 // ─────────────────────────────────────────────────────────────────────────────
-import { useEffect, useCallback } from 'react'
+import { useEffect, useCallback, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useWebSocket } from '../../contexts/WSContext'
 import { useBadgeStore } from '../../utils/appStore'
@@ -21,6 +21,7 @@ import { TopHeader } from './TopHeader'
 export function AppShell({ children }) {
   const { user, isAdmin, api } = useAuth()
   const { subscribe } = useWebSocket()
+  const [accessRequestsCount, setAccessRequestsCount] = useState(0)
 
   const {
     escalations, a2a, emails, patterns,
@@ -33,9 +34,10 @@ export function AppShell({ children }) {
       if (key === 'actions') return escalations + a2a
       if (key === 'email') return emails
       if (key === 'pattern') return patterns
+      if (key === 'workflow_assignments') return accessRequestsCount
       return 0
     },
-    [escalations, a2a, emails, patterns]
+    [escalations, a2a, emails, patterns, accessRequestsCount]
   )
 
   // Poll the real pending queues — identical endpoints to the legacy Layout.
@@ -52,8 +54,14 @@ export function AppShell({ children }) {
       setA2A(Array.isArray(a2as) ? a2as.length : 0)
       setEmails(Array.isArray(emls) ? emls.length : 0)
       setPatterns(Array.isArray(pats) ? pats.length : 0)
+
+      if (isAdmin) {
+        const reqs = await api.get('/admin/workflows/access-requests').catch(() => [])
+        const pending = Array.isArray(reqs) ? reqs.filter(r => r.status === 'pending').length : 0
+        setAccessRequestsCount(pending)
+      }
     } catch (_) {}
-  }, [api, user?.tenant_id, setEscalations, setA2A, setEmails, setPatterns])
+  }, [api, user?.tenant_id, isAdmin, setEscalations, setA2A, setEmails, setPatterns])
 
   useEffect(() => {
     loadCounts()
@@ -64,6 +72,7 @@ export function AppShell({ children }) {
       subscribe('a2a_decided', () => { decA2A(); loadCounts() }),
       subscribe('workflow_completed', loadCounts),
       subscribe('workflow_failed', loadCounts),
+      subscribe('workflow.access_requested', loadCounts),
     ]
     return () => unsubs.forEach(fn => fn())
   }, [loadCounts, subscribe, incEscalations, decEscalations, incA2A, decA2A])
