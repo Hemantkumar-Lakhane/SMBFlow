@@ -1973,7 +1973,7 @@ export default function CopilotPage() {
                 rows={1}
                 value={promptText}
                 onChange={(e) => setPromptText(e.target.value)}
-                placeholder="Tell me what to build or ask a question – add context with +"
+                placeholder="Tell me what to build or ask a question..."
                 className="w-full bg-transparent text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 text-sm md:text-base leading-relaxed resize-none border-0 focus:border-0 outline-none focus:outline-none ring-0 focus:ring-0 focus-visible:outline-none focus-visible:ring-0 shadow-none px-1 py-1 max-h-64"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
@@ -1995,7 +1995,7 @@ export default function CopilotPage() {
                     ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400'
                     : 'border-slate-200 dark:border-[#233048] bg-slate-50 dark:bg-[#182234] hover:bg-slate-100 dark:hover:bg-[#233048] text-slate-600 dark:text-slate-300'
                 }`}
-                title="Add context / Upload file (+)"
+                title="Upload file or document"
               >
                 {isUploading ? <RefreshCw className="w-3.5 h-3.5 animate-spin text-blue-500" /> : <Plus className="w-4 h-4" />}
               </button>
@@ -2031,26 +2031,20 @@ export default function CopilotPage() {
 
           {/* Dynamic Personalized Questions / Categories */}
           {dynamicData?.questions && dynamicData.questions.length > 0 ? (
-            <div className="flex flex-col items-center gap-2 mt-4 max-w-4xl w-full">
-              <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                <Zap className="w-3 h-3 text-blue-500" />
-                <span>Recommended for {dynamicData.organization_name} ({dynamicData.industry.toUpperCase()}):</span>
-              </div>
-              <div className="flex flex-wrap items-center justify-center gap-2 w-full">
-                {dynamicData.questions.map((q) => (
-                  <button
-                    key={q.id}
-                    onClick={() => {
-                      setPromptText(q.question)
-                      handleSend(q.question)
-                    }}
-                    className="flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold border border-slate-200 dark:border-[#233048] bg-white dark:bg-[#121826] text-slate-700 dark:text-slate-300 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-[#182234] dark:hover:text-blue-300 transition-all cursor-pointer shadow-2xs"
-                  >
-                    <ToolLogo name={q.icon || 'zap'} className="w-3.5 h-3.5" />
-                    <span>{q.question}</span>
-                  </button>
-                ))}
-              </div>
+            <div className="flex flex-wrap items-center justify-center gap-2 mt-4 max-w-4xl w-full">
+              {dynamicData.questions.map((q) => (
+                <button
+                  key={q.id}
+                  onClick={() => {
+                    setPromptText(q.question)
+                    handleSend(q.question)
+                  }}
+                  className="flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold border border-slate-200 dark:border-[#233048] bg-white dark:bg-[#121826] text-slate-700 dark:text-slate-300 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-[#182234] dark:hover:text-blue-300 transition-all cursor-pointer shadow-2xs"
+                >
+                  <ToolLogo name={q.icon || 'zap'} className="w-3.5 h-3.5" />
+                  <span>{q.question}</span>
+                </button>
+              ))}
             </div>
           ) : (
             /* Clean, Unified Category Pill Buttons */
@@ -2336,7 +2330,7 @@ export default function CopilotPage() {
                       ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400'
                       : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#182234]'
                   }`}
-                  title="Upload context document / file (+)"
+                  title="Upload file or document"
                 >
                   {isUploading ? <RefreshCw className="w-4 h-4 animate-spin text-blue-500" /> : <Plus className="w-4 h-4" />}
                 </button>

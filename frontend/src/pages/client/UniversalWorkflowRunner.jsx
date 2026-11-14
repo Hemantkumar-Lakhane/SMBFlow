@@ -5739,7 +5739,7 @@ export default function UniversalWorkflowRunner() {
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   className="w-6 h-6 rounded-md bg-slate-50 dark:bg-[#182234] border border-slate-200 dark:border-[#233048] hover:border-blue-400 text-slate-600 dark:text-slate-300 flex items-center justify-center transition-colors cursor-pointer"
-                  title="Add context with +"
+                  title="Attach file"
                 >
                   <Plus className="w-3.5 h-3.5" />
                 </button>

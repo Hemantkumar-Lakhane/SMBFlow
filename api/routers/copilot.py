@@ -585,13 +585,8 @@ async def copilot_chat(
     user_msg_lower = user_msg.lower().strip()
     clean_msg = "".join(c for c in user_msg_lower if c.isalnum() or c.isspace()).strip()
 
-    # Load dynamic context & questions for this user
-    ctx = await get_user_copilot_context_and_prompts(db, current_user)
-    dynamic_questions = ctx["questions"]
-    question_texts = [q["question"] for q in dynamic_questions]
-
     # ─────────────────────────────────────────────────────────────────────────
-    # 1. SECURITY & PROMPT INJECTION DEFENSE LAYER
+    # 1. SECURITY & PROMPT INJECTION DEFENSE LAYER (Instant sub-millisecond)
     # ─────────────────────────────────────────────────────────────────────────
     threat_keywords = [
         "ignore previous", "ignore all instructions", "system prompt", "reveal system",
@@ -606,33 +601,77 @@ async def copilot_chat(
             reply="Security Alert: Restricted directive or prompt injection pattern detected. Operation blocked according to enterprise tenant security and data isolation policy.",
             execution_nodes=[],
             action_cta=None,
-            suggested_followups=question_texts[:3],
+            suggested_followups=[
+                "How do I launch a multi-channel product campaign?",
+                "How can I automate vendor invoice extraction and OCR?",
+                "How do I automate inbound lead scoring from HubSpot CRM?",
+            ],
         )
 
     # ─────────────────────────────────────────────────────────────────────────
-    # 2. CASUAL GREETINGS (NO FAKE PIPELINES, SHOW PERSONALIZED WELCOME)
+    # 2. CASUAL GREETINGS (Sub-Millisecond Instant Response)
     # ─────────────────────────────────────────────────────────────────────────
-    greetings = [
-        "hi", "hello", "hellow", "hey", "good morning", "good evening", "good afternoon",
-        "yo", "sup", "howdy", "hola", "hi there", "hello there", "greetings", "start", "help"
-    ]
-    is_greeting = clean_msg in greetings or (len(clean_msg.split()) <= 2 and any(clean_msg.startswith(g) for g in greetings))
+    GREETING_WORDS = {
+        "hi", "hello", "hellow", "hey", "heya", "yo", "sup", "howdy", "hola",
+        "greetings", "start", "help", "gm", "ga", "ge", "morning", "afternoon", "evening"
+    }
+    GREETING_PHRASES = {
+        "what's up", "whats up", "what up", "wassup", "wazzup", "whats good", "what's good",
+        "good morning", "good evening", "good afternoon", "good day",
+        "how are you", "how are you doing", "how are u", "hows it going", "how's it going",
+        "how do you do", "hi there", "hello there", "hey there", "hello whats up", "hello what's up",
+        "hey whats up", "hey what's up", "hi whats up", "hi what's up"
+    }
+    words = clean_msg.split()
+    is_greeting = (
+        clean_msg in GREETING_WORDS
+        or clean_msg in GREETING_PHRASES
+        or (len(words) <= 4 and (
+            any(clean_msg.startswith(p) for p in GREETING_PHRASES)
+            or any(clean_msg == w or clean_msg.startswith(w + " ") for w in GREETING_WORDS)
+            or any(p in clean_msg for p in ("whats up", "what up", "how are you", "hows it going"))
+        ))
+    )
+
     if is_greeting:
-        greeting_reply = (
-            f"Hello {ctx['user_name']}. I am your SMBFlow AI Assistant for **{ctx['organization_name']}** "
-            f"({ctx['industry'].title()} sector).\n\n"
-            f"• **Assigned Workflows:** {len(ctx['assigned_workflows'])}\n"
-            f"• **Total Executions:** {ctx['total_runs']} run(s) ({ctx['active_runs']} active)\n"
-            f"• **Pending Approvals:** {ctx['pending_approvals']} item(s) in Action Center\n\n"
-            f"Please select one of the suggested operational questions or workflow tasks below to get started:"
+        user_name = (
+            (current_user.full_name if current_user.full_name and "@" not in current_user.full_name else None)
+            or (current_user.email.split("@")[0].replace(".", " ").title() if current_user.email else "there")
         )
+
+        # Contextual friendly greeting text
+        if any(p in clean_msg for p in ("whats up", "what up", "sup", "whats good")):
+            greeting_reply = f"Hey {user_name}! Everything is running smoothly across your workflows. How can I help you today?"
+        elif any(p in clean_msg for p in ("how are you", "hows it going")):
+            greeting_reply = f"I'm doing great, {user_name}! Ready to help you synthesize workflows, analyze data, or manage operations. What's on your mind?"
+        elif "morning" in clean_msg or "gm" in words:
+            greeting_reply = f"Good morning, {user_name}! What workflow would you like to build or run today?"
+        elif "evening" in clean_msg:
+            greeting_reply = f"Good evening, {user_name}! How can I assist you with your operations tonight?"
+        elif "afternoon" in clean_msg:
+            greeting_reply = f"Good afternoon, {user_name}! What can I help you automate today?"
+        else:
+            greeting_reply = f"Hello {user_name}! How can I help you today with your workflows and automations?"
+
+        quick_followups = [
+            "How do I launch a multi-channel product campaign?",
+            "How can I automate vendor invoice extraction and OCR?",
+            "How do I automate inbound lead scoring from HubSpot CRM?",
+            "How do I capture and summarize client meetings?",
+        ]
+
         return CopilotChatResponse(
             message_id=str(uuid.uuid4())[:8],
             reply=greeting_reply,
             execution_nodes=[],
             action_cta=ActionCTA(label="Browse Workflows Catalog", to="/workflows", icon="Workflow", variant="primary"),
-            suggested_followups=question_texts[:4],
+            suggested_followups=quick_followups,
         )
+
+    # Load dynamic context & questions for this user
+    ctx = await get_user_copilot_context_and_prompts(db, current_user)
+    dynamic_questions = ctx["questions"]
+    question_texts = [q["question"] for q in dynamic_questions]
 
     # ─────────────────────────────────────────────────────────────────────────
     # 2.5 OFF-TOPIC / UNKNOWN QUERY DETECTION (Polite Guidance)
