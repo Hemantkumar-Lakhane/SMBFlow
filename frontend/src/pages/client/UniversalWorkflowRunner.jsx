@@ -1878,8 +1878,8 @@ const WORKFLOW_REGISTRY = {
         label: 'Exception & Error Stream',
         prompt: 'Select the monitoring alert stream to triage:',
         type: 'select',
-        options: ['Production Sentry Error Stream (Active)', 'CloudWatch Critical Alarms', 'Kubernetes Log Anomalies', 'Sandbox Ingest Stream'],
-        defaultValue: 'Production Sentry Error Stream (Active)',
+        options: ['Sentry Error Stream (Active)', 'CloudWatch Critical Alarms', 'Kubernetes Log Anomalies', 'Direct API Ingest Stream'],
+        defaultValue: 'Sentry Error Stream (Active)',
         required: true,
       },
       {
@@ -2019,7 +2019,7 @@ function resolveDynamicWorkflow(rawKey, searchParams) {
     fields: [
       { id: 'targetName', label: 'Primary Objective / Scope', prompt: `What is the primary target, dataset, or objective for "${titleFormatted}"?`, placeholder: `e.g. ${titleFormatted} Target`, type: 'text', defaultValue: `${titleFormatted} Standard Execution` },
       { id: 'description', label: 'Workflow Context & Rules', prompt: `What are the key execution criteria, constraints, or context for this workflow?`, placeholder: 'e.g. Focus on high-priority records and flag discrepancies', type: 'textarea', defaultValue: 'Autonomous multi-step execution with intelligent entity extraction, confidence routing, and verified deliverable outputs.' },
-      { id: 'source', label: 'Input Stream / Trigger Source', prompt: 'Where should input data or triggers be ingested from?', type: 'select', options: ['Webhook & API Stream (Connected)', 'PostgreSQL Production DB', 'Manual Ingest / Form'], defaultValue: 'Webhook & API Stream (Connected)' },
+      { id: 'source', label: 'Input Stream / Trigger Source', prompt: 'Where should input data or triggers be ingested from?', type: 'select', options: ['Webhook & API Stream (Connected)', 'PostgreSQL Primary DB', 'Manual Ingest / Form'], defaultValue: 'Webhook & API Stream (Connected)' },
       { id: 'destination', label: 'Alert Destination / Output Channel', prompt: 'Where should notifications or output records be dispatched?', type: 'select', options: ['#general-alerts (Slack)', 'Action Center Review Queue', 'Direct Webhook Event'], defaultValue: '#general-alerts (Slack)' },
     ],
     nodes: [
@@ -2078,6 +2078,24 @@ export default function UniversalWorkflowRunner() {
   // State
   const [pipelineNodes, setPipelineNodes] = useState(() => workflow.nodes.map((n, idx) => ({ ...n, status: idx === 0 ? 'active' : 'idle' })))
   const [selectedNodeId, setSelectedNodeId] = useState(() => workflow.nodes[0]?.id || 'n1')
+  const [canvasScale, setCanvasScale] = useState(0.92)
+  const canvasContainerRef = useRef(null)
+
+  useEffect(() => {
+    const el = canvasContainerRef.current
+    if (!el) return
+    const handleResize = () => {
+      const w = el.clientWidth
+      if (w > 0) {
+        const fitted = Math.min(0.95, Math.max(0.35, (w - 24) / 1060))
+        setCanvasScale(fitted)
+      }
+    }
+    handleResize()
+    const ro = new ResizeObserver(handleResize)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
 
   // Ingested Form Parameters State (All outputs stored in Form only)
   const [formData, setFormData] = useState({})
@@ -4863,22 +4881,29 @@ export default function UniversalWorkflowRunner() {
             </div>
           ) : !isQaTest && (
             <div className="flex items-center gap-2.5 shrink-0 pt-1">
-              {assignmentPending ? (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/60 text-xs font-semibold shadow-2xs">
-                  <Clock className="w-3.5 h-3.5" />
-                  <span>Assignment Requested • Pending Admin Review</span>
-                </span>
+              {accessDenied ? (
+                assignmentPending ? (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/60 text-xs font-semibold shadow-2xs">
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>Assignment Requested • Pending Admin Review</span>
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleRequestWorkflowAssignment}
+                    disabled={requesting}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-[#182234] hover:bg-slate-50 dark:hover:bg-[#233048] text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-[#233048] text-xs font-semibold shadow-2xs transition-all cursor-pointer"
+                    title="Request organization workflow assignment from platform administrator"
+                  >
+                    <Shield className="w-3.5 h-3.5 text-blue-500" />
+                    <span>{requesting ? 'Submitting Request...' : 'Request Workflow Assignment'}</span>
+                  </button>
+                )
               ) : (
-                <button
-                  type="button"
-                  onClick={handleRequestWorkflowAssignment}
-                  disabled={requesting}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-[#182234] hover:bg-slate-50 dark:hover:bg-[#233048] text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-[#233048] text-xs font-semibold shadow-2xs transition-all cursor-pointer"
-                  title="Request organization workflow assignment from platform administrator"
-                >
-                  <Shield className="w-3.5 h-3.5 text-blue-500" />
-                  <span>{requesting ? 'Submitting Request...' : 'Request Workflow Assignment'}</span>
-                </button>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60 text-xs font-medium shadow-2xs">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+                  <span>Assigned to Workspace</span>
+                </span>
               )}
             </div>
           )}
@@ -4901,13 +4926,13 @@ export default function UniversalWorkflowRunner() {
       {!isMeetingIntelligence && (
       <div className="max-w-5xl mx-auto w-full px-4 md:px-6 pt-5">
         <div className="bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-2xl shadow-xs overflow-hidden transition-all relative">
-          <div className="relative overflow-x-auto overflow-y-hidden bg-[#fafcff] dark:bg-[#0b0f17]/95 min-h-[240px] p-4 flex items-center justify-center select-none">
+          <div ref={canvasContainerRef} className="relative overflow-hidden bg-[#fafcff] dark:bg-[#0b0f17]/95 min-h-[220px] p-3 sm:p-4 flex items-center justify-center select-none">
             <div
               style={{
-                transform: 'scale(0.92)',
+                transform: `scale(${canvasScale})`,
                 transformOrigin: 'center center',
               }}
-              className="relative transition-transform duration-75 w-[1060px] h-[210px] shrink-0 pointer-events-auto"
+              className="relative transition-transform duration-100 w-[1060px] h-[210px] shrink-0 pointer-events-auto"
             >
               {/* SVG Connecting Bezier Wires with Dynamic Live Execution Green Glow */}
               <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ width: '1060px', height: '210px' }}>

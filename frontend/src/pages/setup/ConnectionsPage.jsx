@@ -184,7 +184,7 @@ export default function ConnectionsPage() {
     slack: 'Real-time team notifications, escalation alerts, and direct HITL decisions.',
     telegram: 'Autonomous customer chat support bot connected to pgvector embeddings.',
     hubspot: 'Ingest new CRM leads and route deals to sales reps automatically.',
-    postgres: 'Query production database tables, verify ARR risk, and store vector context.',
+    postgres: 'Query primary database tables, verify ARR risk, and store vector context.',
     claude: 'Anthropic Claude 3.5 Sonnet reasoning agent for deep analysis and copy synthesis.',
     openai: 'GPT-4o multimodal parsing, entity extraction, and customer responses.',
   }

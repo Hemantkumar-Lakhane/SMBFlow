@@ -84,7 +84,7 @@ function AddCredentialModal({ open, onClose, tenantId, api, onDone }) {
           onChange={e => setToolName(e.target.value)}
           options={TOOL_TYPES.map(t => ({ value: t, label: `${TOOL_ICONS[t] || '🔧'} ${t}` }))}
         />
-        <Input label="Display Name (optional)" value={display} onChange={e => setDisplay(e.target.value)} placeholder={`e.g. Production ${toolName}`} />
+        <Input label="Display Name (optional)" value={display} onChange={e => setDisplay(e.target.value)} placeholder={`e.g. Primary ${toolName}`} />
         {schLoading ? (
           <div className="flex items-center gap-2 text-gray-500 text-sm py-4"><Spinner size="sm" /> Loading fields…</div>
         ) : (

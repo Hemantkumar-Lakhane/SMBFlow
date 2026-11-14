@@ -264,7 +264,7 @@ function TemplatePreviewModal({ template, onClose, onRun, onRequestAccess, isReq
             </div>
             <div>
               <h3 className="text-base font-bold text-slate-900 dark:text-white">{template.display_name}</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">{template.category} · {template.runs || 'Production Ready'}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{template.category} · {template.runs || 'Active & Verified'}</p>
             </div>
           </div>
 

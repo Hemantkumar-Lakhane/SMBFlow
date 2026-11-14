@@ -376,7 +376,7 @@ ${count > 0 ? fails.slice(0, 3).map((f, i) => `
           
 Processed administrative query: **"${text}"**.
 
-- **Environment**: \`Production Cloud Cluster\`
+- **Environment**: \`Cloud Cluster (Active)\`
 - **Database Status**: \`Connected (PostgreSQL / Redis)\`
 - **Tenant Context**: \`Platform Master Context (Isolate Global)\`
 

@@ -365,7 +365,7 @@ export default function LandingPage() {
         <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto" id="workflows">
           <div className="mb-10 text-center max-w-2xl mx-auto">
             <h2 className={`text-2xl sm:text-3xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-950'}`}>
-              Production Pipelines Built In
+              Automated Workflows Built In
             </h2>
             <p className={`mt-2 text-xs sm:text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
               Select a workflow below to inspect live execution nodes, inputs, and synthesized data schemas.

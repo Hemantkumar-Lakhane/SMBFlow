@@ -933,7 +933,7 @@ export default function AdminWorkflowCatalog() {
 
                   {/* Description */}
                   <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-2 min-h-[32px]">
-                    {wf.description || 'Production autonomous multi-agent pipeline.'}
+                    {wf.description || 'Enterprise autonomous multi-agent workflow.'}
                   </p>
 
                   {/* Tool Badges with Real PNG Logos */}

@@ -746,9 +746,6 @@ export default function WorkflowsPage() {
               <span className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
                 Workflows & Automation Engine
               </span>
-              <span className="text-[10px] uppercase font-bold bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60 px-2 py-0.5 rounded-full font-mono">
-                Production
-              </span>
             </div>
             <p className="mt-1 text-xs md:text-sm text-slate-500 dark:text-slate-400">
               Manage, execute, and monitor autonomous operational pipelines across your workspace.
