@@ -2078,76 +2078,6 @@ export default function UniversalWorkflowRunner() {
   // State
   const [pipelineNodes, setPipelineNodes] = useState(() => workflow.nodes.map((n, idx) => ({ ...n, status: idx === 0 ? 'active' : 'idle' })))
   const [selectedNodeId, setSelectedNodeId] = useState(() => workflow.nodes[0]?.id || 'n1')
-  const [canvasZoom, setCanvasZoom] = useState(0.82)
-  const [isCanvasFullscreen, setIsCanvasFullscreen] = useState(false)
-  const [canvasPan, setCanvasPan] = useState({ x: 0, y: 0 })
-  const [isPanning, setIsPanning] = useState(false)
-  const panStartRef = useRef({ x: 0, y: 0, panX: 0, panY: 0 })
-
-  const handleCanvasMouseDown = (e) => {
-    if (e.button !== 0) return
-    if (e.target.closest('button') || e.target.closest('[data-node-id]')) return
-    setIsPanning(true)
-    panStartRef.current = {
-      x: e.clientX,
-      y: e.clientY,
-      panX: canvasPan.x,
-      panY: canvasPan.y,
-    }
-  }
-
-  const handleCanvasMouseMove = (e) => {
-    if (!isPanning) return
-    const dx = e.clientX - panStartRef.current.x
-    const dy = e.clientY - panStartRef.current.y
-    setCanvasPan({
-      x: panStartRef.current.panX + dx,
-      y: panStartRef.current.panY + dy,
-    })
-  }
-
-  const handleCanvasMouseUp = () => {
-    setIsPanning(false)
-  }
-
-  const handleCanvasWheel = (e) => {
-    e.preventDefault()
-    const delta = e.deltaY < 0 ? 0.05 : -0.05
-    setCanvasZoom(z => Math.max(0.4, Math.min(1.4, +(z + delta).toFixed(2))))
-  }
-
-  const handleCanvasTouchStart = (e) => {
-    if (e.touches.length === 1) {
-      const t = e.touches[0]
-      setIsPanning(true)
-      panStartRef.current = {
-        x: t.clientX,
-        y: t.clientY,
-        panX: canvasPan.x,
-        panY: canvasPan.y,
-      }
-    }
-  }
-
-  const handleCanvasTouchMove = (e) => {
-    if (!isPanning || e.touches.length !== 1) return
-    const t = e.touches[0]
-    const dx = t.clientX - panStartRef.current.x
-    const dy = t.clientY - panStartRef.current.y
-    setCanvasPan({
-      x: panStartRef.current.panX + dx,
-      y: panStartRef.current.panY + dy,
-    })
-  }
-
-  const handleCanvasTouchEnd = () => {
-    setIsPanning(false)
-  }
-
-  const handleResetCanvas = (targetZoom = 0.82) => {
-    setCanvasZoom(targetZoom)
-    setCanvasPan({ x: 0, y: 0 })
-  }
 
   // Ingested Form Parameters State (All outputs stored in Form only)
   const [formData, setFormData] = useState({})
@@ -4802,50 +4732,11 @@ export default function UniversalWorkflowRunner() {
           </div>
         </div>
 
-        {/* Zoom & Fullscreen controls */}
+        {/* Interactive Node Indicator */}
         {!isMeetingIntelligence && (
-          <div className="flex items-center gap-3">
-            <div className="flex items-center bg-slate-50 dark:bg-[#182234] border border-slate-200 dark:border-[#233048] rounded-xl px-2 py-1 text-xs font-medium text-slate-600 dark:text-slate-300 shadow-2xs">
-              <button
-                onClick={() => setCanvasZoom(z => Math.max(0.5, +(z - 0.05).toFixed(2)))}
-                className="px-2 py-0.5 hover:text-blue-600 dark:hover:text-white font-bold cursor-pointer transition-colors"
-                title="Zoom Out"
-              >
-                -
-              </button>
-              <span className="px-2 font-mono text-[11px] font-semibold text-slate-700 dark:text-slate-200 border-x border-slate-200 dark:border-[#233048]">
-                {Math.round(canvasZoom * 100)}%
-              </span>
-              <button
-                onClick={() => setCanvasZoom(z => Math.min(1.3, +(z + 0.05).toFixed(2)))}
-                className="px-2 py-0.5 hover:text-blue-600 dark:hover:text-white font-bold cursor-pointer transition-colors"
-                title="Zoom In"
-              >
-                +
-              </button>
-              <button
-                onClick={() => handleResetCanvas(0.82)}
-                className="ml-1 px-2 py-0.5 hover:text-blue-600 dark:hover:text-white text-[11px] font-semibold cursor-pointer transition-colors"
-                title="Fit to screen & center"
-              >
-                Fit
-              </button>
-              <button
-                onClick={() => handleResetCanvas(1.0)}
-                className="px-2 py-0.5 hover:text-blue-600 dark:hover:text-white text-[11px] font-mono font-semibold cursor-pointer transition-colors"
-                title="Reset 100% zoom & position"
-              >
-                100%
-              </button>
-            </div>
-
-            <button
-              onClick={() => setIsCanvasFullscreen(f => !f)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-[#182234] hover:bg-slate-50 dark:hover:bg-[#233048] border border-slate-200 dark:border-[#233048] rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 shadow-2xs transition-colors cursor-pointer"
-            >
-              <Maximize2 className="w-3.5 h-3.5 text-slate-500" />
-              <span>Fullscreen</span>
-            </button>
+          <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 font-medium bg-slate-50 dark:bg-[#182234] border border-slate-200 dark:border-[#233048] rounded-xl px-2.5 py-1 shadow-2xs">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span>Interactive Node View</span>
           </div>
         )}
       </div>
@@ -5009,24 +4900,11 @@ export default function UniversalWorkflowRunner() {
       {/* ── Section 1: Exact Snapped n8n Horizontal Branching Canvas ─────────── */}
       {!isMeetingIntelligence && (
       <div className="max-w-5xl mx-auto w-full px-4 md:px-6 pt-5">
-        <div className={`bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-2xl shadow-xs overflow-hidden transition-all relative ${
-          isCanvasFullscreen ? 'fixed inset-4 z-50 flex flex-col' : ''
-        }`}>
-          <div
-            onMouseDown={handleCanvasMouseDown}
-            onMouseMove={handleCanvasMouseMove}
-            onMouseUp={handleCanvasMouseUp}
-            onMouseLeave={handleCanvasMouseUp}
-            onWheel={handleCanvasWheel}
-            onTouchStart={handleCanvasTouchStart}
-            onTouchMove={handleCanvasTouchMove}
-            onTouchEnd={handleCanvasTouchEnd}
-            className={`relative overflow-hidden bg-[#fafcff] dark:bg-[#0b0f17]/95 min-h-[250px] p-4 flex items-center justify-center select-none ${isPanning ? 'cursor-grabbing' : 'cursor-grab'}`}
-          >
-            
+        <div className="bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-2xl shadow-xs overflow-hidden transition-all relative">
+          <div className="relative overflow-x-auto overflow-y-hidden bg-[#fafcff] dark:bg-[#0b0f17]/95 min-h-[240px] p-4 flex items-center justify-center select-none">
             <div
               style={{
-                transform: `translate(${canvasPan.x}px, ${canvasPan.y}px) scale(${canvasZoom})`,
+                transform: 'scale(0.92)',
                 transformOrigin: 'center center',
               }}
               className="relative transition-transform duration-75 w-[1060px] h-[210px] shrink-0 pointer-events-auto"

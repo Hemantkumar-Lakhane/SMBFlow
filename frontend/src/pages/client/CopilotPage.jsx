@@ -564,61 +564,20 @@ function CanvasPreview({ template }) {
           </span>
         </div>
 
-        {/* Zoom & Fullscreen controls */}
-        <div className="flex items-center gap-2 text-[10px] text-slate-500 dark:text-slate-400 font-mono">
-          <div className="hidden sm:flex items-center bg-slate-100 dark:bg-[#182234] border border-slate-300 dark:border-[#233048] rounded-lg p-0.5">
-            <button
-              onClick={() => setZoom(z => Math.max(0.6, Number((z - 0.1).toFixed(2))))}
-              className="px-2 py-0.5 hover:bg-white dark:hover:bg-[#202c42] rounded text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
-              title="Zoom out"
-            >
-              -
-            </button>
-            <span className="px-1.5 text-[9.5px] text-slate-600 dark:text-slate-300 select-none">
-              {Math.round(zoom * 100)}%
-            </span>
-            <button
-              onClick={() => setZoom(z => Math.min(1.5, Number((z + 0.1).toFixed(2))))}
-              className="px-2 py-0.5 hover:bg-white dark:hover:bg-[#202c42] rounded text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
-              title="Zoom in"
-            >
-              +
-            </button>
-            <button
-              onClick={() => setZoom(0.82)}
-              className="px-1.5 py-0.5 hover:bg-white dark:hover:bg-[#202c42] rounded text-[9px] text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
-              title="Fit View"
-            >
-              Fit
-            </button>
-            <button
-              onClick={() => setZoom(1)}
-              className="px-1.5 py-0.5 hover:bg-white dark:hover:bg-[#202c42] rounded text-[9px] text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
-              title="100% Zoom"
-            >
-              100%
-            </button>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setIsFullScreen(prev => !prev)}
-            className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-100 dark:bg-[#182234] hover:bg-slate-200 dark:hover:bg-[#202c42] border border-slate-300 dark:border-[#233048] text-slate-700 dark:text-slate-300 transition-colors cursor-pointer font-sans text-[11px] font-semibold"
-            title={isFullScreen ? "Exit Fullscreen" : "View Fullscreen"}
-          >
-            {isFullScreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
-            <span className="hidden sm:inline">{isFullScreen ? 'Exit Fullscreen' : 'Fullscreen'}</span>
-          </button>
+        {/* Canvas Visual Indicator */}
+        <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+          <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+          <span>Click node to inspect</span>
         </div>
       </div>
 
-      {/* SVG Canvas Graph with Smooth Scrolling & Panning */}
+      {/* SVG Canvas Graph Auto-Centered & Fitted */}
       <div
         ref={containerRef}
-        className="p-4 sm:p-6 overflow-x-auto overflow-y-auto max-h-[300px] flex items-center justify-start sm:justify-center relative bg-slate-50/50 dark:bg-[#0b0f17]/40 scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-700 select-none cursor-grab active:cursor-grabbing"
+        className="p-4 sm:p-6 overflow-x-auto overflow-y-hidden flex items-center justify-start sm:justify-center relative bg-slate-50/50 dark:bg-[#0b0f17]/40 select-none"
       >
         <div
-          style={{ transform: `scale(${zoom})`, transformOrigin: 'top center', transition: 'transform 0.15s ease-out' }}
+          style={{ transform: 'scale(0.85)', transformOrigin: 'top center' }}
           className="shrink-0"
         >
           <svg className="w-[980px] h-[240px] overflow-visible">
