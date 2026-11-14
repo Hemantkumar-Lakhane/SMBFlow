@@ -6393,6 +6393,7 @@ class GoogleMeetCaptureResponse(BaseModel):
     meeting_url: str
     conversation_title: Optional[str] = None
     contact_name: Optional[str] = None
+    instance_id: Optional[str] = None
     notice: str = (
         "The Recall.ai meeting bot will join your Google Meet. "
         "Google Meet admission and security controls apply. "
@@ -6727,6 +6728,51 @@ async def capture_google_meet(
     org_uuid = await _resolve_org_uuid(current_user, db)
     normalized_url = validate_google_meet_url(req.meeting_url)
 
+    # 1. Check if a recording session for this Google Meet already exists
+    stmt_existing = (
+        select(ConversationIngestionRecord)
+        .where(
+            ConversationIngestionRecord.organization_id == org_uuid,
+            ConversationIngestionRecord.recording_data["meeting_url"].astext == normalized_url,
+        )
+        .order_by(desc(ConversationIngestionRecord.received_at))
+    )
+    res_existing = await db.execute(stmt_existing)
+    existing_rec = res_existing.scalars().first()
+
+    if existing_rec:
+        b_id = (existing_rec.recording_data or {}).get("bot_id") or (existing_rec.metadata_ or {}).get("bot_id")
+        # If already completed with workflow deliverables, return immediately!
+        if existing_rec.status == "completed" and existing_rec.instance_id:
+            return GoogleMeetCaptureResponse(
+                success=True,
+                ingestion_id=str(existing_rec.id),
+                external_event_id=existing_rec.external_event_id,
+                bot_id=b_id or "",
+                status="completed",
+                instance_id=str(existing_rec.instance_id),
+                message="Meeting completed and deliverables staged successfully!",
+                meeting_url=normalized_url,
+                conversation_title=existing_rec.conversation_title,
+                contact_name=existing_rec.contact_name,
+            )
+        # If the bot is active or call has finished, process it!
+        if b_id and existing_rec.status not in ("completed", "failed"):
+            proc = await _process_recall_recording_core(existing_rec, b_id, db)
+            if proc and proc.get("status") == "completed":
+                return GoogleMeetCaptureResponse(
+                    success=True,
+                    ingestion_id=str(existing_rec.id),
+                    external_event_id=existing_rec.external_event_id,
+                    bot_id=b_id,
+                    status="completed",
+                    instance_id=proc.get("instance_id") or (str(existing_rec.instance_id) if existing_rec.instance_id else None),
+                    message="Meeting completed and deliverables staged successfully!",
+                    meeting_url=normalized_url,
+                    conversation_title=existing_rec.conversation_title,
+                    contact_name=existing_rec.contact_name,
+                )
+
     connector = await _resolve_recall_connector(org_uuid, db)
     if not connector or not connector.api_key:
         raise HTTPException(
@@ -6876,17 +6922,21 @@ async def _process_recall_recording_core(
         return {"status": "failed", "error": record.error_message}
 
     # If call ended or bot is done, check recordings
-    recordings = bot_info.get("recordings", [])
+    recordings = bot_info.get("recordings") or []
     rec_dl = None
     for r_item in recordings:
-        ms = r_item.get("media_shortcuts", {})
+        if not isinstance(r_item, dict):
+            continue
+        ms = r_item.get("media_shortcuts") or {}
+        a_mixed = ms.get("audio_mixed") or r_item.get("audio_mixed") or {}
+        v_mixed = ms.get("video_mixed") or r_item.get("video_mixed") or {}
+        a_data = a_mixed.get("data") if isinstance(a_mixed, dict) else {}
+        v_data = v_mixed.get("data") if isinstance(v_mixed, dict) else {}
         rec_dl = (
-            ms.get("audio_mixed", {}).get("data", {}).get("download_url")
-            or ms.get("video_mixed", {}).get("data", {}).get("download_url")
-            or ms.get("audio_mixed", {}).get("download_url")
-            or ms.get("video_mixed", {}).get("download_url")
-            or (r_item.get("audio_mixed") or {}).get("download_url")
-            or (r_item.get("video_mixed") or {}).get("download_url")
+            (a_data.get("download_url") if isinstance(a_data, dict) else None)
+            or (v_data.get("download_url") if isinstance(v_data, dict) else None)
+            or (a_mixed.get("download_url") if isinstance(a_mixed, dict) else None)
+            or (v_mixed.get("download_url") if isinstance(v_mixed, dict) else None)
         )
         if rec_dl:
             break

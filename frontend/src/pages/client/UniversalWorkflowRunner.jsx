@@ -686,6 +686,9 @@ function MeetingIntelligenceInputModes({ formData, onChange, api, synthesizing, 
           status: res.status || 'waiting_for_bot',
           message: res.message || 'Bot dispatched! Please click "Admit" in your Google Meet window.',
         })
+        if (res.status === 'completed' && res.instance_id && onSelectRunId) {
+          onSelectRunId(res.instance_id)
+        }
       }
     } catch (err) {
       console.error('Bot dispatch error:', err)
@@ -3583,6 +3586,12 @@ export default function UniversalWorkflowRunner() {
             })
             setSynthesizing(false)
             if (botRes && botRes.bot_id) {
+              if (botRes.status === 'completed' && botRes.instance_id) {
+                const synced = await syncMeetingRun(botRes.instance_id)
+                if (synced) applyMeetingRunState(synced)
+                setShowFormWhenDone(false)
+                return
+              }
               setPipelineNodes([
                 { ...workflow.nodes[0], status: 'running', subtitle: `Bot Dispatched (${botRes.bot_id.slice(0, 8)})` },
                 { ...workflow.nodes[1], status: 'pending', subtitle: 'Awaiting Call End & Audio Ingest' },
