@@ -12,14 +12,15 @@ from __future__ import annotations
 
 import json
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
-from sqlalchemy import select, update
+from sqlalchemy import select, update, desc
+from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.auth import TokenData, require_any_auth
@@ -411,6 +412,7 @@ async def create_product_launch_campaign(
 
     # Build WorkflowInstance in 'escalated' status (awaiting human decision/approval)
     instance_id = uuid.uuid4()
+    expires_at = (datetime.utcnow() + timedelta(days=7)).isoformat()
     wf_instance = WorkflowInstance(
         id=instance_id,
         organization_id=org_uuid,
@@ -719,16 +721,19 @@ Return ONLY JSON array format matching this schema:
                 "visual_aspect_ratio": aspect_ratio,
                 "is_executable_connection": is_executable,
                 "approval_required": True,
+                "expires_at": expires_at,
             },
             status="pending",
             created_at=datetime.utcnow(),
         )
         db.add(appr)
 
+        tool_key = "twitter" if plat_name.lower() == "x" else plat_name.lower()
         post_item = {
             "id": post_id,
             "approval_id": str(approval_id),
             "platform": plat_name,
+            "tool": tool_key,
             "category": post.get("category", "LAUNCH ANNOUNCEMENT"),
             "content_role": post.get("content_role", "Launch"),
             "scheduledTime": post.get("scheduledTime", "Oct 1 - 9:00 AM"),
@@ -766,6 +771,7 @@ Return ONLY JSON array format matching this schema:
         "visuals": core_visuals,
         "posts": created_posts_payload,
         "posts_count": len(created_posts_payload),
+        "expires_at": expires_at,
     }
 
     # Atomically record usage for billing
@@ -799,6 +805,7 @@ Return ONLY JSON array format matching this schema:
         "tokens_out": int(t_out),
         "cost_usd": float(c_usd),
         "agent_runs": evidence_data.get("agent_runs", []),
+        "expires_at": expires_at,
     }
 
 
@@ -879,6 +886,7 @@ async def enhance_campaign_visual_prompt(
 
     if inst:
         inst.context = context
+        flag_modified(inst, "context")
         await db.commit()
 
     return {
@@ -987,6 +995,7 @@ async def generate_campaign_visual(
         db.add(audit)
 
         inst.context = context
+        flag_modified(inst, "context")
         await db.commit()
 
         return {
@@ -1098,6 +1107,7 @@ async def generate_campaign_visual(
         db.add(rec_img)
 
     inst.context = context
+    flag_modified(inst, "context")
     await db.commit()
 
     return {
@@ -1198,6 +1208,7 @@ async def approve_campaign_visual(
     db.add(audit)
 
     inst.context = context
+    flag_modified(inst, "context")
     await db.commit()
 
     return {
@@ -1246,6 +1257,7 @@ async def create_custom_campaign_visual(
 
     context["visuals"] = visuals
     inst.context = context
+    flag_modified(inst, "context")
     await db.commit()
 
     return {
@@ -1289,6 +1301,7 @@ async def delete_campaign_visual(
             p["generated_asset_url"] = None
 
     inst.context = context
+    flag_modified(inst, "context")
     await db.commit()
 
     return {
@@ -1409,6 +1422,7 @@ async def schedule_campaign_to_google_calendar(
     # Save to workflow instance context
     context["calendar_events"] = scheduled_results
     inst.context = context
+    flag_modified(inst, "context")
 
     # Record AuditEvent
     audit = AuditEvent(
@@ -1480,6 +1494,7 @@ async def approve_product_launch_post(
                 if p.get("approval_id") == str(appr.id):
                     p["status"] = "Approved"
             wf_inst.context = dict(wf_inst.context)
+            flag_modified(wf_inst, "context")
             db.add(wf_inst)
 
     # Log AuditEvent
@@ -1553,6 +1568,23 @@ async def get_product_launch_campaign(
     inst = res.scalar_one_or_none()
 
     if not inst:
+        # Fallback: Check if inst_uuid is an ApprovalItem ID belonging to this org
+        stmt_appr_check = select(ApprovalItem).where(
+            ApprovalItem.id == inst_uuid,
+            ApprovalItem.organization_id == org_uuid
+        )
+        res_appr_check = await db.execute(stmt_appr_check)
+        appr_match = res_appr_check.scalar_one_or_none()
+        if appr_match and appr_match.instance_id:
+            inst_uuid = appr_match.instance_id
+            stmt_parent = select(WorkflowInstance).where(
+                WorkflowInstance.id == inst_uuid,
+                WorkflowInstance.organization_id == org_uuid
+            )
+            res_parent = await db.execute(stmt_parent)
+            inst = res_parent.scalar_one_or_none()
+
+    if not inst:
         raise HTTPException(status_code=404, detail="Campaign workflow instance not found or access denied")
 
     context = inst.context or {}
@@ -1592,9 +1624,16 @@ async def get_product_launch_campaign(
             if payload.get("hashtags"): p_copy["hashtags"] = payload["hashtags"]
             if payload.get("visual_status"): p_copy["visual_status"] = payload["visual_status"]
             if payload.get("generated_asset_url"): p_copy["generated_asset_url"] = payload["generated_asset_url"]
+            if not p_copy.get("tool"):
+                plat = (p_copy.get("platform") or "").lower()
+                p_copy["tool"] = "twitter" if plat == "x" else (plat or "slack")
             rehydrated_posts.append(p_copy)
         else:
-            rehydrated_posts.append(post)
+            p_copy = dict(post)
+            if not p_copy.get("tool"):
+                plat = (p_copy.get("platform") or "").lower()
+                p_copy["tool"] = "twitter" if plat == "x" else (plat or "slack")
+            rehydrated_posts.append(p_copy)
 
     stmt_runs = select(AgentRunRecord).where(AgentRunRecord.instance_id == inst_uuid)
     res_runs = await db.execute(stmt_runs)
@@ -1615,14 +1654,19 @@ async def get_product_launch_campaign(
         "total_cost_usd": round(total_cost, 4),
     }
 
+    expires_at = context.get("expires_at") or ((inst.started_at + timedelta(days=7)).isoformat() if inst.started_at else (datetime.utcnow() + timedelta(days=7)).isoformat())
+
     return {
         "instance_id": str(inst.id),
+        "runId": str(inst.id),
         "status": inst.status,
         "brief": brief,
         "visuals": visuals,
         "posts": rehydrated_posts,
         "usage_summary": usage_summary,
         "created_at": inst.started_at.isoformat() if inst.started_at else None,
+        "timestamp": inst.started_at.isoformat() if inst.started_at else None,
+        "expires_at": expires_at,
     }
 
 
@@ -1663,6 +1707,7 @@ async def list_product_launch_campaigns(
         visuals = context.get("visuals", [])
         posts = context.get("posts", [])
         product_name = brief.get("productName") or "Product Launch"
+        exp_at = context.get("expires_at") or ((inst.started_at + timedelta(days=7)).isoformat() if inst.started_at else (datetime.utcnow() + timedelta(days=7)).isoformat())
         campaign_list.append({
             "instance_id": str(inst.id),
             "runId": str(inst.id),
@@ -1680,6 +1725,7 @@ async def list_product_launch_campaigns(
             },
             "created_at": inst.started_at.isoformat() if inst.started_at else None,
             "timestamp": inst.started_at.isoformat() if inst.started_at else None,
+            "expires_at": exp_at,
         })
 
     return campaign_list
@@ -1743,6 +1789,7 @@ async def schedule_product_launch_post(
                         if req.scheduled_date and req.scheduled_time:
                             p["scheduledTime"] = f"{req.scheduled_date} - {req.scheduled_time}"
             wf_inst.context = dict(wf_inst.context)
+            flag_modified(wf_inst, "context")
             db.add(wf_inst)
 
     audit = AuditEvent(

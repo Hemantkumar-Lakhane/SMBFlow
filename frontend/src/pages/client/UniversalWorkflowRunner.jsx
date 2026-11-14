@@ -3030,6 +3030,8 @@ export default function UniversalWorkflowRunner() {
               ...run,
               ...fetched,
               runId: id,
+              instance_id: id,
+              expires_at: fetched.expires_at || run.expires_at,
               outputs: fetched.brief ? {
                 name: fetched.brief.productName,
                 desc: fetched.brief.shortDescription,
@@ -3040,6 +3042,18 @@ export default function UniversalWorkflowRunner() {
             }
           }
         } catch (_) {}
+      }
+      if (fullRun.posts && Array.isArray(fullRun.posts)) {
+        fullRun.posts = fullRun.posts.map(p => {
+          const plat = (p.platform || '').toLowerCase()
+          return {
+            ...p,
+            tool: p.tool || (plat === 'x' ? 'twitter' : (plat || 'slack')),
+          }
+        })
+      }
+      if (!fullRun.expires_at) {
+        fullRun.expires_at = fullRun.timestamp ? new Date(new Date(fullRun.timestamp).getTime() + 7 * 24 * 60 * 60 * 1000).toISOString() : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
       }
       setExecutionResult(fullRun)
       if (fullRun.outputs || fullRun.brief) {
@@ -3100,8 +3114,55 @@ export default function UniversalWorkflowRunner() {
     })
   }
 
+  // ── Load specific execution run when run_id / instance_id is passed in URL ──
+  const queryRunId = searchParams.get('run_id') || searchParams.get('instance_id')
+  const deepRunId = queryRunId || (runId && runId !== 'product_launch_sprint' && runId !== 'product_launch' && runId !== 'meeting_intelligence_followup' ? runId : null)
+
+  useEffect(() => {
+    if (!deepRunId) return
+
+    // 1. Check local runsHistory first
+    const h1 = JSON.parse(localStorage.getItem(`smbflow_runs_history_${workflow.key}`) || '[]')
+    const h2 = JSON.parse(localStorage.getItem('smbflow_runs_history_product_launch_sprint') || '[]')
+    const h3 = JSON.parse(localStorage.getItem('smbflow_runs_history_product_launch') || '[]')
+    const allLocal = [...h1, ...h2, ...h3]
+    const matched = allLocal.find(h => (h.runId || h.instance_id) === deepRunId)
+
+    if (matched && matched.posts && matched.posts.length > 0) {
+      handleSelectRun(matched)
+    }
+
+    // 2. Fetch fresh deliverables from backend API
+    if (isProductLaunch) {
+      api.get(`/workflows/product-launch/campaign/${deepRunId}`).then(remoteCampaign => {
+        if (remoteCampaign && remoteCampaign.instance_id) {
+          const fullRun = {
+            ...(matched || {}),
+            ...remoteCampaign,
+            runId: remoteCampaign.instance_id,
+            instance_id: remoteCampaign.instance_id,
+            timestamp: remoteCampaign.created_at || new Date().toISOString(),
+            expires_at: remoteCampaign.expires_at || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+            outputs: remoteCampaign.brief ? {
+              name: remoteCampaign.brief.productName,
+              desc: remoteCampaign.brief.shortDescription,
+              date: remoteCampaign.brief.targetDate,
+              channels: Array.isArray(remoteCampaign.brief.platforms) ? remoteCampaign.brief.platforms.join(', ') : remoteCampaign.brief.platforms,
+              has_images: remoteCampaign.brief.hasProductPhotos ? 'upload' : 'ai_generate',
+            } : (matched?.outputs || {}),
+          }
+          handleSelectRun(fullRun)
+        }
+      }).catch(err => {
+        console.warn('Could not fetch campaign by deepRunId:', err)
+      })
+    }
+  }, [deepRunId, isProductLaunch, workflow.key])
+
   // Restore history & cache on mount or target workflow change
   useEffect(() => {
+    if (deepRunId) return
+
     const initialDefaults = {}
     workflow.fields.forEach(f => {
       if (f.defaultValue !== undefined) {
@@ -3111,8 +3172,18 @@ export default function UniversalWorkflowRunner() {
 
     try {
       const historyKey = `smbflow_runs_history_${workflow.key}`
-      const savedHistory = JSON.parse(localStorage.getItem(historyKey) || '[]')
-      setRunsHistory(savedHistory)
+      const savedHistory = [
+        ...JSON.parse(localStorage.getItem(historyKey) || '[]'),
+        ...(isProductLaunch ? JSON.parse(localStorage.getItem('smbflow_runs_history_product_launch_sprint') || '[]') : []),
+        ...(isProductLaunch ? JSON.parse(localStorage.getItem('smbflow_runs_history_product_launch') || '[]') : []),
+      ]
+      const dedupMap = new Map()
+      savedHistory.forEach(r => {
+        const id = r.runId || r.instance_id
+        if (id && !dedupMap.has(id)) dedupMap.set(id, r)
+      })
+      const cleanHistory = Array.from(dedupMap.values())
+      setRunsHistory(cleanHistory)
 
       // Fetch remote campaigns for product launch to merge with local history
       if (isProductLaunch) {
@@ -3128,9 +3199,21 @@ export default function UniversalWorkflowRunner() {
               const merged = Array.from(map.values()).slice(0, 20)
               try {
                 localStorage.setItem(`smbflow_runs_history_${workflow.key}`, JSON.stringify(merged))
+                localStorage.setItem('smbflow_runs_history_product_launch', JSON.stringify(merged))
+                localStorage.setItem('smbflow_runs_history_product_launch_sprint', JSON.stringify(merged))
               } catch (_) {}
               return merged
             })
+
+            // Auto-load latest remote campaign if user didn't request a fresh run
+            if (!searchParams.get('new')) {
+              setExecutionResult(curr => {
+                if (!curr && remoteRuns[0] && remoteRuns[0].posts && remoteRuns[0].posts.length > 0) {
+                  handleSelectRun(remoteRuns[0])
+                }
+                return curr
+              })
+            }
           }
         }).catch(() => {})
       }
@@ -3194,6 +3277,12 @@ export default function UniversalWorkflowRunner() {
           }
         }
       }
+
+      // If no cached active run, but previous run exists in history for product launch, restore deliverables immediately
+      if (isProductLaunch && cleanHistory.length > 0 && cleanHistory[0].posts && cleanHistory[0].posts.length > 0 && !searchParams.get('new')) {
+        handleSelectRun(cleanHistory[0])
+        return
+      }
     } catch (_) {}
 
     // Default clean initial state if nothing cached
@@ -3210,7 +3299,7 @@ export default function UniversalWorkflowRunner() {
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       fieldIndex: 0,
     })
-  }, [targetKey, isProductLaunch])
+  }, [targetKey, isProductLaunch, deepRunId])
 
   // Synchronize active execution outputs and modifications (images, captions, approvals) to history & cache
   useEffect(() => {
@@ -3228,6 +3317,10 @@ export default function UniversalWorkflowRunner() {
         updatedHistory = [executionResult, ...existingHistory].slice(0, 20)
       }
       localStorage.setItem(historyKey, JSON.stringify(updatedHistory))
+      if (isProductLaunch) {
+        localStorage.setItem('smbflow_runs_history_product_launch', JSON.stringify(updatedHistory))
+        localStorage.setItem('smbflow_runs_history_product_launch_sprint', JSON.stringify(updatedHistory))
+      }
       setRunsHistory(updatedHistory)
 
       const cacheKey = `smbflow_runner_cache_${workflow.key}`
@@ -3235,8 +3328,12 @@ export default function UniversalWorkflowRunner() {
         executionResult,
         formData,
       }))
+      if (isProductLaunch) {
+        localStorage.setItem('smbflow_runner_cache_product_launch', JSON.stringify({ executionResult, formData }))
+        localStorage.setItem('smbflow_runner_cache_product_launch_sprint', JSON.stringify({ executionResult, formData }))
+      }
     } catch (_) {}
-  }, [executionResult, workflow.key, formData])
+  }, [executionResult, workflow.key, formData, isProductLaunch])
 
   // Handle auto_run from Copilot / deep links
   const autoRunParam = searchParams.get('auto_run') === 'true'
@@ -4127,6 +4224,7 @@ export default function UniversalWorkflowRunner() {
         tokens_in: liveApiResponse?.tokens_in || 410,
         tokens_out: liveApiResponse?.tokens_out || 780,
         cost_usd: liveApiResponse?.cost_usd || 0.0022,
+        expires_at: liveApiResponse?.expires_at || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
       }
 
       setExecutionResult(finalResult)
@@ -4137,6 +4235,10 @@ export default function UniversalWorkflowRunner() {
         const existingHistory = JSON.parse(localStorage.getItem(historyKey) || '[]')
         const updatedHistory = [finalResult, ...existingHistory.filter(h => h.runId !== instanceId)].slice(0, 10)
         localStorage.setItem(historyKey, JSON.stringify(updatedHistory))
+        if (isProductLaunch) {
+          localStorage.setItem('smbflow_runs_history_product_launch', JSON.stringify(updatedHistory))
+          localStorage.setItem('smbflow_runs_history_product_launch_sprint', JSON.stringify(updatedHistory))
+        }
       } catch (_) {}
 
       setSynthesizing(false)
@@ -4464,6 +4566,7 @@ export default function UniversalWorkflowRunner() {
       tokens_in: liveApiResponse?.tokens_in || 340,
       tokens_out: liveApiResponse?.tokens_out || 680,
       cost_usd: liveApiResponse?.cost_usd || 0.0018,
+      expires_at: liveApiResponse?.expires_at || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
     }
 
     setExecutionResult(finalResult)
@@ -4474,6 +4577,10 @@ export default function UniversalWorkflowRunner() {
       const existingHistory = JSON.parse(localStorage.getItem(historyKey) || '[]')
       const updatedHistory = [finalResult, ...existingHistory.filter(h => h.runId !== instanceId)].slice(0, 10)
       localStorage.setItem(historyKey, JSON.stringify(updatedHistory))
+      if (isProductLaunch) {
+        localStorage.setItem('smbflow_runs_history_product_launch', JSON.stringify(updatedHistory))
+        localStorage.setItem('smbflow_runs_history_product_launch_sprint', JSON.stringify(updatedHistory))
+      }
     } catch (_) {}
 
     setSynthesizing(false)
@@ -8013,9 +8120,13 @@ export default function UniversalWorkflowRunner() {
                     <span className="text-[10px] font-mono px-2 py-0.5 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 rounded-full border border-emerald-200 dark:border-emerald-800 font-semibold">
                       Ready to Publish
                     </span>
+                    <span className="text-[10px] font-mono px-2 py-0.5 bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 rounded-full border border-amber-200 dark:border-amber-800 font-semibold flex items-center gap-1">
+                      <Clock className="w-3 h-3 text-amber-500" />
+                      <span>Retained for 7 Days • Expires {executionResult.expires_at ? new Date(executionResult.expires_at).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'in 7 days'}</span>
+                    </span>
                   </div>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Generated for <span className="font-semibold text-slate-700 dark:text-slate-200">{formData.name || 'Product'}</span> across {executionResult.posts?.length || 0} distribution channels.
+                    Generated for <span className="font-semibold text-slate-700 dark:text-slate-200">{formData.name || executionResult.outputs?.name || executionResult.brief?.productName || 'Product'}</span> across {executionResult.posts?.length || 0} distribution channels.
                   </p>
                 </div>
               </div>
@@ -8263,12 +8374,20 @@ export default function UniversalWorkflowRunner() {
                         <div className="space-y-2.5">
                           {/* Image Preview */}
                           <div className="relative group overflow-hidden rounded-lg border border-slate-200/80 dark:border-slate-800 bg-slate-900">
-                            <img
-                              src={imgUrl}
-                              alt={vis.role}
-                              className="w-full h-40 object-cover transition-transform duration-300 group-hover:scale-105"
-                              loading="lazy"
-                            />
+                            {imgUrl ? (
+                              <img
+                                src={imgUrl}
+                                alt={vis.role || vis.visual_role || 'Campaign Visual'}
+                                className="w-full h-40 object-cover transition-transform duration-300 group-hover:scale-105"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div className="w-full h-40 flex flex-col items-center justify-center bg-slate-800/80 text-slate-300 p-4 text-center">
+                                <Sparkles className="w-5 h-5 text-amber-400 mb-1.5 animate-pulse" />
+                                <span className="text-xs font-semibold text-slate-200">{vis.role || vis.visual_role || 'Visual Asset'}</span>
+                                <span className="text-[10px] text-slate-400 mt-1">Ready for high-res rendering</span>
+                              </div>
+                            )}
                             <div className="absolute top-2 right-2 bg-black/75 backdrop-blur-xs text-white text-[9px] font-mono font-bold px-2 py-0.5 rounded-md border border-white/10">
                               {vis.aspect_ratio || '16:9'}
                             </div>
@@ -8280,7 +8399,7 @@ export default function UniversalWorkflowRunner() {
                           {/* Role Header & Status */}
                           <div className="flex items-center justify-between gap-1">
                             <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                              {vis.role}
+                              {vis.role || vis.visual_role || 'Campaign Visual'}
                             </span>
                             <span className="inline-flex items-center gap-1 text-[9px] font-mono font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
                               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse" />

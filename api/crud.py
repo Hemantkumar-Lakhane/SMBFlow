@@ -11,7 +11,7 @@ CONSTANT — do not modify for business customization.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Any, Optional
 
 import structlog
@@ -860,7 +860,7 @@ def pattern_to_dict(p: PatternMemory) -> dict:
 
 async def get_dashboard_data(db: AsyncSession, tenant_id: str) -> dict:
     from sqlalchemy import select, func, and_, desc, text
-    from datetime import datetime, timezone, timedelta
+    from datetime import datetime, timezone, timedelta, timedelta
     from core.state_manager import WorkflowInstance, Escalation, A2ARequest, AgentRunRecord, ApprovalItem
 
     # NOTE: DB DateTime columns are naive UTC (Column(DateTime), default=datetime.utcnow)
@@ -1704,6 +1704,12 @@ async def approval_item_to_dict(item) -> dict:
         }
     )
 
+    expires_at = (
+        raw_payload.get("expires_at")
+        or inner_payload.get("expires_at")
+        or ((item.created_at + timedelta(days=7)).isoformat() if item.created_at else None)
+    )
+
     normalized_payload = {
         **raw_payload,
         "to_address": recipient,
@@ -1720,6 +1726,7 @@ async def approval_item_to_dict(item) -> dict:
         "detected_sentiment": detected_sentiment,
         "trigger_keywords": trigger_keywords,
         "xai_explanation": xai_explanation,
+        "expires_at": expires_at,
     }
 
     return {
@@ -1746,6 +1753,7 @@ async def approval_item_to_dict(item) -> dict:
         "decided_by": item.decided_by,
         "decided_at": item.decided_at.isoformat() if item.decided_at else None,
         "created_at": item.created_at.isoformat() if item.created_at else None,
+        "expires_at": expires_at,
     }
 
 

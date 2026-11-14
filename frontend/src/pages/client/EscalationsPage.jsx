@@ -205,8 +205,14 @@ export default function EscalationsPage() {
         }
       }
 
+      const targetRunId = item.instance_id || item.run_id || payload.instance_id || payload.run_id || item.id
+      const itemExpiresAt = item.expires_at || payload.expires_at || (item.created_at ? new Date(new Date(item.created_at).getTime() + 7 * 24 * 60 * 60 * 1000).toISOString() : null)
+
       list.push({
         id: item.id || item.escalation_id,
+        instance_id: targetRunId,
+        run_id: targetRunId,
+        expiresAt: itemExpiresAt,
         workflowKey: isProductLaunch ? 'product_launch_sprint' : (isMeeting ? 'meeting_intelligence_followup' : (item.workflow_key || item.workflow_name || 'email_summarizer')),
         workflowTitle: isProductLaunch ? 'Product Launch Sprint' : (isMeeting ? 'Meeting Intelligence & Follow-up' : (item.workflow_name ? item.workflow_name.replace(/_/g, ' ') : 'Gmail Triage & Summarizer')),
         type: isProductLaunch ? 'product_launch' : (isDraft ? 'followup_email_draft' : (isMeeting ? 'meeting_action' : 'email_triage')),
@@ -219,7 +225,9 @@ export default function EscalationsPage() {
         status: item.status || 'pending',
         urgency: item.urgency_score || (isProductLaunch ? 8 : (isDraft ? 9 : (isMeeting ? 8 : 7))),
         createdAt: item.created_at || new Date().toISOString(),
-        runnerUrl: isProductLaunch ? '/workflows/product_launch_sprint' : (isMeeting ? '/workflows/meeting_intelligence_followup' : null),
+        runnerUrl: isProductLaunch 
+          ? (targetRunId ? `/workflows/product_launch_sprint?run_id=${targetRunId}` : '/workflows/product_launch_sprint') 
+          : (isMeeting ? (targetRunId ? `/workflows/meeting_intelligence_followup?run_id=${targetRunId}` : '/workflows/meeting_intelligence_followup') : null),
         raw: item,
       })
     })
@@ -244,11 +252,22 @@ export default function EscalationsPage() {
 
     // 3. Staged Product Launch Runs from localStorage
     try {
-      const launchHistory = JSON.parse(localStorage.getItem('smbflow_runs_history_product_launch') || '[]')
-      launchHistory.forEach(run => {
-        const prodName = run.outputs?.name || 'Product Launch'
+      const h1 = JSON.parse(localStorage.getItem('smbflow_runs_history_product_launch_sprint') || '[]')
+      const h2 = JSON.parse(localStorage.getItem('smbflow_runs_history_product_launch') || '[]')
+      const mergedMap = new Map()
+      ;[...h1, ...h2].forEach(r => {
+        const id = r.runId || r.instance_id
+        if (id && !mergedMap.has(id)) mergedMap.set(id, r)
+      })
+      mergedMap.forEach(run => {
+        const prodName = run.outputs?.name || run.brief?.productName || run.product_name || 'Product Launch'
+        const runId = run.runId || run.instance_id
+        const expAt = run.expires_at || (run.timestamp ? new Date(new Date(run.timestamp).getTime() + 7 * 24 * 60 * 60 * 1000).toISOString() : null)
         list.push({
-          id: run.runId,
+          id: runId,
+          instance_id: runId,
+          run_id: runId,
+          expiresAt: expAt,
           workflowKey: 'product_launch_sprint',
           workflowTitle: 'Product Launch Sprint',
           type: 'product_launch',
@@ -259,7 +278,7 @@ export default function EscalationsPage() {
           status: 'pending',
           urgency: 9,
           createdAt: run.timestamp || new Date().toISOString(),
-          runnerUrl: '/workflows/product_launch_sprint',
+          runnerUrl: `/workflows/product_launch_sprint?run_id=${runId}`,
           rawRun: run,
         })
       })
@@ -737,10 +756,19 @@ export default function EscalationsPage() {
                         {item.reason}
                       </p>
 
-                      <div className="flex items-center gap-3 text-[11px] text-slate-400 font-mono pt-0.5">
+                      <div className="flex items-center gap-3 text-[11px] text-slate-400 font-mono pt-0.5 flex-wrap">
                         <span>{timeAgo(item.createdAt)}</span>
                         <span>•</span>
                         <span>Urgency: {item.urgency}/10</span>
+                        {item.expiresAt && (
+                          <>
+                            <span>•</span>
+                            <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-medium">
+                              <Clock className="w-3 h-3 text-amber-500" />
+                              <span>Retained until {new Date(item.expiresAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}, {new Date(item.expiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            </span>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -786,7 +814,14 @@ export default function EscalationsPage() {
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
-                          onClick={() => navigate(item.runnerUrl)}
+                          onClick={() => {
+                            const targetRunId = item.instance_id || item.run_id || item.raw?.instance_id || item.raw?.run_id
+                            if (targetRunId) {
+                              navigate(`/workflows/meeting_intelligence_followup?run_id=${targetRunId}`)
+                            } else {
+                              navigate(item.runnerUrl || '/workflows/meeting_intelligence_followup')
+                            }
+                          }}
                           className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-[#182234] dark:hover:bg-[#233048] text-slate-700 dark:text-slate-300 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5"
                         >
                           <span>View in Workflow</span>
@@ -815,7 +850,14 @@ export default function EscalationsPage() {
                     ) : item.runnerUrl ? (
                       <button
                         type="button"
-                        onClick={() => navigate(item.runnerUrl)}
+                        onClick={() => {
+                          const targetRunId = item.instance_id || item.run_id || item.raw?.instance_id || item.raw?.run_id || item.rawRun?.runId || item.rawRun?.instance_id
+                          if (targetRunId) {
+                            navigate(`/workflows/product_launch_sprint?run_id=${targetRunId}`)
+                          } else {
+                            navigate(item.runnerUrl || '/workflows/product_launch_sprint')
+                          }
+                        }}
                         className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
                       >
                         <span>View Campaign Deliverables</span>
