@@ -663,24 +663,29 @@ async def capture_conversation(
         else:
             input_mode = None
 
+    conv_type_mapping = {
+        "direct transcript": "Online Meeting",
+        "transcript": "Online Meeting",
+        "pasted transcript": "Online Meeting",
+        "voice recording": "Phone Call",
+        "audio recording": "Online Meeting",
+        "recording": "Online Meeting",
+    }
+    if conv_type and conv_type.lower() in conv_type_mapping:
+        conv_type = conv_type_mapping[conv_type.lower()]
+
     if conv_type and conv_type not in valid_conv_types:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid conversation type '{conv_type}'. Must be 'Online Meeting', 'Phone Call', or 'In-Person Meeting'."
-        )
+        conv_type = "Online Meeting"
     if not conv_type:
         conv_type = "Online Meeting"
 
     if lang and lang not in valid_languages:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid language '{lang}'. Allowed options: {', '.join(valid_languages)}."
-        )
+        lang = "Auto Detect"
 
     if not title:
-        raise HTTPException(status_code=400, detail="Conversation Title is required.")
+        title = "Meeting Review" if input_mode != "paste_transcript" else "Pasted Conversation Transcript"
     if not contact:
-        raise HTTPException(status_code=400, detail="Contact Name is required.")
+        contact = "Meeting Participants"
 
     source_provenance = {
         "mode": input_mode or "audio_upload",

@@ -3323,9 +3323,7 @@ export default function UniversalWorkflowRunner() {
             : 'Pasted Conversation Transcript'
         )
         const effectiveContact = currentData.contact_name?.trim() || 'Meeting Attendees'
-        const effectiveType = currentData.conversation_type?.trim() || (
-          activeMode === 'google_meet' ? 'Online Meeting' : activeMode === 'audio_upload' ? 'Voice Recording' : 'Direct Transcript'
-        )
+        const effectiveType = currentData.conversation_type?.trim() || 'Online Meeting'
         const effectiveRecording = activeMode === 'audio_upload' ? currentData.recording : null
 
         setActivePrompt({
