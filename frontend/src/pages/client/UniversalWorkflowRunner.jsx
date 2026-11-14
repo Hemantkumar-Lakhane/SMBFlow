@@ -25,6 +25,7 @@ import {
   Image as ImageIcon, Loader2, Database, GitBranch, Activity, User, Star, TrendingUp,
   Inbox, CheckSquare, Mail, Palette, Wand2, Plug, Video, ShieldCheck
 } from 'lucide-react'
+import AutomaticIngestionModal from './AutomaticIngestionModal'
 
 // ── Visual Style Presets for Prompt Enhancer ──────────────────────────────────
 const VISUAL_STYLE_OPTIONS = [
@@ -470,7 +471,7 @@ function formatBytes(bytes) {
 }
 
 // ── Dedicated Mode-Specific Meeting Intelligence Input Form ──────────────────
-function MeetingIntelligenceInputModes({ formData, onChange, api, synthesizing, onExecute }) {
+function MeetingIntelligenceInputModes({ formData, onChange, api, synthesizing, onExecute, onOpenLiveHub }) {
   const activeMode = formData.input_mode || 'paste_transcript'
   const [isUploading, setIsUploading] = useState(false)
   const [googleStatus, setGoogleStatus] = useState({ connected: false, loading: true })
@@ -481,6 +482,14 @@ function MeetingIntelligenceInputModes({ formData, onChange, api, synthesizing, 
   const [showMetadata, setShowMetadata] = useState(false)
   const fileInputRef = useRef(null)
 
+  // Recall.ai Live Bot Dispatch State
+  const [botState, setBotState] = useState({
+    isDispatching: false,
+    botId: null,
+    status: null,
+    message: null,
+  })
+
   const allowedExtensions = ['.mp3', '.wav', '.m4a', '.webm']
   const maxSizeBytes = 50 * 1024 * 1024
 
@@ -488,6 +497,54 @@ function MeetingIntelligenceInputModes({ formData, onChange, api, synthesizing, 
     onChange('input_mode', mode)
     setErrorMsg('')
     setMeetResolveResult(null)
+  }
+
+  // Sample Scenarios for 1-Click Instant Testing
+  const SAMPLE_SCENARIOS = [
+    {
+      id: 'sales_pricing',
+      title: '💼 B2B Pricing & SOW Call',
+      desc: 'Pricing terms, SOC2 addendum, Friday SOW deadline',
+      convTitle: 'Q4 Enterprise SOW & Pricing Negotiation',
+      contactName: 'Sarah Jenkins',
+      text: `[00:00] Hemantkumar (SMBFlow): Welcome Sarah. Thanks for jumping on today to finalize our Q4 enterprise rollout plan and pricing terms.
+[00:15] Sarah (Client Lead): Absolutely Hemantkumar. We reviewed the tier-2 proposal internally. The features align well, but we need final sign-off on the 15% annual volume discount and data residency guarantees.
+[00:35] Hemantkumar: Understood. I commit to sending the revised SOW with the 15% discount and SOC2 compliance addendum by this Friday at 5:00 PM.
+[00:52] Sarah: Perfect. Once I receive that Friday, I will have our legal team review and sign off before next Tuesday. Also, let us schedule a 30-minute kick-off sync for next Thursday.
+[01:10] Hemantkumar: Agreed. I will block next Thursday at 2:00 PM on both our calendars. Looking forward to partnering!`,
+    },
+    {
+      id: 'tech_sync',
+      title: '🚀 Tech & Architecture Review',
+      desc: 'Redis latency SLA, cluster upgrade, security checklist',
+      convTitle: 'Sprint Architecture & Redis Migration',
+      contactName: 'Elena Rostova, Marcus Chen, Sophia Williams',
+      text: `[00:00] Elena (Product Lead): Welcome team. Today we are reviewing the Q4 release roadmap, API latency SLA targets, and client deliverables.
+[00:05] Marcus (Engineering): The distributed caching layer has reduced p99 latency to 18ms. However, we need approval on the Redis cluster upgrade before Friday.
+[00:15] Sophia (Operations): Budget approval for Redis is confirmed. I will sign off in the finance portal by 3:00 PM today.
+[00:22] Elena: Action item for Marcus: finalize the security migration checklist. Sophia: update the billing escalation schedule.`,
+    },
+    {
+      id: 'onboarding_discovery',
+      title: '🤝 Client Strategy & Onboarding',
+      desc: 'Branch workflow automation, pain points, sandbox API',
+      convTitle: 'Client Discovery & Implementation Roadmap',
+      contactName: 'Rahul Sharma',
+      text: `[00:00] Michael (VP Partnerships): Hi Rahul, great connecting with you today. We are excited to map out your multi-branch workflow automation.
+[00:20] Rahul (Ops Director): Our main bottleneck is tracking commitments across 4 regional branches. We lose track of client follow-ups.
+[00:45] Michael: SMBFlow automatically captures your meetings, syncs attendees to Central Memory, and drafts follow-up emails for your approval.
+[01:05] Rahul: That addresses our exact pain point. Please send over the sandbox API credentials by tomorrow afternoon.
+[01:20] Jim: I will generate the API sandbox keys and email them to you before 2:00 PM tomorrow.`,
+    },
+  ]
+
+  const handleSelectScenario = (sc) => {
+    onChange('transcript', sc.text)
+    onChange('conversation_title', sc.convTitle)
+    onChange('contact_name', sc.contactName)
+    if (!formData.conversation_date) {
+      onChange('conversation_date', new Date().toISOString().split('T')[0])
+    }
   }
 
   // Load Google connection status on mount
@@ -558,6 +615,41 @@ function MeetingIntelligenceInputModes({ formData, onChange, api, synthesizing, 
     }
   }
 
+  // Recall.ai Bot Dispatch Handler
+  async function handleDispatchRecallBot() {
+    const rawUrl = (formData.meet_url || '').trim()
+    if (!rawUrl || rawUrl.length < 5) {
+      setErrorMsg('Please enter a valid Google Meet link (e.g. https://meet.google.com/abc-defg-hij)')
+      return
+    }
+    setErrorMsg('')
+    setBotState({
+      isDispatching: true,
+      botId: null,
+      status: 'dispatching',
+      message: 'Connecting to Recall.ai cloud...',
+    })
+    try {
+      const res = await api.post('/workflows/meeting-intelligence/google-meet/capture', {
+        meeting_url: rawUrl,
+        conversation_title: formData.conversation_title || 'Google Meet Capture Session',
+        contact_name: formData.contact_name || 'Meeting Attendees',
+      })
+      if (res && res.bot_id) {
+        setBotState({
+          isDispatching: false,
+          botId: res.bot_id,
+          status: res.status || 'waiting_for_bot',
+          message: res.message || 'Bot dispatched! Please click "Admit" in your Google Meet window.',
+        })
+      }
+    } catch (err) {
+      console.error('Bot dispatch error:', err)
+      setBotState({ isDispatching: false, botId: null, status: 'failed', message: null })
+      setErrorMsg(err?.response?.data?.detail || err.message || 'Failed to dispatch meeting bot. Check Recall API key.')
+    }
+  }
+
   // Google Meet Resolution Handler
   async function handleResolveMeet() {
     const rawUrl = (formData.meet_url || '').trim()
@@ -600,23 +692,9 @@ function MeetingIntelligenceInputModes({ formData, onChange, api, synthesizing, 
     window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${realClientId}&redirect_uri=${redirectUri}&response_type=code&scope=https://www.googleapis.com/auth/meetings.space.readonly%20https://www.googleapis.com/auth/calendar.readonly%20https://www.googleapis.com/auth/drive.readonly%20https://www.googleapis.com/auth/userinfo.email&access_type=offline&prompt=consent`
   }
 
-  function handleInsertSampleTranscript() {
-    const sample = `[00:00] Elena (Product Lead): Welcome team. Today we are reviewing the Q4 release roadmap, API latency SLA targets, and client deliverables.
-[00:05] Marcus (Engineering): The distributed caching layer has reduced p99 latency to 18ms. However, we need approval on the Redis cluster upgrade before Friday.
-[00:15] Sophia (Operations): Budget approval for Redis is confirmed. I will sign off in the finance portal by 3:00 PM today.
-[00:22] Elena: Action item for Marcus: finalize the security migration checklist. Sophia: update the billing escalation schedule.`
-
-    onChange('transcript', sample)
-    if (!formData.conversation_title) {
-      onChange('conversation_title', 'Q4 Roadmap & API Latency Sync')
-    }
-    if (!formData.contact_name) {
-      onChange('contact_name', 'Elena Rostova, Marcus Chen, Sophia Williams')
-    }
-  }
-
   const transcriptText = formData.transcript || ''
   const charCount = transcriptText.length
+  const wordCount = transcriptText ? transcriptText.trim().split(/\s+/).length : 0
 
   const audioRec = formData.recording
   const hasAudio = Boolean(audioRec && (audioRec.stored_path || audioRec.filename))
@@ -624,84 +702,234 @@ function MeetingIntelligenceInputModes({ formData, onChange, api, synthesizing, 
 
   return (
     <div className="space-y-4">
-      {/* 3 Input Mode Tabs */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 p-1 bg-slate-100 dark:bg-[#0c121d] rounded-xl text-xs font-medium">
-        <button
-          type="button"
-          onClick={() => handleModeChange('paste_transcript')}
-          className={`py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-            activeMode === 'paste_transcript'
-              ? 'bg-white dark:bg-[#1a2436] text-slate-900 dark:text-white font-semibold shadow-xs'
-              : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
-          }`}
-        >
-          <FileText className="w-3.5 h-3.5" />
-          <span>Paste Transcript</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => handleModeChange('audio_upload')}
-          className={`py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-            activeMode === 'audio_upload'
-              ? 'bg-white dark:bg-[#1a2436] text-slate-900 dark:text-white font-semibold shadow-xs'
-              : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
-          }`}
-        >
-          <Mic className="w-3.5 h-3.5" />
-          <span>Upload Audio File</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => handleModeChange('google_meet')}
-          className={`py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-            activeMode === 'google_meet'
-              ? 'bg-white dark:bg-[#1a2436] text-slate-900 dark:text-white font-semibold shadow-xs'
-              : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
-          }`}
-        >
-          <Video className="w-3.5 h-3.5" />
-          <span>Google Meet</span>
-        </button>
-      </div>
-
-      {/* Mode A: Paste Transcript */}
-      {activeMode === 'paste_transcript' && (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs">
-            <span className="font-semibold text-slate-700 dark:text-slate-300">
-              Meeting Transcript
+      {/* ── Visual 5-Stage Architecture Stepper ── */}
+      <div className="p-3.5 rounded-2xl bg-gradient-to-r from-blue-50/90 via-indigo-50/60 to-violet-50/90 dark:from-blue-950/40 dark:via-indigo-950/30 dark:to-violet-950/40 border border-blue-200/70 dark:border-blue-900/50 shadow-2xs">
+        <div className="flex items-center justify-between gap-2 flex-wrap pb-2 border-b border-blue-200/50 dark:border-blue-900/40">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-lg bg-blue-600 text-white flex items-center justify-center text-xs font-bold shadow-xs">
+              <Sparkles className="w-3.5 h-3.5" />
+            </div>
+            <div>
+              <div className="text-xs font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">
+                Meeting Intelligence Pipeline
+              </div>
+              <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                Multi-mode capture with evidence-grounded action extraction & relationship memory
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-bold border border-emerald-300 dark:border-emerald-800 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              Recall.ai + Whisper + PostgreSQL Ready
             </span>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handleInsertSampleTranscript}
-                className="text-[11px] font-medium text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
-              >
-                + Insert Sample
-              </button>
-              {charCount > 0 && (
-                <span className="text-[11px] text-slate-400 font-mono">
-                  {charCount.toLocaleString()} chars
-                </span>
-              )}
+          </div>
+        </div>
+
+        {/* 5 Nodes Mini Breadcrumb */}
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mt-2.5 text-xs">
+          <div className={`p-2 rounded-xl border flex items-center gap-2 transition-all ${
+            activeMode ? 'bg-white dark:bg-[#121826] border-blue-300 dark:border-blue-800 shadow-2xs' : 'bg-white/60 dark:bg-[#121826]/60 border-slate-200 dark:border-[#233048]'
+          }`}>
+            <div className="w-6 h-6 rounded-lg bg-blue-100 dark:bg-blue-950/70 text-blue-600 dark:text-blue-400 flex items-center justify-center text-[10px] font-bold">1</div>
+            <div className="min-w-0">
+              <div className="font-bold text-[11px] text-slate-900 dark:text-white truncate">1. Capture</div>
+              <div className="text-[10px] text-slate-500 truncate">{activeMode === 'google_meet' ? 'Google Meet' : activeMode === 'audio_upload' ? 'Audio Upload' : 'Direct Text'}</div>
             </div>
           </div>
 
-          <textarea
-            rows={8}
-            value={transcriptText}
-            onChange={(e) => onChange('transcript', e.target.value)}
-            placeholder="Paste your meeting notes or conversation transcript here..."
-            className="w-full bg-slate-50/60 dark:bg-[#0b0f17] border border-slate-200 dark:border-[#233048] focus:border-blue-500 rounded-xl p-3 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-hidden font-mono leading-relaxed"
-          />
+          <div className="p-2 rounded-xl bg-white/70 dark:bg-[#121826]/70 border border-slate-200 dark:border-[#233048] flex items-center gap-2">
+            <div className="w-6 h-6 rounded-lg bg-indigo-100 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-[10px] font-bold">2</div>
+            <div className="min-w-0">
+              <div className="font-bold text-[11px] text-slate-900 dark:text-white truncate">2. Analyze</div>
+              <div className="text-[10px] text-slate-500 truncate">Whisper + Diarize</div>
+            </div>
+          </div>
+
+          <div className="p-2 rounded-xl bg-white/70 dark:bg-[#121826]/70 border border-slate-200 dark:border-[#233048] flex items-center gap-2">
+            <div className="w-6 h-6 rounded-lg bg-teal-100 dark:bg-teal-950/70 text-teal-600 dark:text-teal-400 flex items-center justify-center text-[10px] font-bold">3</div>
+            <div className="min-w-0">
+              <div className="font-bold text-[11px] text-slate-900 dark:text-white truncate">3. Memory</div>
+              <div className="text-[10px] text-slate-500 truncate">PostgreSQL Sync</div>
+            </div>
+          </div>
+
+          <div className="p-2 rounded-xl bg-white/70 dark:bg-[#121826]/70 border border-slate-200 dark:border-[#233048] flex items-center gap-2">
+            <div className="w-6 h-6 rounded-lg bg-amber-100 dark:bg-amber-950/70 text-amber-600 dark:text-amber-400 flex items-center justify-center text-[10px] font-bold">4</div>
+            <div className="min-w-0">
+              <div className="font-bold text-[11px] text-slate-900 dark:text-white truncate">4. Actions</div>
+              <div className="text-[10px] text-slate-500 truncate">Commitment Matrix</div>
+            </div>
+          </div>
+
+          <div className="p-2 rounded-xl bg-white/70 dark:bg-[#121826]/70 border border-slate-200 dark:border-[#233048] flex items-center gap-2">
+            <div className="w-6 h-6 rounded-lg bg-purple-100 dark:bg-purple-950/70 text-purple-600 dark:text-purple-400 flex items-center justify-center text-[10px] font-bold">5</div>
+            <div className="min-w-0">
+              <div className="font-bold text-[11px] text-slate-900 dark:text-white truncate">5. Follow-up</div>
+              <div className="text-[10px] text-slate-500 truncate">HITL Email Gate</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── 3 Rich Input Mode Cards ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+        {/* Mode A: Paste Transcript */}
+        <button
+          type="button"
+          onClick={() => handleModeChange('paste_transcript')}
+          className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+            activeMode === 'paste_transcript'
+              ? 'bg-blue-50/70 dark:bg-blue-950/40 border-blue-500 ring-2 ring-blue-500/20 shadow-xs'
+              : 'bg-white dark:bg-[#121826] border-slate-200 dark:border-[#233048] hover:border-slate-300 dark:hover:border-slate-700'
+          }`}
+        >
+          <div className="flex items-center justify-between pb-2">
+            <div className="w-8 h-8 rounded-xl bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center shadow-2xs">
+              <FileText className="w-4 h-4" />
+            </div>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/60 text-blue-800 dark:text-blue-300 font-bold">
+              Instant ⚡
+            </span>
+          </div>
+          <div>
+            <div className="text-xs font-bold text-slate-900 dark:text-white">
+              Paste Transcript
+            </div>
+            <div className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 mt-0.5">
+              Paste dialogue notes or use one of 3 realistic scenarios for instant extraction.
+            </div>
+          </div>
+        </button>
+
+        {/* Mode B: Audio Upload */}
+        <button
+          type="button"
+          onClick={() => handleModeChange('audio_upload')}
+          className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+            activeMode === 'audio_upload'
+              ? 'bg-violet-50/70 dark:bg-violet-950/40 border-violet-500 ring-2 ring-violet-500/20 shadow-xs'
+              : 'bg-white dark:bg-[#121826] border-slate-200 dark:border-[#233048] hover:border-slate-300 dark:hover:border-slate-700'
+          }`}
+        >
+          <div className="flex items-center justify-between pb-2">
+            <div className="w-8 h-8 rounded-xl bg-violet-100 dark:bg-violet-950 text-violet-600 dark:text-violet-400 flex items-center justify-center shadow-2xs">
+              <Mic className="w-4 h-4" />
+            </div>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-violet-100 dark:bg-violet-900/60 text-violet-800 dark:text-violet-300 font-bold">
+              Whisper AI 🎙️
+            </span>
+          </div>
+          <div>
+            <div className="text-xs font-bold text-slate-900 dark:text-white">
+              Audio File Upload
+            </div>
+            <div className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 mt-0.5">
+              Upload .mp3, .wav, or .m4a audio file for speech normalization & transcription.
+            </div>
+          </div>
+        </button>
+
+        {/* Mode C: Google Meet */}
+        <button
+          type="button"
+          onClick={() => handleModeChange('google_meet')}
+          className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+            activeMode === 'google_meet'
+              ? 'bg-emerald-50/70 dark:bg-emerald-950/40 border-emerald-500 ring-2 ring-emerald-500/20 shadow-xs'
+              : 'bg-white dark:bg-[#121826] border-slate-200 dark:border-[#233048] hover:border-slate-300 dark:hover:border-slate-700'
+          }`}
+        >
+          <div className="flex items-center justify-between pb-2">
+            <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shadow-2xs">
+              <Video className="w-4 h-4" />
+            </div>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-bold">
+              Recall.ai Bot 🤖
+            </span>
+          </div>
+          <div>
+            <div className="text-xs font-bold text-slate-900 dark:text-white">
+              Google Meet Bot
+            </div>
+            <div className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 mt-0.5">
+              Autonomous notetaker joins your Google Meet, records & summarizes automatically.
+            </div>
+          </div>
+        </button>
+      </div>
+
+      {/* ── Mode A: Paste Transcript Content ── */}
+      {activeMode === 'paste_transcript' && (
+        <div className="p-4 rounded-2xl bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] space-y-3">
+          {/* Preset Scenario Pills */}
+          <div className="space-y-1.5 pb-2 border-b border-slate-100 dark:border-[#1a2336]">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-blue-500" />
+                <span>1-Click Test Scenarios (Click to populate demo conversation):</span>
+              </span>
+              {charCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onChange('transcript', '')
+                    onChange('conversation_title', '')
+                    onChange('contact_name', '')
+                  }}
+                  className="text-[11px] text-slate-400 hover:text-red-500 cursor-pointer"
+                >
+                  Clear text
+                </button>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              {SAMPLE_SCENARIOS.map((sc) => (
+                <button
+                  key={sc.id}
+                  type="button"
+                  onClick={() => handleSelectScenario(sc)}
+                  className="p-2.5 rounded-xl bg-slate-50 dark:bg-[#0b0f17] hover:bg-blue-50/70 dark:hover:bg-blue-950/40 border border-slate-200 dark:border-[#233048] hover:border-blue-300 text-left transition-all cursor-pointer group"
+                >
+                  <div className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                    {sc.title}
+                  </div>
+                  <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                    {sc.desc}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Transcript Textarea */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-semibold text-slate-700 dark:text-slate-300">
+                Conversation Transcript Text
+              </span>
+              <div className="flex items-center gap-2 font-mono text-[11px] text-slate-400">
+                <span>{wordCount.toLocaleString()} words</span>
+                <span>•</span>
+                <span>{charCount.toLocaleString()} chars</span>
+              </div>
+            </div>
+
+            <textarea
+              rows={8}
+              value={transcriptText}
+              onChange={(e) => onChange('transcript', e.target.value)}
+              placeholder="Paste conversation transcript here, or select a 1-click test scenario above..."
+              className="w-full bg-slate-50/80 dark:bg-[#0b0f17] border border-slate-200 dark:border-[#233048] focus:border-blue-500 rounded-xl p-3 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-hidden font-mono leading-relaxed resize-y"
+            />
+          </div>
         </div>
       )}
 
-      {/* Mode B: Upload Audio */}
+      {/* ── Mode B: Upload Audio File ── */}
       {activeMode === 'audio_upload' && (
-        <div className="space-y-2">
+        <div className="p-4 rounded-2xl bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] space-y-3">
           <input
             ref={fileInputRef}
             type="file"
@@ -716,42 +944,52 @@ function MeetingIntelligenceInputModes({ formData, onChange, api, synthesizing, 
           />
 
           <div className="flex items-center justify-between text-xs">
-            <span className="font-semibold text-slate-700 dark:text-slate-300">Audio Recording</span>
-            <span className="text-[11px] text-slate-400 font-mono">Max 50MB</span>
+            <span className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+              <Mic className="w-3.5 h-3.5 text-violet-500" />
+              <span>Voice / Audio Recording</span>
+            </span>
+            <div className="flex items-center gap-1.5 text-[10px] font-mono text-slate-400">
+              <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-[#182234]">.MP3</span>
+              <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-[#182234]">.WAV</span>
+              <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-[#182234]">.M4A</span>
+              <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-[#182234]">Max 50MB</span>
+            </div>
           </div>
 
           {hasAudio ? (
-            <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-[#121826] border border-slate-200 dark:border-[#233048]">
+            <div className="flex items-center justify-between p-3.5 rounded-xl bg-violet-50/50 dark:bg-violet-950/30 border border-violet-200 dark:border-violet-800">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                <div className="w-9 h-9 rounded-xl bg-violet-600 text-white flex items-center justify-center shrink-0 shadow-xs">
                   <Mic className="w-4 h-4" />
                 </div>
                 <div className="min-w-0">
-                  <div className="text-xs font-semibold text-slate-900 dark:text-white truncate">
+                  <div className="text-xs font-bold text-slate-900 dark:text-white truncate">
                     {audioRec.filename}
                   </div>
-                  {audioRec.size_bytes && (
-                    <div className="text-[10px] text-slate-400 font-mono">
-                      {formatBytes(audioRec.size_bytes)}
-                    </div>
-                  )}
+                  <div className="text-[11px] text-violet-700 dark:text-violet-300 font-mono mt-0.5 flex items-center gap-2">
+                    {audioRec.size_bytes && <span>{formatBytes(audioRec.size_bytes)}</span>}
+                    <span>•</span>
+                    <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                      <CheckCircle className="w-3 h-3" /> Preserved for Node 2 Processing
+                    </span>
+                  </div>
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="px-2 py-1 text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium cursor-pointer"
+                  className="px-2.5 py-1 text-xs text-violet-600 dark:text-violet-400 hover:bg-violet-100 dark:hover:bg-violet-900/40 rounded-lg font-semibold transition-colors cursor-pointer"
                 >
-                  Change
+                  Replace
                 </button>
                 <button
                   type="button"
                   onClick={() => onChange('recording', null)}
-                  className="p-1 text-slate-400 hover:text-red-500 rounded-md cursor-pointer"
+                  className="p-1.5 text-slate-400 hover:text-red-500 rounded-lg cursor-pointer transition-colors"
                   title="Remove"
                 >
-                  <X className="w-3.5 h-3.5" />
+                  <X className="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -767,25 +1005,27 @@ function MeetingIntelligenceInputModes({ formData, onChange, api, synthesizing, 
                 }
               }}
               onClick={() => !isUploading && fileInputRef.current?.click()}
-              className={`p-6 border border-dashed rounded-xl text-center cursor-pointer transition-all ${
+              className={`p-7 border-2 border-dashed rounded-2xl text-center cursor-pointer transition-all ${
                 dragOver
-                  ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-950/30'
-                  : 'border-slate-300 dark:border-[#233048] hover:border-slate-400 bg-slate-50/30 dark:bg-[#101622]/30'
+                  ? 'border-violet-500 bg-violet-50/50 dark:bg-violet-950/30'
+                  : 'border-slate-300 dark:border-[#233048] hover:border-violet-400 bg-slate-50/50 dark:bg-[#101622]/40'
               }`}
             >
               {isUploading ? (
-                <div className="flex items-center justify-center gap-2 py-2">
-                  <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
-                  <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">Uploading audio...</span>
+                <div className="flex flex-col items-center justify-center gap-2 py-3">
+                  <Loader2 className="w-6 h-6 animate-spin text-violet-600" />
+                  <span className="text-xs text-violet-700 dark:text-violet-300 font-bold">Uploading & preserving audio file...</span>
                 </div>
               ) : (
-                <div className="flex flex-col items-center justify-center gap-1.5 py-2">
-                  <Mic className="w-5 h-5 text-slate-400" />
-                  <div className="text-xs text-slate-700 dark:text-slate-300">
-                    <span className="text-blue-600 dark:text-blue-400 font-medium underline">Choose audio file</span> or drag & drop here
+                <div className="flex flex-col items-center justify-center gap-2 py-2">
+                  <div className="w-10 h-10 rounded-2xl bg-violet-100 dark:bg-violet-950 text-violet-600 dark:text-violet-400 flex items-center justify-center shadow-xs">
+                    <Mic className="w-5 h-5" />
                   </div>
-                  <div className="text-[11px] text-slate-400 font-mono">
-                    MP3, WAV, M4A, WebM (up to 50MB)
+                  <div className="text-xs text-slate-700 dark:text-slate-300">
+                    <span className="text-violet-600 dark:text-violet-400 font-bold underline">Click to upload audio</span> or drag and drop file here
+                  </div>
+                  <div className="text-[11px] text-slate-400">
+                    Supports MP3, WAV, M4A, WebM (up to 50MB)
                   </div>
                 </div>
               )}
@@ -794,118 +1034,185 @@ function MeetingIntelligenceInputModes({ formData, onChange, api, synthesizing, 
         </div>
       )}
 
-      {/* Mode C: Google Meet */}
+      {/* ── Mode C: Google Meet Notetaker Bot ── */}
       {activeMode === 'google_meet' && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between text-xs">
-            <span className="font-semibold text-slate-700 dark:text-slate-300">Google Meet</span>
-            {googleStatus.connected ? (
-              <span className="text-emerald-600 dark:text-emerald-400 text-[11px] font-medium flex items-center gap-1">
-                <CheckCircle className="w-3 h-3" /> Connected
-              </span>
-            ) : (
+        <div className="p-4 rounded-2xl bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] space-y-4">
+          {/* Header Banner */}
+          <div className="p-3.5 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 flex items-start justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs shrink-0">
+                <Video className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <span>Recall.ai Autonomous Google Meet Capture</span>
+                  <span className="text-[10px] font-mono px-2 py-0.2 rounded-full bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200 font-bold">
+                    Active (us-west-2)
+                  </span>
+                </div>
+                <div className="text-[11px] text-emerald-800/90 dark:text-emerald-300/90 leading-relaxed">
+                  The bot joins your live Google Meet call, records audio, generates a real-time transcript, and automatically runs Nodes 1–5 on call end.
+                </div>
+              </div>
+            </div>
+
+            {onOpenLiveHub && (
               <button
                 type="button"
-                onClick={handleConnectGoogle}
-                className="text-blue-600 dark:text-blue-400 text-[11px] font-medium hover:underline flex items-center gap-1 cursor-pointer"
+                onClick={onOpenLiveHub}
+                className="px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-white dark:bg-[#121826] border border-emerald-300 dark:border-emerald-800 rounded-lg hover:bg-emerald-100 dark:hover:bg-emerald-950 transition-all cursor-pointer shadow-2xs shrink-0"
               >
-                <ExternalLink className="w-3 h-3" /> Connect Google Account
+                Open Webhooks Hub
               </button>
             )}
           </div>
 
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              value={formData.meet_url || ''}
-              onChange={(e) => onChange('meet_url', e.target.value)}
-              placeholder="Paste Google Meet link or code (e.g. meet.google.com/abc-defg-hij)"
-              className="flex-1 bg-slate-50/60 dark:bg-[#101622] border border-slate-200 dark:border-[#233048] focus:border-blue-500 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 font-mono focus:outline-hidden"
-            />
-            <button
-              type="button"
-              onClick={handleResolveMeet}
-              disabled={isResolvingMeet || !meetUrlVal}
-              className="px-3.5 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 disabled:opacity-40 font-medium rounded-xl text-xs flex items-center gap-1.5 shrink-0 cursor-pointer transition-colors"
-            >
-              {isResolvingMeet ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
-              <span>{isResolvingMeet ? 'Verifying...' : 'Verify'}</span>
-            </button>
+          {/* URL Input with Dispatch Button */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center justify-between">
+              <span>Google Meet URL <span className="text-rose-500">*</span></span>
+              <span className="text-[11px] font-mono text-slate-400">e.g. meet.google.com/abc-defg-hij</span>
+            </label>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="url"
+                value={formData.meet_url || ''}
+                onChange={(e) => onChange('meet_url', e.target.value)}
+                placeholder="https://meet.google.com/abc-defg-hij"
+                className="flex-1 bg-slate-50/80 dark:bg-[#0b0f17] border border-slate-300 dark:border-[#233048] focus:border-emerald-500 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 font-mono focus:outline-hidden"
+              />
+
+              <button
+                type="button"
+                onClick={handleDispatchRecallBot}
+                disabled={botState.isDispatching || !meetUrlVal}
+                className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shrink-0 cursor-pointer shadow-xs transition-all"
+              >
+                {botState.isDispatching ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Dispatching...</span>
+                  </>
+                ) : (
+                  <>
+                    <Video className="w-3.5 h-3.5" />
+                    <span>Dispatch Meeting Bot</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
 
-          {meetResolveResult && (
-            <div className="p-2.5 bg-slate-50 dark:bg-[#101622] border border-slate-200 dark:border-[#233048] rounded-xl text-xs">
-              <span className={meetResolveResult.status === 'ready' ? 'text-emerald-600 font-medium' : 'text-amber-600 font-medium'}>
-                {meetResolveResult.message || `Status: ${meetResolveResult.status}`}
-              </span>
+          {/* Live Bot Feedback Box */}
+          {botState.botId && (
+            <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-xs space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                  <span>Bot Dispatched (ID: {botState.botId})</span>
+                </span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200 font-bold uppercase">
+                  {botState.status}
+                </span>
+              </div>
+              <p className="text-[11px] text-amber-800 dark:text-amber-300 leading-relaxed">
+                👉 <strong>Next Step:</strong> Check your Google Meet tab! Click <strong>"Admit"</strong> when <em>"SMBFlow Notetaker"</em> requests to join. Once you finish the meeting and hang up, the transcript is posted to SMBFlow automatically!
+              </p>
             </div>
           )}
+
+          {/* Step-by-Step Instructions */}
+          <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#0b0f17] border border-slate-200/80 dark:border-[#1e2a3f] text-xs space-y-2">
+            <div className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+              <span>How Hands-Free Google Meet Works:</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 text-[11px] text-slate-600 dark:text-slate-400">
+              <div className="p-2 rounded-lg bg-white dark:bg-[#121826] border border-slate-200/60 dark:border-[#233048]">
+                <strong>1. Enter Link</strong>
+                <p className="text-[10px] text-slate-500 mt-0.5">Paste your Google Meet room link above.</p>
+              </div>
+              <div className="p-2 rounded-lg bg-white dark:bg-[#121826] border border-slate-200/60 dark:border-[#233048]">
+                <strong>2. Dispatch Bot</strong>
+                <p className="text-[10px] text-slate-500 mt-0.5">Click "Dispatch Meeting Bot".</p>
+              </div>
+              <div className="p-2 rounded-lg bg-white dark:bg-[#121826] border border-slate-200/60 dark:border-[#233048]">
+                <strong>3. Admit in Meet</strong>
+                <p className="text-[10px] text-slate-500 mt-0.5">Host clicks "Admit" for the notetaker.</p>
+              </div>
+              <div className="p-2 rounded-lg bg-white dark:bg-[#121826] border border-slate-200/60 dark:border-[#233048]">
+                <strong>4. Instant Intel</strong>
+                <p className="text-[10px] text-slate-500 mt-0.5">Hang up call & Nodes 1–5 execute!</p>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Optional Metadata Accordion */}
-      <div className="border border-slate-200 dark:border-[#1e2a3f] rounded-xl overflow-hidden">
+      {/* ── Optional Meeting Metadata Accordion ── */}
+      <div className="border border-slate-200 dark:border-[#1e2a3f] rounded-2xl overflow-hidden bg-white dark:bg-[#121826]">
         <button
           type="button"
           onClick={() => setShowMetadata(prev => !prev)}
-          className="w-full flex items-center justify-between p-2.5 bg-slate-50 dark:bg-[#0f1523] text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-[#151c2e] transition-colors cursor-pointer"
+          className="w-full flex items-center justify-between p-3 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-[#151c2e] transition-colors cursor-pointer"
         >
-          <span className="flex items-center gap-1.5">
-            <Sliders className="w-3 h-3 text-slate-400" />
-            <span>Meeting Details (Optional)</span>
+          <span className="flex items-center gap-2">
+            <Sliders className="w-3.5 h-3.5 text-blue-500" />
+            <span>Additional Meeting Details (Optional Title, Attendees & Date)</span>
           </span>
-          <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${showMetadata ? 'rotate-180' : ''}`} />
+          <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${showMetadata ? 'rotate-180' : ''}`} />
         </button>
 
         {showMetadata && (
-          <div className="p-3 bg-white dark:bg-[#121826] grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs border-t border-slate-200 dark:border-[#1e2a3f]">
+          <div className="p-3.5 bg-slate-50/60 dark:bg-[#0b0f17] grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs border-t border-slate-200 dark:border-[#1e2a3f]">
             <div>
-              <label className="text-[11px] font-medium text-slate-500 block mb-1">
+              <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400 block mb-1">
                 Meeting Title
               </label>
               <input
                 type="text"
                 value={formData.conversation_title || ''}
                 onChange={(e) => onChange('conversation_title', e.target.value)}
-                placeholder="Product Roadmap Sync"
-                className="w-full bg-slate-50 dark:bg-[#0b0f17] border border-slate-200 dark:border-[#233048] rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-hidden"
+                placeholder="Product Roadmap & Pricing Sync"
+                className="w-full bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-hidden"
               />
             </div>
 
             <div>
-              <label className="text-[11px] font-medium text-slate-500 block mb-1">
-                Attendees
+              <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400 block mb-1">
+                Meeting Attendees / Contact Names
               </label>
               <input
                 type="text"
                 value={formData.contact_name || ''}
                 onChange={(e) => onChange('contact_name', e.target.value)}
-                placeholder="Sarah, Alex, Elena"
-                className="w-full bg-slate-50 dark:bg-[#0b0f17] border border-slate-200 dark:border-[#233048] rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-hidden"
+                placeholder="Sarah Jenkins, Hemantkumar Lakhane"
+                className="w-full bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-hidden"
               />
             </div>
 
             <div>
-              <label className="text-[11px] font-medium text-slate-500 block mb-1">
-                Date
+              <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400 block mb-1">
+                Conversation Date
               </label>
               <input
                 type="date"
                 value={formData.conversation_date || new Date().toISOString().split('T')[0]}
                 onChange={(e) => onChange('conversation_date', e.target.value)}
-                className="w-full bg-slate-50 dark:bg-[#0b0f17] border border-slate-200 dark:border-[#233048] rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-hidden"
+                className="w-full bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-hidden"
               />
             </div>
 
             {activeMode === 'audio_upload' && (
               <div>
-                <label className="text-[11px] font-medium text-slate-500 block mb-1">
-                  Language
+                <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400 block mb-1">
+                  Audio Spoken Language
                 </label>
                 <select
                   value={formData.language || 'Auto Detect'}
                   onChange={(e) => onChange('language', e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-[#0b0f17] border border-slate-200 dark:border-[#233048] rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-hidden cursor-pointer"
+                  className="w-full bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-hidden cursor-pointer"
                 >
                   <option value="Auto Detect">Auto Detect</option>
                   <option value="English">English</option>
@@ -918,8 +1225,8 @@ function MeetingIntelligenceInputModes({ formData, onChange, api, synthesizing, 
       </div>
 
       {errorMsg && (
-        <div className="flex items-center gap-2 p-2.5 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 text-xs text-red-600 dark:text-red-400">
-          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+        <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 text-xs text-red-600 dark:text-red-400 animate-in fade-in">
+          <AlertCircle className="w-4 h-4 shrink-0" />
           <span>{errorMsg}</span>
         </div>
       )}
@@ -1770,6 +2077,7 @@ export default function UniversalWorkflowRunner() {
   const [snoozeUntilVal, setSnoozeUntilVal] = useState('Tomorrow 9:00 AM')
   const [copiedDraftSubject, setCopiedDraftSubject] = useState(false)
   const [copiedDraftBody, setCopiedDraftBody] = useState(false)
+  const [showAutoIngestionModal, setShowAutoIngestionModal] = useState(false)
 
   // ── QA Test Center Mode & Status State ───────────────────────────────────────
   const isQaTest = searchParams.get('qa_test') === 'true'
@@ -5350,6 +5658,17 @@ export default function UniversalWorkflowRunner() {
             </div>
 
             <div className="flex items-center gap-2">
+              {isMeetingIntelligence && (
+                <button
+                  type="button"
+                  onClick={() => setShowAutoIngestionModal(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-50 dark:bg-violet-950/60 hover:bg-violet-100 dark:hover:bg-violet-900/40 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-800 rounded-xl text-xs font-semibold shadow-2xs transition-all cursor-pointer"
+                >
+                  <Video className="w-3.5 h-3.5 text-violet-600 dark:text-violet-400" />
+                  <span>Live Bot & Webhook Hub</span>
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                </button>
+              )}
               {filledFieldsCount > 0 && (
                 <button
                   type="button"
@@ -5382,6 +5701,7 @@ export default function UniversalWorkflowRunner() {
               api={api}
               synthesizing={synthesizing}
               onExecute={() => executeActivePipeline()}
+              onOpenLiveHub={() => setShowAutoIngestionModal(true)}
             />
           ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -7987,6 +8307,22 @@ export default function UniversalWorkflowRunner() {
             </div>
           </div>
         )
+      )}
+
+      {/* ── Automatic Ingestion & Webhooks Hub Modal ── */}
+      {showAutoIngestionModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-2xl p-6 shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <AutomaticIngestionModal
+              onClose={() => setShowAutoIngestionModal(false)}
+              onLoadRun={(run) => {
+                setShowAutoIngestionModal(false)
+                handleSelectRun(run)
+              }}
+              initialTab="google_meet"
+            />
+          </div>
+        </div>
       )}
 
     </div>
