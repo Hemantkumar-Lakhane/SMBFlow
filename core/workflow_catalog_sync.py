@@ -480,7 +480,7 @@ async def sync_workflow_catalog(db: AsyncSession) -> dict:
     Returns { inserted: int, skipped: int, errors: int }.
     """
     from db.models.core import WorkflowCatalog
-    from sqlalchemy import select
+    from sqlalchemy import select, func
 
     if not _DAGS_DIR.exists():
         log.warning("workflow_catalog_sync: DAGs directory not found", path=str(_DAGS_DIR))
@@ -638,7 +638,7 @@ async def sync_plan_entitlements_for_new_workflows(db: AsyncSession) -> None:
     Starter gets productivity + sales workflows only.
     """
     from db.models.core import WorkflowCatalog, BillingPlan, PlanWorkflowEntitlement
-    from sqlalchemy import select, delete as sa_delete
+    from sqlalchemy import select, func, delete as sa_delete
 
     growth_result = await db.execute(select(BillingPlan).where(BillingPlan.slug == "growth"))
     growth = growth_result.scalar_one_or_none()
