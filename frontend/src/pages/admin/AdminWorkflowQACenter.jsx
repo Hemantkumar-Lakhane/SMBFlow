@@ -357,7 +357,7 @@ export default function AdminWorkflowQACenter() {
   const metrics = dashboard?.metrics || {}
 
   return (
-    <div className="space-y-6 pb-20 select-text">
+    <div className="flex flex-col gap-6 p-6 sm:p-8 min-h-full bg-slate-50 dark:bg-[#0b0f17] bg-dot-pattern text-slate-900 dark:text-slate-100 font-sans transition-colors select-text pb-24">
       {/* ── Header ───────────────────────────────────────────────────────────── */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
         <div>
