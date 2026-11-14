@@ -72,8 +72,8 @@ export default function AdminModelCatalog() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-[#1a2336]">
-                {filtered.map(m=>(
-                  <tr key={`${m.provider}-${m.id}`} className="hover:bg-slate-50/60 dark:hover:bg-[#162030]/50 transition-colors">
+                {filtered.map((m, idx) => (
+                  <tr key={`${m.provider}-${m.id}-${idx}`} className="hover:bg-slate-50/60 dark:hover:bg-[#162030]/50 transition-colors">
                     <td className="px-5 py-3.5">
                       <p className="text-sm font-bold text-slate-900 dark:text-white">{m.label || m.name || m.id}</p>
                       <p className="text-xs text-slate-400 dark:text-slate-500 font-mono mt-0.5">{m.id}</p>

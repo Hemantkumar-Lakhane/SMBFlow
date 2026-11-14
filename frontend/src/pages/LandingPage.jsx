@@ -168,24 +168,24 @@ export default function LandingPage() {
 
   const faqs = [
     {
-      q: "How does Isolate execute multi-agent workflows?",
-      a: "Isolate uses Directed Acyclic Graphs (DAGs) powered by an asynchronous state engine. Each node represents a discrete task (LLM reasoning, deterministic rule routing, human sign-off, or external API execution) executed in verified sequence with full PostgreSQL audit persistence."
+      q: "Will AI ever take actions or spend budget without my permission?",
+      a: "Never. Isolate has built-in Safety Gates. Any high-stakes action—such as sending customer emails, approving vendor invoices, or updating CRM deals—pauses automatically in your Action Center for your one-click approval before anything is executed."
     },
     {
-      q: "What is Human-in-the-Loop (HITL) Safe Mode?",
-      a: "For sensitive operations (such as high-value payouts, outgoing executive communications, or clinical intake records), execution pauses at a designated Approval Gate. An item is staged in the Action Center for one-click team verification before downstream APIs are invoked."
+      q: "How secure is my company data and API credentials?",
+      a: "Your data is strictly protected with bank-grade security. All integration credentials are encrypted at rest using AES-128-CBC MultiFernet encryption. Each organization's database and documents are strictly quarantined, and your data is never used to train public AI models."
     },
     {
-      q: "Which AI models and providers are supported?",
-      a: "Isolate supports Anthropic (Claude 3.7 / 3.5 Sonnet), OpenAI (GPT-4o / GPT-4o mini), Google Gemini, and open-source models via Groq (Llama 3.3). You can supply your own API keys via the encrypted Key Vault."
+      q: "Can I connect my existing tools like Gmail, Slack, and Google Sheets?",
+      a: "Yes. Isolate integrates directly with the tools you already use every day: Gmail, Google Meet, Google Calendar, Sheets, Slack, HubSpot, and Stripe with 1-click verification. Your team does not need to learn complicated new software."
     },
     {
-      q: "Is data isolated between client organizations?",
-      a: "Yes. Isolate enforces complete multi-tenant database isolation at the schema and query layer. Credentials, workflow execution history, and client data are cryptographically partitioned."
+      q: "What happens if an API or network connection fails during a run?",
+      a: "Every step is saved with persistent database state. If an external service experiences an outage or temporary glitch, Isolate automatically pauses, creates an audit diagnostic, and alerts your team so you can resume from that exact step without losing data or paying twice."
     },
     {
-      q: "Can I schedule workflows or trigger them via webhooks?",
-      a: "Yes. Workflows support automated scheduling (configurable cron intervals: daily, hourly, 15-minute, or custom cron expressions) as well as continuous inbound webhook triggers and manual one-click runs."
+      q: "Do I need coding experience or developer resources to use Isolate?",
+      a: "No coding is required. Isolate is built for business operators, agency owners, and SMB teams. You can run automated workflows, schedule recurring tasks, and review all deliverables using clean visual controls and conversational natural language."
     }
   ]
 
@@ -215,10 +215,10 @@ export default function LandingPage() {
           {/* Desktop Nav Links */}
           <nav className={`hidden md:flex items-center gap-7 text-sm font-medium ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
             <a href="#workflows" className={`transition-colors ${isDark ? 'hover:text-white' : 'hover:text-slate-900'}`}>Workflows</a>
-            <a href="#architecture" className={`transition-colors ${isDark ? 'hover:text-white' : 'hover:text-slate-900'}`}>Architecture</a>
+            <a href="#how-it-works" className={`transition-colors ${isDark ? 'hover:text-white' : 'hover:text-slate-900'}`}>How It Works</a>
             <a href="#integrations" className={`transition-colors ${isDark ? 'hover:text-white' : 'hover:text-slate-900'}`}>Integrations</a>
             <a href="#pricing" className={`transition-colors ${isDark ? 'hover:text-white' : 'hover:text-slate-900'}`}>Pricing</a>
-            <a href="#faq" className={`transition-colors ${isDark ? 'hover:text-white' : 'hover:text-slate-900'}`}>Docs & FAQ</a>
+            <a href="#faq" className={`transition-colors ${isDark ? 'hover:text-white' : 'hover:text-slate-900'}`}>Questions & Security</a>
           </nav>
 
           {/* Nav Actions + Theme Toggle */}
@@ -573,17 +573,17 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ── Core Architectural Pillars ───────────────────────────────────── */}
+        {/* ── How It Works & Reliability ───────────────────────────────────── */}
         <section className={`py-20 border-t transition-colors ${
           isDark ? 'bg-[#080b11] border-[#233048]' : 'bg-slate-50/80 border-slate-200'
-        }`} id="architecture">
+        }`} id="how-it-works">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center max-w-2xl mx-auto mb-14">
               <h2 className={`text-2xl sm:text-3xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-950'}`}>
-                Engineered for Enterprise Reliability
+                How Isolate Automates Your Work Safely
               </h2>
               <p className={`mt-2 text-xs sm:text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                Designed specifically for SMB teams requiring verifiable state machines and security governance.
+                Built for business teams that need reliable automations, guaranteed human control, and bank-grade data security.
               </p>
             </div>
 
@@ -596,10 +596,10 @@ export default function LandingPage() {
                   <Cpu className="w-5 h-5" />
                 </div>
                 <h3 className={`font-bold text-base ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                  Multi-LLM Router
+                  Smart Model Selection
                 </h3>
                 <p className={`text-xs mt-2 leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                  Route tasks to optimal foundation models: Claude 3.5 Sonnet for reasoning, GPT-4o for complex JSON synthesis, and Groq/Llama for high-throughput classification.
+                  Tasks are automatically routed to the best AI model for the job: Claude 3.5 Sonnet for deep analytical reasoning, GPT-4o for document extraction, and ultra-fast models for instant classification—giving you top accuracy at the lowest cost.
                 </p>
               </div>
 
@@ -611,10 +611,10 @@ export default function LandingPage() {
                   <UserCheck className="w-5 h-5" />
                 </div>
                 <h3 className={`font-bold text-base ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                  Action Center Approvals
+                  1-Click Human Approval Gates
                 </h3>
                 <p className={`text-xs mt-2 leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                  Set confidence thresholds. Any financial transactions, customer-facing emails, or booking requests pause safely for 1-click human verification before API commits.
+                  You retain complete authority. Any financial transactions, customer-facing emails, or sensitive calendar bookings pause safely in your Action Center for one-click verification before anything is sent.
                 </p>
               </div>
 
@@ -626,10 +626,10 @@ export default function LandingPage() {
                   <KeyRound className="w-5 h-5" />
                 </div>
                 <h3 className={`font-bold text-base ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                  Encrypted Key Vault
+                  Bank-Grade Encryption
                 </h3>
                 <p className={`text-xs mt-2 leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                  Store OpenAI, Anthropic, Google, and SaaS integration credentials with AES-256 fernet encryption. API keys are masked in the UI and never exposed in logs.
+                  Your Google Workspace credentials, SaaS integration keys, and business records are protected with AES-256 MultiFernet encryption. Keys are masked in the UI and never exposed in logs or shared across workspaces.
                 </p>
               </div>
             </div>

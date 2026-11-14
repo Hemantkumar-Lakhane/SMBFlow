@@ -79,7 +79,7 @@ export default function GeneralSettings() {
     // User Profile
     fullName: user?.full_name || '',
     email: user?.email || '',
-    avatarUrl: localStorage.getItem(`avatar_${user?.id}`) || '',
+    avatarUrl: user?.avatar_url || (user?.id ? localStorage.getItem(`avatar_${user.id}`) : null) || localStorage.getItem('smbflow_avatar') || '',
     
     // Organization Profile
     orgName: '',
@@ -98,6 +98,18 @@ export default function GeneralSettings() {
     runLogsRetention: '90 days',
     evidenceRetention: '1 year',
   })
+
+  useEffect(() => {
+    if (user) {
+      const av = user.avatar_url || (user.id ? localStorage.getItem(`avatar_${user.id}`) : null) || localStorage.getItem('smbflow_avatar') || ''
+      setForm(f => ({
+        ...f,
+        fullName: user.full_name || f.fullName,
+        email: user.email || f.email,
+        avatarUrl: av || f.avatarUrl,
+      }))
+    }
+  }, [user])
 
   const [isEditingProfile, setIsEditingProfile] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -336,8 +348,12 @@ export default function GeneralSettings() {
                 className="w-20 h-20 rounded-2xl border-2 border-slate-200 overflow-hidden bg-gradient-to-br from-blue-600 to-indigo-700 text-white flex items-center justify-center font-bold text-xl shadow-sm cursor-pointer group-hover:border-blue-500 transition-all relative"
                 title="Click to upload/change photo"
               >
-                {form.avatarUrl ? (
-                  <img src={form.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                {form.avatarUrl || user?.avatar_url || (user?.id ? localStorage.getItem(`avatar_${user.id}`) : null) || localStorage.getItem('smbflow_avatar') ? (
+                  <img
+                    src={form.avatarUrl || user?.avatar_url || (user?.id ? localStorage.getItem(`avatar_${user.id}`) : null) || localStorage.getItem('smbflow_avatar')}
+                    alt="Avatar"
+                    className="w-full h-full object-cover"
+                  />
                 ) : (
                   <span>{getInitials()}</span>
                 )}
@@ -360,7 +376,7 @@ export default function GeneralSettings() {
                   <Camera className="w-3.5 h-3.5" />
                   <span>Upload Photo</span>
                 </button>
-                {form.avatarUrl && (
+                {(form.avatarUrl || user?.avatar_url || (user?.id ? localStorage.getItem(`avatar_${user.id}`) : null) || localStorage.getItem('smbflow_avatar')) && (
                   <button
                     type="button"
                     onClick={handleRemoveAvatar}

@@ -5,7 +5,8 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import {
   Zap, Search, RefreshCw, Building2, XCircle,
   CheckCircle2, AlertTriangle, Clock, ChevronDown, ChevronUp,
-  ArrowLeft, Cpu, DollarSign, Eye, ShieldCheck, Activity, Terminal
+  ArrowLeft, Cpu, DollarSign, Eye, ShieldCheck, Activity, Terminal,
+  Copy, Check
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { EmptyState } from '../../components/ui'
@@ -180,6 +181,15 @@ export default function AdminWorkflowRuns() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [orgFilter, setOrgFilter]       = useState('all')
   const [detailRunId, setDetailRunId]   = useState(null)
+  const [copiedId, setCopiedId]         = useState(null)
+
+  const handleCopyId = (e, id) => {
+    e.stopPropagation()
+    if (!id) return
+    navigator.clipboard?.writeText(id)
+    setCopiedId(id)
+    setTimeout(() => setCopiedId(null), 2000)
+  }
 
   const load = useCallback(async () => {
     setLoading(true); setError(null)
@@ -250,19 +260,48 @@ export default function AdminWorkflowRuns() {
       {!loading && !error && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
           {[
-            { label: 'Total Runs', value: counts.total, cls: 'text-slate-900 dark:text-white', icon: Activity, accent: 'bg-slate-100 dark:bg-slate-800 text-slate-500' },
-            { label: 'Completed',  value: counts.completed, cls: 'text-emerald-600 dark:text-emerald-400', icon: CheckCircle2, accent: 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400' },
-            { label: 'Running',    value: counts.running, cls: 'text-blue-600 dark:text-blue-400', icon: Zap, accent: 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400' },
-            { label: 'Failed',     value: counts.failed, cls: 'text-red-600 dark:text-red-400', icon: AlertTriangle, accent: 'bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400' },
+            {
+              label: 'Total Runs',
+              value: counts.total,
+              sub: `${runs.length} logged`,
+              cls: 'text-slate-900 dark:text-white',
+              icon: Activity,
+              accent: 'bg-slate-100 dark:bg-slate-800 text-slate-500',
+            },
+            {
+              label: 'Completed',
+              value: counts.completed,
+              sub: counts.total > 0 ? `${((counts.completed / counts.total) * 100).toFixed(0)}% success rate` : '100% success rate',
+              cls: 'text-emerald-600 dark:text-emerald-400',
+              icon: CheckCircle2,
+              accent: 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400',
+            },
+            {
+              label: 'Running',
+              value: counts.running,
+              sub: counts.running > 0 ? 'Active in flight' : 'No active runs',
+              cls: 'text-blue-600 dark:text-blue-400',
+              icon: Zap,
+              accent: 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400',
+            },
+            {
+              label: 'Failed',
+              value: counts.failed,
+              sub: counts.failed === 0 ? 'Zero failures' : 'Requires review',
+              cls: counts.failed > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-600 dark:text-slate-400',
+              icon: AlertTriangle,
+              accent: counts.failed > 0 ? 'bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-500',
+            },
           ].map(c => {
             const IconComp = c.icon
             return (
-              <div key={c.label} className="bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-2xl p-4.5 shadow-2xs flex items-center justify-between">
+              <div key={c.label} className="bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-2xl p-4 shadow-2xs flex items-center justify-between">
                 <div>
                   <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">{c.label}</p>
-                  <p className={`text-2xl font-extrabold ${c.cls} mt-1`}>{c.value}</p>
+                  <p className={`text-2xl font-extrabold ${c.cls} mt-0.5`}>{c.value}</p>
+                  <p className="text-[10px] text-slate-400 font-medium mt-0.5">{c.sub}</p>
                 </div>
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${c.accent}`}>
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${c.accent}`}>
                   <IconComp size={18} />
                 </div>
               </div>
@@ -276,6 +315,32 @@ export default function AdminWorkflowRuns() {
           <XCircle size={16} className="shrink-0" />{error}
         </div>
       )}
+
+      {/* Quick Status Filter Tabs */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1">
+        {[
+          { id: 'all', label: 'All Runs', count: counts.total },
+          { id: 'completed', label: 'Completed', count: counts.completed },
+          { id: 'running', label: 'Running', count: counts.running },
+          { id: 'failed', label: 'Failed', count: counts.failed },
+        ].map(tab => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setStatusFilter(tab.id)}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
+              statusFilter === tab.id
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'bg-white dark:bg-[#162030] text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-[#233048] hover:bg-slate-50 dark:hover:bg-[#1c273c]'
+            }`}
+          >
+            <span>{tab.label}</span>
+            <span className={`px-1.5 py-0.2 rounded-md text-[10px] ${statusFilter === tab.id ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
+              {tab.count}
+            </span>
+          </button>
+        ))}
+      </div>
 
       {/* Filters Bar */}
       <div className="flex items-center gap-3 flex-wrap">
@@ -333,16 +398,28 @@ export default function AdminWorkflowRuns() {
                     className="hover:bg-slate-50 dark:hover:bg-[#162030]/50 transition-colors cursor-pointer"
                     onClick={() => setDetailRunId(r.run_id)}
                   >
-                    <td className="px-4 py-3 font-mono font-bold text-blue-600 dark:text-blue-400">
-                      {r.run_id?.slice(0, 8)}…
+                    <td className="px-4 py-3 font-mono">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-blue-600 dark:text-blue-400 text-xs">
+                          {r.run_id?.slice(0, 8)}…
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => handleCopyId(e, r.run_id)}
+                          className="p-1 rounded text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#1c273c] transition-colors cursor-pointer"
+                          title="Copy Full Run ID"
+                        >
+                          {copiedId === r.run_id ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
+                        </button>
+                      </div>
                     </td>
                     <td className="px-4 py-3">
-                      <p className="font-bold text-slate-900 dark:text-white max-w-[150px] truncate">{r.workflow}</p>
+                      <p className="font-bold text-slate-900 dark:text-white max-w-[170px] truncate">{r.workflow}</p>
                     </td>
                     <td className="px-4 py-3">
                       <span className="inline-flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
                         <Building2 size={12} className="text-slate-400 shrink-0" />
-                        <span className="truncate max-w-[120px] font-medium">{r.organization || 'Unknown'}</span>
+                        <span className="truncate max-w-[130px] font-medium">{r.organization || 'Workspace Org'}</span>
                       </span>
                     </td>
                     <td className="px-4 py-3"><StatusBadge status={r.status} /></td>
@@ -354,9 +431,10 @@ export default function AdminWorkflowRuns() {
                       <button
                         type="button"
                         onClick={e => { e.stopPropagation(); setDetailRunId(r.run_id) }}
-                        className="px-2.5 py-1 text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800/80 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-colors cursor-pointer"
+                        className="inline-flex items-center gap-1 px-3 py-1 text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800/80 rounded-xl hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-colors cursor-pointer shadow-2xs"
                       >
-                        Detail
+                        <Eye size={12} />
+                        <span>Inspect Trace</span>
                       </button>
                     </td>
                   </tr>
