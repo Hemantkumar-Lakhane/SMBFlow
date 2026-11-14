@@ -2318,6 +2318,11 @@ async def assign_workflow_to_org(db: AsyncSession, organization_id: str, workflo
     db.add(assignment)
     await db.commit()
     await db.refresh(assignment)
+    try:
+        from core.redis_cache import cache as _redis_cache
+        await _redis_cache.delete_pattern("cache:catalog:assigned:*")
+    except Exception:
+        pass
     return assignment
 
 
@@ -2327,6 +2332,11 @@ async def unassign_workflow_from_org(db: AsyncSession, organization_id: str, wor
         return False
     await db.delete(assignment)
     await db.commit()
+    try:
+        from core.redis_cache import cache as _redis_cache
+        await _redis_cache.delete_pattern("cache:catalog:assigned:*")
+    except Exception:
+        pass
     return True
 
 
@@ -2684,6 +2694,11 @@ async def auto_assign_industry_workflows(
 
     if assigned_count > 0:
         await db.commit()
+        try:
+            from core.redis_cache import cache as _redis_cache
+            await _redis_cache.delete_pattern("cache:catalog:assigned:*")
+        except Exception:
+            pass
 
     log.info(
         "auto_assign_industry_workflows: done",

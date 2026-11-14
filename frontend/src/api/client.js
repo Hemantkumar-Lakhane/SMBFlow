@@ -5,6 +5,72 @@ import { emitSessionExpired } from './authEvents'
 export const API_BASE = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:8000/api/v1'
 export const WS_BASE  = import.meta.env.VITE_WS_BASE  || 'ws://127.0.0.1:8000/ws'
 
+// ── In-Memory Client Cache & Inflight Promise Coalescing ───────────────────────
+// Caches read-heavy tab data (auth profile, catalog, connections, copilot insights)
+// to prevent duplicate network hits during tab navigation and simultaneous mounts.
+const clientCache = new Map()       // cacheKey -> { data, expiresAt }
+const inflightRequests = new Map()  // cacheKey -> Promise
+
+const CACHEABLE_ENDPOINTS = [
+  '/auth/me',
+  '/catalog/assigned',
+  '/connections',
+  '/copilot/insights',
+  '/copilot/dynamic-prompts',
+  '/escalations',
+  '/subscriptions',
+  '/billing/plans',
+  '/config/workflows',
+  '/admin/organizations',
+  '/admin/plans',
+]
+
+/**
+ * Checks whether an endpoint path is eligible for short-term client caching.
+ */
+function isCacheable(cleanPath) {
+  return CACHEABLE_ENDPOINTS.some(ep => cleanPath === ep || cleanPath.startsWith(`${ep}?`) || cleanPath.startsWith(`${ep}/`))
+}
+
+/**
+ * Invalidate client-side cache entries.
+ * @param {string|RegExp|null} pattern - Substring or RegExp to match against cache keys. If null, flushes all.
+ */
+export function invalidateClientCache(pattern = null) {
+  if (!pattern) {
+    clientCache.clear()
+    return
+  }
+  const regex = pattern instanceof RegExp ? pattern : new RegExp(pattern, 'i')
+  for (const key of clientCache.keys()) {
+    if (regex.test(key)) {
+      clientCache.delete(key)
+    }
+  }
+}
+
+/**
+ * Automatically invalidate matching client-side caches when a mutation occurs.
+ */
+function autoInvalidateOnMutation(cleanPath) {
+  if (cleanPath.includes('connections')) {
+    invalidateClientCache('connections')
+  } else if (cleanPath.includes('catalog') || cleanPath.includes('assignments') || cleanPath.includes('request-access')) {
+    invalidateClientCache('catalog')
+  } else if (cleanPath.includes('copilot') || cleanPath.includes('chat')) {
+    invalidateClientCache('copilot')
+  } else if (cleanPath.includes('escalations') || cleanPath.includes('approvals')) {
+    invalidateClientCache('escalations')
+    invalidateClientCache('copilot/insights')
+  } else if (cleanPath.includes('workflows') || cleanPath.includes('instances')) {
+    invalidateClientCache('workflows')
+    invalidateClientCache('catalog')
+    invalidateClientCache('copilot')
+  } else if (cleanPath.includes('auth') || cleanPath.includes('profile')) {
+    invalidateClientCache('auth/me')
+  }
+}
+
 /**
  * Core fetch wrapper.
  * - Injects Authorization header when token is provided
@@ -105,35 +171,82 @@ export function createApiClient(token) {
   const call = (path, opts) => apiCall(path, opts, token)
 
   return {
-    get: (path, params) => {
+    get: (path, params, options = {}) => {
       let finalPath = path
       const queryObj = (params && typeof params === 'object' && params.params) ? params.params : params
+      let skipCache = Boolean(options.skipCache || (queryObj && queryObj.skipCache))
+
       if (queryObj && typeof queryObj === 'object') {
         const q = new URLSearchParams()
         Object.entries(queryObj).forEach(([k, v]) => {
-          if (v !== undefined && v !== null) q.append(k, v)
+          if (k !== 'skipCache' && v !== undefined && v !== null) q.append(k, v)
         })
         const qs = q.toString()
         if (qs) finalPath += (finalPath.includes('?') ? '&' : '?') + qs
       }
-      return call(finalPath, { method: 'GET' })
+
+      // Check cache if endpoint is cacheable and skipCache is false
+      const cacheKey = `${token || 'anon'}:${finalPath}`
+      if (!skipCache && isCacheable(finalPath)) {
+        const cached = clientCache.get(cacheKey)
+        if (cached && Date.now() < cached.expiresAt) {
+          // Return cloned response to avoid reference mutation
+          return Promise.resolve(JSON.parse(JSON.stringify(cached.data)))
+        }
+
+        // Request Coalescing: If an identical request is currently in-flight, return the existing promise
+        if (inflightRequests.has(cacheKey)) {
+          return inflightRequests.get(cacheKey)
+        }
+      }
+
+      const requestPromise = call(finalPath, { method: 'GET' })
+        .then(data => {
+          if (!skipCache && isCacheable(finalPath) && data !== null && data !== undefined) {
+            clientCache.set(cacheKey, {
+              data: JSON.parse(JSON.stringify(data)),
+              expiresAt: Date.now() + (options.ttl || 25000), // 25s default TTL
+            })
+          }
+          return data
+        })
+        .finally(() => {
+          inflightRequests.delete(cacheKey)
+        })
+
+      if (!skipCache && isCacheable(finalPath)) {
+        inflightRequests.set(cacheKey, requestPromise)
+      }
+
+      return requestPromise
     },
-    post: (path, data) => {
+    post: async (path, data) => {
+      autoInvalidateOnMutation(path)
       const isFormData = typeof FormData !== 'undefined' && data instanceof FormData
       return call(path, {
         method: 'POST',
         body: isFormData ? data : JSON.stringify(data),
       })
     },
-    upload: (path, formData) => call(path, { method: 'POST', body: formData }),
-    put: (path, data) => {
+    upload: async (path, formData) => {
+      autoInvalidateOnMutation(path)
+      return call(path, { method: 'POST', body: formData })
+    },
+    put: async (path, data) => {
+      autoInvalidateOnMutation(path)
       const isFormData = typeof FormData !== 'undefined' && data instanceof FormData
       return call(path, {
         method: 'PUT',
         body: isFormData ? data : JSON.stringify(data),
       })
     },
-    patch:  (path, data)  => call(path, { method: 'PATCH',  body: JSON.stringify(data) }),
-    delete: (path)        => call(path, { method: 'DELETE' }),
+    patch: async (path, data) => {
+      autoInvalidateOnMutation(path)
+      return call(path, { method: 'PATCH', body: JSON.stringify(data) })
+    },
+    delete: async (path) => {
+      autoInvalidateOnMutation(path)
+      return call(path, { method: 'DELETE' })
+    },
   }
 }

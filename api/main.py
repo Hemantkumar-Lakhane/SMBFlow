@@ -58,6 +58,7 @@ from integrations.key_vault import (
     decrypt_credentials, encrypt_credentials, get_credential_schema, mask_credentials,
 )
 from core.redis_pubsub import pubsub as redis_pubsub
+from core.redis_cache import cache as redis_cache
 from core.dag_validator import validate_dag
 log = structlog.get_logger()
 
@@ -182,10 +183,12 @@ async def lifespan(app: FastAPI):
     except Exception as _scope_mig_err:
         log.error("Workflow scope migration failed (non-fatal)", error=str(_scope_mig_err))
 
-    # Initialize Redis pub/sub
+    # Initialize Redis pub/sub & query cache layer
     await redis_pubsub.connect()
     await redis_pubsub.start_subscriber(_local_broadcast)
     log.info("Redis pub/sub initialized")
+    await redis_cache.connect()
+    log.info("Redis data cache initialized")
 
     # Sync workflow catalog from DAG files (idempotent — only inserts missing entries)
     try:
@@ -263,6 +266,7 @@ async def lifespan(app: FastAPI):
     if "_email_detector" in globals() and _email_detector:
         await _email_detector.stop()
     await redis_pubsub.stop()
+    await redis_cache.close()
     log.info("SMBFlow API stopped")
 
 
@@ -700,6 +704,11 @@ async def get_me(
     current_user: TokenData = Depends(require_any_auth),
     db: AsyncSession = Depends(get_db),
 ):
+    cache_key = f"cache:auth:me:{current_user.user_id}"
+    cached = await redis_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     org_user, org = await crud.ensure_user_organization_provisioned(
         db,
         user_id=current_user.user_id,
@@ -730,7 +739,7 @@ async def get_me(
         or (current_user.email.split("@")[0].replace(".", " ").title() if current_user.email else "Dev User")
     )
 
-    return {
+    res = {
         "id": current_user.user_id,
         "email": current_user.email,
         "role": role,
@@ -744,6 +753,8 @@ async def get_me(
         "company_size": profile.get("company_size"),
         "requires_onboarding": requires_onboarding,
     }
+    await redis_cache.set(cache_key, res, ttl=60)
+    return res
 
 
 class UserProfileUpdate(BaseModel):
@@ -772,6 +783,8 @@ async def update_user_profile(
     if u and body.full_name:
         u.full_name = body.full_name
         await db.commit()
+
+    await redis_cache.delete(f"cache:auth:me:{current_user.user_id}")
 
     return {
         "id": current_user.user_id,
@@ -3368,6 +3381,11 @@ async def list_tenant_workflows(
     is_admin = current_user.role in ("platform_admin", "super_admin")
     org_id = current_user.organization_id or current_user.tenant_id
 
+    cache_key = f"cache:catalog:assigned:{org_id or 'admin'}:{current_user.role}:{include_unassigned}"
+    cached = await redis_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     # Admins: return full catalog (same as /config/workflows)
     if is_admin:
         from sqlalchemy import select as _sel, func as _func
@@ -3406,6 +3424,7 @@ async def list_tenant_workflows(
                 })
             except Exception:
                 result.append({"name": f.stem, "display_name": f.stem.replace("_", " ").title(), "status": "active"})
+        await redis_cache.set(cache_key, result, ttl=180)
         return result
 
     # Non-admin: enforce assignments + industry applicability
@@ -3626,6 +3645,7 @@ async def list_tenant_workflows(
         -(w.get("run_count") or 0),
         (w.get("display_name") or "").lower(),
     ))
+    await redis_cache.set(cache_key, result, ttl=180)
     return result
 
 
@@ -3776,6 +3796,10 @@ async def request_workflow_access(
     )
     db.add(approval)
     await db.commit()
+
+    # Invalidate real-time Redis caches
+    await redis_cache.delete_pattern("cache:catalog:assigned:*")
+    await redis_cache.delete_pattern("cache:copilot:insights:*")
 
     # Real-time WebSocket Event Dispatch to Admin & Org channels
     ws_event = {

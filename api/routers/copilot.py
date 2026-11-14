@@ -24,6 +24,7 @@ from sqlalchemy import select, func
 from api.auth import TokenData, require_any_auth
 from api.dependencies import get_db
 from core.llm_router import LLMRouter, LLMMessage
+from core.redis_cache import cache as redis_cache
 
 log = structlog.get_logger()
 router = APIRouter(prefix="/api/v1/copilot", tags=["AI Copilot & Operations Assistant"])
@@ -88,9 +89,14 @@ async def get_copilot_insights(
     current_user: TokenData = Depends(require_any_auth),
 ):
     """Retrieve instant operational metrics to power AI prompts & copilot cards."""
+    org_id = getattr(current_user, "organization_id", None) or getattr(current_user, "tenant_id", None)
+    cache_key = f"cache:copilot:insights:{org_id or 'demo'}"
+    cached = await redis_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     try:
         from db.models.core import ApprovalItem, WorkflowRunRecord
-        org_id = getattr(current_user, "organization_id", None) or getattr(current_user, "tenant_id", None)
 
         # Pending approvals
         stmt_appr = select(func.count(ApprovalItem.id)).where(
@@ -111,7 +117,7 @@ async def get_copilot_insights(
 
         active_runs = sum(1 for r in runs if getattr(r, "status", "") == "running")
 
-        return {
+        res = {
             "tenant_id": str(org_id) if org_id else "demo-tenant",
             "pending_approvals": pending_approvals,
             "active_runs": active_runs,
@@ -126,6 +132,8 @@ async def get_copilot_insights(
                 for r in runs
             ],
         }
+        await redis_cache.set(cache_key, res, ttl=25)
+        return res
     except Exception as err:
         return {
             "tenant_id": "demo-tenant",
@@ -532,6 +540,12 @@ async def get_copilot_dynamic_prompts(
     Returns personalized predefined questions, operational context, and workflow recommendations
     dynamically calculated from the user's industry, assigned workflows, run history, and action center.
     """
+    org_id = getattr(current_user, "organization_id", None) or getattr(current_user, "tenant_id", None) or current_user.user_id
+    cache_key = f"cache:copilot:prompts:{org_id}"
+    cached = await redis_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     ctx = await get_user_copilot_context_and_prompts(db, current_user)
     
     welcome_msg = (
@@ -540,7 +554,7 @@ async def get_copilot_dynamic_prompts(
         f"{ctx['total_runs']} execution run(s) logged, and {ctx['pending_approvals']} pending approval(s)."
     )
 
-    return {
+    res = {
         "organization_name": ctx["organization_name"],
         "industry": ctx["industry"],
         "user_name": ctx["user_name"],
@@ -552,6 +566,8 @@ async def get_copilot_dynamic_prompts(
         "welcome_message": welcome_msg,
         "questions": ctx["questions"],
     }
+    await redis_cache.set(cache_key, res, ttl=60)
+    return res
 
 
 @router.post("/chat", response_model=CopilotChatResponse)

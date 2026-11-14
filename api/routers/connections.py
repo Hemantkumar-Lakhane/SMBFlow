@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.deps.auth import TokenData, require_authenticated_user
 from api.dependencies import get_db
+from core.redis_cache import cache as redis_cache
 from integrations.key_vault import encrypt_credentials, decrypt_credentials, mask_credentials
 from integrations.connectors import (
     GmailConnector, HubSpotConnector, SlackConnector, StripeConnector, GenericRESTConnector
@@ -375,6 +376,7 @@ async def exchange_google_oauth_code(
 
     await db.commit()
     await db.refresh(conn_obj)
+    await redis_cache.delete(f"cache:connections:{org_id}")
 
     return {
         "id": str(conn_obj.id),
@@ -406,6 +408,11 @@ async def list_organization_connections(
     if not org_id:
         return []
 
+    cache_key = f"cache:connections:{org_id}"
+    cached = await redis_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     stmt = select(ToolConnection).where(ToolConnection.organization_id == uuid.UUID(org_id))
     result = await db.execute(stmt)
     connections = result.scalars().all()
@@ -426,6 +433,8 @@ async def list_organization_connections(
             "last_tested_at": conn.last_tested_at.isoformat() if conn.last_tested_at else None,
             "created_at": conn.created_at.isoformat() if conn.created_at else None,
         })
+
+    await redis_cache.set(cache_key, output, ttl=120)
     return output
 
 
@@ -547,6 +556,8 @@ async def connect_tool(
         await db.commit()
         await db.refresh(conn_obj)
 
+    await redis_cache.delete(f"cache:connections:{org_id}")
+
     return {
         "id": str(conn_obj.id),
         "tool_name": conn_obj.tool_name,
@@ -597,6 +608,7 @@ async def update_tool_connection(
 
     await db.commit()
     await db.refresh(conn)
+    await redis_cache.delete(f"cache:connections:{org_id}")
 
     return {
         "id": str(conn.id),
@@ -685,6 +697,7 @@ async def test_tool_connection(
     conn.status = "connected" if is_healthy else "error"
     conn.last_tested_at = datetime.utcnow()
     await db.commit()
+    await redis_cache.delete(f"cache:connections:{org_id}")
 
     return {
         "id": str(conn.id),
@@ -728,6 +741,7 @@ async def disconnect_tool(
     del_stmt = delete(ToolConnection).where(ToolConnection.id == conn_uuid)
     await db.execute(del_stmt)
     await db.commit()
+    await redis_cache.delete(f"cache:connections:{org_id}")
 
     return {"message": "Tool disconnected successfully", "id": connection_id}
 

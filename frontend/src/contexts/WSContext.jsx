@@ -4,7 +4,7 @@ import {
   useState, useCallback
 } from 'react';
 import { useAuth } from './AuthContext';
-import { WS_BASE } from '../api/client';
+import { WS_BASE, invalidateClientCache } from '../api/client';
 
 const WSContext = createContext(null);
 
@@ -72,6 +72,21 @@ export function WSProvider({ children }) {
         const event = { ...raw, _receivedAt: new Date().toISOString() };
         addEvent(event);
         dispatch(event);
+
+        // Auto-invalidate client-side cache based on real-time event type
+        const t = (event.type || '').toLowerCase();
+        if (t.includes('workflow') || t.includes('instance') || t.includes('execution') || t.includes('run')) {
+          invalidateClientCache('catalog');
+          invalidateClientCache('workflows');
+          invalidateClientCache('copilot');
+        } else if (t.includes('escalation') || t.includes('approval')) {
+          invalidateClientCache('escalations');
+          invalidateClientCache('copilot/insights');
+        } else if (t.includes('connection')) {
+          invalidateClientCache('connections');
+        } else if (t.includes('catalog') || t.includes('assignment')) {
+          invalidateClientCache('catalog');
+        }
       } catch (_) { /* ignore malformed frames */ }
     };
   }, [token, addEvent, dispatch]);
