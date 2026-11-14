@@ -278,7 +278,7 @@ function TemplatePreviewModal({ template, onClose, onRun, onRequestAccess, isReq
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
-                Pipeline Graph
+                Workflow Steps
               </button>
               <button
                 onClick={() => setActiveModalTab('schedule')}
@@ -312,7 +312,7 @@ function TemplatePreviewModal({ template, onClose, onRun, onRequestAccess, isReq
             <div>
               <div className="flex items-center justify-between mb-2.5">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  Interactive Pipeline Steps ({template.nodes?.length || 0} Nodes)
+                  Interactive Workflow Steps ({template.nodes?.length || 0} Steps)
                 </h4>
                 <span className="text-[11px] text-slate-400 font-mono">Click a node to inspect payload</span>
               </div>
@@ -449,7 +449,7 @@ function TemplatePreviewModal({ template, onClose, onRun, onRequestAccess, isReq
               {/* Manual Run Test Block */}
               <div className="p-4 bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-2xl flex items-center justify-between">
                 <div>
-                  <h4 className="text-sm font-bold text-slate-900 dark:text-white">Manual Pipeline Trigger</h4>
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-white">Manual Workflow Run</h4>
                   <p className="text-xs text-slate-500 dark:text-slate-400">Trigger an immediate run right now to test live integration nodes</p>
                 </div>
 
@@ -460,7 +460,7 @@ function TemplatePreviewModal({ template, onClose, onRun, onRequestAccess, isReq
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
                 >
                   <Play className={`w-3.5 h-3.5 fill-white ${isTriggeringTest ? 'animate-spin' : ''}`} />
-                  <span>{isTriggeringTest ? 'Executing Nodes...' : 'Trigger Run Now'}</span>
+                  <span>{isTriggeringTest ? 'Executing Steps...' : 'Trigger Run Now'}</span>
                 </button>
               </div>
 
@@ -468,7 +468,7 @@ function TemplatePreviewModal({ template, onClose, onRun, onRequestAccess, isReq
                 <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs flex items-center justify-between animate-fade-in text-emerald-800 dark:text-emerald-200">
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                    <span>Pipeline executed successfully ({triggerSuccess.nodesPassed} nodes passed in {triggerSuccess.durationMs}ms).</span>
+                    <span>Workflow executed successfully ({triggerSuccess.nodesPassed} steps passed in {triggerSuccess.durationMs}ms).</span>
                   </div>
                   <span className="font-mono text-[10px]">{triggerSuccess.runId}</span>
                 </div>
@@ -727,7 +727,7 @@ export default function WorkflowLibrary() {
         </h1>
 
         <p className="mt-2 text-xs md:text-sm text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">
-          Pre-built, autonomous operations pipelines ready to execute in your workspace.
+          Pre-built, autonomous operations workflows ready to execute in your workspace.
         </p>
 
         {/* Unified Search Bar */}

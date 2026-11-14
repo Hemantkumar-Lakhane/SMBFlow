@@ -30,6 +30,7 @@ from fastapi import (
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+from sqlalchemy import select, update, func, or_, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 try:
@@ -3683,6 +3684,7 @@ async def request_workflow_access(
     Allows an organization user to request access to an unassigned workflow in real-time.
     Creates an ApprovalItem in PostgreSQL and broadcasts instant WebSocket notifications to Admins.
     """
+    from sqlalchemy import select
     from db.models.core import WorkflowCatalog, Organization, ApprovalItem
     from core.redis_pubsub import pubsub as redis_pubsub
 
