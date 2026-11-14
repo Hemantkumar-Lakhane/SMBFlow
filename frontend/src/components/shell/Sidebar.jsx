@@ -122,7 +122,7 @@ function SidebarContent({ isAdmin = false, getBadge, onNavClick, onClose, isMobi
           <img
             src="/isolatelogo.svg"
             alt="Isolate"
-            className="h-6 w-auto max-w-[120px] object-contain shrink-0"
+            className="h-8 md:h-9 w-auto max-w-[155px] object-contain shrink-0 transition-transform group-hover:scale-102"
           />
           {isAdmin && (
             <span className="text-[9px] font-bold uppercase bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-400 px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-800">

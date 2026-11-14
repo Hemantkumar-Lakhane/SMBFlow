@@ -101,6 +101,35 @@ class RedisCache:
                 return False
         return True
 
+    async def incr(self, key: str, ttl: int = 60) -> int:
+        """
+        Atomically increment an integer counter key and set TTL on first creation.
+        Used for high-throughput rate limiting, burst defense, and abuse protection.
+        """
+        client = await self._ensure_client()
+        if self._available and client:
+            try:
+                pipe = client.pipeline()
+                pipe.incr(key)
+                pipe.expire(key, ttl, nx=True)
+                results = await pipe.execute()
+                val = int(results[0])
+                self._memory_cache[key] = (val, time.time() + ttl)
+                return val
+            except Exception as e:
+                log.debug("Redis incr error, falling back to memory", key=key, error=str(e))
+
+        # Memory fallback
+        now = time.time()
+        entry = self._memory_cache.get(key)
+        if entry and now < entry[1]:
+            val = int(entry[0]) + 1
+            self._memory_cache[key] = (val, entry[1])
+            return val
+        else:
+            self._memory_cache[key] = (1, now + ttl)
+            return 1
+
     async def delete(self, key: str) -> bool:
         """Invalidate a specific cache key."""
         self._memory_cache.pop(key, None)

@@ -19,7 +19,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useWebSocket } from '../../contexts/WSContext'
 import { fmtCost, timeAgo } from '../../utils/helpers'
 
-const POLL_MS = 5000
+const POLL_MS = 45000
 
 // ── KPI Card Component ────────────────────────────────────────────────────────
 function KpiCard({ title, icon, value, sub, chart, highlight }) {
@@ -183,8 +183,22 @@ export default function Dashboard() {
 
   useEffect(() => {
     load()
-    const t = setInterval(load, POLL_MS)
-    return () => clearInterval(t)
+    const t = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return
+      load()
+    }, POLL_MS)
+
+    const handleVisibility = () => {
+      if (typeof document !== 'undefined' && !document.hidden) {
+        load()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+
+    return () => {
+      clearInterval(t)
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
   }, [load])
 
   useEffect(() => {

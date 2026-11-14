@@ -18,6 +18,7 @@ const CACHEABLE_ENDPOINTS = [
   '/copilot/insights',
   '/copilot/dynamic-prompts',
   '/escalations',
+  '/dashboard',
   '/subscriptions',
   '/billing/plans',
   '/config/workflows',

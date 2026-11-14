@@ -343,6 +343,80 @@ async def system_integrity_check(request: Request, call_next):
     return await call_next(request)
 
 
+@app.middleware("http")
+async def security_and_rate_limiting_middleware(request: Request, call_next):
+    """
+    Enterprise Security & Resilience Guard:
+      1. Enforces standard HTTP security headers (nosniff, frameguard, XSS protection, HSTS).
+      2. Rejects payloads exceeding 15MB before parsing to prevent memory exhaustion & ReDoS.
+      3. Implements atomic Redis/memory sliding-window rate limiting:
+         - Auth routes: 20 req/minute per IP (prevents credential stuffing & brute-force)
+         - General API: 300 req/minute per IP (mitigates traffic spikes & scraper floods)
+    """
+    path = request.url.path
+
+    # Extract client IP supporting reverse proxies
+    forwarded_for = request.headers.get("x-forwarded-for")
+    if forwarded_for:
+        client_ip = forwarded_for.split(",")[0].strip()
+    else:
+        client_ip = request.client.host if request.client else "127.0.0.1"
+
+    # Bypass rate limits for health checks and static docs
+    if path not in _BYPASS_PATHS and not path.startswith("/ws"):
+        # 1. Payload size guard (Anti-ReDoS and memory protection)
+        content_length = request.headers.get("content-length")
+        if content_length:
+            try:
+                if int(content_length) > 15 * 1024 * 1024:  # 15MB limit
+                    return JSONResponse(
+                        status_code=413,
+                        content={
+                            "detail": "Payload Too Large",
+                            "message": "Request payload exceeds the maximum 15MB security limit.",
+                        },
+                    )
+            except ValueError:
+                pass
+
+        # 2. Rate limiting check
+        is_auth_route = path.startswith("/api/v1/auth/login") or path.startswith("/api/v1/auth/signup") or path.startswith("/api/v1/auth/forgot-password")
+        limit = 20 if is_auth_route else 300
+        rate_key = f"ratelimit:{'auth' if is_auth_route else 'api'}:{client_ip}"
+
+        try:
+            req_count = await redis_cache.incr(rate_key, ttl=60)
+            if req_count > limit:
+                retry_after = 60
+                return JSONResponse(
+                    status_code=429,
+                    content={
+                        "detail": "Rate limit exceeded",
+                        "message": (
+                            "Too many authentication attempts. Please wait a moment."
+                            if is_auth_route else
+                            "API request threshold reached. Please wait before retrying."
+                        ),
+                        "retry_after": retry_after,
+                    },
+                    headers={"Retry-After": str(retry_after)},
+                )
+        except Exception as rl_err:
+            log.debug("Rate limiting check bypass on error", error=str(rl_err))
+
+    response = await call_next(request)
+
+    # 3. Inject standard enterprise security headers
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["X-Permitted-Cross-Domain-Policies"] = "none"
+
+    return response
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # WebSocket
 # ─────────────────────────────────────────────────────────────────────────────

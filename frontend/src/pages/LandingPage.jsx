@@ -208,7 +208,7 @@ export default function LandingPage() {
             <img 
               src="/isolatelogo.svg" 
               alt="Isolate" 
-              className="h-8 w-auto max-w-[130px] object-contain dark:brightness-110"
+              className="h-9 md:h-10 w-auto max-w-[165px] object-contain dark:brightness-110 transition-transform group-hover:scale-102"
             />
           </Link>
 

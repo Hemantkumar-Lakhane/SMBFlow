@@ -96,8 +96,9 @@ export function TopHeader({ onMenuToggle, mobileMenuOpen = false }) {
 
         {/* Desktop Breadcrumbs (sm+) */}
         <nav className="hidden sm:flex items-center gap-1.5 min-w-0" aria-label="Breadcrumb">
-          <Link to={home} className="text-sm text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 transition-colors shrink-0">
-            Isolate
+          <Link to={home} className="flex items-center gap-1.5 text-sm font-semibold text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition-colors shrink-0">
+            <img src="/isolate-icon.svg" alt="Isolate" className="w-4 h-4 shrink-0" />
+            <span>Isolate</span>
           </Link>
           {crumbs.map(crumb => (
             <span key={crumb.to} className="flex items-center gap-1.5 min-w-0">
@@ -114,7 +115,8 @@ export function TopHeader({ onMenuToggle, mobileMenuOpen = false }) {
         </nav>
 
         {/* Mobile Single Active Title (<sm) */}
-        <div className="sm:hidden flex items-center min-w-0">
+        <div className="sm:hidden flex items-center min-w-0 gap-1.5">
+          <img src="/isolate-icon.svg" alt="Isolate" className="w-5 h-5 shrink-0" />
           <span className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
             {currentTitle}
           </span>

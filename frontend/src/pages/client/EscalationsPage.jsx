@@ -20,7 +20,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useWebSocket } from '../../contexts/WSContext'
 import { timeAgo, truncate } from '../../utils/helpers'
 
-const POLL_MS = 8000
+const POLL_MS = 45000
 
 export default function EscalationsPage() {
   const { api } = useAuth()
@@ -110,8 +110,22 @@ export default function EscalationsPage() {
 
   useEffect(() => {
     loadActionItems()
-    const t = setInterval(loadActionItems, POLL_MS)
-    return () => clearInterval(t)
+    const t = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return
+      loadActionItems()
+    }, POLL_MS)
+
+    const handleVisibility = () => {
+      if (typeof document !== 'undefined' && !document.hidden) {
+        loadActionItems()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+
+    return () => {
+      clearInterval(t)
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
   }, [loadActionItems])
 
   useEffect(() => {
