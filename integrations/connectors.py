@@ -1180,8 +1180,13 @@ class RecallAIConnector(BaseConnector):
             resp.raise_for_status()
             return resp.json()
         except httpx.HTTPStatusError as e:
-            self._log.error("Recall API request error", endpoint=endpoint, status_code=e.response.status_code, error=str(e))
-            raise
+            err_text = ""
+            try:
+                err_text = e.response.text
+            except Exception:
+                err_text = str(e)
+            self._log.error("Recall API request error", endpoint=endpoint, status_code=e.response.status_code, error=err_text)
+            raise RuntimeError(f"Recall API error ({e.response.status_code}): {err_text}") from e
         except Exception as e:
             self._log.error("Recall API call failed", endpoint=endpoint, error=str(e))
             raise
@@ -1202,8 +1207,9 @@ class RecallAIConnector(BaseConnector):
         payload = {
             "meeting_url": meeting_url,
             "bot_name": bot_name or self.bot_name,
-            "transcription_options": transcription_options or {"provider": "default"},
         }
+        if transcription_options:
+            payload["transcription_options"] = transcription_options
         if metadata:
             payload["metadata"] = metadata
 
