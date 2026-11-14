@@ -434,7 +434,7 @@ async def get_user_copilot_context_and_prompts(
             "workflow_key": "invoice_processing",
             "question": "How can I automate vendor invoice extraction and OCR?",
             "answer": "The **Invoice Processing & Reconciliation** workflow scans your Gmail inbox, performs OCR on PDF attachments via Claude 3.5, reconciles amounts against Google Sheets PO ledgers, and highlights variances.",
-            "cta_label": "Open Invoice Pipeline",
+            "cta_label": "Open Invoice Workflow",
             "cta_to": "/workflows/invoice_processing",
         })
 
@@ -446,7 +446,7 @@ async def get_user_copilot_context_and_prompts(
             "workflow_key": "lead_scoring",
             "question": "How do I automate inbound lead scoring from HubSpot CRM?",
             "answer": "The **Lead Scoring & Enrichment** workflow captures incoming CRM contacts, enriches firmographics with GPT-4o, calculates an ICP fit score (0–100), and alerts your sales rep on Slack for Tier 1 prospects.",
-            "cta_label": "Open Lead Scoring Canvas",
+            "cta_label": "Open Lead Scoring Workflow",
             "cta_to": "/workflows/lead_scoring",
         })
 
@@ -470,7 +470,7 @@ async def get_user_copilot_context_and_prompts(
             "icon": "zap",
             "workflow_key": None,
             "question": "How do I trigger my first autonomous workflow run?",
-            "answer": f"Welcome to SMBFlow, {user_name}! Your organization currently has **{len(assigned_workflows)} active workflow template(s)** ready in your catalog. Select any workflow, provide the required parameters, and click **Run Pipeline**.",
+            "answer": f"Welcome to SMBFlow, {user_name}! Your organization currently has **{len(assigned_workflows)} active workflow template(s)** ready in your catalog. Select any workflow, provide the required parameters, and click **Start Workflow**.",
             "cta_label": "Browse Workflow Catalog",
             "cta_to": "/workflows",
         })
@@ -481,7 +481,7 @@ async def get_user_copilot_context_and_prompts(
             "icon": "bar-chart-3",
             "workflow_key": None,
             "question": f"What is the status of our {total_runs} executed workflow run(s)?",
-            "answer": f"**Operational Telemetry for {org_name}:**\n• Total Workflow Runs: **{total_runs}**\n• Active / Running: **{active_runs}**\n• Completed Successfully: **{completed_runs}**\n• All execution logs and token costs are isolated and audited in PostgreSQL.",
+            "answer": f"**Operational Telemetry for {org_name}:**\n• Total Workflow Runs: **{total_runs}**\n• Active / Running: **{active_runs}**\n• Completed Successfully: **{completed_runs}**\n• All execution logs and history are securely saved.",
             "cta_label": "Open Operational Dashboard",
             "cta_to": "/dashboard",
         })
@@ -494,7 +494,7 @@ async def get_user_copilot_context_and_prompts(
             "icon": "shield-alert",
             "workflow_key": None,
             "question": f"How do I review the {pending_approvals} pending approval item(s) in Action Center?",
-            "answer": f"You currently have **{pending_approvals} item(s)** awaiting supervisor sign-off. High-impact actions are safely gated at Layer 6 Approval Gates. Supervisors can approve, reject, or request revisions in 1 click.",
+            "answer": f"You currently have **{pending_approvals} item(s)** awaiting your review in the Action Center. Important actions pause here so you can review, approve, or adjust them in 1 click before they proceed.",
             "cta_label": "Review Pending Approvals",
             "cta_to": "/escalations",
         })
@@ -769,7 +769,7 @@ async def copilot_chat(
                 ExecutionNode(id="i3", name="Reconcile with PO Sheet", type="transform", icon="sheet", status="success", duration_ms=30, input_data={"tolerance": 50.0}, output_data={"discrepancy": False}),
                 ExecutionNode(id="i4", name="Action Center Verification", type="output", icon="shield", status="success", duration_ms=40, input_data={"gate": "Supervisor Sign-off"}, output_data={"staged": True}),
             ],
-            action_cta=ActionCTA(label="Open Invoice Pipeline", to="/workflows/invoice_processing", variant="primary"),
+            action_cta=ActionCTA(label="Open Invoice Workflow", to="/workflows/invoice_processing", variant="primary"),
             suggested_followups=question_texts[:3],
             workflow_key="invoice_processing",
         )
@@ -784,7 +784,7 @@ async def copilot_chat(
                 ExecutionNode(id="l3", name="Score buying intent", type="ai_llm", icon="claude", status="success", duration_ms=140, input_data={"icp_fit": True}, output_data={"score": 92, "tier": "Tier 1 Priority"}),
                 ExecutionNode(id="l4", name="Alert Sales Rep in Slack", type="output", icon="slack", status="success", duration_ms=35, input_data={"channel": "#sales-leads"}, output_data={"notified": True}),
             ],
-            action_cta=ActionCTA(label="Open Lead Scoring Canvas", to="/workflows/lead_scoring", variant="primary"),
+            action_cta=ActionCTA(label="Open Lead Scoring Workflow", to="/workflows/lead_scoring", variant="primary"),
             suggested_followups=question_texts[:3],
             workflow_key="lead_scoring",
         )

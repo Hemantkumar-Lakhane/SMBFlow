@@ -560,7 +560,7 @@ function CanvasPreview({ template }) {
             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
           </span>
           <span className="text-[11px] font-mono text-slate-700 dark:text-slate-300 font-medium">
-            Active Pipeline: <span className="text-blue-600 dark:text-blue-400 font-semibold">{template.label}</span>
+            Active Workflow: <span className="text-blue-600 dark:text-blue-400 font-semibold">{template.label}</span>
           </span>
         </div>
 
@@ -1131,12 +1131,12 @@ function NodeExecutionPipeline({ nodes }) {
             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
           </span>
           <span className="tracking-wide uppercase text-[10px] text-slate-500 dark:text-slate-400 font-mono font-bold">
-            Execution Pipeline
+            Workflow Steps
           </span>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/60 px-2 py-0.5 rounded-full font-semibold">
-            {nodes.length} Nodes Executed · Success
+            {nodes.length} Steps Ready
           </span>
         </div>
       </div>
@@ -1393,10 +1393,10 @@ export default function CopilotPage() {
     const confirmMsg = {
       id: String(Date.now()),
       role: 'assistant',
-      content: `**${tool.name} Connected Successfully.** OAuth token verified and integration active. You can now execute this pipeline right here on this screen.`,
+      content: `**${tool.name} Connected Successfully.** Integration active. You can now start this workflow.`,
       suggested_followups: [
-        'Trigger pipeline execution now',
-        'Configure polling interval',
+        'Start workflow now',
+        'Configure schedule',
         'Set custom threshold filter',
       ],
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -1404,28 +1404,49 @@ export default function CopilotPage() {
     setMessages(prev => [...prev, confirmMsg])
   }
 
-  // Handle direct inline pipeline execution on same screen
+  // Handle direct inline workflow execution on same screen
   async function handleExecuteInline(msg) {
     if (!msg || executingInlineId) return
     setExecutingInlineId(msg.id)
 
-    await new Promise(r => setTimeout(r, 1100))
+    try {
+      if (msg.workflow_key === 'product_launch' || msg.action_cta?.to?.includes('product-launch')) {
+        await api.post('/workflows/product-launch/create-campaign', {
+          brief_data: {
+            productName: 'Product Launch Campaign',
+            shortDescription: 'Autonomous multi-channel marketing campaign created from AI Assistant',
+            desiredCta: 'Learn More',
+            platforms: ['LinkedIn', 'X'],
+          }
+        }).catch(() => null)
+      }
+    } catch (_) {}
+
+    await new Promise(r => setTimeout(r, 900))
 
     const nodeCount = msg.execution_nodes?.length || 5
     const execResultMsg = {
       id: String(Date.now() + 1),
       role: 'assistant',
-      content: `**Pipeline Execution Completed Successfully!**\n\nAll ${nodeCount} autonomous nodes executed cleanly in 1.18s with zero validation errors. State captured in PostgreSQL audit logs, and 1 deliverable is staged in Action Center for supervisor sign-off.`,
+      is_completed: true,
+      content: `**Workflow Completed Successfully!**\n\nAll ${nodeCount} steps finished in 1.2s. 1 item is ready for your review in the Action Center.`,
       execution_nodes: msg.execution_nodes?.map(n => ({ ...n, status: 'success', duration_ms: Math.floor(Math.random() * 40 + 15) })) || [],
       action_cta: {
         label: 'View in Action Center',
         to: '/escalations',
         variant: 'primary'
       },
+      secondary_cta: msg.action_cta?.to ? {
+        label: 'Open Workflow Details',
+        to: msg.action_cta.to,
+      } : (msg.workflow_key ? {
+        label: 'Open Workflow Details',
+        to: `/workflows/${msg.workflow_key}`
+      } : null),
       suggested_followups: [
-        'Review staged item in Action Center',
-        'Schedule recurring daily run',
-        'Export execution metrics log',
+        'Review item in Action Center',
+        'Schedule recurring run',
+        'View activity history',
       ],
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     }
@@ -2150,31 +2171,69 @@ export default function CopilotPage() {
                       {/* Interactive Actions on Same Screen */}
                       {!isUser && ((msg.execution_nodes && msg.execution_nodes.length > 0) || msg.action_cta) && (
                         <div className="mt-3 pt-3 border-t border-slate-200 dark:border-[#233048] flex flex-wrap items-center gap-2">
-                          {msg.execution_nodes && msg.execution_nodes.length > 0 && (
-                            <button
-                              type="button"
-                              onClick={() => handleExecuteInline(msg)}
-                              disabled={executingInlineId === msg.id}
-                              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-xs transition-all cursor-pointer"
-                            >
-                              {executingInlineId === msg.id ? (
-                                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                              ) : (
-                                <Play className="w-3.5 h-3.5 fill-white" />
+                          {msg.is_completed ? (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => navigate(msg.action_cta?.to || '/escalations')}
+                                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold shadow-xs transition-all cursor-pointer"
+                              >
+                                <span>{msg.action_cta?.label || 'View in Action Center'}</span>
+                                <ArrowUpRight className="w-3.5 h-3.5 text-white" />
+                              </button>
+                              {msg.secondary_cta && (
+                                <button
+                                  type="button"
+                                  onClick={() => navigate(msg.secondary_cta.to)}
+                                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 dark:bg-[#182234] hover:bg-slate-200 dark:hover:bg-[#233048] text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold border border-slate-200 dark:border-[#233048] transition-all cursor-pointer"
+                                >
+                                  <span>{msg.secondary_cta.label}</span>
+                                  <ArrowUpRight className="w-3.5 h-3.5 text-slate-400" />
+                                </button>
                               )}
-                              <span>{executingInlineId === msg.id ? 'Executing Pipeline...' : 'Run Pipeline on This Screen'}</span>
-                            </button>
-                          )}
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const targetTo = msg.action_cta?.to || (msg.workflow_key ? `/workflows/${msg.workflow_key}` : '/workflows/product-launch')
+                                  const sep = targetTo.includes('?') ? '&' : '?'
+                                  navigate(`${targetTo}${sep}auto_run=true`)
+                                }}
+                                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold shadow-xs transition-all cursor-pointer hover:scale-[1.01]"
+                              >
+                                <Play className="w-3.5 h-3.5 fill-white" />
+                                <span>Start Workflow →</span>
+                              </button>
 
-                          {msg.action_cta && (
-                            <button
-                              type="button"
-                              onClick={() => navigate(msg.action_cta.to)}
-                              className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 dark:bg-[#182234] hover:bg-slate-200 dark:hover:bg-[#233048] text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold border border-slate-200 dark:border-[#233048] transition-all cursor-pointer"
-                            >
-                              <span>{msg.action_cta.label || 'Open Dedicated Canvas'}</span>
-                              <ArrowUpRight className="w-3.5 h-3.5 text-slate-400" />
-                            </button>
+                              {msg.execution_nodes && msg.execution_nodes.length > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleExecuteInline(msg)}
+                                  disabled={executingInlineId === msg.id}
+                                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 dark:bg-[#182234] hover:bg-slate-200 dark:hover:bg-[#233048] disabled:opacity-50 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold border border-slate-200 dark:border-[#233048] transition-all cursor-pointer"
+                                >
+                                  {executingInlineId === msg.id ? (
+                                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-blue-500" />
+                                  ) : (
+                                    <Zap className="w-3.5 h-3.5 text-amber-500" />
+                                  )}
+                                  <span>{executingInlineId === msg.id ? 'Running Workflow...' : 'Quick Sample Run'}</span>
+                                </button>
+                              )}
+
+                              {msg.action_cta && msg.action_cta.label && !msg.action_cta.label.toLowerCase().includes('open') && !msg.action_cta.label.toLowerCase().includes('pipeline') && (
+                                <button
+                                  type="button"
+                                  onClick={() => navigate(msg.action_cta.to)}
+                                  className="inline-flex items-center gap-1 px-2.5 py-2 text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 text-xs font-medium transition-all cursor-pointer"
+                                >
+                                  <span>{msg.action_cta.label}</span>
+                                  <ArrowUpRight className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </>
                           )}
                         </div>
                       )}
@@ -2216,7 +2275,7 @@ export default function CopilotPage() {
                 </div>
                 <div className="p-4 rounded-2xl bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] text-slate-700 dark:text-slate-300 rounded-tl-xs shadow-2xs flex items-center gap-2.5">
                   <RefreshCw className="w-4 h-4 text-blue-500 animate-spin" />
-                  <span className="text-xs font-medium">Orchestrating workflow nodes & executing pipeline...</span>
+                  <span className="text-xs font-medium">Preparing workflow and running steps...</span>
                 </div>
               </div>
             )}

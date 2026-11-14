@@ -782,7 +782,7 @@ export default function WorkflowsPage() {
             <div className="text-xl font-bold text-slate-900 dark:text-white mt-1">{enrichedWorkflows.length}</div>
           </div>
           <div className="p-4 rounded-2xl bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] shadow-2xs">
-            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Active Pipelines</span>
+            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Active Workflows</span>
             <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
               {enrichedWorkflows.filter(w => w.status === 'active').length} Active
             </div>
@@ -828,7 +828,7 @@ export default function WorkflowsPage() {
               }`}
             >
               <Layers className="w-3.5 h-3.5" />
-              <span>Pipelines ({filteredWorkflows.length})</span>
+              <span>Workflows ({filteredWorkflows.length})</span>
             </button>
             <button
               onClick={() => setActiveTab('runs')}

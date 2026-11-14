@@ -1884,12 +1884,12 @@ function resolveDynamicWorkflow(rawKey, searchParams) {
   // Dynamic Universal Pipeline for Any Custom Workflow (Clean, Contextual & AI-Driven)
   const titleFormatted = baseKey
     ? baseKey.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
-    : 'Autonomous Workflow Pipeline'
+    : 'Autonomous Workflow'
 
   return {
     key: normalized,
     title: titleFormatted,
-    displayTitle: `${titleFormatted} Dynamic Pipeline`,
+    displayTitle: `${titleFormatted} Dynamic Workflow`,
     category: 'Autonomous Operations',
     description: `Autonomous dynamic workflow with real-time entity extraction, Claude 3.5 Sonnet decision routing, and dual-branch execution.`,
     apps: ['webhook', 'claude', 'postgres', 'slack'],
@@ -2037,10 +2037,12 @@ export default function UniversalWorkflowRunner() {
 
   // Single-Step Active Chat State (Previous output disappears, stored in Form only)
   const [activePrompt, setActivePrompt] = useState(() => ({
-    content: `I am initializing the **${workflow.displayTitle || workflow.title}** pipeline.\n\nYour inputs will automatically populate the configuration form above.\n\n**${workflow.fields[0]?.prompt}**`,
+    content: `I am initializing the **${workflow.displayTitle || workflow.title}** workflow.\n\nYour inputs will automatically populate the configuration form above.\n\n**${workflow.fields[0]?.prompt}**`,
     timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     fieldIndex: 0,
   }))
+
+  const hasAutoRunRef = useRef(false)
 
   const [inputText, setInputText] = useState('')
   const [loading, setLoading] = useState(false)
@@ -3071,7 +3073,7 @@ export default function UniversalWorkflowRunner() {
     setShowMoreFormChannels(false)
     setShowMoreChatChannels(false)
     setActivePrompt({
-      content: `I am initializing the **${workflow.displayTitle || workflow.title}** pipeline.\n\nYour inputs will automatically populate the configuration form.\n\n**${workflow.fields[0]?.prompt || ''}**`,
+      content: `I am initializing the **${workflow.displayTitle || workflow.title}** workflow.\n\nYour inputs will automatically populate the configuration form.\n\n**${workflow.fields[0]?.prompt || ''}**`,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       fieldIndex: 0,
     })
@@ -3102,6 +3104,31 @@ export default function UniversalWorkflowRunner() {
       }))
     } catch (_) {}
   }, [executionResult, workflow.key, formData])
+
+  // Handle auto_run from Copilot / deep links
+  const autoRunParam = searchParams.get('auto_run') === 'true'
+  useEffect(() => {
+    if (autoRunParam && !hasAutoRunRef.current && !synthesizing && !executionResult) {
+      hasAutoRunRef.current = true
+      const initialDefaults = {}
+      workflow.fields.forEach(f => {
+        if (f.defaultValue !== undefined) {
+          initialDefaults[f.id] = typeof f.defaultValue === 'function' ? f.defaultValue() : f.defaultValue
+        }
+      })
+      if (isMeetingIntelligence && !initialDefaults.transcript) {
+        initialDefaults.input_mode = 'paste_transcript'
+        initialDefaults.transcript = `[00:00] Sarah (Client Lead): Thanks for joining today to finalize the enterprise rollout plan.\n[00:20] Marcus (Engineering): I commit to completing the API specifications by Tuesday.\n[00:45] Sarah: Perfect. Let us schedule a follow-up demonstration next Thursday at 2:00 PM.`
+        initialDefaults.conversation_title = 'Enterprise Rollout & Strategy Review'
+        initialDefaults.contact_name = 'Sarah Jenkins, Marcus Chen'
+      }
+      setFormData(prev => ({ ...initialDefaults, ...prev }))
+      const timer = setTimeout(() => {
+        executeActivePipeline({ ...initialDefaults, ...formData })
+      }, 400)
+      return () => clearTimeout(timer)
+    }
+  }, [autoRunParam, workflow, targetKey, isMeetingIntelligence])
 
   // Auto-expand textarea
   useEffect(() => {
@@ -3248,7 +3275,7 @@ export default function UniversalWorkflowRunner() {
       }
       if (!valid) {
         setActivePrompt({
-          content: `⚠️ **Cannot Run Pipeline — Missing Required Inputs**\n\n${missingReason}`,
+          content: `⚠️ **Cannot Start Workflow — Missing Required Inputs**\n\n${missingReason}`,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           fieldIndex: 0,
         })
@@ -3262,7 +3289,7 @@ export default function UniversalWorkflowRunner() {
         if (firstMissingIndex !== -1) setCurrentQIndex(firstMissingIndex)
         
         setActivePrompt({
-          content: `⚠️ **Cannot Run Pipeline — Missing Required Inputs**\n\nThe pipeline cannot execute until all necessary parameters are configured.\n\nPlease provide **${firstMissing.label}** in the form below:\n\n**${firstMissing.prompt}**`,
+          content: `⚠️ **Cannot Start Workflow — Missing Required Inputs**\n\nThe workflow cannot start until all required parameters are provided.\n\nPlease provide **${firstMissing.label}** in the form below:\n\n**${firstMissing.prompt}**`,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           fieldIndex: firstMissingIndex !== -1 ? firstMissingIndex : 0,
         })
@@ -4348,7 +4375,7 @@ export default function UniversalWorkflowRunner() {
         : workflow.fields.map(f => `• **${f.label}:** \`${formatFieldDisplay(formData[f.id])}\``).join('\n')
 
       setActivePrompt({
-        content: `**${isMeetingIntelligence ? 'Meeting inputs ready!' : `All ${totalFieldsCount} workflow parameters configured in the form below!`}**\n\n${summaryItems}\n\nClick **${isMeetingIntelligence ? 'Summarize meeting' : 'Run Active Pipeline'}** to launch the autonomous pipeline.`,
+        content: `**${isMeetingIntelligence ? 'Meeting inputs ready!' : `All ${totalFieldsCount} workflow parameters configured in the form below!`}**\n\n${summaryItems}\n\nClick **${isMeetingIntelligence ? 'Summarize meeting' : 'Start Workflow'}** to run this workflow.`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         fieldIndex: workflow.fields.length,
       })
@@ -4459,7 +4486,7 @@ export default function UniversalWorkflowRunner() {
           <div className="flex items-center gap-2.5">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)] inline-block animate-pulse" />
             <span className="text-sm md:text-base font-bold text-slate-800 dark:text-slate-200 tracking-tight flex items-center gap-1.5">
-              <span>Active Pipeline:</span>
+              <span>Active Workflow:</span>
               <span className="text-blue-600 dark:text-blue-400 font-mono font-semibold">
                 {workflow.title}
               </span>
@@ -5083,7 +5110,7 @@ export default function UniversalWorkflowRunner() {
                     <div className="mt-3 pt-3 border-t border-slate-200/80 dark:border-[#233048] flex items-center justify-between flex-wrap gap-3 animate-in fade-in duration-200">
                       <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1.5">
                         <CheckCircle2 className="w-4 h-4" />
-                        <span>Ready to launch autonomous pipeline</span>
+                        <span>Ready to start workflow</span>
                       </span>
                       <button
                         type="button"
@@ -5091,7 +5118,7 @@ export default function UniversalWorkflowRunner() {
                         className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-md flex items-center gap-2 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
                       >
                         <Play className="w-3.5 h-3.5 fill-white" />
-                        <span>Run Active Pipeline Now →</span>
+                        <span>Start Workflow Now →</span>
                       </button>
                     </div>
                   )}
@@ -5334,7 +5361,7 @@ export default function UniversalWorkflowRunner() {
                           className="ml-auto px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition-all cursor-pointer shadow-xs flex items-center gap-1.5"
                         >
                           <Play className="w-3.5 h-3.5 fill-white" />
-                          <span>Save & Launch Pipeline</span>
+                          <span>Save & Start Workflow</span>
                           <ArrowRight className="w-3 h-3" />
                         </button>
                       </div>
@@ -5547,7 +5574,7 @@ export default function UniversalWorkflowRunner() {
                     </span>
                   </div>
                   <p className="text-[11px] text-amber-700 dark:text-amber-300 mt-0.5">
-                    Connect missing integrations directly below or use 1-click sandbox to execute this pipeline right now.
+                    Connect missing integrations below or use sample run to start this workflow.
                   </p>
                 </div>
               </div>
@@ -5687,7 +5714,7 @@ export default function UniversalWorkflowRunner() {
                   className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer"
                 >
                   <Play className="w-3.5 h-3.5 fill-white" />
-                  <span>Run Active Pipeline</span>
+                  <span>Start Workflow</span>
                 </button>
               )}
             </div>
@@ -6044,7 +6071,7 @@ export default function UniversalWorkflowRunner() {
                 ) : (
                   <>
                     <Play className="w-3.5 h-3.5 fill-white" />
-                    <span>{isMeetingIntelligence ? 'Summarize Meeting' : 'Run Active Pipeline'}</span>
+                    <span>{isMeetingIntelligence ? 'Summarize Meeting' : 'Start Workflow'}</span>
                   </>
                 )}
               </button>
@@ -6060,7 +6087,7 @@ export default function UniversalWorkflowRunner() {
               <div className="flex items-center gap-2.5">
                 <div className="w-2.5 h-2.5 rounded-full bg-red-500 shrink-0" />
                 <span className="text-xs font-semibold text-red-800 dark:text-red-200">
-                  Pipeline execution halted — {executionResult.errorMessage || 'Execution encountered an error'}.
+                  Workflow execution halted — {executionResult.errorMessage || 'Execution encountered an error'}.
                 </span>
               </div>
               <div className="flex items-center gap-2">
@@ -6079,7 +6106,7 @@ export default function UniversalWorkflowRunner() {
                   className="flex items-center gap-1.5 px-3.5 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-lg text-xs font-bold shadow-xs transition-colors cursor-pointer"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
-                  <span>Retry Pipeline</span>
+                  <span>Retry Workflow</span>
                 </button>
               </div>
             </div>
@@ -6088,7 +6115,7 @@ export default function UniversalWorkflowRunner() {
               <div className="flex items-center gap-2.5">
                 <div className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
                 <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                  Pipeline execution finished across all {pipelineNodes?.length || workflow?.nodes?.length || 0} nodes.
+                  Workflow execution finished across all {pipelineNodes?.length || workflow?.nodes?.length || 0} steps.
                 </span>
               </div>
               <div className="flex items-center gap-2">
@@ -6107,7 +6134,7 @@ export default function UniversalWorkflowRunner() {
                   className="flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold shadow-xs transition-colors cursor-pointer"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
-                  <span>Re-run Pipeline</span>
+                  <span>Re-run Workflow</span>
                 </button>
               </div>
             </div>
@@ -7426,7 +7453,7 @@ export default function UniversalWorkflowRunner() {
               {/* Node Pipeline Implementation Status */}
               <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#0b0f17] border border-slate-200 dark:border-[#233048] space-y-3">
                 <div className="text-xs font-bold text-slate-900 dark:text-white">
-                  Workflow Execution Pipeline Status
+                  Workflow Steps Status
                 </div>
                 <div className="space-y-2">
                   {executionResult.nodeExecution?.map((node, nIdx) => {
