@@ -14,56 +14,56 @@ import ResetPasswordPage  from './pages/ResetPasswordPage'
 import AccessDenied       from './components/shell/AccessDenied'
 import { Spinner }        from './components/ui'
 
-// ── Platform Admin pages ───────────────────────────────────────────────────────
-import AdminPlatformOverview    from './pages/admin/AdminPlatformOverview'
-import AdminAssistant           from './pages/admin/AdminAssistant'
+// ── Platform Admin pages (Dynamic Route Code Splitting) ───────────────────────
+const AdminPlatformOverview    = React.lazy(() => import('./pages/admin/AdminPlatformOverview'))
+const AdminAssistant           = React.lazy(() => import('./pages/admin/AdminAssistant'))
 // CUSTOMERS
-import AdminOrganizations       from './pages/admin/AdminOrganizations'
-import AdminOrgDetail           from './pages/admin/AdminOrgDetail'
-import UsersPage                from './pages/admin/UsersPage'
+const AdminOrganizations       = React.lazy(() => import('./pages/admin/AdminOrganizations'))
+const AdminOrgDetail           = React.lazy(() => import('./pages/admin/AdminOrgDetail'))
+const UsersPage                = React.lazy(() => import('./pages/admin/UsersPage'))
 // WORKFLOWS
-import AdminWorkflowCatalog     from './pages/admin/AdminWorkflowCatalog'
-import AdminWorkflowAssignments from './pages/admin/AdminWorkflowAssignments'
-import AdminWorkflowQACenter    from './pages/admin/AdminWorkflowQACenter'
-import AdminRoutingAssignments  from './pages/admin/AdminRoutingAssignments'
-import AdminWorkflowRuns        from './pages/admin/AdminWorkflowRuns'
+const AdminWorkflowCatalog     = React.lazy(() => import('./pages/admin/AdminWorkflowCatalog'))
+const AdminWorkflowAssignments = React.lazy(() => import('./pages/admin/AdminWorkflowAssignments'))
+const AdminWorkflowQACenter    = React.lazy(() => import('./pages/admin/AdminWorkflowQACenter'))
+const AdminRoutingAssignments  = React.lazy(() => import('./pages/admin/AdminRoutingAssignments'))
+const AdminWorkflowRuns        = React.lazy(() => import('./pages/admin/AdminWorkflowRuns'))
 // BILLING
-import AdminPlans               from './pages/admin/AdminPlans'
-import AdminSubscriptions       from './pages/admin/AdminSubscriptions'
-import AdminUsageCost           from './pages/admin/AdminUsageCost'
-import AdminInvoices            from './pages/admin/AdminInvoices'
+const AdminPlans               = React.lazy(() => import('./pages/admin/AdminPlans'))
+const AdminSubscriptions       = React.lazy(() => import('./pages/admin/AdminSubscriptions'))
+const AdminUsageCost           = React.lazy(() => import('./pages/admin/AdminUsageCost'))
+const AdminInvoices            = React.lazy(() => import('./pages/admin/AdminInvoices'))
 // AI PLATFORM
-import AdminProviderConnections from './pages/admin/AdminProviderConnections'
-import AdminModelCatalog        from './pages/admin/AdminModelCatalog'
+const AdminProviderConnections = React.lazy(() => import('./pages/admin/AdminProviderConnections'))
+const AdminModelCatalog        = React.lazy(() => import('./pages/admin/AdminModelCatalog'))
 // OPERATIONS
-import AdminSystemHealth        from './pages/admin/AdminSystemHealth'
-import AdminAuditLog            from './pages/admin/AdminAuditLog'
-import AdminExceptions          from './pages/admin/AdminExceptions'
+const AdminSystemHealth        = React.lazy(() => import('./pages/admin/AdminSystemHealth'))
+const AdminAuditLog            = React.lazy(() => import('./pages/admin/AdminAuditLog'))
+const AdminExceptions          = React.lazy(() => import('./pages/admin/AdminExceptions'))
 // SYSTEM
-import AdminPlatformSettings    from './pages/admin/AdminPlatformSettings'
+const AdminPlatformSettings    = React.lazy(() => import('./pages/admin/AdminPlatformSettings'))
 
-// ── SMB Owner pages ────────────────────────────────────────────────────────────
-import ConnectionsPage     from './pages/setup/ConnectionsPage'
-import CasesPage           from './pages/medical/CasesPage'
-import UniversalWorkflowRunner from './pages/client/UniversalWorkflowRunner'
-import Dashboard           from './pages/client/Dashboard'
-import CopilotPage         from './pages/client/CopilotPage'
-import EscalationsPage     from './pages/client/EscalationsPage'
-import WorkflowsPage       from './pages/client/WorkflowsPage'
-import WorkflowLibrary     from './pages/client/WorkflowLibrary'
-import AIEngine            from './pages/client/AIEngine'
-import AIEngineSettings    from './pages/client/AIEngineSettings'
-import GeneralSettings     from './pages/client/GeneralSettings'
-import BudgetPage          from './pages/client/BudgetPage'
-import EvidencePage        from './pages/client/EvidencePage'
+// ── SMB Owner pages (Dynamic Route Code Splitting) ────────────────────────────
+const ConnectionsPage     = React.lazy(() => import('./pages/setup/ConnectionsPage'))
+const CasesPage           = React.lazy(() => import('./pages/medical/CasesPage'))
+const UniversalWorkflowRunner = React.lazy(() => import('./pages/client/UniversalWorkflowRunner'))
+const Dashboard           = React.lazy(() => import('./pages/client/Dashboard'))
+const CopilotPage         = React.lazy(() => import('./pages/client/CopilotPage'))
+const EscalationsPage     = React.lazy(() => import('./pages/client/EscalationsPage'))
+const WorkflowsPage       = React.lazy(() => import('./pages/client/WorkflowsPage'))
+const WorkflowLibrary     = React.lazy(() => import('./pages/client/WorkflowLibrary'))
+const AIEngine            = React.lazy(() => import('./pages/client/AIEngine'))
+const AIEngineSettings    = React.lazy(() => import('./pages/client/AIEngineSettings'))
+const GeneralSettings     = React.lazy(() => import('./pages/client/GeneralSettings'))
+const BudgetPage          = React.lazy(() => import('./pages/client/BudgetPage'))
+const EvidencePage        = React.lazy(() => import('./pages/client/EvidencePage'))
 
 // ── Admin-accessible technical tools (kept for operational use) ───────────────
-import WorkflowBuilder from './pages/client/WorkflowBuilder'
-import ModelSettings   from './pages/client/ModelSettings'
-import ToolsPage       from './pages/client/ToolsPage'
-import PromptStudio    from './pages/client/PromptStudio'
-import EmailQueuePage  from './pages/client/EmailQueuePage'
-import PatternsPage    from './pages/client/PatternsPage'
+const WorkflowBuilder = React.lazy(() => import('./pages/client/WorkflowBuilder'))
+const ModelSettings   = React.lazy(() => import('./pages/client/ModelSettings'))
+const ToolsPage       = React.lazy(() => import('./pages/client/ToolsPage'))
+const PromptStudio    = React.lazy(() => import('./pages/client/PromptStudio'))
+const EmailQueuePage  = React.lazy(() => import('./pages/client/EmailQueuePage'))
+const PatternsPage    = React.lazy(() => import('./pages/client/PatternsPage'))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -115,7 +115,17 @@ function ProtectedRoute({ children, adminOnly = false }) {
 function Wrap({ adminOnly = false, children }) {
   return (
     <ProtectedRoute adminOnly={adminOnly}>
-      <AppShell>{children}</AppShell>
+      <AppShell>
+        <React.Suspense
+          fallback={
+            <div className="flex items-center justify-center min-h-[360px] p-8 text-slate-400">
+              <Spinner className="w-6 h-6 text-blue-600 animate-spin" />
+            </div>
+          }
+        >
+          {children}
+        </React.Suspense>
+      </AppShell>
     </ProtectedRoute>
   )
 }

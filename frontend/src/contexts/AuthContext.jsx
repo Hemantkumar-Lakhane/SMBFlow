@@ -40,7 +40,7 @@ function loadStoredUser() {
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(() => loadStoredToken())
   const [user, setUser] = useState(() => loadStoredUser())
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(() => !(loadStoredToken() && loadStoredUser()))
   const [sessionExpired, setSessionExpired] = useState(false)
 
   const login = useCallback((newToken, newUser) => {

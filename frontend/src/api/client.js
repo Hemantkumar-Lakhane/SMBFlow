@@ -2,8 +2,21 @@
 
 import { emitSessionExpired } from './authEvents'
 
-export const API_BASE = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:8000/api/v1'
-export const WS_BASE  = import.meta.env.VITE_WS_BASE  || 'ws://127.0.0.1:8000/ws'
+export const API_BASE = import.meta.env.VITE_API_BASE || (
+  typeof window !== 'undefined'
+    ? (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? 'http://127.0.0.1:8000/api/v1'
+        : `${window.location.protocol}//${window.location.host}/api/v1`)
+    : 'http://127.0.0.1:8000/api/v1'
+)
+
+export const WS_BASE = import.meta.env.VITE_WS_BASE || (
+  typeof window !== 'undefined'
+    ? (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? 'ws://127.0.0.1:8000/ws'
+        : `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`)
+    : 'ws://127.0.0.1:8000/ws'
+)
 
 // ── In-Memory Client Cache & Inflight Promise Coalescing ───────────────────────
 // Caches read-heavy tab data (auth profile, catalog, connections, copilot insights)
