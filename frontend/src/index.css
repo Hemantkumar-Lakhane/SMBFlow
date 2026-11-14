@@ -90,10 +90,23 @@
   * { box-sizing: border-box; }
   code, kbd, samp, pre { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
 
-  /* Selection */
+  /* Selection: Standard vibrant web blue with crisp white text */
   ::selection {
-    background: rgba(var(--c-primary), 0.25);
-    color: rgb(var(--text-primary));
+    background-color: #2563eb;
+    color: #ffffff;
+  }
+  ::-moz-selection {
+    background-color: #2563eb;
+    color: #ffffff;
+  }
+
+  .dark ::selection {
+    background-color: #3b82f6;
+    color: #ffffff;
+  }
+  .dark ::-moz-selection {
+    background-color: #3b82f6;
+    color: #ffffff;
   }
 }
 
