@@ -1,4 +1,4 @@
-param()
+﻿param()
 
 Set-Location $PSScriptRoot
 
@@ -197,10 +197,18 @@ Write-Host ""
 Write-Host "Waiting for backend to become healthy at $healthUrl ..." -ForegroundColor Gray
 for ($i = 1; $i -le $maxAttempts; $i++) {
     try {
-        $resp = Invoke-RestMethod -Uri $healthUrl -TimeoutSec 3 -ErrorAction Stop
-        if ($resp -and $resp.status -eq "ok") {
-            $backendHealthy = $true
-            break
+        if (Get-Command curl.exe -ErrorAction SilentlyContinue) {
+            $raw = & curl.exe -s -m 6 "$healthUrl"
+            if ($raw -and $raw -match '"status"\s*:\s*"ok"') {
+                $backendHealthy = $true
+                break
+            }
+        } else {
+            $resp = Invoke-RestMethod -Uri $healthUrl -TimeoutSec 8 -UseBasicParsing -ErrorAction Stop
+            if ($resp -and $resp.status -eq "ok") {
+                $backendHealthy = $true
+                break
+            }
         }
     } catch {
         # Backend not accepting connections yet — keep polling.

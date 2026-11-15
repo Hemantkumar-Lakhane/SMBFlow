@@ -7288,7 +7288,15 @@ async def recall_webhook_handler(
     return {"success": True, "status": record.status, "message": f"Recall webhook event '{event}' handled."}
 
 
-# ??? Live Google Meet & OAuth Integration (from main) ?????????????
+# ── Live Google Meet & OAuth Integration (from main) ─────────────────────────
+class GoogleMeetExtractRequest(BaseModel):
+    meet_url: str = Field(..., description="Google Meet URL, code, transcript://, or audio:// URI")
+    meeting_title: Optional[str] = Field(None, description="Optional title of the meeting")
+    raw_transcript: Optional[str] = Field(None, description="Optional pasted transcript text")
+    language: Optional[str] = Field(None, description="Detected or specified spoken language")
+    primary_contact: Optional[str] = Field(None, description="Optional email or name of primary attendee")
+
+
 class GoogleMeetTurn(BaseModel):
     timestamp: str
     speaker: str

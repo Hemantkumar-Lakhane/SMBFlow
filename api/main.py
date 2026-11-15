@@ -1213,9 +1213,20 @@ async def health_check(db: AsyncSession = Depends(get_db)):
             llm_providers[provider] = {"status": "not_configured"}
 
 
-    instances = await crud.list_workflow_instances(db, limit=500)
-    active = sum(1 for i in instances if i.status == "running")
-    tenants = await crud.list_tenants(db)
+    try:
+        from core.state_manager import WorkflowInstance
+        from db.models.core import Organization
+        active_res = await db.execute(
+            select(func.count(WorkflowInstance.id)).where(WorkflowInstance.status == "running")
+        )
+        active = active_res.scalar() or 0
+        tenant_res = await db.execute(select(func.count(Organization.id)))
+        total_tenants = tenant_res.scalar() or 0
+    except Exception:
+        await db.execute(select(1))
+        active = 0
+        total_tenants = 0
+
     ev_dir = Path(os.getenv("EPI_EVIDENCE_DIR", "./evidence"))
     ev_count = len(list(ev_dir.glob("*"))) if ev_dir.exists() else 0
 
@@ -1225,7 +1236,7 @@ async def health_check(db: AsyncSession = Depends(get_db)):
         "epi": f"{ev_count} evidence files",
         "timestamp": datetime.utcnow().isoformat(),
         "active_workflows": active,
-        "total_tenants": len(tenants),
+        "total_tenants": total_tenants,
         "ws_connections": len(_ws_connections),
     }
     
