@@ -77,7 +77,7 @@ export default function GeneralSettings() {
 
   const [form, setForm] = useState({
     // User Profile
-    fullName: user?.full_name || '',
+    fullName: (user?.full_name || '').replace(/SMBFlow/gi, 'Isolate') || '',
     email: user?.email || '',
     avatarUrl: user?.avatar_url || (user?.id ? localStorage.getItem(`avatar_${user.id}`) : null) || localStorage.getItem('smbflow_avatar') || '',
     
@@ -104,7 +104,7 @@ export default function GeneralSettings() {
       const av = user.avatar_url || (user.id ? localStorage.getItem(`avatar_${user.id}`) : null) || localStorage.getItem('smbflow_avatar') || ''
       setForm(f => ({
         ...f,
-        fullName: user.full_name || f.fullName,
+        fullName: (user.full_name || f.fullName || '').replace(/SMBFlow/gi, 'Isolate'),
         email: user.email || f.email,
         avatarUrl: av || f.avatarUrl,
       }))
@@ -130,7 +130,7 @@ export default function GeneralSettings() {
 
           return {
             ...f,
-            fullName: user?.full_name || org.full_name || f.fullName,
+            fullName: (user?.full_name || org.full_name || f.fullName || '').replace(/SMBFlow/gi, 'Isolate'),
             email: user?.email || f.email,
             orgName: effectiveOrgName,
             industry: isKnownIndustry ? org.industry : 'saas',

@@ -1382,122 +1382,13 @@ function createDefaultEmailDeliverables(instanceId = `run_email_${Date.now()}`) 
     workflowTitle: 'AI Inbox Triage & Email Summarizer',
     objective: 'Executive Inbound Triage & Automated Action Items',
     kpis: {
-      scannedCount: 6,
-      urgentCount: 2,
-      draftsReadyCount: 2,
-      timeSavedMinutes: 45,
+      scannedCount: 0,
+      urgentCount: 0,
+      draftsReadyCount: 0,
+      timeSavedMinutes: 0,
     },
-    executiveBriefing: "Good morning! 6 emails were scanned across your connected inboxes. 2 require your immediate decision: an enterprise billing discrepancy from TechFlow Corp ($4,250) and a high-priority SLA downtime inquiry from AlphaHealth. 4 routine vendor updates and customer support queries were categorized, and professional draft responses are ready below for your 1-click sign-off.",
-    emails: [
-      {
-        id: "email-1",
-        senderName: "Dr. Marcus Vance",
-        senderEmail: "derek.vance@enterpriseco.example.test",
-        company: "AlphaHealth Clinical Systems",
-        avatarBg: "bg-rose-600",
-        receivedAt: "18 mins ago",
-        subject: "Unacceptable downtime during peak hours — SLA Credit Request",
-        body: "Our executive and clinical team experienced 45 minutes of complete service interruption today during peak clinic hours. We need an explanation, root-cause analysis, and our contracted SLA credit applied immediately to our monthly billing statement.",
-        priority: "urgent",
-        priorityLabel: "P0 URGENT — SLA ESCALATION",
-        badgeColor: "rose",
-        intent: "SLA / Outage Escalation",
-        confidence: "99.4%",
-        keyInsight: "Client experienced 45m outage during peak hours and is demanding an official RCA and immediate SLA credit.",
-        draftReply: "Dear Dr. Vance,\n\nThank you for reaching out, and please accept our sincere apologies for the disruption experienced today. Our site reliability engineering team has fully mitigated the upstream networking event and restored complete redundant failover.\n\nWe are preparing a full Root Cause Analysis (RCA) document with preventative measures, which will be delivered to you by 3:00 PM today. In addition, our billing operations have automatically initiated the 15% SLA credit on your upcoming invoice. I will personally oversee your account to ensure smooth operations.",
-        status: "needs_approval",
-      },
-      {
-        id: "email-2",
-        senderName: "Marcus Sterling",
-        senderEmail: "billing@vendorco.example.test",
-        company: "VendorCo Finance",
-        avatarBg: "bg-amber-600",
-        receivedAt: "42 mins ago",
-        subject: "Discrepancy on Invoice #INV-4821 ($4,500 vs contracted $3,800)",
-        body: "Invoice #INV-4821 shows a charge of $4,500, but our contracted annual rate agreed upon in MSA Schedule B was $3,800. Please issue a corrected invoice or credit memo before month-end payment processing.",
-        priority: "high",
-        priorityLabel: "ACTION REQUIRED — INVOICE",
-        badgeColor: "amber",
-        intent: "Billing Discrepancy",
-        confidence: "98.8%",
-        keyInsight: "Vendor invoiced $4,500 instead of agreed $3,800 schedule rate. Discrepancy staged in Action Center for approval.",
-        draftReply: "Hi Marcus,\n\nThank you for bringing this to our attention. Our accounts team has cross-referenced Invoice #INV-4821 against Schedule B of our MSA. We have confirmed the contracted rate of $3,800 and applied a $700 credit memo adjustment in our ERP ledger.\n\nThe revised invoice showing the corrected balance of $3,800 will be remitted within the standard Net-30 payment cycle.",
-        status: "needs_approval",
-      },
-      {
-        id: "email-3",
-        senderName: "Alice Smith",
-        senderEmail: "alice.smith@clientcorp.example.test",
-        company: "ClientCorp SaaS",
-        avatarBg: "bg-blue-600",
-        receivedAt: "1 hour ago",
-        subject: "Help with session reset on client analytics dashboard",
-        body: "Hi team, I am unable to log in to our dashboard after the latest update. It keeps looping back to the authorization portal. Could someone help reset my active sessions?",
-        priority: "normal",
-        priorityLabel: "ROUTINE SUPPORT — DRAFT READY",
-        badgeColor: "blue",
-        intent: "Account Support",
-        confidence: "99.1%",
-        keyInsight: "Client encountering auth loop after release; token session cache purge resolves issue.",
-        draftReply: "Hi Alice,\n\nWe have flushed your active session tokens from the authentication gateway. Please clear your browser cache or open an incognito window and log in again at app.clientcorp.io. You should now have immediate access. Let us know if you need any further assistance!",
-        status: "ready_to_send",
-      },
-      {
-        id: "email-4",
-        senderName: "Elena Rostova",
-        senderEmail: "support.user@acmelabs.example.test",
-        company: "Acme Laboratories",
-        avatarBg: "bg-indigo-600",
-        receivedAt: "2 hours ago",
-        subject: "Cannot access weekly CSV reporting exports (Error 403)",
-        body: "Hello, our scheduled weekly export script is failing with error 403 Forbidden. Our analyst needs the compliance records before Friday.",
-        priority: "normal",
-        priorityLabel: "ROUTINE SUPPORT — DRAFT READY",
-        badgeColor: "blue",
-        intent: "API Access & Permissions",
-        confidence: "97.5%",
-        keyInsight: "403 error on exports due to API key expiry on scheduled cron job. Read permissions renewed.",
-        draftReply: "Hello Elena,\n\nOur team checked the access logs and confirmed your API token for the export service had reached its 90-day security rotation threshold. We have extended the export scope and sent a refreshed bearer credential to your account administrator. Your scripts should now succeed without error 403.",
-        status: "ready_to_send",
-      },
-      {
-        id: "email-5",
-        senderName: "DevNews Editorial",
-        senderEmail: "digest@devnews.example.test",
-        company: "TechDigest Media",
-        avatarBg: "bg-slate-600",
-        receivedAt: "3 hours ago",
-        subject: "Developer Digest #142: High Performance Architecture & Vector DBs",
-        body: "In this edition: Python 3.13 JIT compiler benchmarks, zero-downtime database schema migrations, and real-time WebSocket orchestration patterns.",
-        priority: "low",
-        priorityLabel: "INFORMATIONAL — NEWSLETTER",
-        badgeColor: "slate",
-        intent: "Newsletter / Low Priority",
-        confidence: "99.8%",
-        keyInsight: "Industry newsletter automatically categorized into Informational folder. No response required.",
-        draftReply: null,
-        status: "archived",
-      },
-      {
-        id: "email-6",
-        senderName: "Cloud Weekly",
-        senderEmail: "weekly@cloudweekly.example.test",
-        company: "Cloud Operations Net",
-        avatarBg: "bg-slate-600",
-        receivedAt: "5 hours ago",
-        subject: "Cloud Architecture Weekly — Issue 409: Multi-Region Failover",
-        body: "Weekly roundup of cloud infrastructure trends, cost optimization strategies for Postgres connection pooling, and edge computing.",
-        priority: "low",
-        priorityLabel: "INFORMATIONAL — NEWSLETTER",
-        badgeColor: "slate",
-        intent: "Newsletter / Low Priority",
-        confidence: "99.9%",
-        keyInsight: "Weekly digest categorized and archived. No action required.",
-        draftReply: null,
-        status: "archived",
-      }
-    ]
+    executiveBriefing: "Inbox zero — all connected inboxes are fully synced. When new emails arrive from clients or vendors, autonomous classification, priority escalation, and 1-click draft responses will appear here.",
+    emails: [],
   }
 }
 
@@ -3271,6 +3162,7 @@ export default function UniversalWorkflowRunner() {
         }
       }).catch(err => {
         console.warn('Could not fetch campaign by deepRunId:', err)
+        setExecutionResult(null)
       })
     }
   }, [deepRunId, isProductLaunch, workflow.key])
@@ -3304,31 +3196,40 @@ export default function UniversalWorkflowRunner() {
       // Fetch remote campaigns for product launch to merge with local history
       if (isProductLaunch) {
         api.get('/workflows/product-launch/campaigns').then(remoteRuns => {
-          if (Array.isArray(remoteRuns) && remoteRuns.length > 0) {
-            setRunsHistory(prev => {
-              const map = new Map()
-              prev.forEach(r => map.set(r.runId || r.instance_id, r))
-              remoteRuns.forEach(r => {
-                const id = r.runId || r.instance_id
-                if (!map.has(id)) map.set(id, r)
-              })
-              const merged = Array.from(map.values()).slice(0, 20)
+          if (Array.isArray(remoteRuns)) {
+            if (remoteRuns.length === 0) {
+              setRunsHistory([])
               try {
-                localStorage.setItem(`smbflow_runs_history_${workflow.key}`, JSON.stringify(merged))
-                localStorage.setItem('smbflow_runs_history_product_launch', JSON.stringify(merged))
-                localStorage.setItem('smbflow_runs_history_product_launch_sprint', JSON.stringify(merged))
+                localStorage.removeItem(`smbflow_runs_history_${workflow.key}`)
+                localStorage.removeItem('smbflow_runs_history_product_launch')
+                localStorage.removeItem('smbflow_runs_history_product_launch_sprint')
               } catch (_) {}
-              return merged
-            })
-
-            // Auto-load latest remote campaign if user didn't request a fresh run
-            if (!searchParams.get('new')) {
-              setExecutionResult(curr => {
-                if (!curr && remoteRuns[0] && remoteRuns[0].posts && remoteRuns[0].posts.length > 0) {
-                  handleSelectRun(remoteRuns[0])
-                }
-                return curr
+            } else {
+              setRunsHistory(prev => {
+                const map = new Map()
+                prev.forEach(r => map.set(r.runId || r.instance_id, r))
+                remoteRuns.forEach(r => {
+                  const id = r.runId || r.instance_id
+                  if (!map.has(id)) map.set(id, r)
+                })
+                const merged = Array.from(map.values()).slice(0, 20)
+                try {
+                  localStorage.setItem(`smbflow_runs_history_${workflow.key}`, JSON.stringify(merged))
+                  localStorage.setItem('smbflow_runs_history_product_launch', JSON.stringify(merged))
+                  localStorage.setItem('smbflow_runs_history_product_launch_sprint', JSON.stringify(merged))
+                } catch (_) {}
+                return merged
               })
+
+              // Auto-load latest remote campaign if user didn't request a fresh run
+              if (!searchParams.get('new')) {
+                setExecutionResult(curr => {
+                  if (!curr && remoteRuns[0] && remoteRuns[0].posts && remoteRuns[0].posts.length > 0) {
+                    handleSelectRun(remoteRuns[0])
+                  }
+                  return curr
+                })
+              }
             }
           }
         }).catch(() => {})
@@ -8019,7 +7920,9 @@ export default function UniversalWorkflowRunner() {
                     <Mail className="w-4 h-4" />
                   </div>
                   <div>
-                    <div className="text-xl font-bold font-mono text-slate-900 dark:text-white">6</div>
+                    <div className="text-xl font-bold font-mono text-slate-900 dark:text-white">
+                      {(executionResult.emails || []).length}
+                    </div>
                     <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Emails Scanned</div>
                   </div>
                 </div>
@@ -8029,7 +7932,9 @@ export default function UniversalWorkflowRunner() {
                     <AlertTriangle className="w-4 h-4" />
                   </div>
                   <div>
-                    <div className="text-xl font-bold font-mono text-rose-600 dark:text-rose-400">2</div>
+                    <div className="text-xl font-bold font-mono text-rose-600 dark:text-rose-400">
+                      {(executionResult.emails || []).filter(e => e.priority === 'urgent' || e.priority === 'high').length}
+                    </div>
                     <div className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">Urgent / SLA Risks</div>
                   </div>
                 </div>
@@ -8039,7 +7944,9 @@ export default function UniversalWorkflowRunner() {
                     <Send className="w-4 h-4" />
                   </div>
                   <div>
-                    <div className="text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400">2</div>
+                    <div className="text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400">
+                      {(executionResult.emails || []).filter(e => !!e.draftReply && !approvedEmailIds.has(e.id)).length}
+                    </div>
                     <div className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">Draft Replies Ready</div>
                   </div>
                 </div>
@@ -8049,7 +7956,9 @@ export default function UniversalWorkflowRunner() {
                     <Clock className="w-4 h-4" />
                   </div>
                   <div>
-                    <div className="text-xl font-bold font-mono text-indigo-600 dark:text-indigo-400">~45m</div>
+                    <div className="text-xl font-bold font-mono text-indigo-600 dark:text-indigo-400">
+                      {(executionResult.emails || []).length > 0 ? (executionResult.kpis?.timeSavedMinutes ? `~${executionResult.kpis.timeSavedMinutes}m` : '~45m') : '0m'}
+                    </div>
                     <div className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">Time Saved Today</div>
                   </div>
                 </div>
@@ -8062,21 +7971,24 @@ export default function UniversalWorkflowRunner() {
                     <Sparkles className="w-4 h-4 text-blue-500 shrink-0" />
                     <span>Executive Morning Briefing & Triage Summary</span>
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setApprovedEmailIds(new Set(['email-1', 'email-2', 'email-3', 'email-4']))
-                      setEmailToast('All 4 AI draft responses approved and dispatched to Gmail queue!')
-                      setTimeout(() => setEmailToast(null), 5000)
-                    }}
-                    className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold shadow-2xs transition-colors cursor-pointer inline-flex items-center gap-1.5"
-                  >
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>1-Click Approve All Drafts</span>
-                  </button>
+                  {(executionResult.emails || []).some(e => !!e.draftReply && !approvedEmailIds.has(e.id)) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const allDraftIds = (executionResult.emails || []).filter(e => !!e.draftReply).map(e => e.id)
+                        setApprovedEmailIds(new Set([...approvedEmailIds, ...allDraftIds]))
+                        setEmailToast('All AI draft responses approved and dispatched!')
+                        setTimeout(() => setEmailToast(null), 5000)
+                      }}
+                      className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold shadow-2xs transition-colors cursor-pointer inline-flex items-center gap-1.5"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>1-Click Approve All Drafts</span>
+                    </button>
+                  )}
                 </div>
                 <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
-                  {executionResult.executiveBriefing || "Good morning! 6 emails were scanned across your connected inboxes. 2 require your immediate decision: an enterprise billing discrepancy from TechFlow Corp ($4,250) and a high-priority SLA downtime inquiry from AlphaHealth. 4 routine vendor updates and customer support queries were categorized, and professional draft responses are ready below for your 1-click sign-off."}
+                  {executionResult.executiveBriefing || "Inbox zero — all connected inboxes are fully synced. When new emails arrive from clients or vendors, autonomous classification, priority escalation, and 1-click draft responses will appear here."}
                 </p>
               </div>
 
@@ -8084,10 +7996,10 @@ export default function UniversalWorkflowRunner() {
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-1">
                 <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
                   {[
-                    { id: 'all', label: 'All Inbound (6)' },
-                    { id: 'urgent', label: '🚨 Urgent Escalations (2)' },
-                    { id: 'drafts', label: '✉️ Drafts Ready (2)' },
-                    { id: 'routine', label: 'ℹ️ Routine Support (4)' },
+                    { id: 'all', label: `All Inbound (${(executionResult.emails || []).length})` },
+                    { id: 'urgent', label: `🚨 Urgent Escalations (${(executionResult.emails || []).filter(e => e.priority === 'urgent' || e.priority === 'high').length})` },
+                    { id: 'drafts', label: `✉️ Drafts Ready (${(executionResult.emails || []).filter(e => !!e.draftReply && !approvedEmailIds.has(e.id)).length})` },
+                    { id: 'routine', label: `ℹ️ Routine Support (${(executionResult.emails || []).filter(e => e.priority === 'normal' || e.priority === 'low').length})` },
                   ].map(tab => (
                     <button
                       key={tab.id}
@@ -8126,7 +8038,38 @@ export default function UniversalWorkflowRunner() {
 
               {/* ── Triaged Email Cards Feed ── */}
               <div className="space-y-3.5">
-                {(executionResult.emails || [])
+                {(executionResult.emails || []).length === 0 ? (
+                  <div className="py-12 px-6 rounded-2xl bg-slate-50/60 dark:bg-[#0b0f17] border border-dashed border-slate-200 dark:border-[#233048] flex flex-col items-center justify-center text-center space-y-3">
+                    <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                      <Inbox className="w-6 h-6" />
+                    </div>
+                    <div className="space-y-1">
+                      <h4 className="text-sm font-bold text-slate-900 dark:text-white">Inbox Zero — All Clear</h4>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md">
+                        No pending emails requiring triage. Connect your Google Workspace or Outlook account in Integrations, or click "Scan Inbox Now" to sync live incoming threads.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => executeActivePipeline()}
+                        disabled={synthesizing}
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold shadow-xs cursor-pointer flex items-center gap-1.5"
+                      >
+                        <RotateCcw className={`w-3.5 h-3.5 ${synthesizing ? 'animate-spin' : ''}`} />
+                        <span>Scan Inbox Now</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => navigate('/integrations')}
+                        className="px-4 py-2 bg-white dark:bg-[#182234] hover:bg-slate-50 dark:hover:bg-[#233048] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#233048] rounded-xl text-xs font-semibold shadow-2xs cursor-pointer flex items-center gap-1.5"
+                      >
+                        <Plug className="w-3.5 h-3.5 text-blue-500" />
+                        <span>Manage Integrations</span>
+                      </button>
+                    </div>
+                  </div>
+                ) : (executionResult.emails || [])
                   .filter(email => {
                     if (emailFilterTab === 'urgent') return email.priority === 'urgent' || email.priority === 'high'
                     if (emailFilterTab === 'drafts') return !!email.draftReply && !approvedEmailIds.has(email.id)

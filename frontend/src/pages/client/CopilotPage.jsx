@@ -9,7 +9,7 @@
 //   • Dynamic live SVG Canvas Node Graph with authentic tool brand logos & flow pulses
 //   • Smooth full-page vertical scrolling (overflow-y-auto)
 //   • Conversational Execution Mode with Node Inspection Drawers
-//   • Zero saffron/orange, zero purple, pure enterprise aesthetics
+//   
 // ─────────────────────────────────────────────────────────────────────────────
 
 import React, { useState, useEffect, useRef } from 'react'
@@ -546,318 +546,316 @@ function CanvasPreview({ template }) {
   }
 
   return (
-    <div className={`w-full transition-all flex flex-col ${
-      isFullScreen 
-        ? 'fixed inset-0 z-50 p-4 md:p-8 bg-slate-950/85 backdrop-blur-md flex items-center justify-center' 
+    <div className={`w-full transition-all flex flex-col ${isFullScreen
+        ? 'fixed inset-0 z-50 p-4 md:p-8 bg-slate-950/85 backdrop-blur-md flex items-center justify-center'
         : 'max-w-4xl mx-auto mt-6 bg-white dark:bg-[#121826] rounded-2xl border border-slate-200 dark:border-[#233048] shadow-md overflow-hidden relative'
-    }`}>
+      }`}>
       <div className={`w-full flex flex-col ${isFullScreen ? 'max-w-6xl max-h-[92vh] bg-white dark:bg-[#121826] rounded-2xl border border-slate-200 dark:border-[#233048] shadow-2xl overflow-hidden' : ''}`}>
-      {/* Canvas Top Bar */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-200 dark:border-[#233048] bg-slate-50 dark:bg-[#0b0f17]/90 z-10 relative">
-        <div className="flex items-center gap-2">
-          <span className="flex h-2 w-2 relative">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-          </span>
-          <span className="text-[11px] font-mono text-slate-700 dark:text-slate-300 font-medium">
-            Active Workflow: <span className="text-blue-600 dark:text-blue-400 font-semibold">{template.label}</span>
-          </span>
+        {/* Canvas Top Bar */}
+        <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-200 dark:border-[#233048] bg-slate-50 dark:bg-[#0b0f17]/90 z-10 relative">
+          <div className="flex items-center gap-2">
+            <span className="flex h-2 w-2 relative">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <span className="text-[11px] font-mono text-slate-700 dark:text-slate-300 font-medium">
+              Active Workflow: <span className="text-blue-600 dark:text-blue-400 font-semibold">{template.label}</span>
+            </span>
+          </div>
+
+          {/* Canvas Visual Indicator */}
+          <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+            <span>Click node to inspect</span>
+          </div>
         </div>
 
-        {/* Canvas Visual Indicator */}
-        <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-          <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-          <span>Click node to inspect</span>
-        </div>
-      </div>
-
-      {/* SVG Canvas Graph Auto-Centered & Fitted */}
-      <div
-        ref={containerRef}
-        className="p-4 sm:p-6 overflow-x-auto overflow-y-hidden flex items-center justify-start sm:justify-center relative bg-slate-50/50 dark:bg-[#0b0f17]/40 select-none"
-      >
+        {/* SVG Canvas Graph Auto-Centered & Fitted */}
         <div
-          style={{ transform: 'scale(0.85)', transformOrigin: 'top center' }}
-          className="shrink-0"
+          ref={containerRef}
+          className="p-4 sm:p-6 overflow-x-auto overflow-y-hidden flex items-center justify-start sm:justify-center relative bg-slate-50/50 dark:bg-[#0b0f17]/40 select-none"
         >
-          <svg className="w-[980px] h-[240px] overflow-visible">
-            {/* Edge Connectors */}
-            {template.edges.map((edge, idx) => {
-              const fromNode = template.nodes.find(n => n.id === edge.from)
-              const toNode = template.nodes.find(n => n.id === edge.to)
-              if (!fromNode || !toNode) return null
+          <div
+            style={{ transform: 'scale(0.85)', transformOrigin: 'top center' }}
+            className="shrink-0"
+          >
+            <svg className="w-[980px] h-[240px] overflow-visible">
+              {/* Edge Connectors */}
+              {template.edges.map((edge, idx) => {
+                const fromNode = template.nodes.find(n => n.id === edge.from)
+                const toNode = template.nodes.find(n => n.id === edge.to)
+                if (!fromNode || !toNode) return null
 
-              const startX = fromNode.x + nodeWidth
-              const startY = fromNode.y + nodeHeight / 2
-              const endX = toNode.x
-              const endY = toNode.y + nodeHeight / 2
-              const midX = (startX + endX) / 2
+                const startX = fromNode.x + nodeWidth
+                const startY = fromNode.y + nodeHeight / 2
+                const endX = toNode.x
+                const endY = toNode.y + nodeHeight / 2
+                const midX = (startX + endX) / 2
 
-              const pathData = `M ${startX} ${startY} C ${midX} ${startY}, ${midX} ${endY}, ${endX} ${endY}`
+                const pathData = `M ${startX} ${startY} C ${midX} ${startY}, ${midX} ${endY}, ${endX} ${endY}`
 
-              return (
-                <g key={idx}>
-                  {/* Glow Line */}
-                  <path
-                    d={pathData}
-                    fill="none"
-                    stroke="#3b82f6"
-                    strokeWidth="3"
-                    strokeOpacity="0.2"
-                  />
-                  {/* Main Connector Line */}
-                  <path
-                    d={pathData}
-                    fill="none"
-                    stroke="#64748b"
-                    strokeWidth="2"
-                    strokeDasharray="4 2"
-                  />
-                  {/* Flow Pulse */}
-                  <circle r="3" fill="#3b82f6">
-                    <animateMotion
-                      path={pathData}
-                      dur="2.5s"
-                      repeatCount="indefinite"
-                    />
-                  </circle>
-                  {/* Edge Label */}
-                  {edge.label && (
-                    <text
-                      x={midX}
-                      y={(startY + endY) / 2 - 6}
-                      fill="#64748b"
-                      fontSize="9"
-                      fontFamily="monospace"
-                      textAnchor="middle"
-                    >
-                      {edge.label}
-                    </text>
-                  )}
-                </g>
-              )
-            })}
-
-            {/* Interactive Clickable Nodes */}
-            {template.nodes.map((node, nIdx) => {
-              const isSelected = selectedNode?.id === node.id
-
-              return (
-                <g
-                  key={`${template.id}_${node.id}`}
-                  transform={`translate(${node.x}, ${node.y})`}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setSelectedNode(node)
-                  }}
-                  className="cursor-pointer group"
-                >
-                  {/* Active Selected Halo */}
-                  {isSelected && (
-                    <rect
-                      x="-4"
-                      y="-4"
-                      width={nodeWidth + 8}
-                      height={nodeHeight + 8}
-                      rx="14"
+                return (
+                  <g key={idx}>
+                    {/* Glow Line */}
+                    <path
+                      d={pathData}
                       fill="none"
                       stroke="#3b82f6"
-                      strokeWidth="2.5"
+                      strokeWidth="3"
+                      strokeOpacity="0.2"
+                    />
+                    {/* Main Connector Line */}
+                    <path
+                      d={pathData}
+                      fill="none"
+                      stroke="#64748b"
+                      strokeWidth="2"
                       strokeDasharray="4 2"
-                      className="animate-pulse"
                     />
-                  )}
-
-                  {/* Node Box */}
-                  <rect
-                    width={nodeWidth}
-                    height={nodeHeight}
-                    rx="10"
-                    fill="currentColor"
-                    className={`text-white dark:text-[#182030] fill-current transition-all shadow-xs ${
-                      isSelected
-                        ? 'stroke-blue-500 shadow-md'
-                        : 'stroke-slate-300 dark:stroke-[#2b374c] group-hover:stroke-blue-400'
-                    }`}
-                    strokeWidth={isSelected ? '2' : '1.5'}
-                  />
-
-                  {/* Left Colored Accent Bar */}
-                  <rect
-                    x="0"
-                    y="0"
-                    width="4"
-                    height={nodeHeight}
-                    rx="2"
-                    fill={node.color}
-                  />
-
-                  {/* Icon Container */}
-                  <g transform="translate(10, 14)">
-                    <rect
-                      width="26"
-                      height="26"
-                      rx="6"
-                      fill={node.color}
-                      fillOpacity="0.15"
-                    />
-                    <foreignObject width="26" height="26">
-                      <div className="w-full h-full flex items-center justify-center pointer-events-none">
-                        <ToolLogo name={node.tool} className="w-4 h-4" />
-                      </div>
-                    </foreignObject>
+                    {/* Flow Pulse */}
+                    <circle r="3" fill="#3b82f6">
+                      <animateMotion
+                        path={pathData}
+                        dur="2.5s"
+                        repeatCount="indefinite"
+                      />
+                    </circle>
+                    {/* Edge Label */}
+                    {edge.label && (
+                      <text
+                        x={midX}
+                        y={(startY + endY) / 2 - 6}
+                        fill="#64748b"
+                        fontSize="9"
+                        fontFamily="monospace"
+                        textAnchor="middle"
+                      >
+                        {edge.label}
+                      </text>
+                    )}
                   </g>
+                )
+              })}
 
-                  {/* Text Content */}
-                  <text
-                    x="42"
-                    y="24"
-                    className="fill-slate-900 dark:fill-slate-100 select-none"
-                    fontSize="11"
-                    fontWeight="600"
-                    fontFamily="system-ui, -apple-system, sans-serif"
-                  >
-                    {node.title.length > 14 ? node.title.slice(0, 13) + '…' : node.title}
-                  </text>
-                  <text
-                    x="42"
-                    y="39"
-                    className="fill-slate-500 dark:fill-slate-400 select-none"
-                    fontSize="9.5"
-                    fontFamily="system-ui, -apple-system, sans-serif"
-                  >
-                    {node.subtitle.length > 16 ? node.subtitle.slice(0, 15) + '…' : node.subtitle}
-                  </text>
+              {/* Interactive Clickable Nodes */}
+              {template.nodes.map((node, nIdx) => {
+                const isSelected = selectedNode?.id === node.id
 
-                  {/* Status Check Badge */}
-                  <circle cx={nodeWidth - 10} cy="12" r="4" fill="#10b981" />
-                </g>
-              )
-            })}
-          </svg>
+                return (
+                  <g
+                    key={`${template.id}_${node.id}`}
+                    transform={`translate(${node.x}, ${node.y})`}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setSelectedNode(node)
+                    }}
+                    className="cursor-pointer group"
+                  >
+                    {/* Active Selected Halo */}
+                    {isSelected && (
+                      <rect
+                        x="-4"
+                        y="-4"
+                        width={nodeWidth + 8}
+                        height={nodeHeight + 8}
+                        rx="14"
+                        fill="none"
+                        stroke="#3b82f6"
+                        strokeWidth="2.5"
+                        strokeDasharray="4 2"
+                        className="animate-pulse"
+                      />
+                    )}
+
+                    {/* Node Box */}
+                    <rect
+                      width={nodeWidth}
+                      height={nodeHeight}
+                      rx="10"
+                      fill="currentColor"
+                      className={`text-white dark:text-[#182030] fill-current transition-all shadow-xs ${isSelected
+                          ? 'stroke-blue-500 shadow-md'
+                          : 'stroke-slate-300 dark:stroke-[#2b374c] group-hover:stroke-blue-400'
+                        }`}
+                      strokeWidth={isSelected ? '2' : '1.5'}
+                    />
+
+                    {/* Left Colored Accent Bar */}
+                    <rect
+                      x="0"
+                      y="0"
+                      width="4"
+                      height={nodeHeight}
+                      rx="2"
+                      fill={node.color}
+                    />
+
+                    {/* Icon Container */}
+                    <g transform="translate(10, 14)">
+                      <rect
+                        width="26"
+                        height="26"
+                        rx="6"
+                        fill={node.color}
+                        fillOpacity="0.15"
+                      />
+                      <foreignObject width="26" height="26">
+                        <div className="w-full h-full flex items-center justify-center pointer-events-none">
+                          <ToolLogo name={node.tool} className="w-4 h-4" />
+                        </div>
+                      </foreignObject>
+                    </g>
+
+                    {/* Text Content */}
+                    <text
+                      x="42"
+                      y="24"
+                      className="fill-slate-900 dark:fill-slate-100 select-none"
+                      fontSize="11"
+                      fontWeight="600"
+                      fontFamily="system-ui, -apple-system, sans-serif"
+                    >
+                      {node.title.length > 14 ? node.title.slice(0, 13) + '…' : node.title}
+                    </text>
+                    <text
+                      x="42"
+                      y="39"
+                      className="fill-slate-500 dark:fill-slate-400 select-none"
+                      fontSize="9.5"
+                      fontFamily="system-ui, -apple-system, sans-serif"
+                    >
+                      {node.subtitle.length > 16 ? node.subtitle.slice(0, 15) + '…' : node.subtitle}
+                    </text>
+
+                    {/* Status Check Badge */}
+                    <circle cx={nodeWidth - 10} cy="12" r="4" fill="#10b981" />
+                  </g>
+                )
+              })}
+            </svg>
+          </div>
         </div>
-      </div>
 
-      {/* ── Interactive Node Inspection Panel (Displays When Node is Clicked) ── */}
-      {selectedNode && (
-        <div className="border-t border-slate-200 dark:border-[#233048] bg-slate-50 dark:bg-[#0b0f17] p-4 transition-all">
-          <div className="flex flex-wrap items-center justify-between gap-3 pb-3 mb-3 border-b border-slate-200 dark:border-[#233048]">
-            <div className="flex items-center gap-2.5">
-              <div
-                className="w-8 h-8 rounded-lg flex items-center justify-center p-1.5 shadow-2xs"
-                style={{ backgroundColor: `${selectedNode.color}20`, border: `1px solid ${selectedNode.color}50` }}
-              >
-                <ToolLogo name={selectedNode.tool} className="w-4 h-4" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h4 className="text-xs font-bold text-slate-900 dark:text-white">{selectedNode.title}</h4>
-                  <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-slate-200 dark:bg-[#182234] text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-[#233048]">
-                    {selectedNode.type}
-                  </span>
+        {/* ── Interactive Node Inspection Panel (Displays When Node is Clicked) ── */}
+        {selectedNode && (
+          <div className="border-t border-slate-200 dark:border-[#233048] bg-slate-50 dark:bg-[#0b0f17] p-4 transition-all">
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-3 mb-3 border-b border-slate-200 dark:border-[#233048]">
+              <div className="flex items-center gap-2.5">
+                <div
+                  className="w-8 h-8 rounded-lg flex items-center justify-center p-1.5 shadow-2xs"
+                  style={{ backgroundColor: `${selectedNode.color}20`, border: `1px solid ${selectedNode.color}50` }}
+                >
+                  <ToolLogo name={selectedNode.tool} className="w-4 h-4" />
                 </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                  {selectedNode.subtitle} · Connected Brand: <span className="font-semibold text-slate-700 dark:text-slate-300">{selectedNode.brand}</span>
-                </p>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-xs font-bold text-slate-900 dark:text-white">{selectedNode.title}</h4>
+                    <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-slate-200 dark:bg-[#182234] text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-[#233048]">
+                      {selectedNode.type}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                    {selectedNode.subtitle} · Connected Brand: <span className="font-semibold text-slate-700 dark:text-slate-300">{selectedNode.brand}</span>
+                  </p>
+                </div>
               </div>
-            </div>
 
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleTestStep}
-                disabled={isTestingStep}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold shadow-xs transition-all cursor-pointer disabled:opacity-50"
-              >
-                <Play size={12} className={isTestingStep ? 'animate-spin' : 'fill-white'} />
-                <span>{isTestingStep ? 'Executing step...' : 'Test Step'}</span>
-              </button>
-
-              <button
-                onClick={() => setSelectedNode(null)}
-                className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
-                title="Close inspector"
-              >
-                ✕
-              </button>
-            </div>
-          </div>
-
-          {/* Test Execution Result Banner */}
-          {testResult && (
-            <div className="mb-3 p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-200 text-xs flex items-center justify-between animate-fade-in">
               <div className="flex items-center gap-2">
-                <CheckCircle2 size={14} className="text-emerald-600 dark:text-emerald-400" />
-                <span>Node test executed successfully in <strong>{testResult.durationMs}ms</strong> at {testResult.timestamp}</span>
-              </div>
-              <span className="text-[10px] font-mono uppercase tracking-wider bg-emerald-100 dark:bg-emerald-900 px-2 py-0.5 rounded">
-                HTTP 200 OK
-              </span>
-            </div>
-          )}
-
-          {/* Configuration & Payload Data Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-            {/* 1. Step Parameters */}
-            <div className="p-3 bg-white dark:bg-[#121826] rounded-xl border border-slate-200 dark:border-[#233048]">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  Node Configuration
-                </span>
-                <Sliders className="w-3.5 h-3.5 text-slate-400" />
-              </div>
-              <div className="space-y-1.5 font-mono text-[10.5px]">
-                {selectedNode.config &&
-                  Object.entries(selectedNode.config).map(([k, v]) => (
-                    <div key={k} className="flex items-start justify-between gap-2 border-b border-slate-100 dark:border-[#1a2336] pb-1 last:border-0 last:pb-0">
-                      <span className="text-slate-500 dark:text-slate-400 truncate">{k}:</span>
-                      <span className="text-slate-900 dark:text-slate-200 font-semibold truncate text-right max-w-[130px]">
-                        {typeof v === 'boolean' ? (v ? 'true' : 'false') : String(v)}
-                      </span>
-                    </div>
-                  ))}
-              </div>
-            </div>
-
-            {/* 2. Mock Input Payload */}
-            <div className="p-3 bg-white dark:bg-[#121826] rounded-xl border border-slate-200 dark:border-[#233048]">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  Input Stream
-                </span>
                 <button
-                  onClick={() => handleCopy('input', selectedNode.sampleInput)}
-                  className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
-                  title="Copy Input JSON"
+                  onClick={handleTestStep}
+                  disabled={isTestingStep}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold shadow-xs transition-all cursor-pointer disabled:opacity-50"
                 >
-                  {copiedPayload === 'input' ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
+                  <Play size={12} className={isTestingStep ? 'animate-spin' : 'fill-white'} />
+                  <span>{isTestingStep ? 'Executing step...' : 'Test Step'}</span>
+                </button>
+
+                <button
+                  onClick={() => setSelectedNode(null)}
+                  className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+                  title="Close inspector"
+                >
+                  ✕
                 </button>
               </div>
-              <pre className="text-[10px] font-mono text-slate-700 dark:text-slate-300 max-h-24 overflow-x-auto overflow-y-auto leading-tight bg-slate-50 dark:bg-[#0b0f17] p-2 rounded border border-slate-100 dark:border-[#1a2336]">
-                {JSON.stringify(selectedNode.sampleInput, null, 2)}
-              </pre>
             </div>
 
-            {/* 3. Output Stream */}
-            <div className="p-3 bg-white dark:bg-[#121826] rounded-xl border border-slate-200 dark:border-[#233048]">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  Output Result
+            {/* Test Execution Result Banner */}
+            {testResult && (
+              <div className="mb-3 p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-200 text-xs flex items-center justify-between animate-fade-in">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 size={14} className="text-emerald-600 dark:text-emerald-400" />
+                  <span>Node test executed successfully in <strong>{testResult.durationMs}ms</strong> at {testResult.timestamp}</span>
+                </div>
+                <span className="text-[10px] font-mono uppercase tracking-wider bg-emerald-100 dark:bg-emerald-900 px-2 py-0.5 rounded">
+                  HTTP 200 OK
                 </span>
-                <button
-                  onClick={() => handleCopy('output', selectedNode.sampleOutput)}
-                  className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
-                  title="Copy Output JSON"
-                >
-                  {copiedPayload === 'output' ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
-                </button>
               </div>
-              <pre className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 max-h-24 overflow-x-auto overflow-y-auto leading-tight bg-slate-50 dark:bg-[#0b0f17] p-2 rounded border border-slate-100 dark:border-[#1a2336]">
-                {JSON.stringify(selectedNode.sampleOutput, null, 2)}
-              </pre>
+            )}
+
+            {/* Configuration & Payload Data Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+              {/* 1. Step Parameters */}
+              <div className="p-3 bg-white dark:bg-[#121826] rounded-xl border border-slate-200 dark:border-[#233048]">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    Node Configuration
+                  </span>
+                  <Sliders className="w-3.5 h-3.5 text-slate-400" />
+                </div>
+                <div className="space-y-1.5 font-mono text-[10.5px]">
+                  {selectedNode.config &&
+                    Object.entries(selectedNode.config).map(([k, v]) => (
+                      <div key={k} className="flex items-start justify-between gap-2 border-b border-slate-100 dark:border-[#1a2336] pb-1 last:border-0 last:pb-0">
+                        <span className="text-slate-500 dark:text-slate-400 truncate">{k}:</span>
+                        <span className="text-slate-900 dark:text-slate-200 font-semibold truncate text-right max-w-[130px]">
+                          {typeof v === 'boolean' ? (v ? 'true' : 'false') : String(v)}
+                        </span>
+                      </div>
+                    ))}
+                </div>
+              </div>
+
+              {/* 2. Mock Input Payload */}
+              <div className="p-3 bg-white dark:bg-[#121826] rounded-xl border border-slate-200 dark:border-[#233048]">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    Input Stream
+                  </span>
+                  <button
+                    onClick={() => handleCopy('input', selectedNode.sampleInput)}
+                    className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+                    title="Copy Input JSON"
+                  >
+                    {copiedPayload === 'input' ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
+                  </button>
+                </div>
+                <pre className="text-[10px] font-mono text-slate-700 dark:text-slate-300 max-h-24 overflow-x-auto overflow-y-auto leading-tight bg-slate-50 dark:bg-[#0b0f17] p-2 rounded border border-slate-100 dark:border-[#1a2336]">
+                  {JSON.stringify(selectedNode.sampleInput, null, 2)}
+                </pre>
+              </div>
+
+              {/* 3. Output Stream */}
+              <div className="p-3 bg-white dark:bg-[#121826] rounded-xl border border-slate-200 dark:border-[#233048]">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    Output Result
+                  </span>
+                  <button
+                    onClick={() => handleCopy('output', selectedNode.sampleOutput)}
+                    className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+                    title="Copy Output JSON"
+                  >
+                    {copiedPayload === 'output' ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
+                  </button>
+                </div>
+                <pre className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 max-h-24 overflow-x-auto overflow-y-auto leading-tight bg-slate-50 dark:bg-[#0b0f17] p-2 rounded border border-slate-100 dark:border-[#1a2336]">
+                  {JSON.stringify(selectedNode.sampleOutput, null, 2)}
+                </pre>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
       </div>
     </div>
   )
@@ -1210,9 +1208,8 @@ function NodeExecutionPipeline({ nodes }) {
                   top: `${node.y}px`,
                   width: '180px',
                 }}
-                className={`bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] border-l-4 ${node.borderColor} rounded-xl px-2.5 py-2 shadow-2xs transition-all cursor-pointer select-none hover:shadow-xs hover:border-slate-300 dark:hover:border-slate-700 ${
-                  isSelected ? 'ring-2 ring-blue-500 shadow-md' : ''
-                }`}
+                className={`bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] border-l-4 ${node.borderColor} rounded-xl px-2.5 py-2 shadow-2xs transition-all cursor-pointer select-none hover:shadow-xs hover:border-slate-300 dark:hover:border-slate-700 ${isSelected ? 'ring-2 ring-blue-500 shadow-md' : ''
+                  }`}
               >
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 min-w-0">
@@ -1379,7 +1376,7 @@ export default function CopilotPage() {
           }
         }).catch(() => null)
       }
-    } catch (_) {}
+    } catch (_) { }
 
     await new Promise(r => setTimeout(r, 900))
 
@@ -1421,11 +1418,11 @@ export default function CopilotPage() {
   useEffect(() => {
     api.get('/copilot/insights')
       .then(res => setInsights(res))
-      .catch(() => {})
+      .catch(() => { })
 
     api.get('/copilot/dynamic-prompts')
       .then(res => setDynamicData(res))
-      .catch(() => {})
+      .catch(() => { })
   }, [api])
 
   // Auto-expand textarea dynamically as user types
@@ -1445,8 +1442,8 @@ export default function CopilotPage() {
 
     for (const file of files) {
       const isText = /\.(txt|csv|json|md|log|yaml|yml|xml|html|js|ts|py|sql)$/i.test(file.name)
-      const sizeFormatted = file.size > 1048576 
-        ? `${(file.size / 1048576).toFixed(1)} MB` 
+      const sizeFormatted = file.size > 1048576
+        ? `${(file.size / 1048576).toFixed(1)} MB`
         : `${(file.size / 1024).toFixed(1)} KB`
 
       if (isText) {
@@ -1549,7 +1546,7 @@ export default function CopilotPage() {
   // Cancel Voice Input
   function cancelVoiceInput() {
     if (recognitionRef.current) {
-      try { recognitionRef.current.stop() } catch {}
+      try { recognitionRef.current.stop() } catch { }
     }
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       mediaRecorderRef.current.stop()
@@ -1561,7 +1558,7 @@ export default function CopilotPage() {
   // Stop & keep transcript
   function stopVoiceInput() {
     if (recognitionRef.current) {
-      try { recognitionRef.current.stop() } catch {}
+      try { recognitionRef.current.stop() } catch { }
     }
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       mediaRecorderRef.current.stop()
@@ -1949,11 +1946,10 @@ export default function CopilotPage() {
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isUploading}
-                className={`w-7 h-7 rounded-lg border flex items-center justify-center transition-all cursor-pointer ${
-                  attachedFiles.length > 0
+                className={`w-7 h-7 rounded-lg border flex items-center justify-center transition-all cursor-pointer ${attachedFiles.length > 0
                     ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400'
                     : 'border-slate-200 dark:border-[#233048] bg-slate-50 dark:bg-[#182234] hover:bg-slate-100 dark:hover:bg-[#233048] text-slate-600 dark:text-slate-300'
-                }`}
+                  }`}
                 title="Upload file or document"
               >
                 {isUploading ? <RefreshCw className="w-3.5 h-3.5 animate-spin text-blue-500" /> : <Plus className="w-4 h-4" />}
@@ -1964,13 +1960,12 @@ export default function CopilotPage() {
                 <button
                   type="button"
                   onClick={toggleVoiceInput}
-                  className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
-                    isListening
+                  className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all cursor-pointer ${isListening
                       ? 'bg-red-500 text-white animate-pulse ring-2 ring-red-400'
                       : isTranscribing
-                      ? 'bg-blue-600 text-white animate-spin'
-                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#182234]'
-                  }`}
+                        ? 'bg-blue-600 text-white animate-spin'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#182234]'
+                    }`}
                   title={isListening ? 'Stop listening' : 'Voice input (Speak to AI)'}
                 >
                   {isListening ? <Square className="w-3.5 h-3.5 fill-white" /> : <Mic className="w-4 h-4" />}
@@ -2017,11 +2012,10 @@ export default function CopilotPage() {
                     onMouseEnter={() => setHoveredTemplate(tpl)}
                     onMouseLeave={() => setHoveredTemplate(null)}
                     onClick={() => handleSelectTemplate(tpl)}
-                    className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all cursor-pointer ${
-                      isSelected
+                    className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all cursor-pointer ${isSelected
                         ? 'border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-[#182234] text-blue-700 dark:text-blue-300'
                         : 'border-slate-200 dark:border-[#233048] bg-white dark:bg-[#121826] text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-[#182234]'
-                    }`}
+                      }`}
                   >
                     <ToolLogo name={tpl.iconName} className="w-3.5 h-3.5" />
                     <span>{tpl.label}</span>
@@ -2059,11 +2053,10 @@ export default function CopilotPage() {
 
                   <div className={`max-w-[85%] md:max-w-[78%] ${isUser ? 'items-end' : 'items-start'}`}>
                     <div
-                      className={`p-4 rounded-2xl text-sm leading-relaxed ${
-                        isUser
+                      className={`p-4 rounded-2xl text-sm leading-relaxed ${isUser
                           ? 'bg-blue-600 text-white rounded-tr-xs shadow-sm'
                           : 'bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] text-slate-900 dark:text-slate-100 rounded-tl-xs shadow-2xs'
-                      }`}
+                        }`}
                     >
                       <MarkdownRenderer content={msg.content} />
 
@@ -2080,11 +2073,10 @@ export default function CopilotPage() {
                               return (
                                 <div
                                   key={t.tool_key}
-                                  className={`p-2 rounded-lg border flex items-center justify-between gap-2 transition-all ${
-                                    isConn
+                                  className={`p-2 rounded-lg border flex items-center justify-between gap-2 transition-all ${isConn
                                       ? 'bg-white dark:bg-[#121826] border-slate-200 dark:border-[#233048]'
                                       : 'bg-amber-50/60 dark:bg-amber-950/20 border-amber-300 dark:border-amber-800/60'
-                                  }`}
+                                    }`}
                                 >
                                   <div className="flex items-center gap-2 min-w-0">
                                     <ToolLogo name={t.tool_key} className="w-4 h-4 shrink-0" />
@@ -2284,11 +2276,10 @@ export default function CopilotPage() {
                   type="button"
                   onClick={() => convFileInputRef.current?.click()}
                   disabled={isUploading}
-                  className={`p-2 rounded-xl transition-colors cursor-pointer ${
-                    attachedFiles.length > 0
+                  className={`p-2 rounded-xl transition-colors cursor-pointer ${attachedFiles.length > 0
                       ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400'
                       : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#182234]'
-                  }`}
+                    }`}
                   title="Upload file or document"
                 >
                   {isUploading ? <RefreshCw className="w-4 h-4 animate-spin text-blue-500" /> : <Plus className="w-4 h-4" />}
@@ -2306,9 +2297,8 @@ export default function CopilotPage() {
                 <button
                   type="button"
                   onClick={toggleVoiceInput}
-                  className={`p-2 rounded-xl transition-colors ${
-                    isListening ? 'bg-red-500 text-white animate-pulse' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-                  }`}
+                  className={`p-2 rounded-xl transition-colors ${isListening ? 'bg-red-500 text-white animate-pulse' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                    }`}
                   title="Voice input"
                 >
                   <Mic className="w-4 h-4" />

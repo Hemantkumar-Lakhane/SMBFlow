@@ -1,4 +1,4 @@
-param()
+﻿param()
 
 Set-Location $PSScriptRoot
 
@@ -153,17 +153,10 @@ try {
     Write-Host "Notice: Docker not available or services already running natively." -ForegroundColor Yellow
 }
 
-$emailFixture = Join-Path $PSScriptRoot "db\seed\data\email_messages.json"
-if (-not (Test-Path $emailFixture)) {
-    Write-Host "Generating Email Summarizer fixture (email_messages.json)..." -ForegroundColor Cyan
-    .\venv\Scripts\python.exe db/seed/email_seed.py
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "WARNING: Email fixture generation failed. The Email Summarizer workflow may have no data." -ForegroundColor Yellow
-        Write-Host "         Retry manually with: .\venv\Scripts\python.exe db/seed/email_seed.py" -ForegroundColor Yellow
-    }
-} else {
-    Write-Host "Email Summarizer fixture already present (email_messages.json) - skipping seed generation." -ForegroundColor Gray
-}
+# =============================================================================
+# Automated Seeding: Disabled for production launch
+# =============================================================================
+Write-Host "Launch mode active: automated mock data seeding is disabled." -ForegroundColor Gray
 
 # =============================================================================
 # 2. Check and start Backend (Port 8000)

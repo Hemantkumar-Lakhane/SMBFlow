@@ -64,7 +64,7 @@ export function TopHeader({ onMenuToggle, mobileMenuOpen = false }) {
 
   const parts = location.pathname.split('/').filter(Boolean)
   const crumbs = parts.map((part, i) => ({
-    label: routeLabels[part] ?? part.charAt(0).toUpperCase() + part.slice(1).replace(/-/g, ' '),
+    label: routeLabels[part] ?? part.split(/[-_]/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
     to: '/' + parts.slice(0, i + 1).join('/'),
     isLast: i === parts.length - 1,
   }))

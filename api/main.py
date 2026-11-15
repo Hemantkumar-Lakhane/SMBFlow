@@ -121,7 +121,11 @@ async def lifespan(app: FastAPI):
                 "ALTER TABLE agent_run_records "
                 "ADD COLUMN IF NOT EXISTS output_data JSONB"
             ))
-        log.info("Schema check: agent_run_records.output_data present")
+            await _mconn.execute(_sql_text(
+                "ALTER TABLE users "
+                "ADD COLUMN IF NOT EXISTS avatar_url TEXT"
+            ))
+        log.info("Schema check: agent_run_records.output_data and users.avatar_url present")
     except Exception as _mig_err:
         # Non-fatal: the app still runs; per-node structured output just won't
         # persist to the normalized table until this column exists.
@@ -206,7 +210,7 @@ async def lifespan(app: FastAPI):
     # Seed super-admin from env
     _admin_email = os.getenv("ADMIN_EMAIL", "admin@smbflow.com")
     _admin_pw    = os.getenv("ADMIN_PASSWORD", "admin123")
-    _admin_name  = os.getenv("ADMIN_FULL_NAME", "SMBFlow Admin")
+    _admin_name  = os.getenv("ADMIN_FULL_NAME", "Isolate Admin")
     try:
         session = await get_raw_session()
         async with session:
@@ -813,7 +817,9 @@ async def get_me(
         or (current_user.email.split("@")[0].replace(".", " ").title() if current_user.email else "Dev User")
     )
 
-    avatar_val = profile.get(f"avatar_{current_user.user_id}") or profile.get("avatar_url") or ""
+    u = await crud.get_user_by_email(db, current_user.email)
+    user_avatar = getattr(u, 'avatar_url', None) if u else None
+    avatar_val = user_avatar or profile.get(f"avatar_{current_user.user_id}") or profile.get("avatar_url") or ""
 
     res = {
         "id": current_user.user_id,
@@ -857,8 +863,11 @@ async def update_user_profile(
         await db.refresh(org_user)
     
     u = await crud.get_user_by_email(db, current_user.email)
-    if u and body.full_name:
-        u.full_name = body.full_name
+    if u:
+        if body.full_name:
+            u.full_name = body.full_name
+        if body.avatar_url is not None:
+            u.avatar_url = body.avatar_url
         await db.commit()
 
     if org and body.avatar_url is not None:

@@ -1,8 +1,8 @@
 # SMBFlow Complete Architecture Audit & Forensic System Analysis
 
-> **Audit Date:** March 2026 (System Time)  
-> **Repository:** `Hemantkumar-Lakhane/SMBFlow`  
-> **Git Commit Audited:** `079bcf1` (Clean `main`)  
+> **Audit Date:** March 2026 (System Time)
+> **Repository:** `Hemantkumar-Lakhane/SMBFlow`
+> **Git Commit Audited:** `079bcf1` (Clean `main`)
 > **Methodology:** Direct static analysis, source code parsing, database inspection, and runtime trace verification. Zero README assumptions; all findings verified against physical codebase reality.
 
 ---
@@ -12,6 +12,7 @@
 **SMBFlow** (internally branded in legacy modules as **OpsGrid**) is an autonomous, multi-tenant B2B operations orchestration platform. It is engineered to ingest business signals (churn risks, stalled deals, inbound leads, expense anomalies, medical patient intake, email inbox events), evaluate them using a multi-agent Directed Acyclic Graph (DAG), execute verified remediations via tool connectors, and persist an immutable, tamper-evident audit trail.
 
 ### Key Architectural Realities
+
 1. **The Orchestration Core is Custom, Not LangGraph:** Despite `langgraph` and `langchain` appearing in `requirements.txt`, the core orchestration engine (`core/orchestrator.py`) is entirely an in-house asynchronous DAG interpreter (`WorkflowOrchestrator`). It manages node traversal, topological edge condition evaluation via `simpleeval`, event-driven suspension (no polling), and the **Reflexion self-healing retry loop**.
 2. **Hybrid Business Logic Architecture:** Business rules, weights, and scoring thresholds are defined as structured JSON (`config/templates/*.json`), injected into prompt templates (`workflows/prompts/*`), reasoned and calculated by the LLM (typically Claude 3.5 Sonnet / heavy tier), and validated by deterministic Python logic and an adversarial **Prosecutor-Judge dual-turn verification pattern**.
 3. **Database-First State Persistence:** State is strictly decoupled from process memory. All workflow runs, node execution logs, escalation flags, and human approvals are persisted to PostgreSQL using SQLAlchemy 2.0 Async (`asyncpg`). Process memory retains only ephemeral WebSocket connections and active `asyncio` task handles.
@@ -22,29 +23,30 @@
 
 ## SECTION 2: TECHNOLOGY STACK AUDIT
 
-| Layer | Technology | Declared vs Actual Version | Physical Usage Location | Architectural Purpose & Dependency Analysis |
-|---|---|---|---|---|
-| **Language** | Python | 3.11+ | Entire backend | Core runtime; leverages modern typing, `match-case`, and `asyncio.TaskGroup`. |
-| **API Framework** | FastAPI | >= 0.109 | `api/main.py`, `api/routers/*` | Asynchronous REST and WebSocket endpoints for dashboard, admin, and worker hooks. |
-| **Data Validation** | Pydantic | v2 (`pydantic.BaseModel`) | `api/auth.py`, `core/state_manager.py` | Request/response DTOs, strict payload validation, and settings management. |
-| **ORM / Persistence** | SQLAlchemy | 2.0 (`sqlalchemy.ext.asyncio`) | `core/state_manager.py`, `db/models/core.py` | Asynchronous database interaction using `AsyncSession` and `create_async_engine`. |
-| **Database Driver** | asyncpg | 0.29+ | `core/database.py` | High-performance asynchronous PostgreSQL protocol driver. |
-| **Database Engine** | PostgreSQL | 15 / 16 (Docker) | `docker-compose.yml`, `db/init.sql` | Relational storage for tenant configurations, workflow instances, logs, and billing. |
-| **Cache & Pub/Sub** | Redis & hiredis | 7.x (Docker / redis-py) | `core/redis_pubsub.py`, `core/llm_router.py` | WebSocket message broadcasting, semantic prompt caching, and transient locks. |
-| **AI / LLM Routing** | LiteLLM | 1.x (`litellm.acompletion`) | `core/llm_router.py` | Multi-provider abstraction (Anthropic, OpenAI, Groq, Gemini) with fallback chains. |
-| **DAG Orchestration** | Custom In-House Engine | N/A (In-house) | `core/orchestrator.py` | **LangGraph is unused in execution.** DAG is executed by `WorkflowOrchestrator`. |
-| **Expression Eval** | simpleeval | 0.9.13+ | `core/orchestrator.py`, `agents/base_agent.py` | Evaluates DAG edge conditions against safe whitelisted names. |
-| **Logging** | structlog | 24.1+ | `core/*`, `agents/*`, `api/*` | Structured JSON log generation with run-scoped and node-scoped context binding. |
-| **CLI / TUI** | Click & Rich | 8.x / 13.x | `main.py`, `admin/control_panel.py` | Operational CLI and terminal dashboard with live rendering. |
-| **Evidence & Audit** | epi-recorder | External package | `epi/epi_manager.py` | Tamper-evident session recording, generating `.epi` evidence containers. |
-| **Frontend Framework**| React | 18.2.0 | `frontend/src/App.jsx`, `main.jsx` | Single-page admin and client portal interface. |
-| **Frontend Build** | Vite | 5.1.0 | `frontend/vite.config.js` | Fast ESM build tooling and local development server. |
-| **Styling** | Tailwind CSS | 3.4.1 | `frontend/tailwind.config.js` | Utility-first responsive UI styling. |
-| **Workflow Canvas** | @xyflow/react | 12.0.0 (React Flow) | `frontend/src/components/workflow/*` | Interactive visual rendering of DAG pipeline nodes and execution statuses. |
-| **State Management**| Zustand | 4.5.1 | `frontend/src/utils/appStore.js` | Client-side reactive UI state (active organization, drawer toggles). |
-| **API Client** | Axios & TanStack Query| Axios 1.6.7 / Query 5.20.5 | `frontend/src/api/client.js` | Backend HTTP request handling, JWT token injection, and server-state caching. |
+| Layer                        | Technology             | Declared vs Actual Version       | Physical Usage Location                            | Architectural Purpose & Dependency Analysis                                              |
+| ---------------------------- | ---------------------- | -------------------------------- | -------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| **Language**           | Python                 | 3.11+                            | Entire backend                                     | Core runtime; leverages modern typing, `match-case`, and `asyncio.TaskGroup`.        |
+| **API Framework**      | FastAPI                | >= 0.109                         | `api/main.py`, `api/routers/*`                 | Asynchronous REST and WebSocket endpoints for dashboard, admin, and worker hooks.        |
+| **Data Validation**    | Pydantic               | v2 (`pydantic.BaseModel`)      | `api/auth.py`, `core/state_manager.py`         | Request/response DTOs, strict payload validation, and settings management.               |
+| **ORM / Persistence**  | SQLAlchemy             | 2.0 (`sqlalchemy.ext.asyncio`) | `core/state_manager.py`, `db/models/core.py`   | Asynchronous database interaction using `AsyncSession` and `create_async_engine`.    |
+| **Database Driver**    | asyncpg                | 0.29+                            | `core/database.py`                               | High-performance asynchronous PostgreSQL protocol driver.                                |
+| **Database Engine**    | PostgreSQL             | 15 / 16 (Docker)                 | `docker-compose.yml`, `db/init.sql`            | Relational storage for tenant configurations, workflow instances, logs, and billing.     |
+| **Cache & Pub/Sub**    | Redis & hiredis        | 7.x (Docker / redis-py)          | `core/redis_pubsub.py`, `core/llm_router.py`   | WebSocket message broadcasting, semantic prompt caching, and transient locks.            |
+| **AI / LLM Routing**   | LiteLLM                | 1.x (`litellm.acompletion`)    | `core/llm_router.py`                             | Multi-provider abstraction (Anthropic, OpenAI, Groq, Gemini) with fallback chains.       |
+| **DAG Orchestration**  | Custom In-House Engine | N/A (In-house)                   | `core/orchestrator.py`                           | **LangGraph is unused in execution.** DAG is executed by `WorkflowOrchestrator`. |
+| **Expression Eval**    | simpleeval             | 0.9.13+                          | `core/orchestrator.py`, `agents/base_agent.py` | Evaluates DAG edge conditions against safe whitelisted names.                            |
+| **Logging**            | structlog              | 24.1+                            | `core/*`, `agents/*`, `api/*`                | Structured JSON log generation with run-scoped and node-scoped context binding.          |
+| **CLI / TUI**          | Click & Rich           | 8.x / 13.x                       | `main.py`, `admin/control_panel.py`            | Operational CLI and terminal dashboard with live rendering.                              |
+| **Evidence & Audit**   | epi-recorder           | External package                 | `epi/epi_manager.py`                             | Tamper-evident session recording, generating `.epi` evidence containers.               |
+| **Frontend Framework** | React                  | 18.2.0                           | `frontend/src/App.jsx`, `main.jsx`             | Single-page admin and client portal interface.                                           |
+| **Frontend Build**     | Vite                   | 5.1.0                            | `frontend/vite.config.js`                        | Fast ESM build tooling and local development server.                                     |
+| **Styling**            | Tailwind CSS           | 3.4.1                            | `frontend/tailwind.config.js`                    | Utility-first responsive UI styling.                                                     |
+| **Workflow Canvas**    | @xyflow/react          | 12.0.0 (React Flow)              | `frontend/src/components/workflow/*`             | Interactive visual rendering of DAG pipeline nodes and execution statuses.               |
+| **State Management**   | Zustand                | 4.5.1                            | `frontend/src/utils/appStore.js`                 | Client-side reactive UI state (active organization, drawer toggles).                     |
+| **API Client**         | Axios & TanStack Query | Axios 1.6.7 / Query 5.20.5       | `frontend/src/api/client.js`                     | Backend HTTP request handling, JWT token injection, and server-state caching.            |
 
 ### Obsolete, Unused, or Misleading Dependencies
+
 - `langgraph`, `langchain`, `langchain-anthropic`, `langchain-openai`, `langchain-google-genai`: Included in `requirements.txt` but **completely absent** from agent and orchestrator code. The team built a native DAG runner in `core/orchestrator.py`.
 - `aiosqlite`: Present in `requirements.txt` as a legacy testing fallback, but production code is tightly coupled to PostgreSQL Dialect JSONB and UUID primitives.
 - `requirements-ml.txt` (`torch`, `sentence-transformers`): Used optionally in `core/rag_engine.py` for local vector embeddings. If missing, `RAGEngine` falls back to hash-based similarity or OpenAI/LiteLLM embedding calls.
@@ -171,10 +173,12 @@ SMBFlow/
 ## SECTION 4: APPLICATION STARTUP FLOW
 
 SMBFlow supports two primary startup paths:
+
 1. **Interactive CLI Execution (`main.py trigger`)**
 2. **Web API Service (`uvicorn api.main:app` or `main.py api`)**
 
 ### 4.1 CLI Execution Call Chain
+
 ```
 main.py::cli()
  └── @cli.command() trigger(workflow_name, config, llm_config, signal, dry_run)
@@ -209,6 +213,7 @@ main.py::cli()
 ```
 
 ### 4.2 Web API Startup Call Chain (`api/main.py`)
+
 ```
 uvicorn.run("api.main:app")
  └── FastAPI(lifespan=lifespan)
@@ -297,6 +302,7 @@ flowchart TD
 The engine resides in `core/orchestrator.py` (`WorkflowOrchestrator`).
 
 ### 6.1 DAG Representation
+
 - **Source:** JSON files stored in `workflows/dags/<workflow_name>.json`.
 - **Top-Level Structure:**
   - `_meta`: Workflow metadata (`name`, `industry`, `version`, `sla_hours`, `max_a2a_attempts`).
@@ -305,6 +311,7 @@ The engine resides in `core/orchestrator.py` (`WorkflowOrchestrator`).
   - `escalation_config`: SLA and resumption instructions.
 
 ### 6.2 Node Execution & State Passing
+
 - Each node maps to a specialized agent via `AGENT_MAP`:
   ```python
   AGENT_MAP = {
@@ -325,6 +332,7 @@ The engine resides in `core/orchestrator.py` (`WorkflowOrchestrator`).
 - **Context Pruning:** Before sending context to the next agent, `_prune_context(node, accumulated_context)` runs. If a node defines `depends_on: ["research"]`, it receives only the metadata keys plus `accumulated_context["research"]`, saving LLM tokens.
 
 ### 6.3 Edge Evaluation & Conditional Branching
+
 - **Mechanism:** In `_should_run_node(node_id, edges, accumulated_context)`:
   1. Locates incoming edge where `edge["to"] == node_id`.
   2. If `condition` is `null`, returns `True`.
@@ -334,6 +342,7 @@ The engine resides in `core/orchestrator.py` (`WorkflowOrchestrator`).
   6. If `simpleeval` is unavailable, evaluates via strict regex/string pattern fallback.
 
 ### 6.4 Event-Driven Suspension (Zero Polling)
+
 - When an agent flags `output.escalate = True` or requests Agent-to-Agent collaboration (`a2a_request`):
   1. The orchestrator calls `await self._state.suspend_workflow(...)`.
   2. It writes `accumulated_context` and `resume_from_node` directly to PostgreSQL.
@@ -342,6 +351,7 @@ The engine resides in `core/orchestrator.py` (`WorkflowOrchestrator`).
   5. Resumption occurs when the user submits an approval via `POST /api/v1/approvals/{id}/decision`, which spawns a background task calling `orchestrator.resume_workflow(instance_id)`.
 
 ### 6.5 The Reflexion Self-Healing Loop
+
 - If an agent fails (`output.success == False` or raises an unhandled exception):
   1. The orchestrator enters a self-healing loop (`MAX_REFLEXION = 3`).
   2. Queries `RAGEngine.get_error_recovery_hints(...)` for historical fixes.
@@ -370,23 +380,23 @@ sequenceDiagram
     Orch->>Res: receive(AgentInput)
     Res->>Res: Calls product_api_usage & NPS tools
     Res-->>Orch: AgentOutput (Accounts, Usage Metrics, NPS)
-    
+  
     Orch->>Reas: receive(AgentInput + Injected RAG)
     Reas->>Reas: Applies Churn Risk Formula & Classifies
     Reas-->>Orch: AgentOutput (Critical Accounts, Actions, Confidence)
-    
+  
     Orch->>Draft: receive(AgentInput)
     Draft->>Draft: Phase 1: Check History Tools -> Phase 2: Write Emails
     Draft-->>Orch: AgentOutput (Drafted Interventions)
-    
+  
     Orch->>Ver: receive(AgentInput)
     Ver->>Ver: Turn 1: Prosecutor (Finds Flaws) -> Turn 2: Judge (Verdict)
     Ver-->>Orch: AgentOutput (Passed: true/false, Approved Drafts)
-    
+  
     Orch->>Exec: receive(AgentInput)
     Exec->>Exec: Checks Operating Hours & Calls Tools (Email/Slack/DB)
     Exec-->>Orch: AgentOutput (Actions Taken, Emails Queued)
-    
+  
     Orch->>Mem: receive(AgentInput)
     Mem->>Mem: Compares vs Lessons -> Computes Delta Analysis
     Mem-->>Orch: AgentOutput (Patterns Stored, Trend Indicator)
@@ -396,6 +406,7 @@ sequenceDiagram
 ### Agent Detailed Breakdown
 
 #### 1. Research Agent
+
 - **Input:** `trigger_signal`, tenant profile, list of target accounts.
 - **Tools Attached:** `product_api_usage`, `product_api_nps`, `crm_get_synthetic_leads`.
 - **LLM Tier:** `mini` or `balanced` (GPT-4o-mini or Claude Haiku). Adaptive `max_tokens = 8192`.
@@ -403,6 +414,7 @@ sequenceDiagram
 - **Output:** Structured JSON containing an `accounts` array with raw metrics.
 
 #### 2. Reasoning Agent
+
 - **Input:** Research output + RAG historical lessons + GraphRAG account relations.
 - **Tools Attached:** None (pure analytical reasoning).
 - **LLM Tier:** `heavy` (Claude 3.5 Sonnet).
@@ -410,6 +422,7 @@ sequenceDiagram
 - **Output:** Structured JSON with `churn_score`, `primary_risk_factor`, `recommended_actions`, `reasoning_confidence`, and `escalate: bool`.
 
 #### 3. Drafting Agent
+
 - **Input:** Reasoning output (accounts flagged for intervention) + tenant `tone_profile`.
 - **Tools Attached:** `get_communication_history`, `get_activity_log`.
 - **LLM Tier:** `heavy` or `budget_heavy`.
@@ -419,6 +432,7 @@ sequenceDiagram
 - **Output:** Structured JSON containing `drafts` and `exec_briefs`.
 
 #### 4. Verification Agent
+
 - **Input:** Drafted emails + Ground truth research metrics + Business rules.
 - **Tools Attached:** `get_communication_history`.
 - **LLM Tier:** `fast` (Claude 3.5 Haiku) for prosecutor; `mini` for judge.
@@ -428,6 +442,7 @@ sequenceDiagram
 - **Output:** Structured JSON with `passed`, `approved_drafts`, `rejected_drafts`, and `_judge_verdict`.
 
 #### 5. Execution Agent
+
 - **Input:** Verified `approved_drafts` from Verification Agent.
 - **Tools Attached:** `db_write_outcome`, `gmail_send_message`, `slack_post_message`.
 - **LLM Tier:** `mini`.
@@ -435,6 +450,7 @@ sequenceDiagram
 - **Output:** Structured JSON reporting `actions_taken` and `emails_queued`.
 
 #### 6. Memory Agent
+
 - **Input:** Complete execution trace (Reasoning + Execution + Verification).
 - **Tools Attached:** `db_write_outcome`, `db_update_pattern`.
 - **LLM Tier:** `balanced`.
@@ -451,23 +467,26 @@ sequenceDiagram
 Prompt templates reside in `workflows/prompts/<industry>/<agent>_<workflow>.txt`.
 
 ### 8.1 Template Placeholder Map
+
 When an agent runs, `BaseAgent._format_prompt()` injects values using `safe_format_template` (a custom formatter that preserves JSON double-curly braces `{{...}}` while replacing single `{placeholder}` tokens):
 
-| Placeholder | Originating Source | Example Injected Value |
-|---|---|---|
-| `{tenant_name}` | `tenant_config["client_name"]` | `"TechFlow SaaS Inc."` |
-| `{industry}` | `tenant_config["industry"]` | `"saas"` |
-| `{company_profile}` | `tenant_config["company_profile"]` | Formatted JSON string of products, ACV, competitors |
-| `{business_rules}` | `tenant_config["business_rules"]` | Injected JSON string of operational thresholds |
-| `{churn_risk.*}` | `tenant_config["business_rules"]["churn_risk"]` | `usage_drop_weight: 0.40`, `critical_score_threshold: 70` |
-| `{tone_profile}` | `tenant_config["tone_profile"]` | Brand voice, prohibited words (`["synergy", "circle back"]`) |
-| `{action_library}` | `tenant_config["action_library"]` | Permitted action IDs and descriptions |
-| `{confidence_threshold}`| `tenant_config["business_rules"]["confidence_threshold"]`| `0.60` |
-| `{relevant_patterns}` | `state_manager.get_active_patterns()` | Historical rules extracted by Memory Agent |
-| `{rag_historical_context}`| `RAGEngine.get_historical_context_for_reasoning()`| Similar past workflow situations and their outcomes |
+| Placeholder                  | Originating Source                                          | Example Injected Value                                         |
+| ---------------------------- | ----------------------------------------------------------- | -------------------------------------------------------------- |
+| `{tenant_name}`            | `tenant_config["client_name"]`                            | `"TechFlow SaaS Inc."`                                       |
+| `{industry}`               | `tenant_config["industry"]`                               | `"saas"`                                                     |
+| `{company_profile}`        | `tenant_config["company_profile"]`                        | Formatted JSON string of products, ACV, competitors            |
+| `{business_rules}`         | `tenant_config["business_rules"]`                         | Injected JSON string of operational thresholds                 |
+| `{churn_risk.*}`           | `tenant_config["business_rules"]["churn_risk"]`           | `usage_drop_weight: 0.40`, `critical_score_threshold: 70`  |
+| `{tone_profile}`           | `tenant_config["tone_profile"]`                           | Brand voice, prohibited words (`["synergy", "circle back"]`) |
+| `{action_library}`         | `tenant_config["action_library"]`                         | Permitted action IDs and descriptions                          |
+| `{confidence_threshold}`   | `tenant_config["business_rules"]["confidence_threshold"]` | `0.60`                                                       |
+| `{relevant_patterns}`      | `state_manager.get_active_patterns()`                     | Historical rules extracted by Memory Agent                     |
+| `{rag_historical_context}` | `RAGEngine.get_historical_context_for_reasoning()`        | Similar past workflow situations and their outcomes            |
 
 ### 8.2 Locus of Business Logic
+
 **The business logic is hybrid:**
+
 - **Weight & Threshold Declaration:** Declarative JSON in `config/templates/saas.json`.
 - **Analytical Computation:** Prompt-guided LLM reasoning (Claude 3.5 Sonnet executes the weighted arithmetic).
 - **Rule Enforcement:** Deterministic Python logic in `agents/agents.py` and `core/orchestrator.py` enforcing operating hours, token limits, and DAG edge branching.
@@ -478,11 +497,15 @@ When an agent runs, `BaseAgent._format_prompt()` injects values using `safe_form
 ## SECTION 9: BUSINESS RULE & DECISION ENGINE
 
 ### 9.1 SaaS Churn Risk Scoring Formula
+
 The exact formula specified in `config/templates/saas.json` and executed via `workflows/prompts/saas/reasoning_churn.txt`:
 
-$$\text{ChurnScore} = \min\left(100, \, w_{\text{usage}} \cdot C_{\text{usage}} + w_{\text{support}} \cdot C_{\text{support}} + w_{\text{nps}} \cdot C_{\text{nps}} + w_{\text{recency}} \cdot C_{\text{recency}}\right)$$
+$$
+\text{ChurnScore} = \min\left(100, \, w_{\text{usage}} \cdot C_{\text{usage}} + w_{\text{support}} \cdot C_{\text{support}} + w_{\text{nps}} \cdot C_{\text{nps}} + w_{\text{recency}} \cdot C_{\text{recency}}\right)
+$$
 
 #### Component Breakdown & Weights:
+
 1. **Usage Drop Component ($w_{\text{usage}} = 0.40$):**
    - $\text{last\_login} > 14\text{ days} \implies +40\text{ points}$
    - $\text{dau\_trend} < -30\% \implies +30\text{ points}$
@@ -497,12 +520,15 @@ $$\text{ChurnScore} = \min\left(100, \, w_{\text{usage}} \cdot C_{\text{usage}} 
    - $\text{No usage in } 21+\text{ days} \implies +30\text{ points}$
 
 #### Classification Thresholds:
+
 - **CRITICAL:** $\text{ChurnScore} \ge 70$
 - **AT_RISK:** $\text{ChurnScore} \ge 45$
 - **HEALTHY:** $\text{ChurnScore} < 45$
 
 ### 9.2 Escalation Decision Logic
+
 The Reasoning Agent evaluates a multi-clause escalation policy:
+
 1. **Low Confidence:** `reasoning_confidence < confidence_threshold` (0.60) $\implies$ `escalate = True`.
 2. **Executive Contract Value:** `deal_value > escalate_deal_value_above` (\$50,000) **AND** `require_human_for_executive_outreach == True` $\implies$ `escalate = True`.
 3. **Data Blackout:** If zero accounts possess valid data $\implies$ `escalate = True`.
@@ -513,6 +539,7 @@ The Reasoning Agent evaluates a multi-clause escalation policy:
 ## SECTION 10: STATE MANAGEMENT ARCHITECTURE
 
 ### 10.1 In-Memory vs. Database Division
+
 - **In-Memory (Transient Only):**
   - `_ws_connections: dict[str, tuple]`: Active WebSocket connections for UI live streaming.
   - `_active_orchestrators: dict[str, Any]`: Running `asyncio.Task` instances for active runs.
@@ -522,7 +549,9 @@ The Reasoning Agent evaluates a multi-clause escalation policy:
   - If the server restarts, suspended workflows remain safely stored in `workflow_instances` with status `escalated` or `pending_a2a` and can be resumed seamlessly.
 
 ### 10.2 JSONB Context Pruning (`_prune_context_for_storage`)
+
 To prevent PostgreSQL TOAST table index thrashing and keep row sizes under the 8KB page threshold, `core/orchestrator.py` enforces a 200,000-byte cap on `accumulated_context`. If a payload exceeds 200KB:
+
 - Lists longer than 25 items are truncated to 25 items with a marker `{"_truncated": True, "total": N}`.
 - Strings longer than 20,000 characters are truncated with `...[truncated]`.
 - System metadata keys (prefixed with `_`) are preserved verbatim.
@@ -555,6 +584,7 @@ The database schema is mapped across `core/state_manager.py` and `db/models/core
 ```
 
 ### Model Definitions
+
 1. **`Organization` (`organizations` / `tenants`):**
    - `id` (UUID, PK), `name` (String), `industry` (String), `profile_config` (JSONB), `active` (Boolean).
 2. **`WorkflowInstance` (`workflow_instances`):**
@@ -575,23 +605,29 @@ The database schema is mapped across `core/state_manager.py` and `db/models/core
 Managed by `LLMRouter` (`core/llm_router.py`) and `RunCostTracker` (`core/cost_tracker.py`).
 
 ### 12.1 Multi-Tier Model Architecture
+
 - **`heavy`:** `claude-3-5-sonnet-20241022` — Used for high-stakes reasoning, strategy, and complex drafting.
 - **`budget_heavy`:** `claude-3-5-haiku-20241022` or `gpt-4o-mini` — Downgraded reasoning tier under budget constraints.
 - **`fast`:** `claude-3-5-haiku-20241022` — Verification prosecutor turn, data normalization.
 - **`mini`:** `gpt-4o-mini` / `groq/llama-3.1-8b-instant` — Research extraction, tool selection, memory delta analysis.
 
 ### 12.2 Budget Governor Optimization Levels
+
 Controlled via tenant config `budget_governor.optimization_level`:
+
 - **Level 0 (Max Accuracy):** Default models assigned to all agents. Full reasoning context passed.
 - **Level 1 (Balanced):** Research and Verification downgraded to `mini`. Semantic caching enabled in Redis.
 - **Level 2 (Aggressive):** Reasoning and Drafting downgraded to `budget_heavy`. Reasoning chains truncated to 500 characters. Summarization bridge activated for large contexts (>40KB).
 - **Level 3 (Budget First):** All agents forced to `mini`. Reasoning chain truncated to 300 characters. Context aggressively pruned.
 
 ### 12.3 Real-Time Cost Tracking & Circuit Breaker
+
 `RunCostTracker` calculates token spend per call using provider cost rates:
+
 ```python
 cost = (tokens_in * rate_in + tokens_out * rate_out) / 1_000_000
 ```
+
 - **Soft Limit:** Triggers a warning at 80% of `max_spend_per_run`.
 - **Hard Limit:** If spend exceeds `max_spend_per_run`, it raises `BudgetExceededError`, which halts the workflow immediately and triggers an automated escalation to human admin.
 
@@ -614,6 +650,7 @@ Located in `integrations/connectors.py`, `integrations/oauth_service.py`, and `i
 ```
 
 ### Integration Reality Breakdown
+
 1. **Google Workspace / Gmail:** **REAL.** Implements authentic Google OAuth2 authorization flows, storing encrypted access and refresh tokens. Uses `google-api-python-client` to list messages, fetch RFC822 email bodies, and draft messages.
 2. **HubSpot CRM:** **PARTIAL / MOCK FALLBACK.** Defines production HubSpot API request patterns, but if `credential_id` is missing or in local environment, it transparently reads mock fixtures from `db/seed/data/saas_accounts.json` and `saas_deals.json`.
 3. **Stripe:** **PARTIAL / MOCK FALLBACK.** Simulates transaction fetching using `db/seed/data/finance_expenses.json` unless live Stripe secret keys are configured in `ToolConnection`.
@@ -644,6 +681,7 @@ The repository contains over 50 DAG definitions in `workflows/dags/`. The primar
 Tenant configuration lives in `config/templates/*.json` and `config/clients/*.json`.
 
 ### Structure of `config/templates/saas.json`
+
 - `_meta`: Schema versioning and fields marked `[MODIFY]`.
 - `client_id` & `client_name`: Tenant identification.
 - `industry`: Informs agent personas and default prompt selection.
@@ -684,6 +722,7 @@ Managed by `MemoryAgent` (`agents/agents.py`), `StateManager` (`core/state_manag
 Implemented in `epi/epi_manager.py` using the `epi-recorder` library.
 
 ### 17.1 Purpose & Execution
+
 - Produces a cryptographically verifiable, tamper-evident audit container for every workflow execution.
 - Generates a file in `./evidence/<workflow>_<tenant>_<timestamp>.epi`.
 - Wrapped in an asynchronous context manager:
@@ -694,6 +733,7 @@ Implemented in `epi/epi_manager.py` using the `epi-recorder` library.
 - Automatically captures all LiteLLM calls via `litellm.callbacks = [EPICallback()]`.
 
 ### 17.2 Verification & Inspection
+
 - Post-run, the manager executes `epi verify <path>` via subprocess to confirm cryptographic hash integrity.
 - Admins can run `python main.py verify-evidence` to inspect local `.epi` containers or launch the standalone browser viewer (`epi view <path>`).
 
@@ -704,18 +744,19 @@ Implemented in `epi/epi_manager.py` using the `epi-recorder` library.
 The API layer is hosted in `api/main.py` and modular routers in `api/routers/`.
 
 ### Key Endpoints
-| HTTP Method | Path | Target Function / Router | DB & Workflow Effect |
-|---|---|---|---|
-| `POST` | `/api/v1/auth/login` | `api.auth::login` | Verifies bcrypt password, issues JWT bearer token. |
-| `GET` | `/api/v1/health` | `api.main::health` | Performs DB connection check (`SELECT 1`) and Redis ping. |
-| `POST` | `/api/v1/workflows/run` | `api.main::run_workflow_endpoint` | Spawns background `asyncio` task executing `WorkflowOrchestrator.run_workflow`. |
-| `GET` | `/api/v1/workflows/instances/{id}` | `api.main::get_instance` | Returns live status, accumulated context, node outputs, and cost. |
-| `POST` | `/api/v1/workflows/instances/{id}/pause`| `api.main::pause_instance` | Clears `_pause_events[id]` in orchestrator. |
-| `POST` | `/api/v1/workflows/instances/{id}/resume`| `api.main::resume_instance`| Sets `_pause_events[id]`, unblocking execution loop. |
-| `GET` | `/api/v1/approvals` | `api.main::list_approvals` | Queries pending `ApprovalItem` records for HITL Action Center. |
-| `POST` | `/api/v1/approvals/{id}/decision` | `api.main::decide_approval` | Records approval/rejection; triggers workflow resumption if suspended. |
-| `GET` | `/api/v1/evidence` | `api.main::list_evidence` | Lists `.epi` artifact files from `./evidence/`. |
-| `WS` | `/ws/workflows/{instance_id}` | `api.main::workflow_ws` | Streams real-time agent execution events and token cost updates. |
+
+| HTTP Method | Path                                        | Target Function / Router            | DB & Workflow Effect                                                                |
+| ----------- | ------------------------------------------- | ----------------------------------- | ----------------------------------------------------------------------------------- |
+| `POST`    | `/api/v1/auth/login`                      | `api.auth::login`                 | Verifies bcrypt password, issues JWT bearer token.                                  |
+| `GET`     | `/api/v1/health`                          | `api.main::health`                | Performs DB connection check (`SELECT 1`) and Redis ping.                         |
+| `POST`    | `/api/v1/workflows/run`                   | `api.main::run_workflow_endpoint` | Spawns background `asyncio` task executing `WorkflowOrchestrator.run_workflow`. |
+| `GET`     | `/api/v1/workflows/instances/{id}`        | `api.main::get_instance`          | Returns live status, accumulated context, node outputs, and cost.                   |
+| `POST`    | `/api/v1/workflows/instances/{id}/pause`  | `api.main::pause_instance`        | Clears `_pause_events[id]` in orchestrator.                                       |
+| `POST`    | `/api/v1/workflows/instances/{id}/resume` | `api.main::resume_instance`       | Sets `_pause_events[id]`, unblocking execution loop.                              |
+| `GET`     | `/api/v1/approvals`                       | `api.main::list_approvals`        | Queries pending `ApprovalItem` records for HITL Action Center.                    |
+| `POST`    | `/api/v1/approvals/{id}/decision`         | `api.main::decide_approval`       | Records approval/rejection; triggers workflow resumption if suspended.              |
+| `GET`     | `/api/v1/evidence`                        | `api.main::list_evidence`         | Lists `.epi` artifact files from `./evidence/`.                                 |
+| `WS`      | `/ws/workflows/{instance_id}`             | `api.main::workflow_ws`           | Streams real-time agent execution events and token cost updates.                    |
 
 ---
 
@@ -743,6 +784,7 @@ frontend/src/
 ```
 
 ### Communication & State Realities
+
 - **REST Polling & WebSockets:** The frontend connects via WebSocket (`/ws/workflows/{id}`) for immediate token updates and node completions. It falls back to 3-second REST polling if the WebSocket disconnects.
 - **Node Inspection:** Clicking any node on the React Flow canvas opens a sliding drawer rendering the agent's exact input prompt, reasoning chain, tool calls, and structured JSON output.
 
@@ -753,11 +795,13 @@ frontend/src/
 Test directory: `tests/`.
 
 ### Verified Test Executions
+
 - `tests/test_security_firewall.py`: **PASSING** (4 passed in 0.19s). Verifies SQL injection, prompt override, and script tag sanitization.
 - `tests/test_admin_control_plane.py`: Unit tests for pause, resume, and stop controls.
 - `tests/test_meeting_intelligence_node*.py`: Multi-stage tests verifying contact resolution, transcript analysis, and memory extraction.
 
 ### Test Execution Realities & Gotchas
+
 - Running bare `pytest` from the root can hang if test files attempt to connect to external LLM providers without mock patches, or if unisolated scratch scripts are detected.
 - **Rule for Testing:** Always run targeted tests inside the sandbox:
   ```powershell
@@ -770,13 +814,13 @@ Test directory: `tests/`.
 
 SMBFlow handles failures gracefully at multiple layers:
 
-| Failure Mode | Trigger Condition | System Response & Self-Healing Action |
-|---|---|---|
-| **Truncated LLM JSON** | LLM hits `max_tokens` mid-stream | `_recover_truncated_json` uses stack-based balancing to close open `{` and `[` delimiters. If still invalid, triggers a one-time parse retry with a conciseness penalty. |
-| **Agent Execution Crash**| Unhandled exception or provider timeout | Triggers **Reflexion Loop** (`MAX_REFLEXION = 3`). Queries RAG for recovery hints and re-prompts the agent with error details. |
-| **LLM Provider Outage** | 401 Auth error, 429 Rate Limit, 500 Outage | `LLMRouter` iterates through `fallback_chain` (Anthropic $\to$ OpenAI $\to$ Groq $\to$ Gemini $\to$ deterministic mock fallback). |
-| **Budget Overrun** | Spend exceeds `max_spend_per_run` | `RunCostTracker` raises `BudgetExceededError`. Orchestrator halts pipeline and converts run to `escalated` status. |
-| **Database Disconnect** | PostgreSQL container unavailable | FastAPI health check flags degraded status; transactions roll back safely without corrupting prior committed nodes. |
+| Failure Mode                    | Trigger Condition                          | System Response & Self-Healing Action                                                                                                                                          |
+| ------------------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Truncated LLM JSON**    | LLM hits `max_tokens` mid-stream         | `_recover_truncated_json` uses stack-based balancing to close open `{` and `[` delimiters. If still invalid, triggers a one-time parse retry with a conciseness penalty. |
+| **Agent Execution Crash** | Unhandled exception or provider timeout    | Triggers **Reflexion Loop** (`MAX_REFLEXION = 3`). Queries RAG for recovery hints and re-prompts the agent with error details.                                         |
+| **LLM Provider Outage**   | 401 Auth error, 429 Rate Limit, 500 Outage | `LLMRouter` iterates through `fallback_chain` (Anthropic $\to$ OpenAI $\to$ Groq $\to$ Gemini $\to$ deterministic mock fallback).                                  |
+| **Budget Overrun**        | Spend exceeds `max_spend_per_run`        | `RunCostTracker` raises `BudgetExceededError`. Orchestrator halts pipeline and converts run to `escalated` status.                                                       |
+| **Database Disconnect**   | PostgreSQL container unavailable           | FastAPI health check flags degraded status; transactions roll back safely without corrupting prior committed nodes.                                                            |
 
 ---
 
@@ -798,19 +842,19 @@ SMBFlow handles failures gracefully at multiple layers:
 
 ## SECTION 23: CODEBASE REALITY MATRIX
 
-| Architectural Component | Status | Physical Implementation Reality |
-|---|---|---|
-| **Custom DAG Engine** | **REAL** | Fully implemented in `core/orchestrator.py`. Handles branching, loops, and conditions natively. |
-| **LangGraph / LangChain** | **MISSING / UNUSED** | Listed in `requirements.txt`, but completely unused. Zero imports in runtime logic. |
-| **Six Core Agents** | **REAL** | Implemented in `agents/agents.py`. Distinct roles, inputs, prompts, and outputs. |
-| **Reflexion Self-Healing** | **REAL** | Implemented in `core/orchestrator.py` (`MAX_REFLEXION = 3`). Re-prompts agent with error context. |
-| **Prosecutor-Judge Verification**| **REAL** | Implemented in `VerificationAgent`. Two LLM calls: adversarial critique followed by policy verdict. |
-| **PostgreSQL Persistence** | **REAL** | Asyncpg + SQLAlchemy 2.0. State persists across restarts. |
-| **FinOps Cost Governor** | **REAL** | Token spend calculation, budget tiers (0–3), and hard circuit breakers fully active. |
-| **Google / Gmail Integration**| **REAL** | Authentic OAuth2 token refresh and Gmail API integration. |
-| **HubSpot / Stripe / Slack** | **PARTIAL / MOCKED**| Production API logic exists, but falls back to local JSON fixtures in `db/seed/data/` if keys are absent. |
-| **EPI Evidence Recorder** | **REAL** | Generates `.epi` audit files via `epi-recorder`; verified via CLI. |
-| **React Dashboard** | **REAL** | React 18 + React Flow + WebSockets. Canvas nodes, logs, and approval modal fully functional. |
+| Architectural Component                 | Status                     | Physical Implementation Reality                                                                             |
+| --------------------------------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| **Custom DAG Engine**             | **REAL**             | Fully implemented in `core/orchestrator.py`. Handles branching, loops, and conditions natively.           |
+| **LangGraph / LangChain**         | **MISSING / UNUSED** | Listed in `requirements.txt`, but completely unused. Zero imports in runtime logic.                       |
+| **Six Core Agents**               | **REAL**             | Implemented in `agents/agents.py`. Distinct roles, inputs, prompts, and outputs.                          |
+| **Reflexion Self-Healing**        | **REAL**             | Implemented in `core/orchestrator.py` (`MAX_REFLEXION = 3`). Re-prompts agent with error context.       |
+| **Prosecutor-Judge Verification** | **REAL**             | Implemented in `VerificationAgent`. Two LLM calls: adversarial critique followed by policy verdict.       |
+| **PostgreSQL Persistence**        | **REAL**             | Asyncpg + SQLAlchemy 2.0. State persists across restarts.                                                   |
+| **FinOps Cost Governor**          | **REAL**             | Token spend calculation, budget tiers (0–3), and hard circuit breakers fully active.                       |
+| **Google / Gmail Integration**    | **REAL**             | Authentic OAuth2 token refresh and Gmail API integration.                                                   |
+| **HubSpot / Stripe / Slack**      | **PARTIAL / MOCKED** | Production API logic exists, but falls back to local JSON fixtures in `db/seed/data/` if keys are absent. |
+| **EPI Evidence Recorder**         | **REAL**             | Generates `.epi` audit files via `epi-recorder`; verified via CLI.                                      |
+| **React Dashboard**               | **REAL**             | React 18 + React Flow + WebSockets. Canvas nodes, logs, and approval modal fully functional.                |
 
 ---
 
@@ -878,6 +922,7 @@ Any newly implemented workflow must strictly adhere to this architectural contra
 ## SECTION 28: COMPLETE END-TO-END EXECUTION TRACE
 
 ### Scenario: `saas_churn_prevention` Execution
+
 1. **Trigger:** User runs `python main.py trigger saas_churn_prevention --config config/templates/saas.json`.
 2. **Initialization:**
    - `_run_workflow_with_dashboard` loads `saas.json` and `llm_config.json`.
@@ -891,7 +936,9 @@ Any newly implemented workflow must strictly adhere to this architectural contra
    - Evaluates edge: condition is `null` $\to$ runs.
    - `ReasoningAgent` receives research metrics + historical lessons from `RAGEngine`.
    - Computes churn risk score for Acme Corp:
-     $$\text{Score} = 0.40(40 + 30) + 0.25(0) + 0.20(40) + 0.15(30) = 28 + 0 + 8 + 4.5 = 40.5 \implies 78.5\text{ (Critical)}$$
+     $$
+     \text{Score} = 0.40(40 + 30) + 0.25(0) + 0.20(40) + 0.15(30) = 28 + 0 + 8 + 4.5 = 40.5 \implies 78.5\text{ (Critical)}
+     $$
    - Acme Corp classified as `CRITICAL`. Recommends `send_csm_outreach_email`. Confidence = `0.88` (> 0.60 threshold). `escalate = False`.
    - Writes analysis into `accumulated_context["reasoning"]`.
 5. **Node 3 (`drafting`):**
@@ -1038,6 +1085,7 @@ Before implementing the next workflow, the following business requirements shoul
 Think of SMBFlow not as a simple chat bot or a rigid sequential Python script, but as an **Autonomous Digital Operations Department** designed specifically for small and mid-sized businesses.
 
 In a traditional business, operations run on human handoffs:
+
 1. An analyst pulls reports from HubSpot, Stripe, or product databases.
 2. A manager reviews the data, spots problems (like dropping usage or unpaid invoices), and decides what to do.
 3. A coordinator drafts personalized emails to the clients.
@@ -1075,6 +1123,7 @@ In a traditional business, operations run on human handoffs:
 ```
 
 #### Why SMBFlow is Safe for Real Businesses
+
 Most companies are terrified of giving autonomous AI access to their customer emails or financial ledgers because LLMs hallucinate, invent false numbers, and make erratic decisions. SMBFlow solves this through **five safety boundaries**:
 
 1. **The Prosecutor-Judge Air Gap:** The agent that drafts the email (`DraftingAgent`) is never allowed to send it. It must submit the draft to `VerificationAgent`, which executes an adversarial Prosecutor turn dedicated solely to finding flaws, factual mismatches, and placeholder text before a Judge approves it.
@@ -1090,11 +1139,13 @@ Most companies are terrified of giving autonomous AI access to their customer em
 When you are ready to implement the next workflow, follow this concise, battle-tested execution checklist:
 
 ### Phase 1: Specification & Design
+
 - [ ] **1. Define Workflow ID & Meta:** Choose a snake_case name (e.g. `logistics_freight_delay`). Define industry, display name, SLA hours, and cron schedule.
 - [ ] **2. Identify Trigger Signal:** Determine what payload starts the workflow (e.g. `{"order_id": "...", "delay_hours": 12}`).
 - [ ] **3. Map Required Tools:** Identify what tools Research and Execution agents require (e.g. `freight_tracker_api`, `slack_alert`).
 
 ### Phase 2: Configuration & Business Rules
+
 - [ ] **4. Create Template Config (`config/templates/<domain>.json`):**
   - [ ] Add `company_profile` context.
   - [ ] Define mathematical scoring weights and classification thresholds.
@@ -1103,6 +1154,7 @@ When you are ready to implement the next workflow, follow this concise, battle-t
   - [ ] Define `tone_profile` (voice, formality, prohibited words).
 
 ### Phase 3: DAG & Prompt Construction
+
 - [ ] **5. Create Workflow DAG (`workflows/dags/<workflow_name>.json`):**
   - [ ] Define nodes with explicit `id`, `agent`, `prompt_file`, `tools`, and `timeout_seconds`.
   - [ ] Define edges using **only** whitelisted conditions (`"not output.escalate"`, `"output.passed"`).
@@ -1113,10 +1165,12 @@ When you are ready to implement the next workflow, follow this concise, battle-t
   - [ ] Enforce strict JSON output schemas and list size limits (max 5 items) to prevent truncation.
 
 ### Phase 4: Mock Data & Tool Connectors
+
 - [ ] **7. Create Seed Data (`db/seed/data/<domain>.json`):** Add realistic mock records for offline development.
 - [ ] **8. Register Tools:** Add tool schemas and resolver handlers in `integrations/local_dev_tools.py` and `integrations/tool_registry_builder.py`.
 
 ### Phase 5: Verification & Testing
+
 - [ ] **9. Run Static DAG Validation:** Execute `validate_dag()` to ensure zero broken prompt links or unknown agent types.
 - [ ] **10. Execute Dry-Run:** Run `python main.py trigger <workflow_name> --dry-run` to verify configuration integrity.
 - [ ] **11. Test Live Execution:** Run `python main.py trigger <workflow_name>` and verify that:
