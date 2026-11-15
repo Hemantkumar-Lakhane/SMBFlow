@@ -570,6 +570,58 @@ async def get_copilot_dynamic_prompts(
     return res
 
 
+def _build_contextual_followups(user_msg: str, user_questions: list[str]) -> list[str]:
+    """Generates clean, business-oriented operational follow-up action pills."""
+    msg_l = user_msg.lower()
+    if any(k in msg_l for k in ("launch", "campaign", "twitter", "linkedin", "product", "market", "creative")):
+        return [
+            "Start Campaign Run",
+            "Review Target Audience & Copy",
+            "Configure Approval Gate",
+        ]
+    elif any(k in msg_l for k in ("incident", "sla", "alert", "sentry", "pagerduty", "triage", "escalat")):
+        return [
+            "Configure Notification Channels",
+            "Set SLA Escalation Thresholds",
+            "Test with Sample Incident",
+        ]
+    elif any(k in msg_l for k in ("invoice", "receipt", "ocr", "po", "bill")):
+        return [
+            "Upload Test Invoice",
+            "Connect Google Sheets PO Ledger",
+            "Set Approval Threshold",
+        ]
+    elif any(k in msg_l for k in ("lead", "hubspot", "crm", "enrich")):
+        return [
+            "Simulate Inbound Lead",
+            "Connect HubSpot CRM",
+            "Review ICP Fit Criteria",
+        ]
+    elif any(k in msg_l for k in ("meeting", "recording", "call", "transcript", "zoom")):
+        return [
+            "Ingest Meeting Recording",
+            "Connect Google Calendar",
+            "Review Commitments Ledger",
+        ]
+    elif any(k in msg_l for k in ("build", "create", "dag", "new workflow", "synthesize")):
+        return [
+            "Open Visual DAG Builder",
+            "Connect Integrations",
+            "Configure Supervisor Sign-Off",
+        ]
+
+    # Filter user_questions to remove any technical jargon or code requests
+    clean_user_q = [
+        q for q in user_questions
+        if not any(bad in q.lower() for bad in ("python", "code", "dag definition", "memory module", "evaluation prompt", "ast"))
+    ]
+    return (clean_user_q[:3] or [
+        "Browse Workflow Catalog",
+        "View Action Center",
+        "Open Operational Dashboard",
+    ])
+
+
 @router.post("/chat", response_model=CopilotChatResponse)
 async def copilot_chat(
     req: CopilotChatRequest,
@@ -772,7 +824,10 @@ async def copilot_chat(
     # ─────────────────────────────────────────────────────────────────────────
     is_connect_gmail = any(k in user_msg_lower for k in ["connect gmail", "link gmail", "authorize gmail"])
     is_connect_hubspot = any(k in user_msg_lower for k in ["connect hubspot", "link hubspot", "auth hubspot"])
-    is_launch_intent = any(k in user_msg_lower for k in ["product launch", "launch sprint", "launch campaign", "marketing campaign", "generate visual"])
+    is_launch_intent = any(k in user_msg_lower for k in [
+        "product launch", "launch sprint", "launch campaign", "marketing campaign", "generate visual",
+        "product campaign", "twitter campaign", "campaign for", "social campaign", "execute campaign"
+    ])
     is_invoice_intent = any(k in user_msg_lower for k in ["invoice", "po reconciliation", "purchase order", "vendor receipt", "billing ocr"])
     is_lead_intent = any(k in user_msg_lower for k in ["lead scoring", "hubspot lead", "crm lead", "enrich lead", "qualify lead"])
     is_email_intent = any(k in user_msg_lower for k in ["email triage", "inbox triage", "summarize email", "gmail summarizer"])
@@ -785,7 +840,7 @@ async def copilot_chat(
             reply="Gmail Connection: Click **Authorize & Connect** in your integrations to link your mailbox. Permissions are isolated per organization.",
             execution_nodes=[],
             action_cta=ActionCTA(label="Open Integrations", to="/integrations", variant="primary"),
-            suggested_followups=question_texts[:3],
+            suggested_followups=_build_contextual_followups(user_msg, question_texts),
         )
 
     if is_connect_hubspot:
@@ -794,13 +849,13 @@ async def copilot_chat(
             reply="HubSpot CRM Connection: Webhook tokens and API credentials can be linked securely in your Integrations manager.",
             execution_nodes=[],
             action_cta=ActionCTA(label="Open Integrations", to="/integrations", variant="primary"),
-            suggested_followups=question_texts[:3],
+            suggested_followups=_build_contextual_followups(user_msg, question_texts),
         )
 
     if is_launch_intent:
         return CopilotChatResponse(
             message_id=str(uuid.uuid4())[:8],
-            reply=f"The **Product Launch Sprint** workflow is available for **{ctx['organization_name']}**. It synthesizes target audience analysis, creates ad copy for LinkedIn/Twitter/Email, generates AI visual creatives, and schedules launch drops.",
+            reply=f"The **Product Launch Sprint** workflow is ready for **{ctx['organization_name']}**. It synthesizes target audience analysis, creates multi-channel copy (LinkedIn, X/Twitter, Email), renders visual creatives, and schedules launch drops with human supervisor sign-off.",
             execution_nodes=[
                 ExecutionNode(id="n1", name="CAMPAIGN BRIEF INTAKE", type="trigger", icon="webhook", status="success", duration_ms=18, input_data={"event": "user_spec_intake"}, output_data={"status": "ingested"}),
                 ExecutionNode(id="n2", name="Synthesize Target Audience", type="action", icon="claude", status="success", duration_ms=42, input_data={"action": "extract_parameters"}, output_data={"segments": 3}),
@@ -810,7 +865,7 @@ async def copilot_chat(
                 ExecutionNode(id="n6", name="Calendar Schedule Drops", type="output", icon="calendar", status="success", duration_ms=50, input_data={"calendar": "Google Calendar"}, output_data={"scheduled_drops": 4}),
             ],
             action_cta=ActionCTA(label="Open Product Launch Sprint", to="/workflows/product-launch", variant="primary"),
-            suggested_followups=question_texts[:3],
+            suggested_followups=_build_contextual_followups(user_msg, question_texts),
             workflow_key="product_launch",
         )
 
@@ -825,7 +880,7 @@ async def copilot_chat(
                 ExecutionNode(id="i4", name="Action Center Verification", type="output", icon="shield", status="success", duration_ms=40, input_data={"gate": "Supervisor Sign-off"}, output_data={"staged": True}),
             ],
             action_cta=ActionCTA(label="Open Invoice Workflow", to="/workflows/invoice_processing", variant="primary"),
-            suggested_followups=question_texts[:3],
+            suggested_followups=_build_contextual_followups(user_msg, question_texts),
             workflow_key="invoice_processing",
         )
 
@@ -840,7 +895,7 @@ async def copilot_chat(
                 ExecutionNode(id="l4", name="Alert Sales Rep in Slack", type="output", icon="slack", status="success", duration_ms=35, input_data={"channel": "#sales-leads"}, output_data={"notified": True}),
             ],
             action_cta=ActionCTA(label="Open Lead Scoring Workflow", to="/workflows/lead_scoring", variant="primary"),
-            suggested_followups=question_texts[:3],
+            suggested_followups=_build_contextual_followups(user_msg, question_texts),
             workflow_key="lead_scoring",
         )
 
@@ -855,7 +910,7 @@ async def copilot_chat(
                 ExecutionNode(id="e4", name="Slack Alert", type="output", icon="slack", status="success", duration_ms=45, input_data={"channel": "#urgent-inbox"}, output_data={"delivered": True}),
             ],
             action_cta=ActionCTA(label="Open Email Summarizer", to="/workflows/email_summarizer", variant="primary"),
-            suggested_followups=question_texts[:3],
+            suggested_followups=_build_contextual_followups(user_msg, question_texts),
             workflow_key="email_summarizer",
         )
 
@@ -865,7 +920,7 @@ async def copilot_chat(
             reply=f"Action Center Governance: You currently have **{ctx['pending_approvals']} item(s)** awaiting supervisor verification. Automated actions requiring supervisor sign-off are safely paused at Layer 6 Approval Gates.",
             execution_nodes=[],
             action_cta=ActionCTA(label="Review Action Center", to="/escalations", variant="primary"),
-            suggested_followups=question_texts[:3],
+            suggested_followups=_build_contextual_followups(user_msg, question_texts),
         )
 
     if is_metrics_intent:
@@ -874,7 +929,7 @@ async def copilot_chat(
             reply=f"Operational Telemetry: **{ctx['total_runs']} total runs**, **{ctx['active_runs']} active runs**, and **{ctx['pending_approvals']} pending approvals** across **{ctx['organization_name']}**.",
             execution_nodes=[],
             action_cta=ActionCTA(label="Open Operational Dashboard", to="/dashboard", variant="primary"),
-            suggested_followups=question_texts[:3],
+            suggested_followups=_build_contextual_followups(user_msg, question_texts),
         )
 
     # ─────────────────────────────────────────────────────────────────────────
@@ -907,9 +962,9 @@ async def _generate_intelligent_copilot_reply(
     wf_names = [f"- **{w.get('name')}** (`{w.get('key')}`)" for w in ctx.get("assigned_workflows", [])[:20]]
     catalog_list = "\n".join(wf_names) or "- Product Launch Sprint (`product_launch`)\n- Meeting Intelligence & Follow-up (`meeting_intelligence_followup`)\n- Invoice Processing & OCR (`invoice_processing`)\n- Lead Scoring & Enrichment (`lead_scoring`)\n- Legal Personal Injury Settlement Suite (`legal_personal_injury`)\n- Football Agent OS (`football_agent_os`)"
 
-    system_prompt = f"""You are the real-time AI Operations Assistant for the Isolate platform (formerly SMBFlow).
-User Role: {'Platform Administrator (Universal Cross-Tenant Scope & System Operator)' if is_admin else f"Workspace Operator for {ctx.get('organization_name')}"}
-Current Infrastructure Context: {ctx.get('organization_name')} ({ctx.get('industry').title()} sector).
+    system_prompt = f"""You are the real-time AI Operations Assistant for the Isolate enterprise platform.
+User Role: {'Platform Administrator (Universal Scope & System Operator)' if is_admin else f"Workspace Operator for {ctx.get('organization_name')}"}
+Organization: {ctx.get('organization_name')} ({ctx.get('industry').title()} sector).
 Total Workflows Registered: {len(ctx.get('assigned_workflows', []))}
 Executed Runs in Scope: {ctx.get('total_runs')} ({ctx.get('active_runs')} active)
 
@@ -919,18 +974,18 @@ Registered Workflows in Platform Catalog:
 Platform Capabilities & Tools:
 - Visual DAG Workflow Builder at `/workflows/builder` with Drag & Drop canvas, auto-layout, and AI prompt synthesis.
 - Native Agent Types: research_agent, reasoning_agent, drafting_agent, verification_agent, execution_agent.
-- Tool Connectors: PostgreSQL (vector/persistent contact memory), Gmail (email ingest/drafting), Google Calendar (meeting briefing & prep blocks), HubSpot CRM (contact matching & task tracking), Slack, Google Sheets.
-- Human-in-the-Loop (HITL) approval gates: Emails and external mutations are strictly staged for human sign-off before dispatch.
+- Tool Connectors: PostgreSQL, Gmail, Google Calendar, HubSpot CRM, Slack, Google Sheets.
+- Human-in-the-Loop (HITL) approval gates: Emails and external mutations are strictly staged in Action Center before dispatch.
 
-Directives:
-1. Provide concise, highly intelligent, real-time responses in GitHub Markdown.
-2. If the user asks how to create a new workflow, or asks to build one with sparse/minimal details:
-   - Explain that they can build it on the Visual Builder canvas (`/workflows/builder`) or use natural language synthesis.
-   - Dynamically ask 3 targeted questions to clarify: (a) Primary Trigger, (b) Data source & tools to connect, (c) Whether a human approval gate is needed.
-3. If the user asks if a workflow is available (such as Meeting Intelligence, Invoice OCR, Lead Scoring):
-   - Confirm its presence from the catalog above and summarize its end-to-end multi-agent pipeline and tool integrations.
-4. If the user asks platform administration or operations questions, answer directly with technical clarity.
-5. NEVER invent fake JSON dumps or say you do not recognize the query. Converse naturally and intelligently.
+CRITICAL FORMATTING & CONTENT DIRECTIVES:
+1. Tone: Professional, executive, concise. Keep all replies strictly under 3 short paragraphs.
+2. ABSOLUTE CONSTRAINT: NEVER output raw JSON dictionaries, raw Python code blocks, AST trees, or pseudo-DAG schemas in chat. If asked for workflow architecture or code, explain the structure cleanly in plain English with bulleted steps (e.g. Trigger -> AI Analysis -> HITL Approval Gate -> Channel Dispatch).
+3. ABSOLUTE CONSTRAINT: NEVER output raw markdown image links or logo URLs (such as `[sentry-logo](https://...)` or `![logo](...)`). The frontend UI renders native vector icons automatically. Simply name tools in bold (e.g. **Sentry**, **Datadog**, **PagerDuty**, **Slack**, **Jira**).
+4. No rambling lecture sections: Do not output verbose academic boilerplate like "Why this works?", "How to Test this Live", or "Next Steps" tutorials unless explicitly asked.
+5. If the user asks to run, execute, or build a campaign/workflow (e.g., for Twitter, LinkedIn, etc.):
+   - Confirm that the workflow is available and ready to run.
+   - Summarize the pipeline stages (Brief Intake -> Audience Analysis -> Copy Generation -> HITL Sign-off -> Scheduled Drop).
+   - Advise them to click the action button below to start or configure the run.
 """
 
     llm_reply = None
@@ -942,11 +997,11 @@ Directives:
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_msg},
                 ],
-                "timeout": 20,
+                "timeout": 15,
             }
             if "gemini" not in model:
-                kwargs["temperature"] = 0.3
-                kwargs["max_tokens"] = 1500
+                kwargs["temperature"] = 0.2
+                kwargs["max_tokens"] = 450
 
             resp = await acompletion(**kwargs)
             llm_reply = resp.choices[0].message.content.strip()
@@ -980,14 +1035,16 @@ Directives:
             )
         else:
             llm_reply = (
-                "I did not recognize that query in the context of our platform workflows. "
-                "Please select one of the recommended operational questions or workflow tasks below to get started."
+                "I am here to assist you with your automations and workflows across Isolate. "
+                "Select one of the recommended operational actions below or describe the workflow you want to launch."
             )
 
     # Determine optimal ActionCTA
     action_cta = ActionCTA(label="Open Visual Workflow Builder", to="/workflows/builder", variant="primary")
     msg_lower = user_msg.lower()
-    if "meeting" in msg_lower:
+    if any(k in msg_lower for k in ("product", "launch", "campaign", "twitter", "linkedin")):
+        action_cta = ActionCTA(label="Open Product Launch Sprint", to="/workflows/product-launch", variant="primary")
+    elif "meeting" in msg_lower:
         action_cta = ActionCTA(label="Open Meeting Intelligence Builder", to="/workflows/builder?wf=meeting_intelligence_followup", variant="primary")
     elif "org" in msg_lower or "tenant" in msg_lower:
         action_cta = ActionCTA(label="Manage Organizations", to="/admin/organizations", variant="primary")
@@ -999,7 +1056,7 @@ Directives:
         reply=llm_reply,
         execution_nodes=[],
         action_cta=action_cta,
-        suggested_followups=question_texts[:3],
+        suggested_followups=_build_contextual_followups(user_msg, question_texts),
         required_tools=[],
         workflow_key=None,
     )

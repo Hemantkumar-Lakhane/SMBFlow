@@ -547,8 +547,8 @@ function CanvasPreview({ template }) {
 
   return (
     <div className={`w-full transition-all flex flex-col ${isFullScreen
-        ? 'fixed inset-0 z-50 p-4 md:p-8 bg-slate-950/85 backdrop-blur-md flex items-center justify-center'
-        : 'max-w-4xl mx-auto mt-6 bg-white dark:bg-[#121826] rounded-2xl border border-slate-200 dark:border-[#233048] shadow-md overflow-hidden relative'
+      ? 'fixed inset-0 z-50 p-4 md:p-8 bg-slate-950/85 backdrop-blur-md flex items-center justify-center'
+      : 'max-w-4xl mx-auto mt-6 bg-white dark:bg-[#121826] rounded-2xl border border-slate-200 dark:border-[#233048] shadow-md overflow-hidden relative'
       }`}>
       <div className={`w-full flex flex-col ${isFullScreen ? 'max-w-6xl max-h-[92vh] bg-white dark:bg-[#121826] rounded-2xl border border-slate-200 dark:border-[#233048] shadow-2xl overflow-hidden' : ''}`}>
         {/* Canvas Top Bar */}
@@ -674,8 +674,8 @@ function CanvasPreview({ template }) {
                       rx="10"
                       fill="currentColor"
                       className={`text-white dark:text-[#182030] fill-current transition-all shadow-xs ${isSelected
-                          ? 'stroke-blue-500 shadow-md'
-                          : 'stroke-slate-300 dark:stroke-[#2b374c] group-hover:stroke-blue-400'
+                        ? 'stroke-blue-500 shadow-md'
+                        : 'stroke-slate-300 dark:stroke-[#2b374c] group-hover:stroke-blue-400'
                         }`}
                       strokeWidth={isSelected ? '2' : '1.5'}
                     />
@@ -861,13 +861,94 @@ function CanvasPreview({ template }) {
   )
 }
 
+// ── Syntax Highlighted & Collapsible Code Card ──────────────────────────────
+function CodeCard({ code, lang = 'json' }) {
+  const [copied, setCopied] = useState(false)
+  const [expanded, setExpanded] = useState(false)
+
+  const lines = (code || '').split('\n')
+  const isLong = lines.length > 7
+  const displayCode = isLong && !expanded ? lines.slice(0, 6).join('\n') + '\n...' : code
+
+  const handleCopy = (e) => {
+    e.stopPropagation()
+    navigator.clipboard.writeText(code)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  return (
+    <div className="my-2.5 rounded-xl border border-slate-700/60 dark:border-[#233048] bg-[#0c1017] dark:bg-[#070b12] text-slate-200 overflow-hidden shadow-xs">
+      <div className="flex items-center justify-between px-3 py-1.5 bg-[#161b22] dark:bg-[#0f1420] border-b border-slate-800 dark:border-[#1a2336] text-[11px] font-mono text-slate-400">
+        <div className="flex items-center gap-2">
+          <Terminal className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+          <span className="uppercase font-semibold tracking-wider text-[10px] text-slate-300">
+            {lang || 'JSON'}
+          </span>
+          <span className="text-[10px] text-slate-500">({lines.length} lines)</span>
+        </div>
+        <div className="flex items-center gap-2">
+          {isLong && (
+            <button
+              type="button"
+              onClick={() => setExpanded(!expanded)}
+              className="text-[11px] text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1 cursor-pointer font-sans"
+            >
+              <ChevronDown className={`w-3 h-3 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+              <span>{expanded ? 'Collapse' : `Expand (${lines.length} lines)`}</span>
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={handleCopy}
+            className="hover:text-white transition-colors flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-slate-800 text-[11px] cursor-pointer"
+          >
+            {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+            <span>{copied ? 'Copied' : 'Copy'}</span>
+          </button>
+        </div>
+      </div>
+      <div className="p-3 overflow-x-auto text-[11px] font-mono leading-relaxed select-text text-slate-300 bg-black/20">
+        <pre className="whitespace-pre">{displayCode}</pre>
+      </div>
+    </div>
+  )
+}
+
 // ── Markdown Parser & Formatter (Zero Unparsed Asterisks or Raw Syntax) ──────
 function MarkdownRenderer({ content, className = '' }) {
   if (!content) return null
 
+  // Pre-clean raw image links or logo URLs dumped by LLM
+  let preClean = content.replace(/\*\*\*/g, '')
+  // Replace patterns like [sentry-logo](https://...) or ![logo](https://...) with clean bold names
+  preClean = preClean.replace(/!?\[([^\]]*?)(?:-logo| logo)\]\(https?:\/\/[^\)]+\)/gi, '**$1**')
+
+  // Parse fenced code blocks
+  const codeBlockRegex = /```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g
+  const blocks = []
+  let lastIdx = 0
+  let codeMatch
+
+  while ((codeMatch = codeBlockRegex.exec(preClean)) !== null) {
+    if (codeMatch.index > lastIdx) {
+      blocks.push({ type: 'text', content: preClean.slice(lastIdx, codeMatch.index) })
+    }
+    blocks.push({
+      type: 'code',
+      lang: (codeMatch[1] || 'json').toLowerCase(),
+      code: codeMatch[2].trim(),
+    })
+    lastIdx = codeBlockRegex.lastIndex
+  }
+  if (lastIdx < preClean.length) {
+    blocks.push({ type: 'text', content: preClean.slice(lastIdx) })
+  }
+
   const parseInline = (text) => {
     const parts = []
-    const regex = /(\*\*(.*?)\*\*|\*(.*?)\*|`(.*?)`)/g
+    // Match inline code, bold, italic, and standard markdown links
+    const regex = /(\*\*(.*?)\*\*|\*(.*?)\*|`(.*?)`|\[(.*?)\]\((https?:\/\/.*?)\))/g
     let lastIndex = 0
     let match
     let keyIdx = 0
@@ -885,6 +966,23 @@ function MarkdownRenderer({ content, className = '' }) {
       } else if (match[4]) {
         // `code`
         parts.push(<code key={keyIdx++} className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-[#1e293b] font-mono text-[11px] text-blue-600 dark:text-blue-400">{match[4]}</code>)
+      } else if (match[5] && match[6]) {
+        // [link](url)
+        const linkText = match[5]
+        const linkUrl = match[6]
+        if (linkText.toLowerCase().includes('logo') || linkUrl.includes('logo')) {
+          parts.push(
+            <span key={keyIdx++} className="inline-flex items-center px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 font-semibold text-[10px] mx-0.5">
+              {linkText.replace(/-logo$/i, '')}
+            </span>
+          )
+        } else {
+          parts.push(
+            <a key={keyIdx++} href={linkUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 underline font-medium hover:opacity-85">
+              {linkText}
+            </a>
+          )
+        }
       }
       lastIndex = regex.lastIndex
     }
@@ -896,51 +994,69 @@ function MarkdownRenderer({ content, className = '' }) {
     return parts.length > 0 ? parts : text
   }
 
-  // Strip unparsed triple asterisks
-  const cleanContent = content.replace(/\*\*\*/g, '')
-  const lines = cleanContent.split('\n')
+  const renderTextBlock = (textStr, blockIdx) => {
+    const lines = textStr.split('\n')
+    return (
+      <div key={blockIdx} className="space-y-1.5">
+        {lines.map((line, idx) => {
+          const trimmed = line.trim()
+          if (!trimmed) return <div key={idx} className="h-1" />
+
+          // Auto-detect raw unfenced JSON objects in chat and render as code card
+          if (trimmed.startsWith('{') && trimmed.endsWith('}') && trimmed.length > 20) {
+            try {
+              const parsed = JSON.parse(trimmed)
+              return <CodeCard key={idx} code={JSON.stringify(parsed, null, 2)} lang="json" />
+            } catch (_) {}
+          }
+
+          // Heading 3
+          if (trimmed.startsWith('### ')) {
+            return <h3 key={idx} className="text-sm font-bold text-slate-900 dark:text-white mt-2 mb-1">{parseInline(trimmed.replace(/^###\s+/, ''))}</h3>
+          }
+          // Heading 2
+          if (trimmed.startsWith('## ')) {
+            return <h2 key={idx} className="text-base font-bold text-slate-900 dark:text-white mt-2.5 mb-1">{parseInline(trimmed.replace(/^##\s+/, ''))}</h2>
+          }
+          // Heading 1
+          if (trimmed.startsWith('# ')) {
+            return <h1 key={idx} className="text-base font-bold text-slate-900 dark:text-white mt-2.5 mb-1">{parseInline(trimmed.replace(/^#\s+/, ''))}</h1>
+          }
+
+          // Bullet list
+          if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+            return (
+              <div key={idx} className="flex items-start gap-2 ml-1 text-xs">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0 mt-1.5" />
+                <div className="flex-1 text-slate-800 dark:text-slate-200">{parseInline(trimmed.substring(2))}</div>
+              </div>
+            )
+          }
+
+          // Numbered list
+          const numMatch = trimmed.match(/^(\d+)\.\s+(.*)/)
+          if (numMatch) {
+            return (
+              <div key={idx} className="flex items-start gap-2 ml-1 text-xs">
+                <span className="text-[11px] font-mono font-bold text-blue-500 shrink-0 mt-0.5">{numMatch[1]}.</span>
+                <div className="flex-1 text-slate-800 dark:text-slate-200">{parseInline(numMatch[2])}</div>
+              </div>
+            )
+          }
+
+          return <p key={idx} className="text-xs text-slate-800 dark:text-slate-200">{parseInline(trimmed)}</p>
+        })}
+      </div>
+    )
+  }
 
   return (
     <div className={`space-y-2 text-xs md:text-sm leading-relaxed ${className}`}>
-      {lines.map((line, idx) => {
-        const trimmed = line.trim()
-        if (!trimmed) return <div key={idx} className="h-1" />
-
-        // Heading 3
-        if (trimmed.startsWith('### ')) {
-          return <h3 key={idx} className="text-sm font-bold text-slate-900 dark:text-white mt-2 mb-1">{parseInline(trimmed.replace(/^###\s+/, ''))}</h3>
+      {blocks.map((b, bIdx) => {
+        if (b.type === 'code') {
+          return <CodeCard key={bIdx} code={b.code} lang={b.lang} />
         }
-        // Heading 2
-        if (trimmed.startsWith('## ')) {
-          return <h2 key={idx} className="text-base font-bold text-slate-900 dark:text-white mt-2.5 mb-1">{parseInline(trimmed.replace(/^##\s+/, ''))}</h2>
-        }
-        // Heading 1
-        if (trimmed.startsWith('# ')) {
-          return <h1 key={idx} className="text-base font-bold text-slate-900 dark:text-white mt-2.5 mb-1">{parseInline(trimmed.replace(/^#\s+/, ''))}</h1>
-        }
-
-        // Bullet list
-        if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
-          return (
-            <div key={idx} className="flex items-start gap-2 ml-1 text-xs">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0 mt-1.5" />
-              <div className="flex-1 text-slate-800 dark:text-slate-200">{parseInline(trimmed.substring(2))}</div>
-            </div>
-          )
-        }
-
-        // Numbered list
-        const numMatch = trimmed.match(/^(\d+)\.\s+(.*)/)
-        if (numMatch) {
-          return (
-            <div key={idx} className="flex items-start gap-2 ml-1 text-xs">
-              <span className="text-[11px] font-mono font-bold text-blue-500 shrink-0 mt-0.5">{numMatch[1]}.</span>
-              <div className="flex-1 text-slate-800 dark:text-slate-200">{parseInline(numMatch[2])}</div>
-            </div>
-          )
-        }
-
-        return <p key={idx} className="text-xs text-slate-800 dark:text-slate-200">{parseInline(trimmed)}</p>
+        return renderTextBlock(b.content, bIdx)
       })}
     </div>
   )
@@ -1778,47 +1894,6 @@ export default function CopilotPage() {
         </div>
       )}
 
-      {/* ── Top Bar ─────────────────────────────────────────────────────────── */}
-      <div className="px-6 py-3 border-b border-slate-200 dark:border-[#233048] bg-white/95 dark:bg-[#121826]/95 backdrop-blur-xs flex items-center justify-between shrink-0 sticky top-0 z-20 transition-colors">
-        <div className="flex items-center gap-3">
-          {hasStartedConversation && (
-            <button
-              onClick={() => {
-                setHasStartedConversation(false)
-                setMessages([])
-                setPromptText('')
-              }}
-              className="p-1.5 rounded-lg bg-slate-100 dark:bg-[#182234] hover:bg-slate-200 dark:hover:bg-[#233048] text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
-              title="New Automation Canvas"
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </button>
-          )}
-
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
-              <img src="/robot.png" alt="Bot" className="w-5 h-5 object-contain shrink-0" />
-              <span>AI Assistant</span>
-            </span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3 text-xs">
-          <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 dark:bg-[#182234] border border-slate-200 dark:border-[#233048] text-slate-700 dark:text-slate-300 font-mono text-[11px]">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>Active Runs: {insights?.active_runs ?? 0}</span>
-          </div>
-
-          <button
-            onClick={() => navigate('/workflows')}
-            className="flex items-center gap-1.5 px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-semibold transition-all shadow-xs cursor-pointer"
-          >
-            <span>Workflows</span>
-            <ArrowUpRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </div>
-
       {/* ── Main Canvas / Conversation Area ─────────────────────────────────── */}
       {!hasStartedConversation ? (
         /* ── HERO VIEW ─────────────────────────────────────────────────────── */
@@ -1949,8 +2024,8 @@ export default function CopilotPage() {
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isUploading}
                 className={`w-7 h-7 rounded-lg border flex items-center justify-center transition-all cursor-pointer ${attachedFiles.length > 0
-                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400'
-                    : 'border-slate-200 dark:border-[#233048] bg-slate-50 dark:bg-[#182234] hover:bg-slate-100 dark:hover:bg-[#233048] text-slate-600 dark:text-slate-300'
+                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400'
+                  : 'border-slate-200 dark:border-[#233048] bg-slate-50 dark:bg-[#182234] hover:bg-slate-100 dark:hover:bg-[#233048] text-slate-600 dark:text-slate-300'
                   }`}
                 title="Upload file or document"
               >
@@ -1963,10 +2038,10 @@ export default function CopilotPage() {
                   type="button"
                   onClick={toggleVoiceInput}
                   className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all cursor-pointer ${isListening
-                      ? 'bg-red-500 text-white animate-pulse ring-2 ring-red-400'
-                      : isTranscribing
-                        ? 'bg-blue-600 text-white animate-spin'
-                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#182234]'
+                    ? 'bg-red-500 text-white animate-pulse ring-2 ring-red-400'
+                    : isTranscribing
+                      ? 'bg-blue-600 text-white animate-spin'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#182234]'
                     }`}
                   title={isListening ? 'Stop listening' : 'Voice input (Speak to AI)'}
                 >
@@ -2015,8 +2090,8 @@ export default function CopilotPage() {
                     onMouseLeave={() => setHoveredTemplate(null)}
                     onClick={() => handleSelectTemplate(tpl)}
                     className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all cursor-pointer ${isSelected
-                        ? 'border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-[#182234] text-blue-700 dark:text-blue-300'
-                        : 'border-slate-200 dark:border-[#233048] bg-white dark:bg-[#121826] text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-[#182234]'
+                      ? 'border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-[#182234] text-blue-700 dark:text-blue-300'
+                      : 'border-slate-200 dark:border-[#233048] bg-white dark:bg-[#121826] text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-[#182234]'
                       }`}
                   >
                     <ToolLogo name={tpl.iconName} className="w-3.5 h-3.5" />
@@ -2056,8 +2131,8 @@ export default function CopilotPage() {
                   <div className={`max-w-[85%] md:max-w-[78%] ${isUser ? 'items-end' : 'items-start'}`}>
                     <div
                       className={`p-4 rounded-2xl text-sm leading-relaxed ${isUser
-                          ? 'bg-blue-600 text-white rounded-tr-xs shadow-sm'
-                          : 'bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] text-slate-900 dark:text-slate-100 rounded-tl-xs shadow-2xs'
+                        ? 'bg-blue-600 text-white rounded-tr-xs shadow-sm'
+                        : 'bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] text-slate-900 dark:text-slate-100 rounded-tl-xs shadow-2xs'
                         }`}
                     >
                       <MarkdownRenderer content={msg.content} />
@@ -2076,8 +2151,8 @@ export default function CopilotPage() {
                                 <div
                                   key={t.tool_key}
                                   className={`p-2 rounded-lg border flex items-center justify-between gap-2 transition-all ${isConn
-                                      ? 'bg-white dark:bg-[#121826] border-slate-200 dark:border-[#233048]'
-                                      : 'bg-amber-50/60 dark:bg-amber-950/20 border-amber-300 dark:border-amber-800/60'
+                                    ? 'bg-white dark:bg-[#121826] border-slate-200 dark:border-[#233048]'
+                                    : 'bg-amber-50/60 dark:bg-amber-950/20 border-amber-300 dark:border-amber-800/60'
                                     }`}
                                 >
                                   <div className="flex items-center gap-2 min-w-0">
@@ -2193,15 +2268,23 @@ export default function CopilotPage() {
                     {/* Suggested Followups */}
                     {!isUser && msg.suggested_followups && msg.suggested_followups.length > 0 && (
                       <div className="flex flex-wrap gap-1.5 mt-2.5">
-                        {msg.suggested_followups.map((sug, sIdx) => (
-                          <button
-                            key={sIdx}
-                            onClick={() => handleSend(sug)}
-                            className="text-xs px-3 py-1.5 bg-white dark:bg-[#121826] hover:bg-slate-100 dark:hover:bg-[#182234] border border-slate-200 dark:border-[#233048] hover:border-blue-400 text-slate-700 dark:text-slate-300 rounded-lg transition-colors cursor-pointer text-left"
-                          >
-                            {sug}
-                          </button>
-                        ))}
+                        {msg.suggested_followups
+                          .filter(sug => {
+                            if (!sug || typeof sug !== 'string') return false
+                            const sLower = sug.toLowerCase()
+                            if (sLower.includes('underlying python') || sLower.includes('dag definition') || sLower.includes('memory module prevent') || sLower.includes('evaluation prompt')) return false
+                            return true
+                          })
+                          .slice(0, 3)
+                          .map((sug, sIdx) => (
+                            <button
+                              key={sIdx}
+                              onClick={() => handleSend(sug)}
+                              className="text-xs px-3 py-1.5 bg-white dark:bg-[#121826] hover:bg-slate-100 dark:hover:bg-[#182234] border border-slate-200 dark:border-[#233048] hover:border-blue-400 text-slate-700 dark:text-slate-300 rounded-lg transition-colors cursor-pointer text-left"
+                            >
+                              {sug}
+                            </button>
+                          ))}
                       </div>
                     )}
                   </div>
@@ -2279,8 +2362,8 @@ export default function CopilotPage() {
                   onClick={() => convFileInputRef.current?.click()}
                   disabled={isUploading}
                   className={`p-2 rounded-xl transition-colors cursor-pointer ${attachedFiles.length > 0
-                      ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400'
-                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#182234]'
+                    ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#182234]'
                     }`}
                   title="Upload file or document"
                 >
