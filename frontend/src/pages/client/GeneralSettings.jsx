@@ -153,31 +153,62 @@ export default function GeneralSettings() {
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
-  // Handle Profile Photo Upload
+  // Handle Profile Photo Upload with client-side canvas optimization & immediate persistence
   const handleAvatarFileSelect = (e) => {
     const file = e.target.files?.[0]
     if (!file) return
 
-    if (file.size > 3 * 1024 * 1024) {
-      setError('Image size should be less than 3MB')
-      return
-    }
-
     const reader = new FileReader()
     reader.onload = (event) => {
-      const dataUrl = event.target.result
-      set('avatarUrl', dataUrl)
-      if (user?.id) {
-        try {
-          localStorage.setItem(`avatar_${user.id}`, dataUrl)
-          localStorage.setItem('smbflow_avatar', dataUrl)
-        } catch (_) {}
+      const img = new Image()
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        const MAX_DIM = 256
+        let width = img.width
+        let height = img.height
+
+        if (width > height) {
+          if (width > MAX_DIM) {
+            height = Math.round((height * MAX_DIM) / width)
+            width = MAX_DIM
+          }
+        } else {
+          if (height > MAX_DIM) {
+            width = Math.round((width * MAX_DIM) / height)
+            height = MAX_DIM
+          }
+        }
+
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext('2d')
+        ctx.drawImage(img, 0, 0, width, height)
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.85)
+
+        set('avatarUrl', compressedDataUrl)
+        if (user?.id) {
+          try {
+            localStorage.setItem(`avatar_${user.id}`, compressedDataUrl)
+            localStorage.setItem('smbflow_avatar', compressedDataUrl)
+          } catch (_) {}
+        }
+        if (user && token) {
+          login(token, { ...user, avatar_url: compressedDataUrl })
+        }
+
+        // Auto-persist immediately to backend profile
+        api.put('/auth/profile', {
+          full_name: (form.fullName || user?.full_name || '').trim(),
+          avatar_url: compressedDataUrl,
+        }).catch(() => {})
+
+        setSuccess('Profile photo updated successfully!')
+        setTimeout(() => setSuccess(''), 3000)
       }
-      if (user && token) {
-        login(token, { ...user, avatar_url: dataUrl })
+      img.onerror = () => {
+        setError('Failed to process image file. Please choose a valid JPG/PNG.')
       }
-      setSuccess('Profile photo updated!')
-      setTimeout(() => setSuccess(''), 3000)
+      img.src = event.target.result
     }
     reader.readAsDataURL(file)
   }
@@ -430,20 +461,20 @@ export default function GeneralSettings() {
             CARD 2: ORGANIZATION PROFILE
             ══════════════════════════════════════════════════════════════════ */}
         <SectionCard
-          title={isPlatformAdmin ? "Platform Operations & Infrastructure Profile" : "Organization & Company Profile"}
-          subtitle={isPlatformAdmin ? "Global platform orchestrator managing multi-tenant infrastructure and universal AI workflows" : "Update company identity, website, and industry categorization"}
+          title={isPlatformAdmin ? "Workspace & Organization Profile" : "Organization & Company Profile"}
+          subtitle={isPlatformAdmin ? "Manage company identity, operational scope, and universal workflow configurations" : "Update company identity, website, and industry categorization"}
           icon={Building2}
         >
           {isPlatformAdmin && (
-            <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-xl flex items-center justify-between text-xs">
+            <div className="mb-4 p-3 bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-800 rounded-xl flex items-center justify-between text-xs">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
                 <span className="font-semibold text-blue-900 dark:text-blue-200">
-                  Universal Platform Administrator Scope — You manage all tenant organizations and AI workflows.
+                  Primary Workspace Administrator — Configured for all organization workflows.
                 </span>
               </div>
-              <span className="px-2 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-bold">
-                PLATFORM ROOT
+              <span className="px-2.5 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-bold tracking-wide">
+                WORKSPACE ADMIN
               </span>
             </div>
           )}

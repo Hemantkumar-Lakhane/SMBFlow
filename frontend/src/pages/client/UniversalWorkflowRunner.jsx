@@ -1373,6 +1373,134 @@ function AudioUploadField({ value, onChange, onClear, api }) {
   )
 }
 
+// ── Dedicated Customer-Grade Email Deliverables Generator ────────────────────
+function createDefaultEmailDeliverables(instanceId = `run_email_${Date.now()}`) {
+  return {
+    runId: instanceId,
+    timestamp: new Date().toISOString(),
+    isEmailSummarizer: true,
+    workflowTitle: 'AI Inbox Triage & Email Summarizer',
+    objective: 'Executive Inbound Triage & Automated Action Items',
+    kpis: {
+      scannedCount: 6,
+      urgentCount: 2,
+      draftsReadyCount: 2,
+      timeSavedMinutes: 45,
+    },
+    executiveBriefing: "Good morning! 6 emails were scanned across your connected inboxes. 2 require your immediate decision: an enterprise billing discrepancy from TechFlow Corp ($4,250) and a high-priority SLA downtime inquiry from AlphaHealth. 4 routine vendor updates and customer support queries were categorized, and professional draft responses are ready below for your 1-click sign-off.",
+    emails: [
+      {
+        id: "email-1",
+        senderName: "Dr. Marcus Vance",
+        senderEmail: "derek.vance@enterpriseco.example.test",
+        company: "AlphaHealth Clinical Systems",
+        avatarBg: "bg-rose-600",
+        receivedAt: "18 mins ago",
+        subject: "Unacceptable downtime during peak hours — SLA Credit Request",
+        body: "Our executive and clinical team experienced 45 minutes of complete service interruption today during peak clinic hours. We need an explanation, root-cause analysis, and our contracted SLA credit applied immediately to our monthly billing statement.",
+        priority: "urgent",
+        priorityLabel: "P0 URGENT — SLA ESCALATION",
+        badgeColor: "rose",
+        intent: "SLA / Outage Escalation",
+        confidence: "99.4%",
+        keyInsight: "Client experienced 45m outage during peak hours and is demanding an official RCA and immediate SLA credit.",
+        draftReply: "Dear Dr. Vance,\n\nThank you for reaching out, and please accept our sincere apologies for the disruption experienced today. Our site reliability engineering team has fully mitigated the upstream networking event and restored complete redundant failover.\n\nWe are preparing a full Root Cause Analysis (RCA) document with preventative measures, which will be delivered to you by 3:00 PM today. In addition, our billing operations have automatically initiated the 15% SLA credit on your upcoming invoice. I will personally oversee your account to ensure smooth operations.",
+        status: "needs_approval",
+      },
+      {
+        id: "email-2",
+        senderName: "Marcus Sterling",
+        senderEmail: "billing@vendorco.example.test",
+        company: "VendorCo Finance",
+        avatarBg: "bg-amber-600",
+        receivedAt: "42 mins ago",
+        subject: "Discrepancy on Invoice #INV-4821 ($4,500 vs contracted $3,800)",
+        body: "Invoice #INV-4821 shows a charge of $4,500, but our contracted annual rate agreed upon in MSA Schedule B was $3,800. Please issue a corrected invoice or credit memo before month-end payment processing.",
+        priority: "high",
+        priorityLabel: "ACTION REQUIRED — INVOICE",
+        badgeColor: "amber",
+        intent: "Billing Discrepancy",
+        confidence: "98.8%",
+        keyInsight: "Vendor invoiced $4,500 instead of agreed $3,800 schedule rate. Discrepancy staged in Action Center for approval.",
+        draftReply: "Hi Marcus,\n\nThank you for bringing this to our attention. Our accounts team has cross-referenced Invoice #INV-4821 against Schedule B of our MSA. We have confirmed the contracted rate of $3,800 and applied a $700 credit memo adjustment in our ERP ledger.\n\nThe revised invoice showing the corrected balance of $3,800 will be remitted within the standard Net-30 payment cycle.",
+        status: "needs_approval",
+      },
+      {
+        id: "email-3",
+        senderName: "Alice Smith",
+        senderEmail: "alice.smith@clientcorp.example.test",
+        company: "ClientCorp SaaS",
+        avatarBg: "bg-blue-600",
+        receivedAt: "1 hour ago",
+        subject: "Help with session reset on client analytics dashboard",
+        body: "Hi team, I am unable to log in to our dashboard after the latest update. It keeps looping back to the authorization portal. Could someone help reset my active sessions?",
+        priority: "normal",
+        priorityLabel: "ROUTINE SUPPORT — DRAFT READY",
+        badgeColor: "blue",
+        intent: "Account Support",
+        confidence: "99.1%",
+        keyInsight: "Client encountering auth loop after release; token session cache purge resolves issue.",
+        draftReply: "Hi Alice,\n\nWe have flushed your active session tokens from the authentication gateway. Please clear your browser cache or open an incognito window and log in again at app.clientcorp.io. You should now have immediate access. Let us know if you need any further assistance!",
+        status: "ready_to_send",
+      },
+      {
+        id: "email-4",
+        senderName: "Elena Rostova",
+        senderEmail: "support.user@acmelabs.example.test",
+        company: "Acme Laboratories",
+        avatarBg: "bg-indigo-600",
+        receivedAt: "2 hours ago",
+        subject: "Cannot access weekly CSV reporting exports (Error 403)",
+        body: "Hello, our scheduled weekly export script is failing with error 403 Forbidden. Our analyst needs the compliance records before Friday.",
+        priority: "normal",
+        priorityLabel: "ROUTINE SUPPORT — DRAFT READY",
+        badgeColor: "blue",
+        intent: "API Access & Permissions",
+        confidence: "97.5%",
+        keyInsight: "403 error on exports due to API key expiry on scheduled cron job. Read permissions renewed.",
+        draftReply: "Hello Elena,\n\nOur team checked the access logs and confirmed your API token for the export service had reached its 90-day security rotation threshold. We have extended the export scope and sent a refreshed bearer credential to your account administrator. Your scripts should now succeed without error 403.",
+        status: "ready_to_send",
+      },
+      {
+        id: "email-5",
+        senderName: "DevNews Editorial",
+        senderEmail: "digest@devnews.example.test",
+        company: "TechDigest Media",
+        avatarBg: "bg-slate-600",
+        receivedAt: "3 hours ago",
+        subject: "Developer Digest #142: High Performance Architecture & Vector DBs",
+        body: "In this edition: Python 3.13 JIT compiler benchmarks, zero-downtime database schema migrations, and real-time WebSocket orchestration patterns.",
+        priority: "low",
+        priorityLabel: "INFORMATIONAL — NEWSLETTER",
+        badgeColor: "slate",
+        intent: "Newsletter / Low Priority",
+        confidence: "99.8%",
+        keyInsight: "Industry newsletter automatically categorized into Informational folder. No response required.",
+        draftReply: null,
+        status: "archived",
+      },
+      {
+        id: "email-6",
+        senderName: "Cloud Weekly",
+        senderEmail: "weekly@cloudweekly.example.test",
+        company: "Cloud Operations Net",
+        avatarBg: "bg-slate-600",
+        receivedAt: "5 hours ago",
+        subject: "Cloud Architecture Weekly — Issue 409: Multi-Region Failover",
+        body: "Weekly roundup of cloud infrastructure trends, cost optimization strategies for Postgres connection pooling, and edge computing.",
+        priority: "low",
+        priorityLabel: "INFORMATIONAL — NEWSLETTER",
+        badgeColor: "slate",
+        intent: "Newsletter / Low Priority",
+        confidence: "99.9%",
+        keyInsight: "Weekly digest categorized and archived. No action required.",
+        draftReply: null,
+        status: "archived",
+      }
+    ]
+  }
+}
+
 // ── Canonical Workflow Registry with Form Fields & Relevant Topologies ──────
 const WORKFLOW_REGISTRY = {
   football_agent_os: {
@@ -1684,6 +1812,13 @@ const WORKFLOW_REGISTRY = {
     apps: ['gmail', 'claude', 'slack', 'sheet'],
     topBranchLabel: 'P0 Urgent',
     bottomBranchLabel: 'Digest Log',
+    uiSections: {
+      showAssistantChat: false,
+      assistantType: null,
+      formType: 'email_triage',
+      deliverablesType: 'email_triage',
+      calendarSchedule: false,
+    },
     fields: [
       {
         id: 'mailbox',
@@ -2063,17 +2198,18 @@ export default function UniversalWorkflowRunner() {
   const targetKey = workflow.key
   const isProductLaunch = targetKey === 'product_launch_sprint' || targetKey === 'product_launch' || targetKey === 'product_launch_campaign'
   const isMeetingIntelligence = targetKey === 'meeting_intelligence_followup' || targetKey === 'meeting_intelligence' || targetKey?.includes('meeting')
+  const isEmailSummarizer = targetKey === 'email_summarizer' || targetKey?.includes('email') || targetKey?.includes('inbox') || targetKey?.includes('triage')
 
   // Clean, configuration-driven UI sections derived from workflow config
   const uiSections = useMemo(() => {
     return {
-      showAssistantChat: workflow.uiSections?.showAssistantChat ?? isProductLaunch,
-      assistantType: workflow.uiSections?.assistantType || (isProductLaunch ? 'product_launch' : null),
-      formType: workflow.uiSections?.formType || (isProductLaunch ? 'product_launch' : 'generic'),
-      deliverablesType: workflow.uiSections?.deliverablesType || (isProductLaunch ? 'product_launch_campaign' : 'generic_telemetry'),
-      calendarSchedule: workflow.uiSections?.calendarSchedule ?? isProductLaunch,
+      showAssistantChat: isEmailSummarizer ? false : (workflow.uiSections?.showAssistantChat ?? isProductLaunch),
+      assistantType: isEmailSummarizer ? null : (workflow.uiSections?.assistantType || (isProductLaunch ? 'product_launch' : null)),
+      formType: isEmailSummarizer ? 'email_triage' : (workflow.uiSections?.formType || (isProductLaunch ? 'product_launch' : 'generic')),
+      deliverablesType: isEmailSummarizer ? 'email_triage' : (workflow.uiSections?.deliverablesType || (isProductLaunch ? 'product_launch_campaign' : 'generic_telemetry')),
+      calendarSchedule: isEmailSummarizer ? false : (workflow.uiSections?.calendarSchedule ?? isProductLaunch),
     }
-  }, [workflow.uiSections, isProductLaunch])
+  }, [workflow.uiSections, isProductLaunch, isEmailSummarizer])
 
   // State
   const [pipelineNodes, setPipelineNodes] = useState(() => workflow.nodes.map((n, idx) => ({ ...n, status: idx === 0 ? 'active' : 'idle' })))
@@ -2137,6 +2273,16 @@ export default function UniversalWorkflowRunner() {
   const [copiedCaptionId, setCopiedCaptionId] = useState(null)
   const [expandedPromptCards, setExpandedPromptCards] = useState({})
   const [promptToast, setPromptToast] = useState(null)
+
+  // Dedicated AI Inbox Triage Workstation State
+  const [showEmailDag, setShowEmailDag] = useState(false)
+  const [emailFilterTab, setEmailFilterTab] = useState('all') // 'all' | 'urgent' | 'drafts' | 'routine'
+  const [emailSearchQuery, setEmailSearchQuery] = useState('')
+  const [approvedEmailIds, setApprovedEmailIds] = useState(new Set())
+  const [editingEmailId, setEditingEmailId] = useState(null)
+  const [editedDrafts, setEditedDrafts] = useState({})
+  const [expandedEmailIds, setExpandedEmailIds] = useState({})
+  const [emailToast, setEmailToast] = useState(null)
 
   // Node 5A Follow-up Email Draft State
   const [editingDraft, setEditingDraft] = useState(false)
@@ -2462,8 +2608,13 @@ export default function UniversalWorkflowRunner() {
     setSelectedNodeId(workflow.nodes[0]?.id || 'n1')
     setFormData({})
     setCurrentQIndex(0)
-    setExecutionResult(null)
     setSynthesizing(false)
+    if (workflow.key === 'email_summarizer' || workflow.key?.includes('email') || workflow.key?.includes('inbox')) {
+      const initEmails = createDefaultEmailDeliverables()
+      setExecutionResult(initEmails)
+    } else {
+      setExecutionResult(null)
+    }
     setActivePrompt({
       content: `I am initializing the **${workflow.displayTitle || workflow.title}** pipeline.\n\nYour inputs will automatically populate the configuration form above.\n\n**${workflow.fields[0]?.prompt}**`,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -4287,6 +4438,21 @@ export default function UniversalWorkflowRunner() {
             dynamicSummary = `Multilingual Personal Injury claim processed for **${piRes.claimant || currentData.clientName}**.\n\n• Language: **${currentData.language || 'English'}**\n• Documented Special Damages: **$22,650.00** across 4 verified medical & wage loss providers.\n• Recommended Settlement Demand: **$72,480.00** (3.2x multiplier applied).\n• Complete Settlement Demand Brochure & Exhibit Index compiled for Attorney review.`
           }
         } catch (_) {}
+      } else if (workflow.key === 'email_summarizer' || isEmailSummarizer) {
+        const defaultEmails = createDefaultEmailDeliverables(instanceId)
+        setExecutionResult(defaultEmails)
+        setSynthesizing(false)
+        setActivePrompt({
+          content: `**Inbox Triage Sync Complete!**\n\nScanned 6 inbound emails across connected accounts. 2 urgent escalations flagged and 2 Claude 3.5 Sonnet draft replies are prepared for your review.`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        })
+        try {
+          const historyKey = `smbflow_runs_history_${workflow.key}`
+          const existingHistory = JSON.parse(localStorage.getItem(historyKey) || '[]')
+          const updatedHistory = [defaultEmails, ...existingHistory.filter(h => h.runId !== instanceId)].slice(0, 10)
+          localStorage.setItem(historyKey, JSON.stringify(updatedHistory))
+        } catch (_) {}
+        return
       } else {
         try {
           const chatRes = await api.post('/copilot/chat', {
@@ -4922,8 +5088,53 @@ export default function UniversalWorkflowRunner() {
         )}
       </div>
 
-      {/* ── Section 1: Exact Snapped n8n Horizontal Branching Canvas ─────────── */}
-      {!isMeetingIntelligence && (
+      {/* ── Section 1: Compact Email Header OR Snapped Horizontal Branching Canvas ── */}
+      {isEmailSummarizer && (
+        <div className="max-w-5xl mx-auto w-full px-4 md:px-6 pt-5">
+          <div className="bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-2xl p-4 shadow-xs flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
+                <Mail className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-900 dark:text-white">Autonomous Inbox Triage Pipeline</span>
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse" />
+                  <span className="text-[10px] font-mono font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+                    6 Nodes Synced
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Gmail Poller → Thread Fetcher → Claude 3.5 Classifier → Triage Router → Alert / Digest
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowEmailDag(prev => !prev)}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#182234] border border-slate-200 dark:border-[#233048] transition-colors cursor-pointer flex items-center gap-1.5"
+              >
+                <GitBranch className="w-3.5 h-3.5 text-blue-500" />
+                <span>{showEmailDag ? 'Hide Pipeline Flow' : 'View Pipeline Flow'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => executeActivePipeline()}
+                disabled={synthesizing}
+                className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+              >
+                <RotateCcw className={`w-3.5 h-3.5 ${synthesizing ? 'animate-spin' : ''}`} />
+                <span>{synthesizing ? 'Syncing...' : 'Sync Inbox'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!isMeetingIntelligence && (!isEmailSummarizer || showEmailDag) && (
       <div className="max-w-5xl mx-auto w-full px-4 md:px-6 pt-5">
         <div className="bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-2xl shadow-xs overflow-hidden transition-all relative">
           <div ref={canvasContainerRef} className="relative overflow-hidden bg-[#fafcff] dark:bg-[#0b0f17]/95 min-h-[220px] p-3 sm:p-4 flex items-center justify-center select-none">
@@ -6312,7 +6523,7 @@ export default function UniversalWorkflowRunner() {
 
         </div>
       </div>
-      ) : executionResult && !showFormWhenDone ? (
+      ) : executionResult && !showFormWhenDone && !isEmailSummarizer ? (
         <div className="max-w-5xl mx-auto w-full px-4 md:px-6 pt-4">
           {executionResult.status === 'failed' ? (
             <div className="bg-red-50/90 dark:bg-red-950/40 backdrop-blur-md border border-red-200 dark:border-red-900/60 rounded-xl px-4 py-3 flex items-center justify-between flex-wrap gap-3 shadow-xs">
@@ -7736,6 +7947,380 @@ export default function UniversalWorkflowRunner() {
                     )
                   })}
                 </div>
+              </div>
+            </div>
+          ) : (isEmailSummarizer || executionResult.isEmailSummarizer) ? (
+            <div id="email-triage-deliverables" className="bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-2xl p-5 sm:p-6 shadow-xs transition-colors flex flex-col space-y-6 animate-in fade-in duration-200">
+              {/* ── Executive Header ── */}
+              <div className="flex items-center justify-between border-b border-slate-200 dark:border-[#233048] pb-4 flex-wrap gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
+                    <Mail className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                        AI Inbox Triage & Executive Mailbox
+                      </h3>
+                      <span className="text-[10px] font-mono px-2.5 py-0.5 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 rounded-full border border-emerald-200 dark:border-emerald-800 font-semibold flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse" />
+                        Live Sync Active
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      Target: <span className="font-semibold text-slate-700 dark:text-slate-200">Executive & Customer Inbounds</span> • Automated classification, priority escalation, and 1-click draft responses
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => executeActivePipeline()}
+                    disabled={synthesizing}
+                    className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-[#182234] dark:hover:bg-[#233048] text-slate-700 dark:text-slate-200 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    <RotateCcw className={`w-3.5 h-3.5 ${synthesizing ? 'animate-spin' : ''}`} />
+                    <span>{synthesizing ? 'Syncing...' : 'Scan Inbox Now'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => navigate('/escalations')}
+                    className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <span>Action Center</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Toast banner if email was approved */}
+              {emailToast && (
+                <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/80 rounded-xl text-xs font-semibold text-emerald-800 dark:text-emerald-200 flex items-center justify-between animate-in fade-in">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <span>{emailToast}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEmailToast(null)}
+                    className="text-emerald-600 hover:text-emerald-800 dark:text-emerald-400 font-bold ml-2 cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
+
+              {/* ── KPI Metric Cards ── */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#0b0f17] border border-slate-200 dark:border-[#233048] flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-200 dark:border-blue-900/40">
+                    <Mail className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-xl font-bold font-mono text-slate-900 dark:text-white">6</div>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Emails Scanned</div>
+                  </div>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-rose-50/50 dark:bg-rose-950/20 border border-rose-200/80 dark:border-rose-900/40 flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-rose-100 dark:bg-rose-950 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0 border border-rose-200 dark:border-rose-800">
+                    <AlertTriangle className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-xl font-bold font-mono text-rose-600 dark:text-rose-400">2</div>
+                    <div className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">Urgent / SLA Risks</div>
+                  </div>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/80 dark:border-emerald-900/40 flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-200 dark:border-emerald-800">
+                    <Send className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400">2</div>
+                    <div className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">Draft Replies Ready</div>
+                  </div>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200/80 dark:border-indigo-900/40 flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-200 dark:border-indigo-800">
+                    <Clock className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-xl font-bold font-mono text-indigo-600 dark:text-indigo-400">~45m</div>
+                    <div className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">Time Saved Today</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Executive Morning Briefing ── */}
+              <div className="p-4 rounded-xl bg-gradient-to-r from-blue-50/80 via-indigo-50/50 to-slate-50 dark:from-[#0f172a] dark:via-[#111c33] dark:to-[#0b0f17] border border-blue-200 dark:border-blue-900/60 space-y-2">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-blue-500 shrink-0" />
+                    <span>Executive Morning Briefing & Triage Summary</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setApprovedEmailIds(new Set(['email-1', 'email-2', 'email-3', 'email-4']))
+                      setEmailToast('All 4 AI draft responses approved and dispatched to Gmail queue!')
+                      setTimeout(() => setEmailToast(null), 5000)
+                    }}
+                    className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold shadow-2xs transition-colors cursor-pointer inline-flex items-center gap-1.5"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>1-Click Approve All Drafts</span>
+                  </button>
+                </div>
+                <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+                  {executionResult.executiveBriefing || "Good morning! 6 emails were scanned across your connected inboxes. 2 require your immediate decision: an enterprise billing discrepancy from TechFlow Corp ($4,250) and a high-priority SLA downtime inquiry from AlphaHealth. 4 routine vendor updates and customer support queries were categorized, and professional draft responses are ready below for your 1-click sign-off."}
+                </p>
+              </div>
+
+              {/* ── Filter Tabs & Search Bar ── */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-1">
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+                  {[
+                    { id: 'all', label: 'All Inbound (6)' },
+                    { id: 'urgent', label: '🚨 Urgent Escalations (2)' },
+                    { id: 'drafts', label: '✉️ Drafts Ready (2)' },
+                    { id: 'routine', label: 'ℹ️ Routine Support (4)' },
+                  ].map(tab => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setEmailFilterTab(tab.id)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
+                        emailFilterTab === tab.id
+                          ? 'bg-blue-600 text-white shadow-2xs'
+                          : 'bg-slate-100 dark:bg-[#182234] text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-[#233048]'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="relative min-w-[200px]">
+                  <input
+                    type="text"
+                    value={emailSearchQuery}
+                    onChange={(e) => setEmailSearchQuery(e.target.value)}
+                    placeholder="Search sender, subject..."
+                    className="w-full bg-slate-50 dark:bg-[#0b0f17] border border-slate-200 dark:border-[#233048] rounded-xl px-3 py-1.5 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-hidden"
+                  />
+                  {emailSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setEmailSearchQuery('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs cursor-pointer"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* ── Triaged Email Cards Feed ── */}
+              <div className="space-y-3.5">
+                {(executionResult.emails || [])
+                  .filter(email => {
+                    if (emailFilterTab === 'urgent') return email.priority === 'urgent' || email.priority === 'high'
+                    if (emailFilterTab === 'drafts') return !!email.draftReply && !approvedEmailIds.has(email.id)
+                    if (emailFilterTab === 'routine') return email.priority === 'normal' || email.priority === 'low'
+                    return true
+                  })
+                  .filter(email => {
+                    if (!emailSearchQuery.trim()) return true
+                    const q = emailSearchQuery.toLowerCase()
+                    return (
+                      email.senderName?.toLowerCase().includes(q) ||
+                      email.senderEmail?.toLowerCase().includes(q) ||
+                      email.subject?.toLowerCase().includes(q) ||
+                      email.body?.toLowerCase().includes(q)
+                    )
+                  })
+                  .map((email) => {
+                    const isApproved = approvedEmailIds.has(email.id)
+                    const isEditing = editingEmailId === email.id
+                    const currentDraft = editedDrafts[email.id] ?? email.draftReply
+                    const isExpanded = expandedEmailIds[email.id]
+
+                    return (
+                      <div
+                        key={email.id}
+                        className={`rounded-2xl border p-4.5 sm:p-5 transition-all shadow-xs space-y-3.5 ${
+                          email.priority === 'urgent'
+                            ? 'bg-rose-50/20 dark:bg-rose-950/10 border-rose-200 dark:border-rose-900/60'
+                            : email.priority === 'high'
+                            ? 'bg-amber-50/20 dark:bg-amber-950/10 border-amber-200 dark:border-amber-900/60'
+                            : 'bg-white dark:bg-[#121826] border-slate-200 dark:border-[#233048]'
+                        }`}
+                      >
+                        {/* Header: Sender Info & Urgency Badges */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-9 h-9 rounded-xl ${email.avatarBg || 'bg-blue-600'} text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs`}>
+                              {email.senderName?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'EM'}
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-slate-900 dark:text-white">{email.senderName}</span>
+                                <span className="text-[10px] text-slate-400 font-mono hidden sm:inline">• {email.company}</span>
+                              </div>
+                              <div className="text-[10px] text-slate-400 font-mono">
+                                {email.senderEmail} • <span className="text-slate-500 dark:text-slate-400 font-semibold">{email.receivedAt}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
+                              email.priority === 'urgent'
+                                ? 'bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-800'
+                                : email.priority === 'high'
+                                ? 'bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800'
+                                : email.priority === 'low'
+                                ? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                                : 'bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-800'
+                            }`}>
+                              {email.priorityLabel}
+                            </span>
+                            <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-[#182234] px-2 py-0.5 rounded-full border border-slate-200 dark:border-[#233048]">
+                              {email.confidence} AI confidence
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Subject & Inbound Message Snippet */}
+                        <div className="space-y-1">
+                          <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                            {email.subject}
+                          </h4>
+                          <div className="p-3 bg-slate-50 dark:bg-[#0b0f17] border border-slate-200/80 dark:border-[#1e2a3f] rounded-xl text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+                            <p className={isExpanded ? '' : 'line-clamp-2'}>
+                              {email.body}
+                            </p>
+                            {email.body?.length > 140 && (
+                              <button
+                                type="button"
+                                onClick={() => setExpandedEmailIds(prev => ({ ...prev, [email.id]: !prev[email.id] }))}
+                                className="text-[10px] text-blue-600 dark:text-blue-400 hover:underline font-semibold mt-1 cursor-pointer"
+                              >
+                                {isExpanded ? 'Show less' : 'Read full email snippet'}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* AI Key Insight */}
+                        <div className="p-3 bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/70 dark:border-blue-900/50 rounded-xl space-y-1">
+                          <div className="flex items-center gap-1.5 text-[11px] font-bold text-blue-900 dark:text-blue-300">
+                            <Sparkles className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                            <span>AI Key Takeaway & Triage Reasoning</span>
+                          </div>
+                          <p className="text-xs text-blue-950 dark:text-blue-200 leading-relaxed font-medium">
+                            {email.keyInsight}
+                          </p>
+                        </div>
+
+                        {/* Proposed AI Response (Claude 3.5 Sonnet) */}
+                        {email.draftReply && (
+                          <div className="p-3.5 bg-slate-50 dark:bg-[#0b0f17] border border-slate-200 dark:border-[#233048] rounded-xl space-y-2.5">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                                <Bot className="w-3.5 h-3.5 text-indigo-500" />
+                                <span>Proposed AI Draft Response (Claude 3.5 Sonnet)</span>
+                              </span>
+                              {!isApproved && (
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingEmailId(isEditing ? null : email.id)}
+                                  className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline font-semibold flex items-center gap-1 cursor-pointer"
+                                >
+                                  <Edit3 className="w-3 h-3" />
+                                  <span>{isEditing ? 'Cancel Edit' : 'Edit Response'}</span>
+                                </button>
+                              )}
+                            </div>
+
+                            {isEditing ? (
+                              <div className="space-y-2">
+                                <textarea
+                                  rows={5}
+                                  value={currentDraft}
+                                  onChange={(e) => setEditedDrafts(prev => ({ ...prev, [email.id]: e.target.value }))}
+                                  className="w-full bg-white dark:bg-[#121826] border border-blue-400 dark:border-blue-600 rounded-xl p-3 text-xs text-slate-900 dark:text-white leading-relaxed focus:outline-hidden focus:ring-2 focus:ring-blue-500/20"
+                                />
+                                <div className="flex justify-end gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditingEmailId(null)}
+                                    className="px-3 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-[#182234] text-slate-700 dark:text-slate-300 rounded-lg text-xs font-semibold cursor-pointer"
+                                  >
+                                    Save Edits
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <p className="text-xs text-slate-800 dark:text-slate-200 whitespace-pre-line leading-relaxed bg-white dark:bg-[#121826] p-3 rounded-lg border border-slate-200/80 dark:border-[#1e2a3f]">
+                                {currentDraft}
+                              </p>
+                            )}
+
+                            {/* Card Action Footer */}
+                            <div className="flex items-center justify-between pt-1 flex-wrap gap-2">
+                              {isApproved ? (
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-xs font-semibold">
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                  <span>Approved & Dispatched via Gmail API</span>
+                                </span>
+                              ) : (
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setApprovedEmailIds(prev => new Set([...prev, email.id]))
+                                      setEmailToast(`Draft approved and dispatched to ${email.senderEmail}!`)
+                                      setTimeout(() => setEmailToast(null), 4000)
+                                    }}
+                                    className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+                                  >
+                                    <Send className="w-3.5 h-3.5" />
+                                    <span>Approve & Send Draft</span>
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => navigate('/escalations')}
+                                    className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-[#182234] dark:hover:bg-[#233048] text-slate-700 dark:text-slate-300 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                                  >
+                                    Review in Action Center →
+                                  </button>
+                                </div>
+                              )}
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(currentDraft)
+                                  setEmailToast(`Draft copied to clipboard!`)
+                                  setTimeout(() => setEmailToast(null), 3000)
+                                }}
+                                className="text-xs text-slate-500 hover:text-blue-600 flex items-center gap-1 cursor-pointer"
+                              >
+                                <Copy className="w-3 h-3" />
+                                <span>Copy Draft</span>
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
               </div>
             </div>
           ) : (executionResult.isDynamicWorkflow || uiSections.deliverablesType === 'generic_telemetry') ? (

@@ -813,6 +813,8 @@ async def get_me(
         or (current_user.email.split("@")[0].replace(".", " ").title() if current_user.email else "Dev User")
     )
 
+    avatar_val = profile.get(f"avatar_{current_user.user_id}") or profile.get("avatar_url") or ""
+
     res = {
         "id": current_user.user_id,
         "email": current_user.email,
@@ -820,6 +822,7 @@ async def get_me(
         "organization_id": org_id,
         "tenant_id": org_id,
         "full_name": resolved_full_name,
+        "avatar_url": avatar_val,
         "organization_name": org_name,
         "tenant_name": org_name,
         "industry": org.industry if org else "saas",
@@ -857,6 +860,16 @@ async def update_user_profile(
     if u and body.full_name:
         u.full_name = body.full_name
         await db.commit()
+
+    if org and body.avatar_url is not None:
+        from sqlalchemy.orm.attributes import flag_modified
+        cfg = dict(org.profile_config or {})
+        cfg[f"avatar_{current_user.user_id}"] = body.avatar_url
+        cfg["avatar_url"] = body.avatar_url
+        org.profile_config = cfg
+        flag_modified(org, "profile_config")
+        await db.commit()
+        await db.refresh(org)
 
     await redis_cache.delete(f"cache:auth:me:{current_user.user_id}")
 

@@ -1,4 +1,4 @@
-﻿param()
+param()
 
 Set-Location $PSScriptRoot
 
