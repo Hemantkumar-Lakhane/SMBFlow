@@ -2073,7 +2073,7 @@ async def get_workflow_trigger_info(
             org_uuid = uuid.UUID(str(org_id)) if isinstance(org_id, str) else org_id
             conn_stmt = select(ToolConnection).where(
                 ToolConnection.organization_id == org_uuid,
-                ToolConnection.tool_name == "gmail",
+                ToolConnection.tool_name.in_(["gmail", "google_workspace"]),
                 ToolConnection.status == "connected"
             )
             c_res = await db.execute(conn_stmt)
@@ -3717,12 +3717,9 @@ async def list_tenant_workflows(
         if is_impl:
             wf_scope = "GLOBAL"
         is_global = (wf_scope == "GLOBAL")
-        is_assigned = is_impl or is_global or (str(wf_cat.id) in assign_map)
+        # Universal Access: All workflows unlocked and assigned for all users
+        is_assigned = True
         assign = assign_map.get(str(wf_cat.id))
-
-        # Non-assigned industry workflows only visible if matching tenant industry
-        if not is_assigned and wf_scope == "INDUSTRY" and wf_industry and org_industry != wf_industry.lower().strip():
-            continue
 
         item = {
             "id":           str(wf_cat.id),
@@ -3731,13 +3728,13 @@ async def list_tenant_workflows(
             "display_name": wf_cat.name,
             "description":  wf_cat.description or "",
             "category":     wf_cat.category,
-            "status":       "active" if is_assigned else "ready",
-            "scope":        wf_scope,
+            "status":       "active",
+            "scope":        "GLOBAL",
             "industry":     wf_industry,
             "trigger_type": "New Email" if "email" in (wf_cat.key or "") else "Manual",
-            "assigned_at":  (assign.assigned_at.isoformat() if (assign and assign.assigned_at) else datetime.utcnow().isoformat()) if is_assigned else None,
-            "is_assigned":  is_assigned,
-            "can_run":      is_assigned,
+            "assigned_at":  (assign.assigned_at.isoformat() if (assign and assign.assigned_at) else datetime.utcnow().isoformat()),
+            "is_assigned":  True,
+            "can_run":      True,
             "run_count":    run_counts.get(wf_cat.key, 0),
             "last_run_at":  last_run.get(wf_cat.key),
         }

@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
-import { useAuth }  from '../../contexts/AuthContext'
+import { useAuth } from '../../contexts/AuthContext'
 import {
   Card, Button, Input, Select, Modal, Alert, Spinner,
   EmptyState, TabGroup, Toggle, GlowExpandButton
@@ -27,25 +27,25 @@ const TOOL_ICONS = {
 }
 
 const INDUSTRY_COLORS = {
-  saas:        'text-blue-300 bg-blue-900/20 border-blue-800/40',
-  retail:      'text-orange-300 bg-orange-900/20 border-orange-800/40',
-  healthcare:  'text-green-300 bg-green-900/20 border-green-800/40',
-  finance:     'text-yellow-300 bg-yellow-900/20 border-yellow-800/40',
+  saas: 'text-blue-300 bg-blue-900/20 border-blue-800/40',
+  retail: 'text-orange-300 bg-orange-900/20 border-orange-800/40',
+  healthcare: 'text-green-300 bg-green-900/20 border-green-800/40',
+  finance: 'text-yellow-300 bg-yellow-900/20 border-yellow-800/40',
   real_estate: 'text-teal-300 bg-teal-900/20 border-teal-800/40',
-  logistics:   'text-cyan-300 bg-cyan-900/20 border-cyan-800/40',
-  universal:   'text-gray-300 bg-gray-800/40 border-gray-700/40',
-  utility:     'text-purple-300 bg-purple-900/20 border-purple-800/40',
+  logistics: 'text-cyan-300 bg-cyan-900/20 border-cyan-800/40',
+  universal: 'text-gray-300 bg-gray-800/40 border-gray-700/40',
+  utility: 'text-purple-300 bg-purple-900/20 border-purple-800/40',
 }
 
 // ── Add Credential Modal ───────────────────────────────────────────────────────
 function AddCredentialModal({ open, onClose, tenantId, api, onDone }) {
-  const [toolName,   setToolName]   = useState('hubspot')
-  const [display,    setDisplay]    = useState('')
-  const [schema,     setSchema]     = useState([])
-  const [values,     setValues]     = useState({})
-  const [loading,    setLoading]    = useState(false)
+  const [toolName, setToolName] = useState('hubspot')
+  const [display, setDisplay] = useState('')
+  const [schema, setSchema] = useState([])
+  const [values, setValues] = useState({})
+  const [loading, setLoading] = useState(false)
   const [schLoading, setSchLoading] = useState(false)
-  const [error,      setError]      = useState('')
+  const [error, setError] = useState('')
 
   useEffect(() => { if (!open) return; setValues({}); setDisplay('') }, [open])
 
@@ -116,9 +116,9 @@ function AddCredentialModal({ open, onClose, tenantId, api, onDone }) {
 // ── Add Custom Tool Modal ──────────────────────────────────────────────────────
 function AddToolModal({ open, onClose, tenantId, credentials, api, onDone }) {
   const init = { tool_name: '', display_name: '', description: '', base_url: '', http_method: 'GET', auth_type: 'api_key', credential_id: '', response_path: '' }
-  const [form, setForm]   = useState(init)
+  const [form, setForm] = useState(init)
   const [loading, setLoading] = useState(false)
-  const [error,   setError]   = useState('')
+  const [error, setError] = useState('')
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }))
 
@@ -172,11 +172,11 @@ function AddToolModal({ open, onClose, tenantId, credentials, api, onDone }) {
 
 // ── Seed Data Status Banner ───────────────────────────────────────────────────
 function SeedDataBanner({ api }) {
-  const [status, setStatus]   = useState(null)
+  const [status, setStatus] = useState(null)
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    api.get('/seed-data/status').then(setStatus).catch(() => {})
+    api.get('/seed-data/status').then(setStatus).catch(() => { })
   }, [api])
 
   const generate = async (industry) => {
@@ -287,18 +287,18 @@ function BuiltinToolModal({ tool, open, onClose }) {
 // ── Main ToolsPage ─────────────────────────────────────────────────────────────
 export default function ToolsPage() {
   const { user, api } = useAuth()
-  const tenantId      = user?.tenant_id
+  const tenantId = user?.tenant_id
 
-  const [tab,         setTab]        = useState('creds')
-  const [creds,       setCreds]      = useState([])
-  const [tools,       setTools]      = useState([])
-  const [localTools,  setLocalTools] = useState([])
-  const [loading,     setLoading]    = useState(true)
-  const [error,       setError]      = useState('')
+  const [tab, setTab] = useState('creds')
+  const [creds, setCreds] = useState([])
+  const [tools, setTools] = useState([])
+  const [localTools, setLocalTools] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [showAddCred, setShowAddCred] = useState(false)
   const [showAddTool, setShowAddTool] = useState(false)
-  const [deleting,    setDeleting]   = useState({})
-  const [detailTool,  setDetailTool] = useState(null)
+  const [deleting, setDeleting] = useState({})
+  const [detailTool, setDetailTool] = useState(null)
   const [industryFilter, setIndustryFilter] = useState('all')
 
   const load = useCallback(async () => {
@@ -332,7 +332,7 @@ export default function ToolsPage() {
     finally { setDeleting(p => { const n = { ...p }; delete n[id]; return n }) }
   }
 
- const industries = ['all', ...new Set(localTools.map(t => t.industry || 'universal'))]
+  const industries = ['all', ...new Set(localTools.map(t => t.industry || 'universal'))]
   const filteredLocalTools = industryFilter === 'all'
     ? localTools
     : localTools.filter(t => t.industry === industryFilter)
@@ -370,9 +370,9 @@ export default function ToolsPage() {
 
       <TabGroup
         tabs={[
-          { value: 'builtin', label: '🔌 Built-in Tools',  badge: localTools.length },
-          { value: 'creds',   label: '🔑 Credentials',     badge: creds.length },
-          { value: 'tools',   label: '🔧 Custom Tools',    badge: tools.length },
+          { value: 'builtin', label: '🔌 Built-in Tools', badge: localTools.length },
+          { value: 'creds', label: '🔑 Credentials', badge: creds.length },
+          { value: 'tools', label: '🔧 Custom Tools', badge: tools.length },
         ]}
         value={tab}
         onChange={setTab}
@@ -393,14 +393,13 @@ export default function ToolsPage() {
               <button
                 key={ind}
                 onClick={() => setIndustryFilter(ind)}
-                className={`px-3 py-1 rounded-full text-xs border transition-colors ${
-                  industryFilter === ind
-                    ? 'bg-blue-600 border-blue-500 text-white'
-                    : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600 hover:text-white'
-                }`}
+                className={`px-3 py-1 rounded-full text-xs border transition-colors ${industryFilter === ind
+                  ? 'bg-blue-600 border-blue-500 text-white'
+                  : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600 hover:text-white'
+                  }`}
               >
                 {/* Add the optional chaining or fallback here */}
-                {(ind || 'universal').toUpperCase()} 
+                {(ind || 'universal').toUpperCase()}
               </button>
             ))}
           </div>
@@ -447,7 +446,7 @@ export default function ToolsPage() {
           <Card title="Utility Tools (always available)" className="mt-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {[
-                { name: 'db_write_outcome',  desc: 'Log an action outcome to the database for future learning and RAG context.',       params: ['tenant_id', 'action_taken', 'metric_name', 'metric_value'] },
+                { name: 'db_write_outcome', desc: 'Log an action outcome to the database for future learning and RAG context.', params: ['tenant_id', 'action_taken', 'metric_name', 'metric_value'] },
                 { name: 'db_update_pattern', desc: 'Store a learned pattern in memory store so future runs can benefit from it.', params: ['tenant_id', 'pattern_key', 'pattern_data', 'success'] },
               ].map(t => (
                 <div key={t.name} className="bg-gray-800/30 border border-gray-700/40 rounded-xl p-3">

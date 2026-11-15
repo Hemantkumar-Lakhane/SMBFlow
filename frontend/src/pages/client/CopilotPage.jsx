@@ -1,16 +1,8 @@
-// frontend/src/pages/client/CopilotPage.jsx
-// ─────────────────────────────────────────────────────────────────────────────
-// Clean, Modern Enterprise AI Assistant & Workflow Orchestrator
-// Features:
-//   • Dual-theme responsive design (light slate & dark enterprise obsidian)
-//   • Custom Tool Logo Loader with image path support (/assets/tools/{name}.png)
-//   • Real-time Voice / Microphone Input (Web Speech API + Backend Whisper fallback)
-//   • Clean, unified category pills without rainbow coloring
-//   • Dynamic live SVG Canvas Node Graph with authentic tool brand logos & flow pulses
-//   • Smooth full-page vertical scrolling (overflow-y-auto)
-//   • Conversational Execution Mode with Node Inspection Drawers
-//   
-// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Autonomous Operations Copilot & Workflow Orchestrator
+ * Enterprise conversational assistant coordinating multi-agent workflows,
+ * live SVG graph pipelines, voice directives, and verified system execution.
+ */
 
 import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -518,12 +510,10 @@ function CanvasPreview({ template }) {
   const [copiedPayload, setCopiedPayload] = useState(null)
   const containerRef = useRef(null)
 
-  // Reset selected node when template changes
+  // Reset state when template changes
   useEffect(() => {
-    if (template?.nodes?.length > 0) {
-      setSelectedNode(template.nodes[0])
-      setTestResult(null)
-    }
+    setSelectedNode(null)
+    setTestResult(null)
   }, [template])
 
   function handleCopy(label, data) {
@@ -564,10 +554,10 @@ function CanvasPreview({ template }) {
             </span>
           </div>
 
-          {/* Canvas Visual Indicator */}
+          {/* Canvas Node Count Indicator */}
           <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-            <span>Click node to inspect</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            <span className="text-slate-600 dark:text-slate-300 font-semibold">{template.nodes?.length || 0} Nodes Configured</span>
           </div>
         </div>
 
@@ -736,127 +726,6 @@ function CanvasPreview({ template }) {
             </svg>
           </div>
         </div>
-
-        {/* ── Interactive Node Inspection Panel (Displays When Node is Clicked) ── */}
-        {selectedNode && (
-          <div className="border-t border-slate-200 dark:border-[#233048] bg-slate-50 dark:bg-[#0b0f17] p-4 transition-all">
-            <div className="flex flex-wrap items-center justify-between gap-3 pb-3 mb-3 border-b border-slate-200 dark:border-[#233048]">
-              <div className="flex items-center gap-2.5">
-                <div
-                  className="w-8 h-8 rounded-lg flex items-center justify-center p-1.5 shadow-2xs"
-                  style={{ backgroundColor: `${selectedNode.color}20`, border: `1px solid ${selectedNode.color}50` }}
-                >
-                  <ToolLogo name={selectedNode.tool} className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h4 className="text-xs font-bold text-slate-900 dark:text-white">{selectedNode.title}</h4>
-                    <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-slate-200 dark:bg-[#182234] text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-[#233048]">
-                      {selectedNode.type}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                    {selectedNode.subtitle} · Connected Brand: <span className="font-semibold text-slate-700 dark:text-slate-300">{selectedNode.brand}</span>
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleTestStep}
-                  disabled={isTestingStep}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold shadow-xs transition-all cursor-pointer disabled:opacity-50"
-                >
-                  <Play size={12} className={isTestingStep ? 'animate-spin' : 'fill-white'} />
-                  <span>{isTestingStep ? 'Executing step...' : 'Test Step'}</span>
-                </button>
-
-                <button
-                  onClick={() => setSelectedNode(null)}
-                  className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
-                  title="Close inspector"
-                >
-                  ✕
-                </button>
-              </div>
-            </div>
-
-            {/* Test Execution Result Banner */}
-            {testResult && (
-              <div className="mb-3 p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-200 text-xs flex items-center justify-between animate-fade-in">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 size={14} className="text-emerald-600 dark:text-emerald-400" />
-                  <span>Node test executed successfully in <strong>{testResult.durationMs}ms</strong> at {testResult.timestamp}</span>
-                </div>
-                <span className="text-[10px] font-mono uppercase tracking-wider bg-emerald-100 dark:bg-emerald-900 px-2 py-0.5 rounded">
-                  HTTP 200 OK
-                </span>
-              </div>
-            )}
-
-            {/* Configuration & Payload Data Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-              {/* 1. Step Parameters */}
-              <div className="p-3 bg-white dark:bg-[#121826] rounded-xl border border-slate-200 dark:border-[#233048]">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                    Node Configuration
-                  </span>
-                  <Sliders className="w-3.5 h-3.5 text-slate-400" />
-                </div>
-                <div className="space-y-1.5 font-mono text-[10.5px]">
-                  {selectedNode.config &&
-                    Object.entries(selectedNode.config).map(([k, v]) => (
-                      <div key={k} className="flex items-start justify-between gap-2 border-b border-slate-100 dark:border-[#1a2336] pb-1 last:border-0 last:pb-0">
-                        <span className="text-slate-500 dark:text-slate-400 truncate">{k}:</span>
-                        <span className="text-slate-900 dark:text-slate-200 font-semibold truncate text-right max-w-[130px]">
-                          {typeof v === 'boolean' ? (v ? 'true' : 'false') : String(v)}
-                        </span>
-                      </div>
-                    ))}
-                </div>
-              </div>
-
-              {/* 2. Mock Input Payload */}
-              <div className="p-3 bg-white dark:bg-[#121826] rounded-xl border border-slate-200 dark:border-[#233048]">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                    Input Stream
-                  </span>
-                  <button
-                    onClick={() => handleCopy('input', selectedNode.sampleInput)}
-                    className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
-                    title="Copy Input JSON"
-                  >
-                    {copiedPayload === 'input' ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
-                  </button>
-                </div>
-                <pre className="text-[10px] font-mono text-slate-700 dark:text-slate-300 max-h-24 overflow-x-auto overflow-y-auto leading-tight bg-slate-50 dark:bg-[#0b0f17] p-2 rounded border border-slate-100 dark:border-[#1a2336]">
-                  {JSON.stringify(selectedNode.sampleInput, null, 2)}
-                </pre>
-              </div>
-
-              {/* 3. Output Stream */}
-              <div className="p-3 bg-white dark:bg-[#121826] rounded-xl border border-slate-200 dark:border-[#233048]">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                    Output Result
-                  </span>
-                  <button
-                    onClick={() => handleCopy('output', selectedNode.sampleOutput)}
-                    className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
-                    title="Copy Output JSON"
-                  >
-                    {copiedPayload === 'output' ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
-                  </button>
-                </div>
-                <pre className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 max-h-24 overflow-x-auto overflow-y-auto leading-tight bg-slate-50 dark:bg-[#0b0f17] p-2 rounded border border-slate-100 dark:border-[#1a2336]">
-                  {JSON.stringify(selectedNode.sampleOutput, null, 2)}
-                </pre>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   )
@@ -2242,7 +2111,7 @@ export default function CopilotPage() {
                                   ) : (
                                     <Zap className="w-3.5 h-3.5 text-amber-500" />
                                   )}
-                                  <span>{executingInlineId === msg.id ? 'Running Workflow...' : 'Quick Sample Run'}</span>
+                                  <span>{executingInlineId === msg.id ? 'Running Workflow...' : 'Execute Live Run'}</span>
                                 </button>
                               )}
 

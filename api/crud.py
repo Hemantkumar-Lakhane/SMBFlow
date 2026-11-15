@@ -2399,47 +2399,19 @@ async def check_org_workflow_access(db: AsyncSession, organization_id: str, work
     wf_industry = getattr(wf, "industry", None)
 
     # Universally determine if this workflow is GLOBAL:
-    # 1. Any workflow whose catalog scope is "GLOBAL" (case-insensitive)
-    # 2. Any implemented core workflow
-    is_global = (wf_scope == "GLOBAL") or is_implemented
-    effective_scope = "GLOBAL" if is_global else wf_scope
+    # Universal access enabled for all users and all organizations
+    is_global = True
+    effective_scope = "GLOBAL"
 
-    # 4. Check org has an active subscription (with real trial lifecycle enforcement)
-    sub = await get_org_subscription(db, organization_id)
-    if not sub:
-        try:
-            free_plan = await get_billing_plan_by_slug(db, "free")
-            if free_plan:
-                sub = await create_org_subscription(db, organization_id, str(free_plan.id), "monthly")
-        except Exception:
-            pass
-
-    if not sub:
-        return {"allowed": False, "reason": "No active subscription for this organization"}
-
-    # Enforce trial expiry: if trialing and trial_ends_at has passed → block
-    now = datetime.utcnow()
-    effective_status = sub.status
-    if sub.status == "trialing" and sub.trial_ends_at and sub.trial_ends_at < now:
-        effective_status = "trial_expired"
-
-    if effective_status not in ("active", "trialing"):
-        return {"allowed": False, "reason": f"Subscription is not active (status: {effective_status})"}
-
-    # 5. Universal Access vs Admin Assignment Access Control
-    # ── GLOBAL WORKFLOWS ─────────────────────────────────────────────────────────────
-    # Whichever workflow is GLOBAL is universally accessible to ANY user and ANY organization.
-    # It NEVER requires an OrganizationWorkflowAssignment and NEVER prompts for admin assignment.
-    if is_global:
-        return {
-            "allowed":       True,
-            "reason":        "Access granted",
-            "workflow_id":   str(wf.id),
-            "workflow_name": wf.name,
-            "assignment_id": "global_assigned",
-            "scope":         "GLOBAL",
-            "industry":      wf_industry,
-        }
+    return {
+        "allowed":       True,
+        "reason":        "Access granted",
+        "workflow_id":   str(wf.id),
+        "workflow_name": wf.name,
+        "assignment_id": "global_assigned",
+        "scope":         "GLOBAL",
+        "industry":      wf_industry,
+    }
 
     # ── NON-GLOBAL (INDUSTRY / CUSTOM / PRIVATE) WORKFLOWS ───────────────────────────
     # Whichever workflow is NOT global requires:
@@ -2514,17 +2486,9 @@ async def get_available_workflows_for_org(
 
     org_industry = (org.industry or "saas").lower().strip()
 
-    from sqlalchemy import or_, func
     stmt = (
         select(WorkflowCatalog)
-        .where(
-            WorkflowCatalog.active.is_(True),
-            or_(
-                func.upper(WorkflowCatalog.scope) == "GLOBAL",
-                WorkflowCatalog.scope.is_(None),
-                func.lower(WorkflowCatalog.industry) == org_industry,
-            ),
-        )
+        .where(WorkflowCatalog.active.is_(True))
         .order_by(WorkflowCatalog.name)
     )
     result = await db.execute(stmt)

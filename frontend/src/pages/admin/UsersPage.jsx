@@ -43,9 +43,9 @@ function InviteModal({ open, onClose, api, orgs, onDone }) {
     setLoading(true); setError('')
     try {
       await api.post('/admin/users/invite', {
-        email:           form.email.trim(),
-        full_name:       form.full_name.trim() || undefined,
-        role:            form.role,
+        email: form.email.trim(),
+        full_name: form.full_name.trim() || undefined,
+        role: form.role,
         organization_id: form.organization_id || undefined,
       })
       onDone(); onClose()
@@ -79,7 +79,7 @@ function InviteModal({ open, onClose, api, orgs, onDone }) {
           value={form.role}
           onChange={e => set('role', e.target.value)}
           options={[
-            { value: 'org_user',       label: 'Org User — access to assigned workflows' },
+            { value: 'org_user', label: 'Org User — access to assigned workflows' },
             { value: 'platform_admin', label: 'Platform Admin — full control plane access' },
           ]}
         />
@@ -107,9 +107,9 @@ function InviteModal({ open, onClose, api, orgs, onDone }) {
 function UserRowActions({ user, api, orgs, onRefresh }) {
   const [open, setOpen] = useState(false)
   const [changeRoleOpen, setChangeRoleOpen] = useState(false)
-  const [changeOrgOpen, setChangeOrgOpen]   = useState(false)
+  const [changeOrgOpen, setChangeOrgOpen] = useState(false)
   const [newRole, setNewRole] = useState(user.role)
-  const [newOrg, setNewOrg]  = useState(user.organization_id || '')
+  const [newOrg, setNewOrg] = useState(user.organization_id || '')
   const [loading, setLoading] = useState(false)
   const isSuspended = user.role?.startsWith('suspended_')
 
@@ -169,9 +169,8 @@ function UserRowActions({ user, api, orgs, onRefresh }) {
               <div className="h-[1px] bg-slate-100 dark:bg-slate-800 my-1" />
               <button
                 onClick={e => { e.stopPropagation(); toggleActive() }}
-                className={`w-full flex items-center gap-2 px-3 py-2 hover:bg-slate-50 dark:hover:bg-[#1f2c42] cursor-pointer ${
-                  isSuspended ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
-                }`}
+                className={`w-full flex items-center gap-2 px-3 py-2 hover:bg-slate-50 dark:hover:bg-[#1f2c42] cursor-pointer ${isSuspended ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
+                  }`}
               >
                 {isSuspended ? <><UserCheck size={13} /> Reactivate User</> : <><UserX size={13} /> Suspend User</>}
               </button>
@@ -188,7 +187,7 @@ function UserRowActions({ user, api, orgs, onRefresh }) {
             value={newRole}
             onChange={e => setNewRole(e.target.value)}
             options={[
-              { value: 'org_user',       label: 'Org User' },
+              { value: 'org_user', label: 'Org User' },
               { value: 'platform_admin', label: 'Platform Admin' },
             ]}
           />
@@ -221,13 +220,13 @@ function UserRowActions({ user, api, orgs, onRefresh }) {
 // ── Main component ─────────────────────────────────────────────────────────────
 export default function UsersPage() {
   const { api } = useAuth()
-  const [users, setUsers]       = useState([])
-  const [orgs, setOrgs]         = useState([])
-  const [loading, setLoading]   = useState(true)
-  const [error, setError]       = useState(null)
-  const [search, setSearch]     = useState('')
+  const [users, setUsers] = useState([])
+  const [orgs, setOrgs] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [search, setSearch] = useState('')
   const [filterRole, setFilterRole] = useState('all')
-  const [filterOrg, setFilterOrg]   = useState('all')
+  const [filterOrg, setFilterOrg] = useState('all')
   const [showInvite, setShowInvite] = useState(false)
 
   const load = useCallback(async () => {
@@ -271,7 +270,7 @@ export default function UsersPage() {
 
   return (
     <div className="flex flex-col gap-6 p-6 min-h-full bg-slate-50 dark:bg-[#0b0f17] bg-dot-pattern text-slate-900 dark:text-slate-100 font-sans transition-colors">
-      
+
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
@@ -381,11 +380,10 @@ export default function UsersPage() {
                       {u.organization_name || <span className="text-slate-400 italic text-xs">—</span>}
                     </td>
                     <td className="px-4 py-3.5">
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                        u.status === 'suspended' || u.role?.startsWith('suspended_')
-                          ? 'bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800'
-                          : 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
-                      }`}>
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${u.status === 'suspended' || u.role?.startsWith('suspended_')
+                        ? 'bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800'
+                        : 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
+                        }`}>
                         {u.status === 'suspended' || u.role?.startsWith('suspended_')
                           ? <><XCircle size={10} />Suspended</>
                           : <><CheckCircle2 size={10} />Active</>}

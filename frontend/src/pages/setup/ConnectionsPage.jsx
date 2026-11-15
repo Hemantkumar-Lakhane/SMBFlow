@@ -114,7 +114,7 @@ export default function ConnectionsPage() {
 
     setConnectModalTool(tool)
     const initial = {}
-    ;(tool.required_fields || []).forEach(f => { initial[f] = '' })
+      ; (tool.required_fields || []).forEach(f => { initial[f] = '' })
     setFieldValues(initial)
   }
 
@@ -252,11 +252,10 @@ export default function ConnectionsPage() {
               key={cat.id}
               type="button"
               onClick={() => setCategoryFilter(cat.id)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                categoryFilter === cat.id
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${categoryFilter === cat.id
                   ? 'bg-blue-600 text-white shadow-2xs'
                   : 'bg-white dark:bg-[#182234] border border-slate-200 dark:border-[#233048] text-slate-700 dark:text-slate-300 hover:bg-slate-100'
-              }`}
+                }`}
             >
               {cat.label}
             </button>

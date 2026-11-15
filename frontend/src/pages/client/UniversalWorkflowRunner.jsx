@@ -547,8 +547,8 @@ function MeetingIntelligenceInputModes({ formData, onChange, api, synthesizing, 
     setMeetResolveResult(null)
   }
 
-  // Sample Scenarios for 1-Click Instant Testing
-  const SAMPLE_SCENARIOS = [
+  // Meeting Transcript Templates
+  const PRESET_SCENARIOS = [
     {
       id: 'sales_pricing',
       title: '💼 B2B Pricing & SOW Call',
@@ -918,7 +918,7 @@ function MeetingIntelligenceInputModes({ formData, onChange, api, synthesizing, 
             <div className="flex items-center justify-between text-xs">
               <span className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-blue-500" />
-                <span>1-Click Test Scenarios (Click to populate demo conversation):</span>
+                <span>Meeting Transcript Templates:</span>
               </span>
               {charCount > 0 && (
                 <button
@@ -936,7 +936,7 @@ function MeetingIntelligenceInputModes({ formData, onChange, api, synthesizing, 
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              {SAMPLE_SCENARIOS.map((sc) => (
+              {PRESET_SCENARIOS.map((sc) => (
                 <button
                   key={sc.id}
                   type="button"
@@ -1710,39 +1710,11 @@ const WORKFLOW_REGISTRY = {
     uiSections: {
       showAssistantChat: false,
       assistantType: null,
-      formType: 'email_triage',
+      formType: 'email_live_hub',
       deliverablesType: 'email_triage',
       calendarSchedule: false,
     },
-    fields: [
-      {
-        id: 'mailbox',
-        label: 'Target Email Scope',
-        prompt: 'Which incoming emails should this pipeline scan and triage?',
-        type: 'select',
-        options: ['Unread Priority Emails (is:unread)', 'All Customer Inquiries', 'Billing & Finance Inbound', 'Executive & VIP Threads'],
-        defaultValue: 'Unread Priority Emails (is:unread)',
-        required: true,
-      },
-      {
-        id: 'schedule',
-        label: 'Triage Frequency',
-        prompt: 'How often should the autonomous triage agent run?',
-        type: 'select',
-        options: ['Every 15 minutes (Real-time Triage)', 'Every 1 hour (Standard)', 'Twice Daily (Morning & Afternoon)', 'Once Daily (End of Day Digest)'],
-        defaultValue: 'Every 15 minutes (Real-time Triage)',
-        required: true,
-      },
-      {
-        id: 'alertChannel',
-        label: 'Urgent Alert Destination',
-        prompt: 'Where should high-urgency escalations be sent?',
-        type: 'select',
-        options: ['#inbox-alerts (Recommended)', '#general-triage', '#customer-support', 'Direct Notification / Action Center'],
-        defaultValue: '#inbox-alerts (Recommended)',
-        required: true,
-      },
-    ],
+    fields: [],
     nodes: [
       { id: 'n1', title: 'INBOX POLLER', subtitle: 'Trigger: Unread Mail', tool: 'gmail', color: '#EA4335', x: 20, y: 70 },
       { id: 'n2', title: 'Fetch Threads', subtitle: 'Gmail API', tool: 'gmail', color: '#EA4335', x: 220, y: 70 },
@@ -2244,27 +2216,35 @@ export default function UniversalWorkflowRunner() {
     }
   }
 
-  // Handle Google OAuth return callback code
+  // Handle Google OAuth return callback code for ALL workflows (Gmail & Workspace)
   useEffect(() => {
     const code = searchParams.get('code')
-    if (code && isMeetingIntelligence) {
+    if (code) {
       async function exchangeCode() {
         try {
-          const res = await api.post('/workflows/meeting-intelligence/google/exchange-code', {
+          const redirectUri = window.location.origin + window.location.pathname
+          const res = await api.post('/connections/oauth/google/exchange', {
             code,
-            redirect_uri: window.location.origin + window.location.pathname,
+            redirect_uri: redirectUri,
           })
-          if (res?.status === 'connected' || res?.status === 'mock_connected') {
-            setQaToast('Google Meet & Workspace connected successfully!')
-            setTimeout(() => setQaToast(null), 4000)
-          }
+          setConnectionSuccessToast(`Connected Google Account (${res?.connected_email || 'Verified'})!`)
+          setTimeout(() => setConnectionSuccessToast(null), 5000)
+          window.history.replaceState({}, document.title, window.location.pathname)
+          if (typeof loadConnections === 'function') loadConnections()
         } catch (err) {
+          try {
+            await api.post('/workflows/meeting-intelligence/google/exchange-code', {
+              code,
+              redirect_uri: window.location.origin + window.location.pathname,
+            })
+          } catch (_) {}
           console.warn('OAuth code exchange notice:', err)
+          window.history.replaceState({}, document.title, window.location.pathname)
         }
       }
       exchangeCode()
     }
-  }, [searchParams, isMeetingIntelligence, api])
+  }, [searchParams, api, loadConnections])
 
   // Pre-flight authorization state
   const [accessChecking, setAccessChecking] = useState(true)
@@ -2504,17 +2484,20 @@ export default function UniversalWorkflowRunner() {
     setFormData({})
     setCurrentQIndex(0)
     setSynthesizing(false)
-    if (workflow.key === 'email_summarizer' || workflow.key?.includes('email') || workflow.key?.includes('inbox')) {
-      const initEmails = createDefaultEmailDeliverables()
-      setExecutionResult(initEmails)
+    setExecutionResult(null)
+    if (workflow.key === 'email_summarizer' || isEmailSummarizer || !workflow.fields || workflow.fields.length === 0) {
+      setActivePrompt({
+        content: `I am initializing the **${workflow.displayTitle || workflow.title}** pipeline.\n\nAuthorize your Gmail account via OAuth to stream real inbound messages, score urgency with Claude 3.5 Sonnet, and stage draft responses.`,
+        timestamp: getISTTime(new Date()),
+        fieldIndex: 0,
+      })
     } else {
-      setExecutionResult(null)
+      setActivePrompt({
+        content: `I am initializing the **${workflow.displayTitle || workflow.title}** pipeline.\n\nYour inputs will automatically populate the configuration form above.\n\n**${workflow.fields[0]?.prompt}**`,
+        timestamp: getISTTime(new Date()),
+        fieldIndex: 0,
+      })
     }
-    setActivePrompt({
-      content: `I am initializing the **${workflow.displayTitle || workflow.title}** pipeline.\n\nYour inputs will automatically populate the configuration form above.\n\n**${workflow.fields[0]?.prompt}**`,
-      timestamp: getISTTime(new Date()),
-      fieldIndex: 0,
-    })
   }, [workflow.key])
 
   // Fetch active LLM routing settings so DAG nodes dynamically reflect configured providers/models (for Product Launch Sprint)
@@ -4344,20 +4327,87 @@ export default function UniversalWorkflowRunner() {
           }
         } catch (_) {}
       } else if (workflow.key === 'email_summarizer' || isEmailSummarizer) {
-        const defaultEmails = createDefaultEmailDeliverables(instanceId)
-        setExecutionResult(defaultEmails)
-        setSynthesizing(false)
-        setActivePrompt({
-          content: `**Inbox Triage Sync Complete!**\n\nScanned 6 inbound emails across connected accounts. 2 urgent escalations flagged and 2 Claude 3.5 Sonnet draft replies are prepared for your review.`,
-          timestamp: getISTTime(new Date()),
-        })
         try {
-          const historyKey = `smbflow_runs_history_${workflow.key}`
-          const existingHistory = JSON.parse(localStorage.getItem(historyKey) || '[]')
-          const updatedHistory = [defaultEmails, ...existingHistory.filter(h => h.runId !== instanceId)].slice(0, 10)
-          localStorage.setItem(historyKey, JSON.stringify(updatedHistory))
-        } catch (_) {}
-        return
+          // Query real Gmail trigger info & unread messages directly from Gmail API
+          const triggerInfo = await api.get('/workflows/email_summarizer/trigger-info?scope=unread&batch_size=10').catch(() => null)
+          const rawMessages = triggerInfo?.preview_messages || []
+          let realEmails = []
+
+          if (rawMessages.length > 0) {
+            // Autonomous triage of real user emails with Claude 3.5 Sonnet / balanced tier
+            const promptPayload = `You are an executive inbox triage system. Analyze these ${rawMessages.length} real incoming emails and return ONLY a valid JSON array of objects with keys: id, senderName, senderEmail, company, avatarBg, receivedAt, subject, body, priority ("urgent"|"high"|"normal"|"low"), priorityLabel, badgeColor ("rose"|"amber"|"blue"|"slate"), intent, confidence, keyInsight, draftReply, status ("needs_approval"|"ready_to_send"|"archived").
+Raw emails:
+${JSON.stringify(rawMessages.map((m, i) => ({
+  id: m.id || m.message_id || `msg-${i}`,
+  from: m.from || m.sender || 'Unknown',
+  subject: m.subject || '(No Subject)',
+  body: (m.body || m.snippet || '').slice(0, 600),
+  date: m.received_at || m.date || new Date().toISOString(),
+})))}`
+
+            const copilotRes = await api.post('/copilot/chat', {
+              message: promptPayload,
+              conversation_history: [],
+            }).catch(() => null)
+
+            if (copilotRes?.reply) {
+              try {
+                const cleaned = copilotRes.reply.replace(/```json/gi, '').replace(/```/g, '').trim()
+                const match = cleaned.match(/\[[\s\S]*\]/)
+                if (match) {
+                  realEmails = JSON.parse(match[0])
+                }
+              } catch (_) {}
+            }
+          }
+
+          const urgentCount = realEmails.filter(e => e.priority === 'urgent' || e.priority === 'high').length
+          const draftsCount = realEmails.filter(e => Boolean(e.draftReply)).length
+          const connectedEmailAddr = triggerInfo?.connected_email || connections.find(c => c.tool_name === 'gmail')?.config?.connected_email || user?.email || 'Gmail'
+
+          const liveDeliverable = {
+            runId: instanceId,
+            timestamp: new Date().toISOString(),
+            isEmailSummarizer: true,
+            isLiveGmail: true,
+            connectedEmail: connectedEmailAddr,
+            workflowTitle: 'AI Inbox Triage & Email Summarizer',
+            objective: `Live Inbox Triage (${connectedEmailAddr})`,
+            kpis: {
+              scannedCount: rawMessages.length,
+              urgentCount,
+              draftsReadyCount: draftsCount,
+              timeSavedMinutes: Math.round(rawMessages.length * 7.5),
+            },
+            executiveBriefing: rawMessages.length > 0
+              ? `Live Gmail triage completed for ${connectedEmailAddr}. Scanned ${rawMessages.length} unread thread(s); flagged ${urgentCount} high-urgency escalation(s) with ${draftsCount} AI draft response(s) staged for 1-click approval.`
+              : `Inbox zero for ${connectedEmailAddr} — all connected inboxes are fully synced. When new emails arrive, autonomous classification, urgency scoring, and 1-click draft replies will appear here.`,
+            emails: realEmails,
+          }
+
+          setExecutionResult(liveDeliverable)
+          setSynthesizing(false)
+          setActivePrompt({
+            content: rawMessages.length > 0
+              ? `**Live Gmail Triage Complete!**\n\nScanned **${rawMessages.length} real email(s)** from **${connectedEmailAddr}**.\n- **${urgentCount}** Urgent Escalation(s)\n- **${draftsCount}** AI Draft Response(s) prepared for your 1-click review.`
+              : `**Inbox Zero Confirmed!**\n\nNo unread emails found in **${connectedEmailAddr}**. Your inbox is clean.`,
+            timestamp: getISTTime(new Date()),
+          })
+
+          try {
+            const historyKey = `smbflow_runs_history_${workflow.key}`
+            const existingHistory = JSON.parse(localStorage.getItem(historyKey) || '[]')
+            const updatedHistory = [liveDeliverable, ...existingHistory.filter(h => h.runId !== instanceId)].slice(0, 10)
+            localStorage.setItem(historyKey, JSON.stringify(updatedHistory))
+          } catch (_) {}
+          return
+        } catch (err) {
+          console.error('Real Gmail triage error:', err)
+          setConnectionErrorToast(err?.message || 'Failed to triage live Gmail messages.')
+          setTimeout(() => setConnectionErrorToast(null), 5000)
+          setSynthesizing(false)
+          return
+        }
       } else {
         try {
           const chatRes = await api.post('/copilot/chat', {
@@ -5901,7 +5951,7 @@ export default function UniversalWorkflowRunner() {
                     </span>
                   </div>
                   <p className="text-[11px] text-amber-700 dark:text-amber-300 mt-0.5">
-                    Connect missing integrations below or use sample run to start this workflow.
+                    Authorize required integrations below to enable live multi-agent execution.
                   </p>
                 </div>
               </div>
@@ -5986,6 +6036,84 @@ export default function UniversalWorkflowRunner() {
           )}
         </div>
 
+        {isEmailSummarizer ? (
+          <div className="bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-2xl p-5 sm:p-6 shadow-xs transition-colors">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-slate-100 dark:border-[#1a2336]">
+              <div className="flex items-start md:items-center gap-3.5">
+                <div className="w-11 h-11 rounded-2xl bg-red-500/10 dark:bg-red-950/40 border border-red-500/20 flex items-center justify-center text-red-600 dark:text-red-400 shrink-0">
+                  <Mail className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                      Live Gmail Inbound Triage Sentinel
+                    </h3>
+                    {connections.some(c => (c.tool_name === 'gmail' || c.tool_name === 'google_workspace') && (c.status === 'connected' || c.status === 'active')) ? (
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 font-semibold flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                        Gmail OAuth Active
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800 font-semibold">
+                        Google OAuth Required
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    Connects securely to your Gmail inbox via official Google OAuth. Fetches real unread customer & vendor threads, scores urgency with Claude 3.5 Sonnet, and stages 1-click draft responses.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2.5 shrink-0">
+                {!connections.some(c => (c.tool_name === 'gmail' || c.tool_name === 'google_workspace') && (c.status === 'connected' || c.status === 'active')) ? (
+                  <button
+                    type="button"
+                    onClick={handleConnectGoogleOAuth}
+                    disabled={connectingTool !== null}
+                    className="relative inline-flex items-center justify-center px-5 py-2.5 overflow-hidden tracking-tighter text-white bg-red-600 hover:bg-red-500 rounded-xl font-bold text-xs shadow-md transition-all cursor-pointer flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                      <path d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 0 1 0 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L5.455 4.64 12 9.548l6.545-4.91 1.528-1.145C21.69 2.28 24 3.434 24 5.457z"/>
+                    </svg>
+                    <span>Authorize Google / Gmail via OAuth</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => executeActivePipeline()}
+                    disabled={synthesizing}
+                    className="relative inline-flex items-center justify-center px-6 py-2.5 overflow-hidden tracking-tighter text-white bg-blue-600 hover:bg-blue-500 rounded-xl font-bold text-xs shadow-md transition-all cursor-pointer flex items-center gap-2"
+                  >
+                    <Play className={`w-3.5 h-3.5 fill-current ${synthesizing ? 'animate-spin' : ''}`} />
+                    <span>{synthesizing ? 'Triaging Real Inboxes...' : 'Run Inbox Triage & Fetch Live Emails'}</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 text-xs">
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#151c2a] border border-slate-200/60 dark:border-[#233048]">
+                <span className="text-slate-400 block text-[11px] font-medium">Authorized Account</span>
+                <span className="font-semibold text-slate-800 dark:text-slate-200 block truncate mt-0.5">
+                  {connections.find(c => (c.tool_name === 'gmail' || c.tool_name === 'google_workspace') && (c.status === 'connected' || c.status === 'active'))?.config?.connected_email || user?.email || 'Click Authorize to Connect'}
+                </span>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#151c2a] border border-slate-200/60 dark:border-[#233048]">
+                <span className="text-slate-400 block text-[11px] font-medium">Inbound Filter Query</span>
+                <span className="font-mono text-[11px] font-semibold text-slate-800 dark:text-slate-200 block mt-0.5">
+                  is:unread in:inbox (Live API)
+                </span>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#151c2a] border border-slate-200/60 dark:border-[#233048]">
+                <span className="text-slate-400 block text-[11px] font-medium">Triage Reasoning Engine</span>
+                <span className="font-semibold text-slate-800 dark:text-slate-200 block mt-0.5">
+                  Claude 3.5 Sonnet Heavy
+                </span>
+              </div>
+            </div>
+          </div>
+        ) : (
         <div className="bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-2xl p-5 shadow-xs transition-colors">
           
           {/* Form Header */}
@@ -6427,6 +6555,7 @@ export default function UniversalWorkflowRunner() {
           </div>
 
         </div>
+        )}
       </div>
       ) : executionResult && !showFormWhenDone && !isEmailSummarizer ? (
         <div className="max-w-5xl mx-auto w-full px-4 md:px-6 pt-4">

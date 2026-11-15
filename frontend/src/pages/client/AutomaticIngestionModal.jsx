@@ -1,7 +1,10 @@
-/**
- * Conversation Ingestion & Webhook Stream Capture
- * Manages real-time capture sources, webhook ingestion streams, and idempotency checks.
- */
+// frontend/src/pages/client/AutomaticIngestionModal.jsx
+// ─────────────────────────────────────────────────────────────────────────────
+// Automatic Conversation Ingestion & Capture Modal
+// Displays webhook stream, capture sources matrix, idempotency tracking,
+// and retry controls for external recordings entering Node 1 → Node 5.
+// ─────────────────────────────────────────────────────────────────────────────
+
 import React, { useState, useEffect } from 'react'
 import {
   Radio, Copy, Check, RefreshCw, AlertCircle, CheckCircle2,
@@ -226,11 +229,10 @@ export default function AutomaticIngestionModal({ onClose, onLoadRun, initialTab
         <button
           type="button"
           onClick={() => setActiveTab('google_meet')}
-          className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
-            activeTab === 'google_meet'
-              ? 'bg-violet-600 text-white shadow-xs'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-[#182234]'
-          }`}
+          className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${activeTab === 'google_meet'
+            ? 'bg-violet-600 text-white shadow-xs'
+            : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-[#182234]'
+            }`}
         >
           <Video className="w-3.5 h-3.5" />
           <span>Google Meet Capture</span>
@@ -242,18 +244,16 @@ export default function AutomaticIngestionModal({ onClose, onLoadRun, initialTab
         <button
           type="button"
           onClick={() => setActiveTab('stream')}
-          className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
-            activeTab === 'stream'
-              ? 'bg-violet-600 text-white shadow-xs'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-[#182234]'
-          }`}
+          className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${activeTab === 'stream'
+            ? 'bg-violet-600 text-white shadow-xs'
+            : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-[#182234]'
+            }`}
         >
           <Radio className="w-3.5 h-3.5" />
           <span>Ingestion Stream & History</span>
           {ingestions.length > 0 && (
-            <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
-              activeTab === 'stream' ? 'bg-violet-700 text-white' : 'bg-slate-200 dark:bg-[#233048] text-slate-700 dark:text-slate-300'
-            }`}>
+            <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${activeTab === 'stream' ? 'bg-violet-700 text-white' : 'bg-slate-200 dark:bg-[#233048] text-slate-700 dark:text-slate-300'
+              }`}>
               {ingestions.length}
             </span>
           )}
@@ -262,11 +262,10 @@ export default function AutomaticIngestionModal({ onClose, onLoadRun, initialTab
         <button
           type="button"
           onClick={() => setActiveTab('docs')}
-          className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
-            activeTab === 'docs'
-              ? 'bg-violet-600 text-white shadow-xs'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-[#182234]'
-          }`}
+          className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${activeTab === 'docs'
+            ? 'bg-violet-600 text-white shadow-xs'
+            : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-[#182234]'
+            }`}
         >
           <Terminal className="w-3.5 h-3.5" />
           <span>Webhook & API Specs</span>
@@ -275,11 +274,10 @@ export default function AutomaticIngestionModal({ onClose, onLoadRun, initialTab
         <button
           type="button"
           onClick={() => setActiveTab('sources')}
-          className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
-            activeTab === 'sources'
-              ? 'bg-violet-600 text-white shadow-xs'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-[#182234]'
-          }`}
+          className={`px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${activeTab === 'sources'
+            ? 'bg-violet-600 text-white shadow-xs'
+            : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-[#182234]'
+            }`}
         >
           <Layers className="w-3.5 h-3.5" />
           <span>Supported Matrix</span>
@@ -447,13 +445,12 @@ export default function AutomaticIngestionModal({ onClose, onLoadRun, initialTab
                 {/* 5 Status Stages Display */}
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-2 pt-1">
                   {/* Step 1: Waiting for bot */}
-                  <div className={`p-2.5 rounded-xl border text-xs flex flex-col justify-between gap-1.5 transition-all ${
-                    activeCapture.status === 'waiting_for_bot'
-                      ? 'bg-blue-50/80 dark:bg-blue-950/40 border-blue-300 dark:border-blue-700 text-blue-900 dark:text-blue-200 ring-2 ring-blue-500/20'
-                      : ['bot_joined', 'capturing', 'processing_transcript', 'processing', 'completed'].includes(activeCapture.status)
+                  <div className={`p-2.5 rounded-xl border text-xs flex flex-col justify-between gap-1.5 transition-all ${activeCapture.status === 'waiting_for_bot'
+                    ? 'bg-blue-50/80 dark:bg-blue-950/40 border-blue-300 dark:border-blue-700 text-blue-900 dark:text-blue-200 ring-2 ring-blue-500/20'
+                    : ['bot_joined', 'capturing', 'processing_transcript', 'processing', 'completed'].includes(activeCapture.status)
                       ? 'bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900 text-emerald-800 dark:text-emerald-300'
                       : 'bg-slate-50 dark:bg-[#0b0f17] border-slate-200 dark:border-[#233048] text-slate-400'
-                  }`}>
+                    }`}>
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-bold uppercase tracking-wider">Step 1</span>
                       {activeCapture.status === 'waiting_for_bot' ? (
@@ -471,13 +468,12 @@ export default function AutomaticIngestionModal({ onClose, onLoadRun, initialTab
                   </div>
 
                   {/* Step 2: Bot joined / capturing */}
-                  <div className={`p-2.5 rounded-xl border text-xs flex flex-col justify-between gap-1.5 transition-all ${
-                    ['bot_joined', 'capturing'].includes(activeCapture.status)
-                      ? 'bg-emerald-50 dark:bg-emerald-950/50 border-emerald-300 dark:border-emerald-600 text-emerald-900 dark:text-emerald-200 ring-2 ring-emerald-500/20'
-                      : ['processing_transcript', 'processing', 'completed'].includes(activeCapture.status)
+                  <div className={`p-2.5 rounded-xl border text-xs flex flex-col justify-between gap-1.5 transition-all ${['bot_joined', 'capturing'].includes(activeCapture.status)
+                    ? 'bg-emerald-50 dark:bg-emerald-950/50 border-emerald-300 dark:border-emerald-600 text-emerald-900 dark:text-emerald-200 ring-2 ring-emerald-500/20'
+                    : ['processing_transcript', 'processing', 'completed'].includes(activeCapture.status)
                       ? 'bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900 text-emerald-800 dark:text-emerald-300'
                       : 'bg-slate-50 dark:bg-[#0b0f17] border-slate-200 dark:border-[#233048] text-slate-400'
-                  }`}>
+                    }`}>
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-bold uppercase tracking-wider">Step 2</span>
                       {['bot_joined', 'capturing'].includes(activeCapture.status) ? (
@@ -495,13 +491,12 @@ export default function AutomaticIngestionModal({ onClose, onLoadRun, initialTab
                   </div>
 
                   {/* Step 3: Processing transcript */}
-                  <div className={`p-2.5 rounded-xl border text-xs flex flex-col justify-between gap-1.5 transition-all ${
-                    ['processing_transcript', 'processing'].includes(activeCapture.status)
-                      ? 'bg-violet-50 dark:bg-violet-950/50 border-violet-300 dark:border-violet-600 text-violet-900 dark:text-violet-200 ring-2 ring-violet-500/20'
-                      : activeCapture.status === 'completed'
+                  <div className={`p-2.5 rounded-xl border text-xs flex flex-col justify-between gap-1.5 transition-all ${['processing_transcript', 'processing'].includes(activeCapture.status)
+                    ? 'bg-violet-50 dark:bg-violet-950/50 border-violet-300 dark:border-violet-600 text-violet-900 dark:text-violet-200 ring-2 ring-violet-500/20'
+                    : activeCapture.status === 'completed'
                       ? 'bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900 text-emerald-800 dark:text-emerald-300'
                       : 'bg-slate-50 dark:bg-[#0b0f17] border-slate-200 dark:border-[#233048] text-slate-400'
-                  }`}>
+                    }`}>
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-bold uppercase tracking-wider">Step 3</span>
                       {['processing_transcript', 'processing'].includes(activeCapture.status) ? (
@@ -519,11 +514,10 @@ export default function AutomaticIngestionModal({ onClose, onLoadRun, initialTab
                   </div>
 
                   {/* Step 4: Completed */}
-                  <div className={`p-2.5 rounded-xl border text-xs flex flex-col justify-between gap-1.5 transition-all ${
-                    activeCapture.status === 'completed'
-                      ? 'bg-emerald-100/70 dark:bg-emerald-950/70 border-emerald-400 dark:border-emerald-600 text-emerald-900 dark:text-emerald-100 ring-2 ring-emerald-500/30 font-bold'
-                      : 'bg-slate-50 dark:bg-[#0b0f17] border-slate-200 dark:border-[#233048] text-slate-400'
-                  }`}>
+                  <div className={`p-2.5 rounded-xl border text-xs flex flex-col justify-between gap-1.5 transition-all ${activeCapture.status === 'completed'
+                    ? 'bg-emerald-100/70 dark:bg-emerald-950/70 border-emerald-400 dark:border-emerald-600 text-emerald-900 dark:text-emerald-100 ring-2 ring-emerald-500/30 font-bold'
+                    : 'bg-slate-50 dark:bg-[#0b0f17] border-slate-200 dark:border-[#233048] text-slate-400'
+                    }`}>
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-bold uppercase tracking-wider">Step 4</span>
                       {activeCapture.status === 'completed' ? (
@@ -539,11 +533,10 @@ export default function AutomaticIngestionModal({ onClose, onLoadRun, initialTab
                   </div>
 
                   {/* Step 5: Failed */}
-                  <div className={`p-2.5 rounded-xl border text-xs flex flex-col justify-between gap-1.5 transition-all ${
-                    activeCapture.status === 'failed'
-                      ? 'bg-rose-50 dark:bg-rose-950/60 border-rose-300 dark:border-rose-700 text-rose-900 dark:text-rose-200 ring-2 ring-rose-500/20'
-                      : 'bg-slate-50 dark:bg-[#0b0f17] border-slate-200 dark:border-[#233048] text-slate-400'
-                  }`}>
+                  <div className={`p-2.5 rounded-xl border text-xs flex flex-col justify-between gap-1.5 transition-all ${activeCapture.status === 'failed'
+                    ? 'bg-rose-50 dark:bg-rose-950/60 border-rose-300 dark:border-rose-700 text-rose-900 dark:text-rose-200 ring-2 ring-rose-500/20'
+                    : 'bg-slate-50 dark:bg-[#0b0f17] border-slate-200 dark:border-[#233048] text-slate-400'
+                    }`}>
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-bold uppercase tracking-wider">Status</span>
                       {activeCapture.status === 'failed' ? (
@@ -617,11 +610,10 @@ export default function AutomaticIngestionModal({ onClose, onLoadRun, initialTab
                     key={filter}
                     type="button"
                     onClick={() => setStatusFilter(filter)}
-                    className={`px-2.5 py-1 rounded-md text-xs font-medium capitalize transition-colors cursor-pointer ${
-                      statusFilter === filter
-                        ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 font-bold'
-                        : 'bg-slate-100 dark:bg-[#182234] text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-[#233048]'
-                    }`}
+                    className={`px-2.5 py-1 rounded-md text-xs font-medium capitalize transition-colors cursor-pointer ${statusFilter === filter
+                      ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 font-bold'
+                      : 'bg-slate-100 dark:bg-[#182234] text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-[#233048]'
+                      }`}
                   >
                     {filter}
                   </button>
@@ -642,11 +634,10 @@ export default function AutomaticIngestionModal({ onClose, onLoadRun, initialTab
 
             {/* Test result banner */}
             {testResult && (
-              <div className={`p-3 rounded-xl border text-xs flex items-center justify-between gap-2 ${
-                testResult.success
-                  ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300'
-                  : 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300'
-              }`}>
+              <div className={`p-3 rounded-xl border text-xs flex items-center justify-between gap-2 ${testResult.success
+                ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300'
+                : 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300'
+                }`}>
                 <span>{testResult.message}</span>
                 <button
                   type="button"

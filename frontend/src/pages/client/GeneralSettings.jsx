@@ -46,14 +46,12 @@ function Toggle({ checked, onChange }) {
     <button
       type="button"
       onClick={() => onChange(!checked)}
-      className={`relative w-10 h-5 rounded-full transition-colors flex-shrink-0 cursor-pointer ${
-        checked ? 'bg-blue-600' : 'bg-slate-300'
-      }`}
+      className={`relative w-10 h-5 rounded-full transition-colors flex-shrink-0 cursor-pointer ${checked ? 'bg-blue-600' : 'bg-slate-300'
+        }`}
     >
       <div
-        className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
-          checked ? 'translate-x-5' : 'translate-x-0.5'
-        }`}
+        className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${checked ? 'translate-x-5' : 'translate-x-0.5'
+          }`}
       />
     </button>
   )
@@ -87,7 +85,7 @@ export default function GeneralSettings() {
     fullName: (user?.full_name || '').replace(/SMBFlow/gi, 'Isolate') || '',
     email: user?.email || '',
     avatarUrl: user?.avatar_url || (user?.id ? localStorage.getItem(`avatar_${user.id}`) : null) || localStorage.getItem('smbflow_avatar') || '',
-    
+
     // Organization Profile
     orgName: '',
     industry: 'saas',
@@ -197,7 +195,7 @@ export default function GeneralSettings() {
           try {
             localStorage.setItem(`avatar_${user.id}`, compressedDataUrl)
             localStorage.setItem('smbflow_avatar', compressedDataUrl)
-          } catch (_) {}
+          } catch (_) { }
         }
         if (user && token) {
           login(token, { ...user, avatar_url: compressedDataUrl })
@@ -207,7 +205,7 @@ export default function GeneralSettings() {
         api.put('/auth/profile', {
           full_name: (form.fullName || user?.full_name || '').trim(),
           avatar_url: compressedDataUrl,
-        }).catch(() => {})
+        }).catch(() => { })
 
         setSuccess('Profile photo updated successfully!')
         setTimeout(() => setSuccess(''), 3000)
@@ -226,7 +224,7 @@ export default function GeneralSettings() {
       try {
         localStorage.removeItem(`avatar_${user.id}`)
         localStorage.removeItem('smbflow_avatar')
-      } catch (_) {}
+      } catch (_) { }
     }
     if (user && token) {
       login(token, { ...user, avatar_url: null })
@@ -249,7 +247,7 @@ export default function GeneralSettings() {
       await api.put('/auth/profile', {
         full_name: form.fullName.trim(),
         avatar_url: form.avatarUrl || null,
-      }).catch(() => {})
+      }).catch(() => { })
 
       // 2. Update Organization Profile in database
       await api.put('/organizations/me/profile', {
@@ -312,7 +310,7 @@ export default function GeneralSettings() {
 
   return (
     <div className="p-6 sm:p-8 bg-slate-50/50 dark:bg-[#0b0f17] bg-dot-pattern min-h-full font-sans antialiased text-slate-800 dark:text-slate-100 max-w-5xl mx-auto space-y-6 transition-colors">
-      
+
       {/* ── Top Header ─────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -370,7 +368,7 @@ export default function GeneralSettings() {
           icon={User}
         >
           <div className="flex flex-col sm:flex-row sm:items-center gap-6 pt-2">
-            
+
             {/* Clickable Profile Photo / Avatar */}
             <div className="relative group">
               <input
@@ -380,7 +378,7 @@ export default function GeneralSettings() {
                 accept="image/*"
                 className="hidden"
               />
-              
+
               <div
                 onClick={() => fileInputRef.current?.click()}
                 className="w-20 h-20 rounded-2xl border-2 border-slate-200 overflow-hidden bg-gradient-to-br from-blue-600 to-indigo-700 text-white flex items-center justify-center font-bold text-xl shadow-sm cursor-pointer group-hover:border-blue-500 transition-all relative"
@@ -395,7 +393,7 @@ export default function GeneralSettings() {
                 ) : (
                   <span>{getInitials()}</span>
                 )}
-                
+
                 <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity text-white text-[10px] font-semibold">
                   <Camera className="w-4 h-4 mb-0.5" />
                   <span>Change</span>

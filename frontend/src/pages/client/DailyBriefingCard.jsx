@@ -1,7 +1,17 @@
-/**
- * Automated Daily Operations Briefing
- * Generates daily operational digests and action priorities.
- */
+// frontend/src/pages/client/DailyBriefingCard.jsx
+// ─────────────────────────────────────────────────────────────────────────────
+// Daily Briefing Executive Card & Configuration Modal
+// Displays:
+//   - Today's & upcoming meetings
+//   - Key synthesized priorities
+//   - Pending internal commitments & waiting-on-contact items
+//   - Follow-up email drafts awaiting review (with 1-click navigation)
+//   - Suggested contact follow-ups (overdue touches)
+//   - Verified contact research & news
+//   - Manual "Generate Now" & Delivery Config Modal (time + timezone)
+// Never fabricates missing data.
+// ─────────────────────────────────────────────────────────────────────────────
+
 import React, { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -219,11 +229,10 @@ export default function DailyBriefingCard() {
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5 my-4">
         <div
           onClick={() => setActiveTab('meetings')}
-          className={`p-2.5 rounded-lg border cursor-pointer transition-all ${
-            activeTab === 'meetings'
-              ? 'bg-blue-50/80 dark:bg-blue-950/40 border-blue-300 dark:border-blue-800'
-              : 'bg-slate-50/60 dark:bg-[#161f30] border-slate-200 dark:border-[#1e293b] hover:border-slate-300'
-          }`}
+          className={`p-2.5 rounded-lg border cursor-pointer transition-all ${activeTab === 'meetings'
+            ? 'bg-blue-50/80 dark:bg-blue-950/40 border-blue-300 dark:border-blue-800'
+            : 'bg-slate-50/60 dark:bg-[#161f30] border-slate-200 dark:border-[#1e293b] hover:border-slate-300'
+            }`}
         >
           <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Today's Mtgs</span>
           <span className="text-lg font-bold text-slate-900 dark:text-white">{totals.meetings_today}</span>
@@ -231,11 +240,10 @@ export default function DailyBriefingCard() {
 
         <div
           onClick={() => setActiveTab('meetings')}
-          className={`p-2.5 rounded-lg border cursor-pointer transition-all ${
-            activeTab === 'meetings'
-              ? 'bg-blue-50/80 dark:bg-blue-950/40 border-blue-300 dark:border-blue-800'
-              : 'bg-slate-50/60 dark:bg-[#161f30] border-slate-200 dark:border-[#1e293b] hover:border-slate-300'
-          }`}
+          className={`p-2.5 rounded-lg border cursor-pointer transition-all ${activeTab === 'meetings'
+            ? 'bg-blue-50/80 dark:bg-blue-950/40 border-blue-300 dark:border-blue-800'
+            : 'bg-slate-50/60 dark:bg-[#161f30] border-slate-200 dark:border-[#1e293b] hover:border-slate-300'
+            }`}
         >
           <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Upcoming</span>
           <span className="text-lg font-bold text-slate-900 dark:text-white">{totals.upcoming_meetings}</span>
@@ -243,11 +251,10 @@ export default function DailyBriefingCard() {
 
         <div
           onClick={() => setActiveTab('priorities')}
-          className={`p-2.5 rounded-lg border cursor-pointer transition-all ${
-            activeTab === 'priorities'
-              ? 'bg-blue-50/80 dark:bg-blue-950/40 border-blue-300 dark:border-blue-800'
-              : 'bg-slate-50/60 dark:bg-[#161f30] border-slate-200 dark:border-[#1e293b] hover:border-slate-300'
-          }`}
+          className={`p-2.5 rounded-lg border cursor-pointer transition-all ${activeTab === 'priorities'
+            ? 'bg-blue-50/80 dark:bg-blue-950/40 border-blue-300 dark:border-blue-800'
+            : 'bg-slate-50/60 dark:bg-[#161f30] border-slate-200 dark:border-[#1e293b] hover:border-slate-300'
+            }`}
         >
           <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Key Priorities</span>
           <span className="text-lg font-bold text-blue-600 dark:text-blue-400">{priorities.length}</span>
@@ -255,11 +262,10 @@ export default function DailyBriefingCard() {
 
         <div
           onClick={() => setActiveTab('commitments')}
-          className={`p-2.5 rounded-lg border cursor-pointer transition-all ${
-            activeTab === 'commitments'
-              ? 'bg-blue-50/80 dark:bg-blue-950/40 border-blue-300 dark:border-blue-800'
-              : 'bg-slate-50/60 dark:bg-[#161f30] border-slate-200 dark:border-[#1e293b] hover:border-slate-300'
-          }`}
+          className={`p-2.5 rounded-lg border cursor-pointer transition-all ${activeTab === 'commitments'
+            ? 'bg-blue-50/80 dark:bg-blue-950/40 border-blue-300 dark:border-blue-800'
+            : 'bg-slate-50/60 dark:bg-[#161f30] border-slate-200 dark:border-[#1e293b] hover:border-slate-300'
+            }`}
         >
           <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Our Commitments</span>
           <span className="text-lg font-bold text-slate-900 dark:text-white">{totals.our_commitments}</span>
@@ -267,11 +273,10 @@ export default function DailyBriefingCard() {
 
         <div
           onClick={() => setActiveTab('commitments')}
-          className={`p-2.5 rounded-lg border cursor-pointer transition-all ${
-            activeTab === 'commitments'
-              ? 'bg-blue-50/80 dark:bg-blue-950/40 border-blue-300 dark:border-blue-800'
-              : 'bg-slate-50/60 dark:bg-[#161f30] border-slate-200 dark:border-[#1e293b] hover:border-slate-300'
-          }`}
+          className={`p-2.5 rounded-lg border cursor-pointer transition-all ${activeTab === 'commitments'
+            ? 'bg-blue-50/80 dark:bg-blue-950/40 border-blue-300 dark:border-blue-800'
+            : 'bg-slate-50/60 dark:bg-[#161f30] border-slate-200 dark:border-[#1e293b] hover:border-slate-300'
+            }`}
         >
           <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Waiting On</span>
           <span className="text-lg font-bold text-amber-600 dark:text-amber-400">{totals.waiting_on_contacts}</span>
@@ -279,11 +284,10 @@ export default function DailyBriefingCard() {
 
         <div
           onClick={() => setActiveTab('commitments')}
-          className={`p-2.5 rounded-lg border cursor-pointer transition-all ${
-            activeTab === 'commitments'
-              ? 'bg-blue-50/80 dark:bg-blue-950/40 border-blue-300 dark:border-blue-800'
-              : 'bg-slate-50/60 dark:bg-[#161f30] border-slate-200 dark:border-[#1e293b] hover:border-slate-300'
-          }`}
+          className={`p-2.5 rounded-lg border cursor-pointer transition-all ${activeTab === 'commitments'
+            ? 'bg-blue-50/80 dark:bg-blue-950/40 border-blue-300 dark:border-blue-800'
+            : 'bg-slate-50/60 dark:bg-[#161f30] border-slate-200 dark:border-[#1e293b] hover:border-slate-300'
+            }`}
         >
           <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Drafts Awaiting</span>
           <span className={`text-lg font-bold ${totals.drafts_review > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-900 dark:text-white'}`}>
@@ -293,11 +297,10 @@ export default function DailyBriefingCard() {
 
         <div
           onClick={() => setActiveTab('intelligence')}
-          className={`p-2.5 rounded-lg border cursor-pointer transition-all ${
-            activeTab === 'intelligence'
-              ? 'bg-blue-50/80 dark:bg-blue-950/40 border-blue-300 dark:border-blue-800'
-              : 'bg-slate-50/60 dark:bg-[#161f30] border-slate-200 dark:border-[#1e293b] hover:border-slate-300'
-          }`}
+          className={`p-2.5 rounded-lg border cursor-pointer transition-all ${activeTab === 'intelligence'
+            ? 'bg-blue-50/80 dark:bg-blue-950/40 border-blue-300 dark:border-blue-800'
+            : 'bg-slate-50/60 dark:bg-[#161f30] border-slate-200 dark:border-[#1e293b] hover:border-slate-300'
+            }`}
         >
           <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Enriched Intel</span>
           <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{totals.verified_research}</span>
@@ -308,41 +311,37 @@ export default function DailyBriefingCard() {
       <div className="flex items-center gap-1 border-b border-slate-200 dark:border-[#1e293b] mb-4 text-xs font-semibold">
         <button
           onClick={() => setActiveTab('priorities')}
-          className={`pb-2 px-3 border-b-2 transition-colors cursor-pointer ${
-            activeTab === 'priorities'
-              ? 'border-blue-600 text-blue-600 dark:text-blue-400'
-              : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
-          }`}
+          className={`pb-2 px-3 border-b-2 transition-colors cursor-pointer ${activeTab === 'priorities'
+            ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+            : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+            }`}
         >
           Priorities ({priorities.length})
         </button>
         <button
           onClick={() => setActiveTab('meetings')}
-          className={`pb-2 px-3 border-b-2 transition-colors cursor-pointer ${
-            activeTab === 'meetings'
-              ? 'border-blue-600 text-blue-600 dark:text-blue-400'
-              : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
-          }`}
+          className={`pb-2 px-3 border-b-2 transition-colors cursor-pointer ${activeTab === 'meetings'
+            ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+            : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+            }`}
         >
           Meetings ({meetingsToday.length + upcomingMeetings.length})
         </button>
         <button
           onClick={() => setActiveTab('commitments')}
-          className={`pb-2 px-3 border-b-2 transition-colors cursor-pointer ${
-            activeTab === 'commitments'
-              ? 'border-blue-600 text-blue-600 dark:text-blue-400'
-              : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
-          }`}
+          className={`pb-2 px-3 border-b-2 transition-colors cursor-pointer ${activeTab === 'commitments'
+            ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+            : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+            }`}
         >
           Commitments & Reviews ({ourCommitments.length + waitingContacts.length + draftsReview.length})
         </button>
         <button
           onClick={() => setActiveTab('intelligence')}
-          className={`pb-2 px-3 border-b-2 transition-colors cursor-pointer ${
-            activeTab === 'intelligence'
-              ? 'border-blue-600 text-blue-600 dark:text-blue-400'
-              : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
-          }`}
+          className={`pb-2 px-3 border-b-2 transition-colors cursor-pointer ${activeTab === 'intelligence'
+            ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+            : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+            }`}
         >
           Enriched Intel & Follow-ups ({followups.length + researchHighlights.length})
         </button>
@@ -383,11 +382,10 @@ export default function DailyBriefingCard() {
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${
-                            item.priority === 'urgent'
-                              ? 'bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300'
-                              : 'bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300'
-                          }`}>
+                          <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${item.priority === 'urgent'
+                            ? 'bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300'
+                            : 'bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300'
+                            }`}>
                             {item.category || item.priority}
                           </span>
                           <p className="text-xs font-bold text-slate-900 dark:text-slate-100">

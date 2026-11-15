@@ -279,7 +279,7 @@ I am connected to the **Isolate Platform Core Engine**, PostgreSQL telemetry sto
         activeOrgs: Array.isArray(orgs) ? orgs.length : 0,
         providersCount: 5,
       })
-    } catch (_) {}
+    } catch (_) { }
   }
 
   useEffect(() => {
@@ -407,7 +407,7 @@ Everything is running normally. You can ask about available workflows (e.g. Meet
 
   return (
     <div className="flex flex-col h-[calc(100vh-3.5rem)] bg-slate-50 dark:bg-[#0b0f17] text-slate-900 dark:text-slate-100 transition-colors">
-      
+
       {/* ── Top Command Bar ─────────────────────────────────────────────── */}
       <div className="px-3 sm:px-6 py-2.5 sm:py-3.5 border-b border-slate-200 dark:border-[#233048] bg-white dark:bg-[#0f1522] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 shrink-0">
         <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
@@ -457,11 +457,10 @@ Everything is running normally. You can ask about available workflows (e.g. Meet
                 </div>
               )}
               <div className={`max-w-[94%] sm:max-w-[85%] md:max-w-[80%] ${isUser ? 'items-end' : 'items-start'}`}>
-                <div className={`p-3.5 sm:p-5 rounded-2xl text-xs sm:text-sm leading-relaxed ${
-                  isUser
-                    ? 'bg-blue-600 text-white rounded-tr-xs shadow-xs font-medium'
-                    : 'bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] text-slate-900 dark:text-slate-100 rounded-tl-xs shadow-2xs'
-                }`}>
+                <div className={`p-3.5 sm:p-5 rounded-2xl text-xs sm:text-sm leading-relaxed ${isUser
+                  ? 'bg-blue-600 text-white rounded-tr-xs shadow-xs font-medium'
+                  : 'bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] text-slate-900 dark:text-slate-100 rounded-tl-xs shadow-2xs'
+                  }`}>
                   {isUser ? (
                     <div className="whitespace-pre-wrap font-sans">{msg.content}</div>
                   ) : (
@@ -500,7 +499,7 @@ Everything is running normally. You can ask about available workflows (e.g. Meet
 
       {/* ── Quick Directives & Command Input Footer ──────────────────────── */}
       <div className="px-3 sm:px-6 pb-3 sm:pb-6 pt-1 sm:pt-2 max-w-5xl mx-auto w-full shrink-0">
-        
+
         {/* Quick Action Chips */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-1.5 sm:gap-2 mb-2 sm:mb-3">
           {ADMIN_QUICK_ACTIONS.map(action => {
