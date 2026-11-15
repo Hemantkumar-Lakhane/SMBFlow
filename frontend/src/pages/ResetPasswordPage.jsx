@@ -1,17 +1,7 @@
-// frontend/src/pages/ResetPasswordPage.jsx
-// ─────────────────────────────────────────────────────────────────────────────
-// Set a new password using a single-use token from the reset link
-// (?token=...). Security/UX notes:
-//   • The token comes from the query string; it is a single-use reset
-//     credential, never a password, and is never persisted by the client.
-//   • The backend returns ONE generic error for any invalid / expired / used
-//     token, so we don't try to distinguish those states (doing so would leak
-//     token state). We show that single message.
-//   • Missing/empty token → immediate invalid state without calling the API.
-//   • Password policy mirrors the backend: minimum 8 characters + confirm match.
-// Uses an UNAUTHENTICATED client (no token) — errors are handled inline and
-// never trip the session-expiry path.
-// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Password Reset & Verification Portal
+ * Sets new credentials following verified recovery tokens.
+ */
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Eye, EyeOff, AlertCircle, CheckCircle2, Loader2, Check } from 'lucide-react'

@@ -1,4 +1,7 @@
-// frontend/src/components/ui/index.jsx
+/**
+ * Enterprise Design System Components
+ * Foundational accessible UI components: buttons, modals, badges, loaders, and layout cards.
+ */
 import { useState, useEffect, useRef, forwardRef, isValidElement } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {

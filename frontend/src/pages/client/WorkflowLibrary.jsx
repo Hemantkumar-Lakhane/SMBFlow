@@ -1,14 +1,7 @@
-// frontend/src/pages/client/WorkflowLibrary.jsx
-// ─────────────────────────────────────────────────────────────────────────────
-// Clean, Modern Enterprise Workflow Template Directory
-// Features:
-//   • Full persistent Light & Dark mode support
-//   • Official tool logos loaded directly from /assets/tools/
-//   • Filter by tech stack and business category
-//   • Clean, professional cards without rainbow gradients or vibe-coded sparkles
-//   • Interactive Node Inspection & 1-Click execution modal
-// ─────────────────────────────────────────────────────────────────────────────
-
+/**
+ * Enterprise Workflow Template Directory
+ * Pre-engineered autonomous multi-agent pipelines with verified schema triggers and configurations.
+ */
 import React, { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {

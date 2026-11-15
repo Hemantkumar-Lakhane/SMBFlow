@@ -1,9 +1,8 @@
-// frontend/src/pages/client/ToolsPage.jsx
-// ==========================================
-// Three tabs:
-//   1. Credentials — encrypted API keys (unchanged)
-//   2. Custom REST tools — user-defined HTTP tools (unchanged)
-//   3. Built-in Tools — local dev tools + utility tools (NEW)
+/**
+ * Tools & Credentials Management
+ * Configuration interface for encrypted API credentials, custom REST connectors,
+ * and built-in execution tools available across multi-agent workflows.
+ */
 
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth }  from '../../contexts/AuthContext'

@@ -1,15 +1,8 @@
-// frontend/src/pages/client/WorkflowsPage.jsx
-// ─────────────────────────────────────────────────────────────────────────────
-// Clean, Modern Enterprise Workflow Management & Execution Engine
-// Features:
-//   • Dual-theme responsive layout with dot-grid canvas background
-//   • High-fidelity card grid matching Workflow Library aesthetics
-//   • Filter by tech stack integrations (Gmail, Claude, OpenAI, Slack, etc.)
-//   • Category filters & unified search
-//   • Interactive Node Pipeline inspection modal
-//   • Switchable View (Card Grid vs Detailed Execution Runs Table)
-//   • Direct Execution & Quick Run triggers
-// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Multi-Agent Workflow Management & Execution Engine
+ * Enterprise catalog interface with category filtering, integration stack tagging,
+ * node pipeline inspection, and one-click execution controls.
+ */
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'

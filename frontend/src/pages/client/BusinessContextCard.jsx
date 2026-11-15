@@ -1,16 +1,7 @@
-// frontend/src/pages/client/BusinessContextCard.jsx
-// ─────────────────────────────────────────────────────────────────────────────
-// Business Context Pack Configuration Component
-// Allows organization administrators to view, edit, and save:
-//   • services_offerings
-//   • target_market
-//   • business_priorities
-//   • additional_context
-//
-// Stored as organization-scoped configuration.
-// Supports both form editing and structured JSON mode.
-// ─────────────────────────────────────────────────────────────────────────────
-
+/**
+ * Organization Business Context
+ * Domain intelligence and context injection for multi-agent reasoning.
+ */
 import React, { useState, useEffect, useCallback } from 'react'
 import {
   Briefcase, Save, RefreshCw, Check, AlertCircle, Loader2,

@@ -1,5 +1,8 @@
-// frontend/src/pages/admin/UsersPage.jsx
-// Platform user management (admin only) with full dark theme support
+/**
+ * Global User Directory
+ * Administrative access controls, role assignments, user lifecycle management,
+ * and security policy enforcement.
+ */
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import {
   Users, Search, Plus, RefreshCw, XCircle, CheckCircle2,

@@ -1,5 +1,8 @@
-// frontend/src/pages/client/AIEngine.jsx
-// Configuration → AI Engine: card-based view matching Figma
+/**
+ * AI Engine Configuration
+ * Card-based management of LLM reasoning agents, machine learning predictive models,
+ * deterministic rule engines, and external connected tool executions.
+ */
 
 import { useState, useEffect, useCallback } from 'react'
 import { Bot, Cpu, Wrench, Zap } from 'lucide-react'

@@ -1,11 +1,7 @@
-// frontend/src/pages/SignupPage.jsx
-// ─────────────────────────────────────────────────────────────────────────────
-// Multi-Step B2B SaaS Workspace Onboarding Wizard
-// Supports:
-//   • Step 1: Company Website (with Next & optional Skip)
-//   • Step 2: Tell Us About Your Company (with Back, Next / Create my account, & Other custom tag)
-//   • Step 3: Administrator Credentials (with Back & Create my account for Email Signups)
-// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Workspace Registration & Tenant Provisioning
+ * Organization onboarding and primary administrative account creation.
+ */
 import { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { Eye, EyeOff, AlertCircle, Loader2, ChevronDown } from 'lucide-react'

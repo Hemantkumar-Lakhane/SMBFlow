@@ -1,5 +1,7 @@
-// frontend/src/api/client.js
-
+/**
+ * HTTP API Client & Interceptor
+ * Axios-compatible Fetch API client with automatic token attachment and error classification.
+ */
 import { emitSessionExpired } from './authEvents'
 
 export const API_BASE = import.meta.env.VITE_API_BASE || (

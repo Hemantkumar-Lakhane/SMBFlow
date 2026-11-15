@@ -1,11 +1,8 @@
-// frontend/src/pages/client/GeneralSettings.jsx
-// ─────────────────────────────────────────────────────────────────────────────
-// Profile & Workspace Settings
-//   • User Profile with clickable Avatar photo upload/edit/remove
-//   • Organization Details (Name, Industry + Custom Tag, Website, Size, Timezone)
-//   • System Notifications, Security & Data Retention preferences
-//   • Real backend database sync via /auth/profile, /organizations/me/profile, /organizations/me/config
-// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Profile & Workspace Settings
+ * Identity management, organization profile, localization, timezone configuration,
+ * system notifications, and data retention preferences.
+ */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import {

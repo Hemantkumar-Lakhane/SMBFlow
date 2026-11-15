@@ -400,6 +400,7 @@ def decode_token(token: str) -> TokenData:
         if not payload:
             supa_secret = get_supabase_jwt_secret()
             if supa_secret and supa_secret != SECRET_KEY:
+                # 2a: Try raw secret string
                 try:
                     payload = jwt.decode(token, supa_secret, algorithms=[alg], options={"verify_aud": False})
                 except ExpiredSignatureError:
@@ -408,8 +409,23 @@ def decode_token(token: str) -> TokenData:
                         detail="Token has expired",
                         headers={"WWW-Authenticate": "Bearer"},
                     )
-                except JWTError:
+                except (JWTError, JWKError, JOSEError, Exception):
                     pass
+
+                # 2b: Try base64-decoded binary secret (Supabase standard HMAC key format)
+                if not payload:
+                    try:
+                        import base64
+                        decoded_secret_bytes = base64.b64decode(supa_secret)
+                        payload = jwt.decode(token, decoded_secret_bytes, algorithms=[alg], options={"verify_aud": False})
+                    except ExpiredSignatureError:
+                        raise HTTPException(
+                            status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="Token has expired",
+                            headers={"WWW-Authenticate": "Bearer"},
+                        )
+                    except (JWTError, JWKError, JOSEError, Exception):
+                        pass
 
         # Attempt 3: If payload successfully verified, build TokenData
         if payload:

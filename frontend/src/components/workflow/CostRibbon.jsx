@@ -1,4 +1,7 @@
-// frontend/src/components/workflow/CostRibbon.jsx
+/**
+ * Execution Cost Telemetry Ribbon
+ * Real-time token usage and inference cost indicators.
+ */
 import { motion } from 'framer-motion'
 import { DollarSign, ArrowDownToLine, ArrowUpFromLine, TrendingUp } from 'lucide-react'
 import { fmtCost, fmtTokens } from '../../utils/helpers'

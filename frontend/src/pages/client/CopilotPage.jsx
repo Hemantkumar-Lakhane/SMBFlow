@@ -1008,7 +1008,7 @@ function MarkdownRenderer({ content, className = '' }) {
             try {
               const parsed = JSON.parse(trimmed)
               return <CodeCard key={idx} code={JSON.stringify(parsed, null, 2)} lang="json" />
-            } catch (_) {}
+            } catch (_) { }
           }
 
           // Heading 3

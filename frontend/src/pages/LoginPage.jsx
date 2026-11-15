@@ -1,9 +1,8 @@
-// frontend/src/pages/LoginPage.jsx
-// ─────────────────────────────────────────────────────────────────────────────
-// Approved Figma login presentation, wired to the REAL backend & Supabase Auth.
-//   • Supports direct email/password sign-in and Supabase Google OAuth.
-//   • Role authority is the backend: super_admin / platform_admin → /admin, org_user → /dashboard.
-// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * User Authentication & Login Portal
+ * Enterprise identity management with multi-tenant credential verification,
+ * OAuth providers, and automated role-based routing.
+ */
 import { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { Eye, EyeOff, AlertCircle, Info, Loader2 } from 'lucide-react'

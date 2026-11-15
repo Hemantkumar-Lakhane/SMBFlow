@@ -450,8 +450,10 @@ async def _local_broadcast(event_type: str, data: dict) -> None:
 
 @app.websocket("/ws/{session_id}")
 async def websocket_endpoint(websocket: WebSocket, session_id: str):
+    await websocket.accept()
     token = websocket.query_params.get("token")
     if not token:
+        await websocket.send_text(json.dumps({"type": "error", "message": "Missing authentication token"}))
         await websocket.close(code=4001)
         return
     try:
@@ -459,10 +461,9 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
         token_data = await get_current_user_from_token(token)
     except Exception as e:
         log.warning("WebSocket authentication failed", error=str(e), session_id=session_id)
+        await websocket.send_text(json.dumps({"type": "error", "message": f"Authentication failed: {str(e)}"}))
         await websocket.close(code=4001)
         return
- 
-    await websocket.accept()
     user_tenant = getattr(token_data, "tenant_id", None) or getattr(token_data, "organization_id", None)
     user_role   = getattr(token_data, "role", "anon")
     _ws_connections[session_id] = (websocket, user_tenant)

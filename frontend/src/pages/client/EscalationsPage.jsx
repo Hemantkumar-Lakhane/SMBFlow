@@ -1,12 +1,8 @@
-// frontend/src/pages/client/EscalationsPage.jsx
-// ─────────────────────────────────────────────────────────────────────────────
-// SMBFlow — Human-in-the-Loop (HITL) Workflow Action Center
-// Features:
-//   • Genuine Workflow Task Review (Product Launch, Email Summarizer, Churn, A2A)
-//   • Direct 1-Click Navigation into Workflow Runner Deliverables
-//   • Zero fake stats / zero emojis / clean enterprise layout
-//   • Real-time approvals, inline decisions, and humanized email drafting
-// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Human-in-the-Loop (HITL) Action Center
+ * Central review gateway for staging, inspecting, approving, or modifying
+ * high-stakes multi-agent pipeline actions before external dispatch.
+ */
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'

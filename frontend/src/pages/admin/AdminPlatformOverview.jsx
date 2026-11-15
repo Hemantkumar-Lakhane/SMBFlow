@@ -1,5 +1,8 @@
-// frontend/src/pages/admin/AdminPlatformOverview.jsx
-// Real SaaS control-plane dashboard with full dark-mode design system
+/**
+ * Platform Overview & Fleet Command
+ * High-level control-plane dashboard tracking system-wide ARR, active tenants,
+ * provider API latency, and fleet health metrics.
+ */
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {

@@ -1,12 +1,8 @@
-// frontend/src/pages/admin/AdminAssistant.jsx
-// ─────────────────────────────────────────────────────────────────────────────
-// Autonomous Platform Operations AI Copilot & System Diagnostic Terminal
-// Specifically designed for Platform Administrators:
-//   • Live system telemetry, fleet health, and active provider heartbeat
-//   • Real-time diagnostic queries (failures, stuck runs, usage spikes, audit logs)
-//   • Natural-language Multi-Agent DAG Generator with instant Visual Builder handoff
-//   • High-contrast dark enterprise command-center aesthetic
-// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Autonomous Platform Operations AI Copilot
+ * Administrative diagnostic assistant monitoring system telemetry, provider heartbeats,
+ * error spikes, security audits, and multi-agent DAG generation.
+ */
 
 import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'

@@ -1,4 +1,7 @@
-// frontend/src/utils/helpers.js
+/**
+ * Shared Formatters & Utility Functions
+ * Centralized Indian Standard Time (IST) formatters, status badges, and helpers.
+ */
 import React from 'react'
 import { clsx } from 'clsx'
 import {

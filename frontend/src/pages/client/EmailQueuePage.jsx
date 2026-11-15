@@ -1,12 +1,7 @@
-// frontend/src/pages/client/EmailQueuePage.jsx
-// ─────────────────────────────────────────────────────────────────────────────
-// KEY CHANGES vs original:
-//  1. Split-pane / master-detail layout (Apple Mail / Outlook UX)
-//  2. Keyboard shortcut: Cmd/Ctrl+Enter to approve and auto-advance
-//  3. Keyboard shortcut: Escape to reject / close
-//  4. No modal round-trips — edit & approve in-place in right panel
-//  5. Status badge counts update optimistically
-// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Outbound Communication & Email Dispatch Queue
+ * Staging monitor and delivery tracking for automated client notifications and drafts.
+ */
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth }      from '../../contexts/AuthContext'
 import { useWebSocket } from '../../contexts/WSContext'

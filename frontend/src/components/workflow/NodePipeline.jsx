@@ -1,14 +1,7 @@
-// frontend/src/components/workflow/NodePipeline.jsx
-// ─────────────────────────────────────────────────────────────────────────────
-// KEY CHANGES vs original:
-//  1. dagre auto-layout — no more hardcoded grid math
-//  2. LiveOutputMini reads from Zustand directly — eliminates prop-drilling
-//     that caused the whole canvas to re-render on every LLM token
-//  3. setRfNodes / setRfEdges only fire when DAG *structure* changes
-//     (not on every streaming tick)
-//  4. Agent icons use lucide-react from helpers, no emojis
-//  5. Animated SVG "data flow" pulse on active edges
-// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Interactive Node Pipeline Diagram
+ * Visual DAG node flow component.
+ */
 import { useEffect, useState, useCallback, useRef, memo } from 'react'
 import {
   ReactFlow, Background, Controls, useNodesState, useEdgesState,

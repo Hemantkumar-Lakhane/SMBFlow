@@ -1,15 +1,8 @@
-// frontend/src/pages/client/UniversalWorkflowRunner.jsx
-// ─────────────────────────────────────────────────────────────────────────────
-// SMBFlow — Universal Dynamic Workflow Canvas & Conversational Agent Runner
-// Features:
-//   • Full Horizontal Layout matching /copilot page
-//   • Snapped n8n-Style Horizontal Branching Canvas with Animated Data Flows
-//   • Interactive Channel Selector with Tool PNG/Vector Logos (1-Click Select)
-//   • Live Interactive Configuration Form (All outputs & values stored in Form only)
-//   • Single-Step Active Conversational Chatbot (Previous questions disappear after filling form)
-//   • Claude-Style Shimmering Reasoning & Collapsible Thought Stream ("Thought for 0.6s")
-//   • Zero raw asterisks, zero emojis, clean enterprise styling
-// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Universal Workflow Canvas & Execution Engine
+ * Enterprise horizontal branching canvas with live interactive execution,
+ * telemetry, thought streaming, and conversational parameters.
+ */
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom'

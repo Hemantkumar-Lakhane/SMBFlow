@@ -1,12 +1,8 @@
-// frontend/src/pages/setup/ConnectionsPage.jsx
-// ─────────────────────────────────────────────────────────────────────────────
-// SMBFlow — Minimal, Clean Tool Integrations & Authentication
-// Features:
-//   • Minimal uncluttered layout with short, crisp descriptions
-//   • 1-Click Google Workspace OAuth (Gmail, Calendar, Drive)
-//   • Category filters: All, Communication, Marketing, Databases, CRM
-//   • Instant live connection testing & AES Vault security
-// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Tool Integrations & External Authentication
+ * Encrypted connection manager supporting OAuth integrations, API keys,
+ * connection health verification, and secure vault storage.
+ */
 
 import React, { useState, useEffect, useMemo } from 'react'
 import {

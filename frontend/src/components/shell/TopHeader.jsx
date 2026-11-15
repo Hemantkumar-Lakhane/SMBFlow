@@ -1,10 +1,8 @@
-// frontend/src/components/shell/TopHeader.jsx
-// ─────────────────────────────────────────────────────────────────────────────
-// Approved Figma top header, ported:
-//   • breadcrumbs from the current path (react-router-dom v6 useLocation/Link)
-//   • real user initials from useAuth() (no hardcoded "SA")
-//   • live WebSocket connection status from the EXISTING WSContext
-// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Top Header Navigation Bar
+ * Features dynamic route breadcrumbs, live WebSocket connection state indicator,
+ * notification center drawer, and light/dark theme switcher.
+ */
 import { Link, useLocation } from 'react-router-dom'
 import { ChevronRight, Sun, Moon, Menu } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'

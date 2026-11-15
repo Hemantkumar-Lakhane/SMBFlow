@@ -1,16 +1,8 @@
-// frontend/src/components/shell/AppShell.jsx
-// ─────────────────────────────────────────────────────────────────────────────
-// Approved Figma app shell (Sidebar + TopHeader + content), ported to this repo.
-//
-// Differences from the Figma original (intentional):
-//   • Wraps `children` (react-router-dom v6 <Wrap> pattern) instead of <Outlet>.
-//   • Reuses the PROVEN badge-polling + WebSocket wiring from the legacy Layout,
-//     so the Action Center badge stays live. No second WS client is created.
-//   • isAdmin comes from the backend role via useAuth(), not the URL.
-//
-// This is the presentation frame only. Individual pages are migrated later
-// (Phase 3+); until then existing pages render inside this shell unchanged.
-// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Enterprise Application Shell Frame
+ * Core layout component providing persistent responsive navigation sidebar,
+ * top operational header, real-time WebSocket notifications, and tenant badge counts.
+ */
 import { useEffect, useCallback, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'

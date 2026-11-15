@@ -1,11 +1,8 @@
-// frontend/src/pages/client/Dashboard.jsx
-// ─────────────────────────────────────────────────────────────────────────────
-// Clean, professional enterprise operations dashboard:
-//   • Dual-theme design (light slate & dark enterprise obsidian #0b0f17 / #121826 / #233048)
-//   • Shows only necessary operational metrics (Active Runs, Approvals, Completed, Workflows, Savings)
-//   • Clean Recent Activity timeline & Workflow Health tracking
-//   • Zero purple, zero saffron, zero gratuitous emojis, crisp typography
-// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Operations Command Dashboard
+ * Real-time operational telemetry tracking active workflow executions,
+ * human-in-the-loop approvals, system savings, and execution timeline events.
+ */
 
 import React, { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'

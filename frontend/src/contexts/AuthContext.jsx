@@ -1,8 +1,7 @@
-// frontend/src/contexts/AuthContext.jsx
-// ─────────────────────────────────────────────────────────────────────────────
-// Supabase Auth + SMBFlow Canonical Profile Context
-// Handles token, user, role, organization hydration & session listeners.
-// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Authentication & Session State Context
+ * Centralized user session, JWT management, and role authorization provider.
+ */
 import { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import { createApiClient } from '../api/client'

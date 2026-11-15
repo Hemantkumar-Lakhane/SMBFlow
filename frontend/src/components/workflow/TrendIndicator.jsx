@@ -1,8 +1,7 @@
-// frontend/src/components/workflow/TrendIndicator.jsx
-// ======================================================
-// Displays the MemoryAgent's delta_analysis as a compact
-// "Run Trend" badge or a full card depending on the `compact` prop.
-
+/**
+ * Performance Trend & Velocity Indicator
+ * KPI trend visualization component.
+ */
 const TREND_CONFIG = {
   improving: {
     icon: '↑',

@@ -1,6 +1,7 @@
-// frontend/src/pages/client/ModelSettings.jsx
-// Shows current model assignments per agent and lets client override per-agent models.
-
+/**
+ * Model Routing & Tier Configuration
+ * Agent-to-model allocation matrix, temperature controls, and inference fallback configurations.
+ */
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import {

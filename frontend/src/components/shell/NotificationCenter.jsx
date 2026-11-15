@@ -1,14 +1,7 @@
-// frontend/src/components/shell/NotificationCenter.jsx
-// ─────────────────────────────────────────────────────────────────────────────
-// SMBFlow — Global & Personal Notification Center
-// Features:
-//   • Unified Bell Icon in TopHeader with real-time unread count badge
-//   • Dual Scope Filter: 'Personal' (Tasks, Approvals, Runs) vs 'Global' (System, What's New)
-//   • Real-time WebSocket refresh + automatic badge sync
-//   • 1-Click Actions: Approve/Reject access requests, jump to workflow run, open review
-//   • Dark & Light mode compliant enterprise design
-// ─────────────────────────────────────────────────────────────────────────────
-
+/**
+ * Real-Time Notification Drawer
+ * Event notification panel with live WebSocket subscription and action links.
+ */
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {

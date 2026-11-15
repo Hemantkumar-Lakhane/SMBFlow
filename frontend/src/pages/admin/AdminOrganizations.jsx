@@ -1,5 +1,8 @@
-// frontend/src/pages/admin/AdminOrganizations.jsx
-// Platform customer workspace management with full dark theme support
+/**
+ * Platform Organization Directory
+ * Multi-tenant customer workspace management, quota allocations, subscription statuses,
+ * and tenant provisioning controls.
+ */
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {

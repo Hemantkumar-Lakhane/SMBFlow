@@ -1,4 +1,7 @@
-// frontend/src/pages/client/PromptStudio.jsx
+/**
+ * Enterprise Prompt Engineering Studio
+ * Hierarchical prompt tree management, dynamic variable injection, and prompt versioning.
+ */
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Editor from '@monaco-editor/react'

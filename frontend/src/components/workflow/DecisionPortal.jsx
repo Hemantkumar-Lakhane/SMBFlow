@@ -1,11 +1,7 @@
-// frontend/src/components/workflow/DecisionPortal.jsx
-// ─────────────────────────────────────────────────────────────────────────────
-// KEY CHANGES vs original:
-//  1. All emojis replaced with lucide-react icons
-//  2. Agent icons use AGENT_ICON_MAP from helpers (lucide, not emoji)
-//  3. Smoother modal entrance animations
-//  4. EscModal: prosecutor findings collapsed by default with expand toggle
-// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Human Decision & Sign-off Portal
+ * Interactive approval modal for staged pipeline actions.
+ */
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'

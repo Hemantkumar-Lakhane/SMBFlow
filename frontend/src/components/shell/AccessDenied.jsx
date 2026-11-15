@@ -1,11 +1,7 @@
-// frontend/src/components/shell/AccessDenied.jsx
-// ─────────────────────────────────────────────────────────────────────────────
-// Professional "permission denied" state for authenticated-but-unauthorized
-// situations (e.g. a tenant_user reaching an admin-only area). This does NOT
-// change any guard semantics — the existing adminOnly guard in App.jsx still
-// governs access. This component is the explicit, readable surface for a 403
-// where we'd otherwise show nothing useful.
-// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Role-Based Access Enforcement Guard
+ * Fallback security view for restricted administrative routes.
+ */
 import { useNavigate } from 'react-router-dom'
 import { ShieldAlert } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'

@@ -1,16 +1,7 @@
-// frontend/src/pages/ForgotPasswordPage.jsx
-// ─────────────────────────────────────────────────────────────────────────────
-// Request a password-reset link. Security-first UX:
-//   • The backend ALWAYS returns the same generic message for known and unknown
-//     emails, so this page shows an identical confirmation either way and never
-//     reveals whether an account exists.
-//   • In an explicitly-enabled non-production dev environment with email
-//     delivery unconfigured, the backend response may include `dev_reset_url`.
-//     We render it in a clearly-labelled "Developer only" panel — never styled
-//     as, or described as, a real delivered email.
-// Uses an UNAUTHENTICATED client (no token), so its errors are handled inline
-// and never trip the session-expiry path.
-// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Account Password Recovery Portal
+ * Secure password reset request interface.
+ */
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AlertCircle, CheckCircle2, Loader2, ArrowLeft } from 'lucide-react'

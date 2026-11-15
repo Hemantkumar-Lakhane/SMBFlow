@@ -1,5 +1,8 @@
-// frontend/src/pages/client/EvidencePage.jsx
-// Matches Figma: Evidence — audit trail of AI recommendations and actions
+/**
+ * Execution Evidence & Compliance Audit Trail
+ * Cryptographically hashed records of autonomous decisions, pipeline outputs,
+ * and human authorization logs across all multi-agent workflows.
+ */
 
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'

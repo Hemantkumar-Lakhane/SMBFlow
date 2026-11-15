@@ -1,11 +1,7 @@
-// frontend/src/components/workflow/LogTerminal.jsx
-// ─────────────────────────────────────────────────────────────────────────────
-// KEY CHANGES vs original:
-//  1. react-virtuoso — only visible rows rendered, 60 FPS at 500+ events
-//  2. No framer-motion per LogLine — CSS transition only (massive perf win)
-//  3. Terminal aesthetic: gradient header, bottom fade mask, macOS dots
-//  4. Auto-scroll to bottom on new events
-// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Real-Time Workflow Log Terminal
+ * Live execution trace viewer with stream filtering.
+ */
 import { useRef, useCallback } from 'react'
 import { Virtuoso } from 'react-virtuoso'
 import { Terminal } from 'lucide-react'

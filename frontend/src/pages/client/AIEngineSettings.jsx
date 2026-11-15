@@ -1,5 +1,8 @@
-// frontend/src/pages/client/AIEngine.jsx
-// Matches screenshot: AI Engine Settings
+/**
+ * AI Engine Capabilities & Tool Routing
+ * Settings panel for predictive ML evaluators, deterministic rule engines,
+ * and autonomous tool execution providers.
+ */
 
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../../contexts/AuthContext'

@@ -1,6 +1,8 @@
-// frontend/src/pages/admin/AdminWorkflowRuns.jsx
-// Data from: GET /api/v1/admin/runs  (platform admin endpoint, org-joined)
-// GET /api/v1/admin/runs/:runId for detail + agent_runs
+/**
+ * Fleet Execution Runs Monitor
+ * Real-time monitoring and inspection of workflow runs across all tenant organizations,
+ * including agent execution traces, durations, and state transitions.
+ */
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import {
   Zap, Search, RefreshCw, Building2, XCircle,

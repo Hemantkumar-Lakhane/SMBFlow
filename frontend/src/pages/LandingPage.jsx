@@ -191,24 +191,22 @@ export default function LandingPage() {
   ]
 
   return (
-    <div className={`min-h-screen transition-colors duration-200 ${
-      isDark
-        ? 'bg-[#0b0f17] text-slate-100 selection:bg-blue-600 selection:text-white'
-        : 'bg-slate-50 text-slate-900 selection:bg-blue-600 selection:text-white font-sans'
-    }`}>
+    <div className={`min-h-screen transition-colors duration-200 ${isDark
+      ? 'bg-[#0b0f17] text-slate-100 selection:bg-blue-600 selection:text-white'
+      : 'bg-slate-50 text-slate-900 selection:bg-blue-600 selection:text-white font-sans'
+      }`}>
 
       {/* ── Top Header Navigation ───────────────────────────────────────────── */}
-      <header className={`sticky top-0 z-50 w-full backdrop-blur-md border-b transition-colors ${
-        isDark
-          ? 'bg-[#0b0f17]/90 border-[#233048] text-white'
-          : 'bg-white/90 border-slate-200 text-slate-900'
-      }`}>
+      <header className={`sticky top-0 z-50 w-full backdrop-blur-md border-b transition-colors ${isDark
+        ? 'bg-[#0b0f17]/90 border-[#233048] text-white'
+        : 'bg-white/90 border-slate-200 text-slate-900'
+        }`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 group">
-            <img 
-              src="/isolatelogo.svg" 
-              alt="Isolate" 
+            <img
+              src="/isolatelogo.svg"
+              alt="Isolate"
               className="h-9 md:h-10 w-auto max-w-[165px] object-contain dark:brightness-110 transition-transform group-hover:scale-102"
             />
           </Link>
@@ -226,11 +224,10 @@ export default function LandingPage() {
           <div className="flex items-center gap-3">
             <button
               onClick={toggleTheme}
-              className={`p-2 rounded-xl border transition-all cursor-pointer ${
-                isDark
-                  ? 'bg-[#121826] border-[#233048] text-amber-300 hover:bg-[#182234]'
-                  : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100 shadow-2xs'
-              }`}
+              className={`p-2 rounded-xl border transition-all cursor-pointer ${isDark
+                ? 'bg-[#121826] border-[#233048] text-amber-300 hover:bg-[#182234]'
+                : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100 shadow-2xs'
+                }`}
               title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
             >
               {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
@@ -238,9 +235,8 @@ export default function LandingPage() {
 
             <Link
               to="/auth"
-              className={`text-sm font-medium px-3 py-2 transition-colors ${
-                isDark ? 'text-slate-300 hover:text-white' : 'text-slate-700 hover:text-slate-900'
-              }`}
+              className={`text-sm font-medium px-3 py-2 transition-colors ${isDark ? 'text-slate-300 hover:text-white' : 'text-slate-700 hover:text-slate-900'
+                }`}
             >
               Sign in
             </Link>
@@ -260,11 +256,10 @@ export default function LandingPage() {
         <section
           ref={heroRef}
           onMouseMove={handleMouseMove}
-          className={`relative pt-20 pb-20 md:pt-28 md:pb-28 overflow-hidden transition-colors border-b ${
-            isDark
-              ? 'bg-[#080c14] border-[#233048]'
-              : 'bg-white border-slate-200'
-          }`}
+          className={`relative pt-20 pb-20 md:pt-28 md:pb-28 overflow-hidden transition-colors border-b ${isDark
+            ? 'bg-[#080c14] border-[#233048]'
+            : 'bg-white border-slate-200'
+            }`}
         >
           {/* Interactive HUD Crosshair */}
           <Crosshair
@@ -291,7 +286,7 @@ export default function LandingPage() {
           ) : (
             <div className="absolute inset-0 pointer-events-none overflow-hidden">
               {/* Precision Dark Orthogonal Grid (Matching User Reference) */}
-              <div 
+              <div
                 className="absolute inset-0 opacity-[0.22]"
                 style={{
                   backgroundImage: `linear-gradient(to right, #334155 1px, transparent 1px), linear-gradient(to bottom, #334155 1px, transparent 1px)`,
@@ -318,19 +313,17 @@ export default function LandingPage() {
 
           <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center text-center relative z-10">
             {/* Tag Badge */}
-            <div className={`inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-semibold mb-8 border shadow-2xs ${
-              isDark
-                ? 'bg-[#121826] border-[#233048] text-blue-400'
-                : 'bg-slate-50 border-slate-200 text-blue-700'
-            }`}>
+            <div className={`inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-semibold mb-8 border shadow-2xs ${isDark
+              ? 'bg-[#121826] border-[#233048] text-blue-400'
+              : 'bg-slate-50 border-slate-200 text-blue-700'
+              }`}>
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
               <span>Autonomous Multi-Agent Workflow Engine</span>
             </div>
 
             {/* Headline */}
-            <h1 className={`text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight max-w-3xl leading-[1.15] ${
-              isDark ? 'text-white' : 'text-slate-950'
-            }`}>
+            <h1 className={`text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight max-w-3xl leading-[1.15] ${isDark ? 'text-white' : 'text-slate-950'
+              }`}>
               Autonomous workflows with{' '}
               <span className="text-blue-600 dark:text-blue-400">
                 human-in-the-loop
@@ -339,9 +332,8 @@ export default function LandingPage() {
             </h1>
 
             {/* Subtitle */}
-            <p className={`mt-6 text-base sm:text-lg max-w-2xl font-normal leading-relaxed ${
-              isDark ? 'text-slate-400' : 'text-slate-600'
-            }`}>
+            <p className={`mt-6 text-base sm:text-lg max-w-2xl font-normal leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'
+              }`}>
               Isolate coordinates intelligent multi-agent pipelines for invoice processing, inbound email triage, CRM lead enrichment, and campaign execution with verifiable state execution.
             </p>
 
@@ -357,11 +349,10 @@ export default function LandingPage() {
               </GlowExpandButton>
               <a
                 href="#workflows"
-                className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm border transition-all ${
-                  isDark
-                    ? 'bg-[#121826] text-slate-200 border-[#233048] hover:bg-[#182234]'
-                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 shadow-2xs'
-                }`}
+                className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm border transition-all ${isDark
+                  ? 'bg-[#121826] text-slate-200 border-[#233048] hover:bg-[#182234]'
+                  : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 shadow-2xs'
+                  }`}
               >
                 <Workflow className="w-4 h-4 text-blue-500" />
                 <span>Explore Interactive Pipelines</span>
@@ -369,9 +360,8 @@ export default function LandingPage() {
             </div>
 
             {/* Verification Strip */}
-            <div className={`mt-12 flex flex-wrap items-center justify-center gap-6 text-xs font-medium ${
-              isDark ? 'text-slate-400' : 'text-slate-500'
-            }`}>
+            <div className={`mt-12 flex flex-wrap items-center justify-center gap-6 text-xs font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'
+              }`}>
               <span className="flex items-center gap-1.5"><Check className="w-4 h-4 text-emerald-500" /> Deterministic DAG Execution</span>
               <span className="flex items-center gap-1.5"><Check className="w-4 h-4 text-emerald-500" /> Human Approval Gates</span>
               <span className="flex items-center gap-1.5"><Check className="w-4 h-4 text-emerald-500" /> Multi-Tenant Isolation</span>
@@ -398,13 +388,12 @@ export default function LandingPage() {
                 <button
                   key={wf.id}
                   onClick={() => handleSelectWorkflow(wf.id)}
-                  className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 border transition-all cursor-pointer ${
-                    isSelected
-                      ? 'bg-blue-600 border-blue-600 text-white shadow-xs'
-                      : isDark
-                        ? 'bg-[#121826] border-[#233048] text-slate-300 hover:bg-[#182234]'
-                        : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 shadow-2xs'
-                  }`}
+                  className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 border transition-all cursor-pointer ${isSelected
+                    ? 'bg-blue-600 border-blue-600 text-white shadow-xs'
+                    : isDark
+                      ? 'bg-[#121826] border-[#233048] text-slate-300 hover:bg-[#182234]'
+                      : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 shadow-2xs'
+                    }`}
                 >
                   <ToolLogo name={wf.nodes[0]?.tool} className="w-3.5 h-3.5" />
                   <span>{wf.name}</span>
@@ -414,21 +403,18 @@ export default function LandingPage() {
           </div>
 
           {/* Interactive Canvas Graph Card */}
-          <div className={`rounded-2xl border shadow-md overflow-hidden transition-colors ${
-            isDark ? 'bg-[#121826] border-[#233048]' : 'bg-white border-slate-200'
-          }`}>
-            {/* Canvas Header */}
-            <div className={`px-6 py-4 border-b flex flex-wrap items-center justify-between gap-4 ${
-              isDark ? 'bg-[#0b0f17]/80 border-[#233048]' : 'bg-slate-50/70 border-slate-200'
+          <div className={`rounded-2xl border shadow-md overflow-hidden transition-colors ${isDark ? 'bg-[#121826] border-[#233048]' : 'bg-white border-slate-200'
             }`}>
+            {/* Canvas Header */}
+            <div className={`px-6 py-4 border-b flex flex-wrap items-center justify-between gap-4 ${isDark ? 'bg-[#0b0f17]/80 border-[#233048]' : 'bg-slate-50/70 border-slate-200'
+              }`}>
               <div>
                 <div className="flex items-center gap-2">
                   <span className={`font-bold text-sm ${isDark ? 'text-white' : 'text-slate-900'}`}>
                     {currentWorkflow.name}
                   </span>
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-semibold border ${
-                    isDark ? 'bg-[#182234] text-blue-300 border-[#233048]' : 'bg-blue-50 text-blue-700 border-blue-200'
-                  }`}>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-semibold border ${isDark ? 'bg-[#182234] text-blue-300 border-[#233048]' : 'bg-blue-50 text-blue-700 border-blue-200'
+                    }`}>
                     {currentWorkflow.category}
                   </span>
                 </div>
@@ -449,9 +435,8 @@ export default function LandingPage() {
             {/* Live SVG Graph Canvas (Clean Auto-Centered Diagram, Click Node to Inspect) */}
             <div className="p-4 sm:p-6 bg-slate-50/40 dark:bg-[#0b0f17]/40">
               <div
-                className={`relative w-full h-[280px] sm:h-[300px] rounded-xl border overflow-hidden select-none transition-colors ${
-                  isDark ? 'bg-[#0b0f17] border-[#233048]' : 'bg-slate-50/70 border-slate-200'
-                }`}
+                className={`relative w-full h-[280px] sm:h-[300px] rounded-xl border overflow-hidden select-none transition-colors ${isDark ? 'bg-[#0b0f17] border-[#233048]' : 'bg-slate-50/70 border-slate-200'
+                  }`}
               >
                 {/* Visual inspection indicator */}
                 <div className="absolute top-3 right-3 text-[10px] text-slate-400 dark:text-slate-500 bg-white/70 dark:bg-[#121826]/70 backdrop-blur px-2.5 py-1 rounded-lg border border-slate-200/60 dark:border-[#233048]/60 flex items-center gap-1.5 shadow-2xs pointer-events-none z-10">
@@ -465,7 +450,7 @@ export default function LandingPage() {
                       <circle cx="2" cy="2" r="1" fill={isDark ? '#233048' : '#cbd5e1'} />
                     </pattern>
                   </defs>
-                  
+
                   {/* Subtle Grid Canvas Layer */}
                   <rect width="100%" height="100%" fill="url(#canvas-grid-pattern)" opacity="0.6" />
 
@@ -544,20 +529,18 @@ export default function LandingPage() {
 
               {/* Node Payload Inspector Drawer */}
               {selectedNode && (
-                <div className={`mt-4 p-4 rounded-xl border text-xs transition-colors ${
-                  isDark ? 'bg-[#0f141f] border-[#233048]' : 'bg-white border-slate-200 shadow-2xs'
-                }`}>
+                <div className={`mt-4 p-4 rounded-xl border text-xs transition-colors ${isDark ? 'bg-[#0f141f] border-[#233048]' : 'bg-white border-slate-200 shadow-2xs'
+                  }`}>
                   <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-[#1a2336] mb-3">
                     <div className="flex items-center gap-2">
                       <ToolLogo name={selectedNode.tool} className="w-4 h-4" />
                       <span className={`font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
                         {selectedNode.title}
                       </span>
-                      <span className={`text-[10px] font-mono px-2 py-0.5 rounded border ${
-                        selectedNode.type === 'HITL Review'
-                          ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800'
-                          : 'bg-slate-100 dark:bg-[#182234] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-[#233048]'
-                      }`}>
+                      <span className={`text-[10px] font-mono px-2 py-0.5 rounded border ${selectedNode.type === 'HITL Review'
+                        ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800'
+                        : 'bg-slate-100 dark:bg-[#182234] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-[#233048]'
+                        }`}>
                         {selectedNode.type}
                       </span>
                     </div>
@@ -592,9 +575,8 @@ export default function LandingPage() {
         </section>
 
         {/* ── How It Works & Reliability ───────────────────────────────────── */}
-        <section className={`py-20 border-t transition-colors ${
-          isDark ? 'bg-[#080b11] border-[#233048]' : 'bg-slate-50/80 border-slate-200'
-        }`} id="how-it-works">
+        <section className={`py-20 border-t transition-colors ${isDark ? 'bg-[#080b11] border-[#233048]' : 'bg-slate-50/80 border-slate-200'
+          }`} id="how-it-works">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center max-w-2xl mx-auto mb-14">
               <h2 className={`text-2xl sm:text-3xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-950'}`}>
@@ -607,9 +589,8 @@ export default function LandingPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Card 1 */}
-              <div className={`p-6 rounded-2xl border transition-all shadow-2xs ${
-                isDark ? 'bg-[#121826] border-[#233048]' : 'bg-white border-slate-200'
-              }`}>
+              <div className={`p-6 rounded-2xl border transition-all shadow-2xs ${isDark ? 'bg-[#121826] border-[#233048]' : 'bg-white border-slate-200'
+                }`}>
                 <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 flex items-center justify-center mb-4">
                   <Cpu className="w-5 h-5" />
                 </div>
@@ -622,9 +603,8 @@ export default function LandingPage() {
               </div>
 
               {/* Card 2 */}
-              <div className={`p-6 rounded-2xl border transition-all shadow-2xs ${
-                isDark ? 'bg-[#121826] border-[#233048]' : 'bg-white border-slate-200'
-              }`}>
+              <div className={`p-6 rounded-2xl border transition-all shadow-2xs ${isDark ? 'bg-[#121826] border-[#233048]' : 'bg-white border-slate-200'
+                }`}>
                 <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800 flex items-center justify-center mb-4">
                   <UserCheck className="w-5 h-5" />
                 </div>
@@ -637,9 +617,8 @@ export default function LandingPage() {
               </div>
 
               {/* Card 3 */}
-              <div className={`p-6 rounded-2xl border transition-all shadow-2xs ${
-                isDark ? 'bg-[#121826] border-[#233048]' : 'bg-white border-slate-200'
-              }`}>
+              <div className={`p-6 rounded-2xl border transition-all shadow-2xs ${isDark ? 'bg-[#121826] border-[#233048]' : 'bg-white border-slate-200'
+                }`}>
                 <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 flex items-center justify-center mb-4">
                   <KeyRound className="w-5 h-5" />
                 </div>
@@ -655,9 +634,8 @@ export default function LandingPage() {
         </section>
 
         {/* ── Integrations Section (Real Tool Logos) ───────────────────────── */}
-        <section className={`py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-b ${
-          isDark ? 'border-[#233048]' : 'border-slate-200'
-        }`} id="integrations">
+        <section className={`py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-b ${isDark ? 'border-[#233048]' : 'border-slate-200'
+          }`} id="integrations">
           <div className="text-center max-w-2xl mx-auto mb-10">
             <h2 className={`text-xl sm:text-2xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
               Connects with Your Operational Stack
@@ -671,11 +649,10 @@ export default function LandingPage() {
             {INTEGRATION_TOOLS.map((tool) => (
               <div
                 key={tool.id}
-                className={`px-4 py-2.5 rounded-xl border text-xs font-semibold flex items-center gap-2.5 transition-all shadow-2xs ${
-                  isDark
-                    ? 'bg-[#121826] border-[#233048] text-slate-200 hover:border-slate-600'
-                    : 'bg-white border-slate-200 text-slate-800 hover:border-slate-300'
-                }`}
+                className={`px-4 py-2.5 rounded-xl border text-xs font-semibold flex items-center gap-2.5 transition-all shadow-2xs ${isDark
+                  ? 'bg-[#121826] border-[#233048] text-slate-200 hover:border-slate-600'
+                  : 'bg-white border-slate-200 text-slate-800 hover:border-slate-300'
+                  }`}
               >
                 <div className="w-5 h-5 rounded flex items-center justify-center shrink-0">
                   <ToolLogo name={tool.id} className="w-4 h-4" />
@@ -696,26 +673,23 @@ export default function LandingPage() {
               Get started for free or scale your workflow capacity as operations expand.
             </p>
 
-            <div className={`mt-6 inline-flex items-center gap-2 p-1 rounded-xl border ${
-              isDark ? 'bg-[#121826] border-[#233048]' : 'bg-slate-100 border-slate-200'
-            }`}>
+            <div className={`mt-6 inline-flex items-center gap-2 p-1 rounded-xl border ${isDark ? 'bg-[#121826] border-[#233048]' : 'bg-slate-100 border-slate-200'
+              }`}>
               <button
                 onClick={() => setBillingCycle('monthly')}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                  billingCycle === 'monthly'
-                    ? isDark ? 'bg-[#182234] text-white shadow-xs' : 'bg-white text-slate-900 shadow-xs'
-                    : isDark ? 'text-slate-400' : 'text-slate-600'
-                }`}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${billingCycle === 'monthly'
+                  ? isDark ? 'bg-[#182234] text-white shadow-xs' : 'bg-white text-slate-900 shadow-xs'
+                  : isDark ? 'text-slate-400' : 'text-slate-600'
+                  }`}
               >
                 Monthly
               </button>
               <button
                 onClick={() => setBillingCycle('annual')}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                  billingCycle === 'annual'
-                    ? isDark ? 'bg-[#182234] text-white shadow-xs' : 'bg-white text-slate-900 shadow-xs'
-                    : isDark ? 'text-slate-400' : 'text-slate-600'
-                }`}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${billingCycle === 'annual'
+                  ? isDark ? 'bg-[#182234] text-white shadow-xs' : 'bg-white text-slate-900 shadow-xs'
+                  : isDark ? 'text-slate-400' : 'text-slate-600'
+                  }`}
               >
                 Annual (20% off)
               </button>
@@ -724,9 +698,8 @@ export default function LandingPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
             {/* Free */}
-            <div className={`p-6 rounded-2xl border flex flex-col justify-between shadow-2xs ${
-              isDark ? 'bg-[#121826] border-[#233048]' : 'bg-white border-slate-200'
-            }`}>
+            <div className={`p-6 rounded-2xl border flex flex-col justify-between shadow-2xs ${isDark ? 'bg-[#121826] border-[#233048]' : 'bg-white border-slate-200'
+              }`}>
               <div>
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono">Free Tier</span>
                 <div className="mt-3 flex items-baseline gap-1">
@@ -746,9 +719,8 @@ export default function LandingPage() {
               <div className="mt-6 pt-4 border-t border-slate-100 dark:border-[#182234]">
                 <Link
                   to="/auth/signup"
-                  className={`w-full inline-flex items-center justify-center py-2 rounded-xl border text-xs font-semibold ${
-                    isDark ? 'border-[#233048] text-white hover:bg-[#182234]' : 'border-slate-300 text-slate-800 hover:bg-slate-50'
-                  }`}
+                  className={`w-full inline-flex items-center justify-center py-2 rounded-xl border text-xs font-semibold ${isDark ? 'border-[#233048] text-white hover:bg-[#182234]' : 'border-slate-300 text-slate-800 hover:bg-slate-50'
+                    }`}
                 >
                   Start Free
                 </Link>
@@ -756,9 +728,8 @@ export default function LandingPage() {
             </div>
 
             {/* Starter */}
-            <div className={`p-6 rounded-2xl border-2 flex flex-col justify-between relative shadow-md ${
-              isDark ? 'bg-[#121826] border-blue-500' : 'bg-white border-blue-600'
-            }`}>
+            <div className={`p-6 rounded-2xl border-2 flex flex-col justify-between relative shadow-md ${isDark ? 'bg-[#121826] border-blue-500' : 'bg-white border-blue-600'
+              }`}>
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider text-white bg-blue-600 font-mono">
                 Recommended
               </div>
@@ -794,9 +765,8 @@ export default function LandingPage() {
             </div>
 
             {/* Enterprise */}
-            <div className={`p-6 rounded-2xl border flex flex-col justify-between shadow-2xs ${
-              isDark ? 'bg-[#121826] border-[#233048]' : 'bg-white border-slate-200'
-            }`}>
+            <div className={`p-6 rounded-2xl border flex flex-col justify-between shadow-2xs ${isDark ? 'bg-[#121826] border-[#233048]' : 'bg-white border-slate-200'
+              }`}>
               <div>
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono">Enterprise</span>
                 <div className="mt-3 flex items-baseline gap-1">
@@ -815,9 +785,8 @@ export default function LandingPage() {
               <div className="mt-6 pt-4 border-t border-slate-100 dark:border-[#182234]">
                 <a
                   href="#faq"
-                  className={`w-full inline-flex items-center justify-center py-2 rounded-xl border text-xs font-semibold ${
-                    isDark ? 'border-[#233048] text-white hover:bg-[#182234]' : 'border-slate-300 text-slate-800 hover:bg-slate-50'
-                  }`}
+                  className={`w-full inline-flex items-center justify-center py-2 rounded-xl border text-xs font-semibold ${isDark ? 'border-[#233048] text-white hover:bg-[#182234]' : 'border-slate-300 text-slate-800 hover:bg-slate-50'
+                    }`}
                 >
                   Contact Sales
                 </a>
@@ -827,9 +796,8 @@ export default function LandingPage() {
         </section>
 
         {/* ── FAQ ──────────────────────────────────────────────────────────── */}
-        <section className={`py-20 border-t transition-colors ${
-          isDark ? 'bg-[#080b11] border-[#233048]' : 'bg-slate-50/80 border-slate-200'
-        }`} id="faq">
+        <section className={`py-20 border-t transition-colors ${isDark ? 'bg-[#080b11] border-[#233048]' : 'bg-slate-50/80 border-slate-200'
+          }`} id="faq">
           <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-10">
               <h2 className={`text-2xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-950'}`}>
@@ -841,24 +809,20 @@ export default function LandingPage() {
               {faqs.map((faq, idx) => {
                 const isOpen = openFaqIndex === idx
                 return (
-                  <div key={idx} className={`rounded-xl border overflow-hidden transition-colors shadow-2xs ${
-                    isDark ? 'bg-[#121826] border-[#233048]' : 'bg-white border-slate-200'
-                  }`}>
+                  <div key={idx} className={`rounded-xl border overflow-hidden transition-colors shadow-2xs ${isDark ? 'bg-[#121826] border-[#233048]' : 'bg-white border-slate-200'
+                    }`}>
                     <button
                       onClick={() => setOpenFaqIndex(isOpen ? null : idx)}
-                      className={`w-full p-4 text-left flex items-center justify-between font-semibold text-sm cursor-pointer ${
-                        isDark ? 'text-white' : 'text-slate-900'
-                      }`}
+                      className={`w-full p-4 text-left flex items-center justify-between font-semibold text-sm cursor-pointer ${isDark ? 'text-white' : 'text-slate-900'
+                        }`}
                     >
                       <span>{faq.q}</span>
-                      <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${
-                        isOpen ? 'rotate-180' : ''
-                      } ${isDark ? 'text-slate-400' : 'text-slate-500'}`} />
+                      <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''
+                        } ${isDark ? 'text-slate-400' : 'text-slate-500'}`} />
                     </button>
                     {isOpen && (
-                      <div className={`px-4 pb-4 text-xs leading-relaxed border-t border-slate-100 dark:border-[#182234] pt-3 ${
-                        isDark ? 'text-slate-400' : 'text-slate-600'
-                      }`}>
+                      <div className={`px-4 pb-4 text-xs leading-relaxed border-t border-slate-100 dark:border-[#182234] pt-3 ${isDark ? 'text-slate-400' : 'text-slate-600'
+                        }`}>
                         {faq.a}
                       </div>
                     )}
@@ -871,11 +835,10 @@ export default function LandingPage() {
 
         {/* ── Closing CTA ──────────────────────────────────────────────────── */}
         <section className="py-16 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className={`rounded-2xl p-8 sm:p-12 border shadow-lg ${
-            isDark
-              ? 'bg-[#121826] border-[#233048] text-white'
-              : 'bg-slate-950 border-slate-900 text-white'
-          }`}>
+          <div className={`rounded-2xl p-8 sm:p-12 border shadow-lg ${isDark
+            ? 'bg-[#121826] border-[#233048] text-white'
+            : 'bg-slate-950 border-slate-900 text-white'
+            }`}>
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
               Automate your business operations with precision.
             </h2>
@@ -904,14 +867,13 @@ export default function LandingPage() {
       </main>
 
       {/* ── Footer ───────────────────────────────────────────────────────── */}
-      <footer className={`border-t py-12 transition-colors ${
-        isDark ? 'bg-[#080b11] border-[#233048] text-slate-400' : 'bg-white border-slate-200 text-slate-500'
-      }`}>
+      <footer className={`border-t py-12 transition-colors ${isDark ? 'bg-[#080b11] border-[#233048] text-slate-400' : 'bg-white border-slate-200 text-slate-500'
+        }`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
           <div className="flex items-center gap-2">
-            <img 
-              src="/isolatelogo.svg" 
-              alt="Isolate" 
+            <img
+              src="/isolatelogo.svg"
+              alt="Isolate"
               className="h-5 w-auto max-w-[90px] object-contain dark:brightness-110"
             />
             <span>— Autonomous Multi-Tenant Workflow Engine</span>

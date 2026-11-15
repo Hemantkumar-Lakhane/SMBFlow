@@ -1,17 +1,7 @@
-// frontend/src/pages/client/BudgetPage.jsx
-// Industry-aware Usage & Billing page.
-//
-// The page title is derived dynamically from the org's industry
-// (e.g. "Healthcare Usage & Billing", "Finance Usage & Billing").
-//
-// Usage data is fetched from GET /api/v1/billing/summary which:
-//   - Returns only workflows applicable to the org's industry
-//   - Excludes cross-industry workflows from cost calculations
-//   - Derives industry from the authenticated org (never trusted from frontend)
-//
-// Budget settings (optimization level, caching) are preserved from the
-// previous implementation via GET/PUT /tenants/:id/budget.
-
+/**
+ * Resource Budget & Spend Telemetry
+ * Real-time usage tracking, token allocations, spend controls, and billing metrics.
+ */
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import {

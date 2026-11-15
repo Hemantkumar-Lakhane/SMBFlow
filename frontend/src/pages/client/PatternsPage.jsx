@@ -1,10 +1,7 @@
-// frontend/src/pages/client/PatternsPage.jsx
-// ============================================
-// Pattern Memory Browser — for business owners (tenant users).
-// Shows what SMBFlow has learned from past workflow runs.
-// Business owner can promote sandbox patterns to active (inject into future RAG)
-// or demote active patterns back to review if they seem incorrect.
-
+/**
+ * Pattern Memory & Learned Heuristics
+ * Central memory browser of recurring operational patterns, customer interactions, and heuristics.
+ */
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import {

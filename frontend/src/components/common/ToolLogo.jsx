@@ -1,11 +1,7 @@
-// frontend/src/components/common/ToolLogo.jsx
-// ─────────────────────────────────────────────────────────────────────────────
-// Universal Tool & Model Logo Component
-// Renders official asset images (/assets/tools/{name}.png) with reactive fallbacks
-// to authentic, clean, precision vector SVGs for Gemini, Claude, OpenAI, Telegram,
-// PostgreSQL, Sheets, Calendar, Gmail, Slack, HubSpot, LinkedIn, X/Twitter, etc.
-// ─────────────────────────────────────────────────────────────────────────────
-
+/**
+ * Tool & Integration Brand Identity
+ * Dynamic brand logo resolver with fallback vectors.
+ */
 import React, { useState, useEffect, useMemo } from 'react'
 import { Zap } from 'lucide-react'
 

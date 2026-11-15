@@ -1,4 +1,7 @@
-// frontend/src/components/workflow/RunWorkflowModal.jsx
+/**
+ * Workflow Parameter & Execution Modal
+ * Dynamic execution modal for parameterized workflow launches.
+ */
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'

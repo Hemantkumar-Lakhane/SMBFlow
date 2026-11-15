@@ -1,17 +1,7 @@
-// frontend/src/pages/client/DailyBriefingCard.jsx
-// ─────────────────────────────────────────────────────────────────────────────
-// Daily Briefing Executive Card & Configuration Modal
-// Displays:
-//   - Today's & upcoming meetings
-//   - Key synthesized priorities
-//   - Pending internal commitments & waiting-on-contact items
-//   - Follow-up email drafts awaiting review (with 1-click navigation)
-//   - Suggested contact follow-ups (overdue touches)
-//   - Verified contact research & news
-//   - Manual "Generate Now" & Delivery Config Modal (time + timezone)
-// Never fabricates missing data.
-// ─────────────────────────────────────────────────────────────────────────────
-
+/**
+ * Automated Daily Operations Briefing
+ * Generates daily operational digests and action priorities.
+ */
 import React, { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {

@@ -1,10 +1,7 @@
-// frontend/src/pages/AuthCallbackPage.jsx
-// ─────────────────────────────────────────────────────────────────────────────
-// Dedicated OAuth Callback Page for Supabase Google Authentication.
-//   • Waits for Supabase Auth session hydration and FastAPI /auth/me profile loading.
-//   • Prevents premature redirection to /auth while authentication hydrates.
-//   • Directs new users to /auth/signup, completed users to /dashboard or /admin.
-// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * OAuth Authentication Callback Handler
+ * Processes external identity callbacks and establishes session tokens.
+ */
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Loader2, AlertCircle } from 'lucide-react'

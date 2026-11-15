@@ -1,4 +1,7 @@
-// frontend/src/contexts/WSContext.jsx
+/**
+ * Real-Time WebSocket State Context
+ * Persistent WebSocket connection manager with channel pub/sub.
+ */
 import {
   createContext, useContext, useEffect, useRef,
   useState, useCallback

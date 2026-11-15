@@ -1,4 +1,7 @@
-// frontend/src/pages/client/WorkflowBuilder.jsx
+/**
+ * Visual Multi-Agent DAG Workflow Builder
+ * Pipeline canvas for constructing, linking, and validating multi-agent workflows.
+ */
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {

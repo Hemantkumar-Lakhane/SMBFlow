@@ -1,11 +1,7 @@
-// frontend/src/pages/client/CentralMemoryQueryCard.jsx
-// ─────────────────────────────────────────────────────────────────────────────
-// Natural-Language Central Memory Query Component
-// Allows users to query their organization's stored relationship memory.
-// Returns concise, grounded answers with complete source conversation citations.
-// Never invents facts; excludes uncertain contact research.
-// ─────────────────────────────────────────────────────────────────────────────
-
+/**
+ * Central Memory Search & Retrieval
+ * Cross-workflow semantic search across shared agent memory stores.
+ */
 import React, { useState } from 'react'
 import {
   Search, Sparkles, Database, CheckCircle, AlertTriangle, Clock,

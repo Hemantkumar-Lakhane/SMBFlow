@@ -1,10 +1,7 @@
-// frontend/src/pages/client/AutomaticIngestionModal.jsx
-// ─────────────────────────────────────────────────────────────────────────────
-// Automatic Conversation Ingestion & Capture Modal
-// Displays webhook stream, capture sources matrix, idempotency tracking,
-// and retry controls for external recordings entering Node 1 → Node 5.
-// ─────────────────────────────────────────────────────────────────────────────
-
+/**
+ * Conversation Ingestion & Webhook Stream Capture
+ * Manages real-time capture sources, webhook ingestion streams, and idempotency checks.
+ */
 import React, { useState, useEffect } from 'react'
 import {
   Radio, Copy, Check, RefreshCw, AlertCircle, CheckCircle2,

@@ -1,15 +1,7 @@
-// frontend/src/components/workflow/WorkflowSummary.jsx
-// =====================================================
-// Comprehensive workflow analysis panel.
-// ENHANCEMENTS:
-//  - Full situation analysis with detailed urgency breakdown
-//  - Per-agent evidence with tool call details
-//  - Verification prosecutor findings expanded view
-//  - Actions taken with full details
-//  - Learning & memory summary
-//  - Consensus agent results display
-//  - "Evidence" section linking raw EPI data
-
+/**
+ * Workflow Run Execution Summary
+ * Post-execution performance and output summary card.
+ */
 import { useMemo, useState } from 'react'
 import { Card } from '../ui'
 import { fmtCost, fmtTokens, AGENT_ICONS, AGENT_LABELS } from '../../utils/helpers'
