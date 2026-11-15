@@ -1,4 +1,5 @@
 // frontend/src/utils/helpers.js
+import React from 'react'
 import { clsx } from 'clsx'
 import {
   Search, BrainCircuit, PenTool, ShieldCheck,
@@ -47,10 +48,20 @@ export const STATUS_COLORS = {
   skipped:   'bg-[rgba(var(--text-muted)/0.1)] text-[rgb(var(--text-muted))] border-[rgb(var(--border))]',
 }
 
+export function RobotIcon({ className = 'w-4 h-4', size, ...props }) {
+  return React.createElement('img', {
+    src: '/robot.png',
+    alt: 'Bot',
+    style: size ? { width: `${size}px`, height: `${size}px` } : undefined,
+    className: `object-contain inline-block shrink-0 ${className}`,
+    ...props
+  })
+}
+
 // ── Agent icons — lucide-react components (no emojis) ────────────────────────
 // Usage: const Icon = AGENT_ICONS['research_agent']; <Icon className="w-4 h-4" />
 // Fallback: if unknown key, use AGENT_ICON_FALLBACK
-export const AGENT_ICON_FALLBACK = Bot
+export const AGENT_ICON_FALLBACK = RobotIcon
 
 export const AGENT_ICON_MAP = {
   research_agent:     Search,

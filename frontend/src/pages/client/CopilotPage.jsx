@@ -1796,8 +1796,8 @@ export default function CopilotPage() {
           )}
 
           <div className="flex items-center gap-2">
-            <span className="text-sm font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-1.5">
-              <Terminal className="w-4 h-4 text-blue-600 dark:text-blue-500" />
+            <span className="text-sm font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+              <img src="/robot.png" alt="Bot" className="w-5 h-5 object-contain shrink-0" />
               <span>AI Assistant</span>
             </span>
           </div>
@@ -1824,9 +1824,11 @@ export default function CopilotPage() {
         /* ── HERO VIEW ─────────────────────────────────────────────────────── */
         <div className="flex-1 px-4 py-8 md:py-12 flex flex-col items-center justify-start max-w-4xl mx-auto w-full pb-16">
           {/* Centered Heading */}
-          <div className="flex items-center gap-2.5 text-xl md:text-2xl font-bold text-slate-900 dark:text-white mb-6">
-            <Terminal className="w-5 h-5 text-blue-600 dark:text-blue-500" />
-            <h2>What do you want to automate?</h2>
+          <div className="flex flex-col items-center text-center gap-3 mb-6">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500/10 to-blue-500/10 dark:bg-[#182234] border border-purple-200/50 dark:border-purple-900/40 p-2.5 shadow-sm flex items-center justify-center">
+              <img src="/robot.png" alt="Bot" className="w-full h-full object-contain" />
+            </div>
+            <h2 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white">What do you want to automate?</h2>
           </div>
 
           {/* Clean Prompt Card */}
@@ -2046,8 +2048,8 @@ export default function CopilotPage() {
               return (
                 <div key={msg.id} className={`flex gap-3.5 ${isUser ? 'justify-end' : 'justify-start'}`}>
                   {!isUser && (
-                    <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
-                      <Bot className="w-4 h-4" />
+                    <div className="w-8 h-8 rounded-xl bg-purple-50/80 dark:bg-[#182234] border border-purple-200/60 dark:border-purple-900/40 overflow-hidden shrink-0 shadow-2xs mt-0.5 p-1 flex items-center justify-center">
+                      <img src="/robot.png" alt="AI Bot" className="w-full h-full object-contain" />
                     </div>
                   )}
 
@@ -2215,8 +2217,8 @@ export default function CopilotPage() {
 
             {loading && (
               <div className="flex gap-3.5 justify-start">
-                <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm">
-                  <Bot className="w-4 h-4 animate-bounce" />
+                <div className="w-8 h-8 rounded-xl bg-purple-50/80 dark:bg-[#182234] border border-purple-200/60 dark:border-purple-900/40 overflow-hidden shrink-0 shadow-2xs p-1 flex items-center justify-center">
+                  <img src="/robot.png" alt="AI Bot" className="w-full h-full object-contain animate-bounce" />
                 </div>
                 <div className="p-4 rounded-2xl bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] text-slate-700 dark:text-slate-300 rounded-tl-xs shadow-2xs flex items-center gap-2.5">
                   <RefreshCw className="w-4 h-4 text-blue-500 animate-spin" />

@@ -54,7 +54,7 @@ function A2AModal({ req, api, onDone }) {
       open
       title={
         <span className="flex items-center gap-2">
-          <Bot className="w-4 h-4 text-primary-400" />
+          <img src="/robot.png" alt="Bot" className="w-4 h-4 object-contain inline-block shrink-0" />
           Agent-to-Agent Request
         </span>
       }
@@ -205,7 +205,7 @@ function EscModal({ esc, api, onDone, onDismiss }) {
 
         {esc.recommended_action && (
           <div className="flex items-center gap-2 text-xs bg-success/8 border border-success/25 rounded-xl px-3 py-2">
-            <Bot className="w-3.5 h-3.5 text-success flex-shrink-0" />
+            <img src="/robot.png" alt="Bot" className="w-3.5 h-3.5 object-contain flex-shrink-0" />
             <span className="text-[rgb(var(--text-muted))]">Agent recommends:</span>
             <strong className="text-success">{esc.recommended_action}</strong>
           </div>

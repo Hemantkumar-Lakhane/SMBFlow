@@ -9,9 +9,20 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 
+function RobotNavIcon({ size = 16, className = "shrink-0" }) {
+  return (
+    <img
+      src="/robot.png"
+      alt="Bot"
+      style={{ width: `${size + 1}px`, height: `${size + 1}px` }}
+      className={`object-contain shrink-0 ${className}`}
+    />
+  )
+}
+
 // ── Primary Operations ────────────────────────────────────────────────────────
 const ownerPrimaryNav = [
-  { label: 'AI Assistant',  to: '/copilot',     icon: Terminal },
+  { label: 'AI Assistant',  to: '/copilot',     icon: RobotNavIcon },
   { label: 'Dashboard',     to: '/dashboard',   icon: LayoutDashboard },
   { label: 'Action Center', to: '/escalations', icon: Inbox, badge: 'actions' },
   { label: 'Workflows',     to: '/workflows',   icon: Workflow },
@@ -32,7 +43,7 @@ const adminNav = [
     title: 'Platform Hub',
     items: [
       { label: 'Platform Overview',   to: '/admin',         icon: LayoutDashboard },
-      { label: 'Operations Copilot',  to: '/admin/copilot', icon: Terminal },
+      { label: 'Operations Copilot',  to: '/admin/copilot', icon: RobotNavIcon },
       { label: 'System Health & Ops', to: '/admin/health',  icon: Activity },
     ],
   },

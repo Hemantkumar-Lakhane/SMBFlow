@@ -17,6 +17,10 @@ function Toggle({ checked, onChange, disabled }) {
   )
 }
 
+function RobotSettingIcon({ size = 16, className = "" }) {
+  return <img src="/robot.png" alt="Bot" style={{ width: `${size}px`, height: `${size}px` }} className={`object-contain shrink-0 ${className}`} />
+}
+
 function Section({ icon: Icon, title, children }) {
   return (
     <div className="bg-white dark:bg-[#121826] border border-slate-200 dark:border-[#233048] rounded-2xl overflow-hidden shadow-2xs">
@@ -223,7 +227,7 @@ export default function AdminPlatformSettings() {
           </Section>
 
           {/* System Behavior */}
-          <Section icon={Bot} title="System Behavior &amp; Recovery">
+          <Section icon={RobotSettingIcon} title="System Behavior &amp; Recovery">
             <Row label="Enable audit log" sub="Persist all admin and operational actions into the audit_events table.">
               <Toggle checked={!!form.enable_audit_log} onChange={v => set('enable_audit_log', v)} />
             </Row>

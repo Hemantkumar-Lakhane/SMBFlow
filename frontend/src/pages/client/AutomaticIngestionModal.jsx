@@ -298,8 +298,8 @@ export default function AutomaticIngestionModal({ onClose, onLoadRun, initialTab
             <div className="p-4 rounded-2xl bg-gradient-to-br from-violet-500/10 via-purple-500/5 to-transparent border border-violet-200/80 dark:border-violet-800/60 space-y-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-violet-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-                    <Video className="w-4 h-4" />
+                  <div className="w-8 h-8 rounded-xl bg-purple-50/80 dark:bg-[#182234] border border-purple-200/60 dark:border-purple-900/40 overflow-hidden shrink-0 shadow-xs p-1 flex items-center justify-center">
+                    <img src="/robot.png" alt="Bot" className="w-full h-full object-contain" />
                   </div>
                   <div>
                     <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">

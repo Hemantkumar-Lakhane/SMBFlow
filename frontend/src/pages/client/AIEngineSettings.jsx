@@ -16,7 +16,7 @@ const CAPABILITIES = [
   },
   {
     id: 'llm',
-    icon: <Bot className="w-5 h-5 text-purple-500" />,
+    icon: <img src="/robot.png" alt="Bot" className="w-5 h-5 object-contain" />,
     bg: 'bg-purple-50',
     name: 'LLM Agent',
     desc: 'Select an LLM provider and configure agent parameters once the backend is connected.',

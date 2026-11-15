@@ -8,7 +8,7 @@ import { useAuth } from '../../contexts/AuthContext'
 const ENGINE_CARDS = [
   {
     id: 'llm',
-    icon: <Bot className="w-6 h-6 text-purple-600" />,
+    icon: <img src="/robot.png" alt="Bot" className="w-6 h-6 object-contain" />,
     bg: 'bg-purple-50',
     title: 'LLM Agent',
     desc: 'Language model agents for reasoning, summarization, recommendation, and conversation.',
