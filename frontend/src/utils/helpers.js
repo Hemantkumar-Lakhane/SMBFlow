@@ -31,6 +31,65 @@ export function fmtDuration(ms) {
   return `${Math.floor(ms / 60000)}m ${Math.floor((ms % 60000) / 1000)}s`
 }
 
+// ── Indian Standard Time (IST / Asia/Kolkata) Formatters ─────────────────────
+export const INDIAN_TIMEZONE = 'Asia/Kolkata'
+export const INDIAN_LOCALE = 'en-IN'
+
+export function formatISTTime(dateInput, options = {}) {
+  if (!dateInput) return '—'
+  const date = typeof dateInput === 'string' || typeof dateInput === 'number' ? new Date(dateInput) : dateInput
+  if (isNaN(date.getTime())) return '—'
+  const timeStr = date.toLocaleTimeString(INDIAN_LOCALE, {
+    timeZone: INDIAN_TIMEZONE,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+    ...options,
+  })
+  return options.includeZoneSuffix === false ? timeStr : `${timeStr} IST`
+}
+
+export function formatISTDate(dateInput, options = {}) {
+  if (!dateInput) return '—'
+  const date = typeof dateInput === 'string' || typeof dateInput === 'number' ? new Date(dateInput) : dateInput
+  if (isNaN(date.getTime())) return '—'
+  return date.toLocaleDateString(INDIAN_LOCALE, {
+    timeZone: INDIAN_TIMEZONE,
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    ...options,
+  })
+}
+
+export function formatISTDateTime(dateInput, options = {}) {
+  if (!dateInput) return '—'
+  const date = typeof dateInput === 'string' || typeof dateInput === 'number' ? new Date(dateInput) : dateInput
+  if (isNaN(date.getTime())) return '—'
+  const datePart = date.toLocaleDateString(INDIAN_LOCALE, {
+    timeZone: INDIAN_TIMEZONE,
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
+  const timePart = date.toLocaleTimeString(INDIAN_LOCALE, {
+    timeZone: INDIAN_TIMEZONE,
+    hour: '2-digit',
+    minute: '2-digit',
+    second: options.includeSeconds ? '2-digit' : undefined,
+    hour12: true,
+  })
+  return `${datePart}, ${timePart} IST`
+}
+
+export function getCurrentISTTime() {
+  return formatISTTime(new Date())
+}
+
+export function getCurrentISTDateTime() {
+  return formatISTDateTime(new Date())
+}
+
 export function safeJson(str, fallback = null) {
   try { return JSON.parse(str) } catch { return fallback }
 }

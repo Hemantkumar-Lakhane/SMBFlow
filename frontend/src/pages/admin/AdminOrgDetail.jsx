@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { Modal, Button, Input, Select, EmptyState, TabGroup } from '../../components/ui'
+import { formatISTDate } from '../../utils/helpers'
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 function timeAgo(iso) {
@@ -38,7 +39,7 @@ function OverviewTab({ detail }) {
         { label: 'Total Runs',    value: m.total_runs ?? 0 },
         { label: 'Total Tokens',  value: m.total_tokens ? m.total_tokens.toLocaleString() : '0' },
         { label: 'Total Spend',   value: m.total_cost_usd !== null && m.total_cost_usd !== undefined ? `$${Number(m.total_cost_usd).toFixed(2)}` : 'Unavailable' },
-        { label: 'Active Since',  value: detail?.created_at ? new Date(detail.created_at).toLocaleDateString() : '—' },
+        { label: 'Active Since',  value: formatISTDate(detail?.created_at) },
       ].map(item => (
         <div key={item.label} className="bg-slate-50 dark:bg-[#162030] rounded-2xl p-4 border border-slate-200 dark:border-[#2a3850]">
           <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">{item.label}</p>
@@ -55,7 +56,7 @@ function OverviewTab({ detail }) {
             }`}>{sub.status}</span>
             <span className="text-slate-500 dark:text-slate-400 capitalize">{sub.billing_cycle}</span>
             {sub.current_period_end && (
-              <span className="text-slate-500 dark:text-slate-400 font-medium">Renews {new Date(sub.current_period_end).toLocaleDateString()}</span>
+              <span className="text-slate-500 dark:text-slate-400 font-medium">Renews {formatISTDate(sub.current_period_end)}</span>
             )}
           </div>
         </div>
@@ -140,7 +141,7 @@ function UsersTab({ users, orgId, api, onRefresh }) {
                     </span>
                   </td>
                   <td className="px-5 py-3.5 text-xs text-slate-400 dark:text-slate-500">
-                    {u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'}
+                    {formatISTDate(u.created_at)}
                   </td>
                 </tr>
               ))}
@@ -376,7 +377,7 @@ function BillingTab({ orgId, api }) {
               { label: 'Plan',    value: sub.plan_name || sub.plan_slug || '—' },
               { label: 'Status',  value: <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${STATUS_CLS[sub.status] || 'bg-slate-500/10 text-slate-500'}`}>{sub.status}</span> },
               { label: 'Cycle',   value: sub.billing_cycle || '—' },
-              { label: 'Period Ends', value: sub.current_period_end ? new Date(sub.current_period_end).toLocaleDateString() : '—' },
+              { label: 'Period Ends', value: formatISTDate(sub.current_period_end) },
             ].map(item => (
               <div key={item.label}>
                 <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">{item.label}</p>
@@ -385,7 +386,7 @@ function BillingTab({ orgId, api }) {
             ))}
           </div>
           {sub.trial_ends_at && (
-            <p className="text-xs text-blue-500 mt-3 font-medium">Trial ends {new Date(sub.trial_ends_at).toLocaleDateString()}</p>
+            <p className="text-xs text-blue-500 mt-3 font-medium">Trial ends {formatISTDate(sub.trial_ends_at)}</p>
           )}
           {sub.cancel_reason && (
             <p className="text-xs text-rose-500 mt-2">Cancel reason: {sub.cancel_reason}</p>
@@ -421,8 +422,8 @@ function BillingTab({ orgId, api }) {
                     </td>
                     <td className="px-5 py-3 text-xs font-mono text-slate-500 dark:text-slate-400">${Number(inv.subtotal_usd || 0).toFixed(2)}</td>
                     <td className="px-5 py-3 text-sm font-bold text-slate-900 dark:text-white font-mono">${Number(inv.total_usd || 0).toFixed(2)}</td>
-                    <td className="px-5 py-3 text-xs text-slate-400 dark:text-slate-500">{inv.due_date ? new Date(inv.due_date).toLocaleDateString() : '—'}</td>
-                    <td className="px-5 py-3 text-xs text-slate-400 dark:text-slate-500">{inv.paid_at ? new Date(inv.paid_at).toLocaleDateString() : '—'}</td>
+                    <td className="px-5 py-3 text-xs text-slate-400 dark:text-slate-500">{formatISTDate(inv.due_date)}</td>
+                    <td className="px-5 py-3 text-xs text-slate-400 dark:text-slate-500">{formatISTDate(inv.paid_at)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -584,7 +585,7 @@ export default function AdminOrgDetail() {
             )}
           </div>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5 capitalize">
-            {detail?.industry} · {detail?.user_count ?? 0} users · Created {detail?.created_at ? new Date(detail.created_at).toLocaleDateString() : '—'}
+            {detail?.industry} · {detail?.user_count ?? 0} users · Created {formatISTDate(detail?.created_at)}
           </p>
         </div>
         <div className="flex items-center gap-2">

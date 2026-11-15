@@ -12,6 +12,7 @@ import {
   Terminal, AlertTriangle, Layers, Play, CheckCircle, Video, Bot, Loader2
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
+import { formatISTTime, formatISTDateTime } from '../../utils/helpers'
 
 export default function AutomaticIngestionModal({ onClose, onLoadRun, initialTab = 'google_meet' }) {
   const { user, api } = useAuth()
@@ -166,7 +167,7 @@ export default function AutomaticIngestionModal({ onClose, onLoadRun, initialTab
       const payload = {
         ...samplePayload,
         external_event_id: testEventId,
-        conversation_title: `Live Test Ingestion (${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`,
+        conversation_title: `Live Test Ingestion (${formatISTTime(new Date())})`,
       }
       const res = await api.post(`/workflows/meeting-intelligence/webhook/${orgId}`, payload)
       setTestResult({ success: true, message: `Simulated ingestion successful: ${res?.external_event_id || testEventId}` })
@@ -745,7 +746,7 @@ export default function AutomaticIngestionModal({ onClose, onLoadRun, initialTab
                         <div className="flex items-center gap-3 font-mono text-[10px]">
                           <span>Event: <strong className="text-slate-700 dark:text-slate-300">{item.external_event_id}</strong></span>
                           <span>•</span>
-                          <span>{new Date(item.received_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric' })}</span>
+                          <span>{formatISTDateTime(item.received_at)}</span>
                           {item.retry_count > 0 && (
                             <>
                               <span>•</span>

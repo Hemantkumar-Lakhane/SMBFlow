@@ -13,6 +13,7 @@ import {
   Mail, ShieldCheck, Bell, Clock, Database, Save, Trash2, Edit3
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
+import { GlowExpandButton } from '../../components/ui'
 
 const INDUSTRIES = [
   { label: 'SaaS / Technology', value: 'saas' },
@@ -29,8 +30,17 @@ const INDUSTRIES = [
 
 const COMPANY_SIZES = ['1-10', '11-50', '51-200', '201-500', '500+']
 const TIMEZONES = [
-  'UTC', 'America/New_York', 'America/Chicago', 'America/Denver',
-  'America/Los_Angeles', 'Europe/London', 'Europe/Paris', 'Asia/Kolkata', 'Asia/Tokyo', 'Australia/Sydney'
+  { value: 'Asia/Kolkata', label: 'Asia/Kolkata (IST - Indian Standard Time, UTC+05:30)' },
+  { value: 'Asia/Colombo', label: 'Asia/Colombo (SLST, UTC+05:30)' },
+  { value: 'Asia/Dhaka', label: 'Asia/Dhaka (BST, UTC+06:00)' },
+  { value: 'Asia/Dubai', label: 'Asia/Dubai (GST, UTC+04:00)' },
+  { value: 'Asia/Singapore', label: 'Asia/Singapore (SGT, UTC+08:00)' },
+  { value: 'Asia/Tokyo', label: 'Asia/Tokyo (JST, UTC+09:00)' },
+  { value: 'Europe/London', label: 'Europe/London (GMT/BST)' },
+  { value: 'Europe/Paris', label: 'Europe/Paris (CET/CEST)' },
+  { value: 'America/New_York', label: 'America/New_York (EST/EDT)' },
+  { value: 'America/Los_Angeles', label: 'America/Los_Angeles (PST/PDT)' },
+  { value: 'UTC', label: 'UTC (Coordinated Universal Time)' },
 ]
 const RETENTION_OPTS = ['30 days', '60 days', '90 days', '6 months', '1 year', 'Indefinite']
 
@@ -87,7 +97,7 @@ export default function GeneralSettings() {
     customIndustry: '',
     website: '',
     companySize: '11-50',
-    timezone: 'UTC',
+    timezone: 'Asia/Kolkata',
 
     // Notifications & System
     emailNotif: true,
@@ -317,11 +327,11 @@ export default function GeneralSettings() {
           </p>
         </div>
 
-        <button
-          type="button"
+        <GlowExpandButton
           onClick={handleSaveAll}
           disabled={saving}
-          className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs sm:text-sm font-semibold rounded-full transition-all shadow-sm cursor-pointer active:scale-98"
+          accentColor="bg-blue-600"
+          className="rounded-full px-6 py-2.5 text-xs sm:text-sm font-semibold"
         >
           {saving ? (
             <>
@@ -334,7 +344,7 @@ export default function GeneralSettings() {
               <span>Save changes</span>
             </>
           )}
-        </button>
+        </GlowExpandButton>
       </div>
 
       {/* ── Status Banners ────────────────────────────────────────────── */}
@@ -587,9 +597,13 @@ export default function GeneralSettings() {
                 onChange={e => set('timezone', e.target.value)}
                 className="w-full border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 bg-white font-medium appearance-none pr-10 cursor-pointer outline-none"
               >
-                {TIMEZONES.map(tz => (
-                  <option key={tz} value={tz}>{tz}</option>
-                ))}
+                {TIMEZONES.map(tz => {
+                  const val = typeof tz === 'string' ? tz : tz.value
+                  const lbl = typeof tz === 'string' ? tz : tz.label
+                  return (
+                    <option key={val} value={val}>{lbl}</option>
+                  )
+                })}
               </select>
               <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">▾</div>
             </div>

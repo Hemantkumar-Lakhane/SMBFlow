@@ -945,7 +945,7 @@ async def get_my_organization(
         "active":           org.active,
         "created_at":       org.created_at.isoformat() if org.created_at else None,
         "config": {
-            "timezone":      profile.get("timezone", "UTC"),
+            "timezone":      profile.get("timezone", "Asia/Kolkata"),
             "notifications": profile.get("notifications", {}),
             "retention":     profile.get("retention", {}),
         },

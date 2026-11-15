@@ -42,6 +42,7 @@ import {
 
 import ToolLogo from '../components/common/ToolLogo'
 import { GradientWave } from '@/components/ui/gradient-wave'
+import { Crosshair, GlowExpandButton } from '../components/ui'
 
 // ── Interactive Canvas Pipeline Presets ────────────────────────────────────────
 const LANDING_WORKFLOWS = [
@@ -265,6 +266,22 @@ export default function LandingPage() {
               : 'bg-white border-slate-200'
           }`}
         >
+          {/* Interactive HUD Crosshair */}
+          <Crosshair
+            containerRef={heroRef}
+            color={isDark ? "#93c5fd" : "#2563eb"}
+            targetEffect="lock"
+            thickness={1}
+            opacity={isDark ? 0.45 : 0.25}
+            smoothing={0.35}
+            showCoordinates
+            lineStyle="solid"
+            blendMode="normal"
+            gap={0}
+            fade={0}
+            clickPulse
+            hideCursor={false}
+          />
           {/* Background: Animated GradientWave for light/default theme; Precision Grid Canvas for dark theme */}
           {!isDark ? (
             <GradientWave
@@ -330,13 +347,14 @@ export default function LandingPage() {
 
             {/* Actions */}
             <div className="mt-8 flex flex-col sm:flex-row items-center gap-3.5 w-full sm:w-auto">
-              <Link
-                to="/auth/signup"
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold text-sm text-white bg-blue-600 hover:bg-blue-500 shadow-xs transition-all"
+              <GlowExpandButton
+                onClick={() => navigate('/auth/signup')}
+                accentColor="bg-orange-600"
+                icon={ArrowRight}
+                className="w-full sm:w-auto py-3 px-8 text-sm"
               >
-                <span>Create Free Workspace</span>
-                <ArrowRight className="w-4 h-4" />
-              </Link>
+                Create Free Workspace
+              </GlowExpandButton>
               <a
                 href="#workflows"
                 className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm border transition-all ${

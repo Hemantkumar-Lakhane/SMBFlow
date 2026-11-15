@@ -25,6 +25,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import ToolLogo from '../../components/common/ToolLogo'
+import { formatISTTime } from '../../utils/helpers'
 
 // ── Workflow Templates ────────────────────────────────────────────────────────
 // ── Workflow Templates with Rich Inspection Properties ────────────────────────
@@ -540,7 +541,7 @@ function CanvasPreview({ template }) {
       setTestResult({
         status: 'success',
         durationMs: Math.floor(Math.random() * 80) + 35,
-        timestamp: new Date().toLocaleTimeString(),
+        timestamp: formatISTTime(new Date()),
       })
     }, 600)
   }
@@ -1471,7 +1472,7 @@ export default function CopilotPage() {
         'Configure schedule',
         'Set custom threshold filter',
       ],
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      timestamp: formatISTTime(new Date()),
     }
     setMessages(prev => [...prev, confirmMsg])
   }
@@ -1520,7 +1521,7 @@ export default function CopilotPage() {
         'Schedule recurring run',
         'View activity history',
       ],
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      timestamp: formatISTTime(new Date()),
     }
 
     setMessages(prev => [...prev, execResultMsg])
@@ -1772,7 +1773,7 @@ export default function CopilotPage() {
       id: String(Date.now()),
       role: 'user',
       content: rawQuery || `Uploaded ${attachedFiles.length} file(s) for workflow synthesis`,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      timestamp: formatISTTime(new Date()),
     }
 
     const currentHistory = messages.length === 0 ? [] : messages
@@ -1798,7 +1799,7 @@ export default function CopilotPage() {
         suggested_followups: res.suggested_followups || [],
         required_tools: res.required_tools || [],
         workflow_key: res.workflow_key || null,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        timestamp: formatISTTime(new Date()),
       }
 
       setMessages(prev => [...prev, assistantMsg])
@@ -1808,7 +1809,7 @@ export default function CopilotPage() {
         role: 'assistant',
         content: `I encountered an issue connecting to the workflow execution engine: ${err?.message || 'Network error'}. You can still navigate directly to your workflows from the sidebar.`,
         execution_nodes: [],
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        timestamp: formatISTTime(new Date()),
       }
       setMessages(prev => [...prev, errorMsg])
     } finally {

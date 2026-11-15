@@ -24,21 +24,21 @@ import { useWebSocket } from '../../contexts/WSContext'
 import { timeAgo } from '../../utils/helpers'
 
 const COMMON_TIMEZONES = [
+  'Asia/Kolkata',
+  'Asia/Colombo',
+  'Asia/Dhaka',
+  'Asia/Dubai',
+  'Asia/Singapore',
+  'Asia/Tokyo',
+  'Europe/London',
+  'Europe/Paris',
+  'Europe/Berlin',
   'America/New_York',
   'America/Chicago',
   'America/Denver',
   'America/Los_Angeles',
-  'America/Toronto',
-  'America/Vancouver',
-  'Europe/London',
-  'Europe/Paris',
-  'Europe/Berlin',
-  'Asia/Dubai',
-  'Asia/Kolkata',
-  'Asia/Singapore',
-  'Asia/Tokyo',
-  'Australia/Sydney',
-  'UTC'
+  'UTC',
+  'Australia/Sydney'
 ]
 
 export default function DailyBriefingCard() {
@@ -55,7 +55,7 @@ export default function DailyBriefingCard() {
   const [configForm, setConfigForm] = useState({
     enabled: true,
     time: '08:00',
-    timezone: 'UTC'
+    timezone: 'Asia/Kolkata'
   })
   const [feedbackMsg, setFeedbackMsg] = useState('')
   const [activeTab, setActiveTab] = useState('priorities') // 'priorities' | 'meetings' | 'commitments' | 'intelligence'
@@ -80,7 +80,7 @@ export default function DailyBriefingCard() {
       setConfigForm({
         enabled: res.enabled ?? true,
         time: res.time || '08:00',
-        timezone: res.timezone || 'UTC'
+        timezone: res.timezone || 'Asia/Kolkata'
       })
     } catch (err) {
       console.warn('Failed to load daily briefing config:', err)

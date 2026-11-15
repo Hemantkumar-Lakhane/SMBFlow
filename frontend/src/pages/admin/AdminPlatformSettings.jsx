@@ -49,17 +49,17 @@ const inputCls  = 'border border-slate-200 dark:border-[#2a3850] rounded-xl px-3
 const selectCls = inputCls + ' cursor-pointer'
 
 const TIMEZONES = [
-  'UTC', 'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles',
-  'America/Sao_Paulo', 'Europe/London', 'Europe/Berlin', 'Europe/Paris',
-  'Asia/Dubai', 'Asia/Kolkata', 'Asia/Singapore', 'Asia/Tokyo',
-  'Australia/Sydney',
+  'Asia/Kolkata', 'Asia/Colombo', 'Asia/Dhaka', 'Asia/Dubai', 'Asia/Singapore', 'Asia/Tokyo',
+  'Europe/London', 'Europe/Berlin', 'Europe/Paris',
+  'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles',
+  'UTC', 'Australia/Sydney',
 ]
 
 export default function AdminPlatformSettings() {
   const { api } = useAuth()
 
   const [form, setForm] = useState({
-    timezone:               'UTC',
+    timezone:               'Asia/Kolkata',
     environment:            'production',
     allow_signups:          true,
     auto_provision_orgs:    false,

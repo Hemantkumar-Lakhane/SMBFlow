@@ -26,6 +26,7 @@ import {
   Inbox, CheckSquare, Mail, Palette, Wand2, Plug, Video, ShieldCheck
 } from 'lucide-react'
 import AutomaticIngestionModal from './AutomaticIngestionModal'
+import { GlowExpandButton, InteractiveRating, VerticalStepper } from '../../components/ui'
 
 // ── Visual Style Presets for Prompt Enhancer ──────────────────────────────────
 const VISUAL_STYLE_OPTIONS = [
@@ -362,16 +363,26 @@ function formatDateReadable(dateStr) {
     if (parts.length === 3) {
       const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]))
       if (!isNaN(d.getTime())) {
-        return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
+        return d.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
       }
     }
     const d = new Date(dateStr)
     if (!isNaN(d.getTime())) {
-      return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
+      return d.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
     }
     return dateStr
   } catch (e) {
     return dateStr
+  }
+}
+
+function getISTTime(date = new Date()) {
+  try {
+    const d = typeof date === 'string' || typeof date === 'number' ? new Date(date) : date
+    if (isNaN(d.getTime())) return '—'
+    return d.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) + ' IST'
+  } catch {
+    return '—'
   }
 }
 
@@ -2134,7 +2145,7 @@ export default function UniversalWorkflowRunner() {
   // Single-Step Active Chat State (Previous output disappears, stored in Form only)
   const [activePrompt, setActivePrompt] = useState(() => ({
     content: `I am initializing the **${workflow.displayTitle || workflow.title}** workflow.\n\nYour inputs will automatically populate the configuration form above.\n\n**${workflow.fields[0]?.prompt}**`,
-    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    timestamp: getISTTime(new Date()),
     fieldIndex: 0,
   }))
 
@@ -2508,7 +2519,7 @@ export default function UniversalWorkflowRunner() {
     }
     setActivePrompt({
       content: `I am initializing the **${workflow.displayTitle || workflow.title}** pipeline.\n\nYour inputs will automatically populate the configuration form above.\n\n**${workflow.fields[0]?.prompt}**`,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      timestamp: getISTTime(new Date()),
       fieldIndex: 0,
     })
   }, [workflow.key])
@@ -2917,7 +2928,7 @@ export default function UniversalWorkflowRunner() {
     setSelectedNodeId(isNode5ADone ? 'n5' : (isNode4Done ? 'n4' : (isNode3Done ? 'n3' : (isNode2Done ? 'n2' : 'n1'))))
     setActivePrompt({
       content: `**Loaded Meeting Intelligence Run: ${run.runId}**\n\n${isNode5ADone ? 'Nodes 1–4 and Node 5A (Follow-up Email Draft) active. Review controls and deliverables staged below.' : isNode4Done ? 'Nodes 1, 2, 3 & 4 executed. Action items, Central Memory, and Structured Extraction staged below.' : isNode3Done ? 'Nodes 1, 2 & 3 executed. Contact relationship memory persisted in PostgreSQL.' : isNode2Done ? 'Nodes 1 & 2 executed. Transcript and structured intelligence staged below.' : 'Node 1 executed. Audio and metadata preserved.'}\n\n${isNode5ADone ? 'Follow-up Email Draft is active for human review in Action Center.' : 'Pipeline ready for execution.'}`,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      timestamp: getISTTime(new Date()),
       fieldIndex: workflow.fields.length,
     })
 
@@ -3077,7 +3088,7 @@ export default function UniversalWorkflowRunner() {
       setSelectedNodeId(workflow.nodes[workflow.nodes.length - 1]?.id || 'n5b')
       setActivePrompt({
         content: `**Restored Campaign Run: ${id}**\n\nDeliverables for **${fullRun.product_name || fullRun.outputs?.name || 'Product Launch'}** restored. All platform copy, generated visuals, and launch configurations are ready.`,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        timestamp: getISTTime(new Date()),
         fieldIndex: workflow.fields.length,
       })
     } else {
@@ -3089,7 +3100,7 @@ export default function UniversalWorkflowRunner() {
       setSelectedNodeId(workflow.nodes[workflow.nodes.length - 1]?.id || 'n5b')
       setActivePrompt({
         content: `**Loaded Previous Run: ${id}**\n\nAll ${workflow.nodes.length} nodes were executed. Deliverables have been restored below.`,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        timestamp: getISTTime(new Date()),
         fieldIndex: workflow.fields.length,
       })
     }
@@ -3116,7 +3127,7 @@ export default function UniversalWorkflowRunner() {
     setSelectedNodeId(workflow.nodes[0]?.id || 'n1')
     setActivePrompt({
       content: `Starting a new run for **${workflow.displayTitle || workflow.title}**.\n\nYour inputs will automatically populate the configuration form.\n\n**${workflow.fields[0]?.prompt || ''}**`,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      timestamp: getISTTime(new Date()),
       fieldIndex: 0,
     })
   }
@@ -3287,7 +3298,7 @@ export default function UniversalWorkflowRunner() {
             setSelectedNodeId(workflow.nodes[workflow.nodes.length - 1]?.id || 'n5b')
             setActivePrompt({
               content: `**Loaded Previous Run: ${rawResult.runId}**\n\nAll ${workflow.nodes.length} nodes were executed. Deliverables have been restored below.`,
-              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              timestamp: getISTTime(new Date()),
               fieldIndex: workflow.fields.length,
             })
             return
@@ -3313,7 +3324,7 @@ export default function UniversalWorkflowRunner() {
     setShowMoreChatChannels(false)
     setActivePrompt({
       content: `I am initializing the **${workflow.displayTitle || workflow.title}** workflow.\n\nYour inputs will automatically populate the configuration form.\n\n**${workflow.fields[0]?.prompt || ''}**`,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      timestamp: getISTTime(new Date()),
       fieldIndex: 0,
     })
   }, [targetKey, isProductLaunch, deepRunId])
@@ -3439,7 +3450,7 @@ export default function UniversalWorkflowRunner() {
     setPipelineNodes(workflow.nodes.map((n, idx) => ({ ...n, status: idx === 0 ? 'active' : 'idle' })))
     setActivePrompt({
       content: `Form cleared. Let's start from step 1:\n\n**${workflow.fields[0]?.prompt}**`,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      timestamp: getISTTime(new Date()),
       fieldIndex: 0,
     })
   }
@@ -3472,7 +3483,7 @@ export default function UniversalWorkflowRunner() {
         setCurrentQIndex(firstMissingIdx)
         setActivePrompt({
           content: `**${currentField?.label}** saved.\n\nPlease provide **${missing[0].label}** before launching the pipeline:\n\n**${missing[0].prompt}**`,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          timestamp: getISTTime(new Date()),
           fieldIndex: firstMissingIdx,
         })
       }
@@ -3494,7 +3505,7 @@ export default function UniversalWorkflowRunner() {
 
     setActivePrompt({
       content: nextContent,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      timestamp: getISTTime(new Date()),
       fieldIndex: nextQIndex,
     })
   }
@@ -3523,7 +3534,7 @@ export default function UniversalWorkflowRunner() {
       if (!valid) {
         setActivePrompt({
           content: `⚠️ **Cannot Start Workflow — Missing Required Inputs**\n\n${missingReason}`,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          timestamp: getISTTime(new Date()),
           fieldIndex: 0,
         })
         return
@@ -3537,7 +3548,7 @@ export default function UniversalWorkflowRunner() {
         
         setActivePrompt({
           content: `⚠️ **Cannot Start Workflow — Missing Required Inputs**\n\nThe workflow cannot start until all required parameters are provided.\n\nPlease provide **${firstMissing.label}** in the form below:\n\n**${firstMissing.prompt}**`,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          timestamp: getISTTime(new Date()),
           fieldIndex: firstMissingIndex !== -1 ? firstMissingIndex : 0,
         })
         return
@@ -3575,7 +3586,7 @@ export default function UniversalWorkflowRunner() {
         if (activeMode === 'google_meet') {
           setActivePrompt({
             content: `**Dispatching Recall.ai Meeting Bot**\n\nConnecting bot to Google Meet room (${currentData.meet_url})...`,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            timestamp: getISTTime(new Date()),
             fieldIndex: workflow.fields.length,
           })
           try {
@@ -3601,7 +3612,7 @@ export default function UniversalWorkflowRunner() {
               ])
               setActivePrompt({
                 content: `🤖 **Notetaker Bot Successfully Dispatched!**\n\n**Next Steps:**\n1. Open your Google Meet call (**${currentData.meet_url}**).\n2. Click **"Admit"** when **SMBFlow Notetaker** requests to join.\n3. Conduct your meeting. When you hang up, the audio recording will automatically be transcribed with Whisper AI and processed into your 5-node deliverables dashboard!\n\n*(Bot Reference: ${botRes.bot_id})*`,
-                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                timestamp: getISTTime(new Date()),
                 fieldIndex: workflow.fields.length,
               })
             }
@@ -3610,7 +3621,7 @@ export default function UniversalWorkflowRunner() {
             setSynthesizing(false)
             setActivePrompt({
               content: `⚠️ **Could Not Dispatch Bot**: ${dispatchErr?.response?.data?.detail || dispatchErr.message || 'Check Recall API key or Meet URL'}\n\nTip: You can also paste your dialogue notes directly in the "Paste Transcript" tab for instant analysis.`,
-              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              timestamp: getISTTime(new Date()),
               fieldIndex: workflow.fields.length,
             })
             return
@@ -3619,7 +3630,7 @@ export default function UniversalWorkflowRunner() {
 
         setActivePrompt({
           content: `**Executing Node 1: Conversation Ingest**\n\nIngesting meeting source (${activeMode}) and metadata for "${effectiveTitle}"...`,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          timestamp: getISTTime(new Date()),
           fieldIndex: workflow.fields.length,
         })
 
@@ -3641,7 +3652,7 @@ export default function UniversalWorkflowRunner() {
           setSynthesizing(false)
           setActivePrompt({
             content: `**Error during Conversation Capture**: ${err.message || 'Failed to capture conversation.'}`,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            timestamp: getISTTime(new Date()),
             fieldIndex: workflow.fields.length,
           })
           return
@@ -3659,7 +3670,7 @@ export default function UniversalWorkflowRunner() {
       ])
       setActivePrompt({
         content: `**Executing Node 2: Process Conversation**\n\nTranscribing audio recording via Whisper and extracting structured intelligence with AI...`,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        timestamp: getISTTime(new Date()),
         fieldIndex: workflow.fields.length,
       })
 
@@ -3711,7 +3722,7 @@ export default function UniversalWorkflowRunner() {
         setSynthesizing(false)
         setActivePrompt({
           content: `**Process Conversation Failed**: ${procErr.message || 'Error occurred during transcription or extraction.'}\n\nYou can retry processing once the issue is resolved. Nodes 3–5 remain pending.`,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          timestamp: getISTTime(new Date()),
           fieldIndex: workflow.fields.length,
         })
         return
@@ -3730,7 +3741,7 @@ export default function UniversalWorkflowRunner() {
       ])
       setActivePrompt({
         content: `**Executing Node 3: Central Memory**\n\nResolving contact identity for "${currentData.contact_name}" and indexing conversation into persistent organization memory...`,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        timestamp: getISTTime(new Date()),
         fieldIndex: workflow.fields.length,
       })
 
@@ -3785,7 +3796,7 @@ export default function UniversalWorkflowRunner() {
         setSynthesizing(false)
         setActivePrompt({
           content: `**Central Memory Indexing Failed**: ${memErr.message || 'Could not persist relationship memory.'}\n\nNodes 1 & 2 succeeded. Nodes 4–5 remain pending.`,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          timestamp: getISTTime(new Date()),
           fieldIndex: workflow.fields.length,
         })
         return
@@ -3805,7 +3816,7 @@ export default function UniversalWorkflowRunner() {
       setSelectedNodeId('n4')
       setActivePrompt({
         content: `**Nodes 1–3 Completed!**\n\nContact **${contactName}** indexed in Central Memory (${totalConvs} stored conversation(s)).\n\nNow running **Node 4 — Action Generator** to classify commitments, waiting items, and AI suggestions into Action Center...`,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        timestamp: getISTTime(new Date()),
         fieldIndex: workflow.fields.length,
       })
 
@@ -3849,7 +3860,7 @@ export default function UniversalWorkflowRunner() {
         setSynthesizing(false)
         setActivePrompt({
           content: `**Action Generation Failed**: ${actErr.message || 'Could not classify action items.'}\n\nNodes 1–3 succeeded. Node 5 remains pending.`,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          timestamp: getISTTime(new Date()),
           fieldIndex: workflow.fields.length,
         })
         return
@@ -3872,7 +3883,7 @@ export default function UniversalWorkflowRunner() {
       setSelectedNodeId('n5')
       setActivePrompt({
         content: `**Nodes 1–4 Completed!**\n\n- **${numOurCmts} Our Commitment(s)**\n- **${numContactCmts} Waiting on Contact**\n- **${numAiSuggs} AI Suggested Action(s)**\n\nNow executing **Node 5A — Follow-up Email Draft**: synthesizing grounded obligations with Central Memory for human review...`,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        timestamp: getISTTime(new Date()),
         fieldIndex: workflow.fields.length,
       })
 
@@ -3980,7 +3991,7 @@ export default function UniversalWorkflowRunner() {
 
       setActivePrompt({
         content: `**Nodes 1, 2, 3 & 4 Completed Successfully!**\n\nAudio for **${currentData.conversation_title}** transcribed (${detectedLang}). Contact **${contactName}** (${totalConvs} stored conversation(s)) reconciled in Central Memory.\n\n**Action Generator (Node 4)**:\n- **${numOurCmts} Our Commitment(s)** (actionable obligations in Action Center)\n- **${numContactCmts} Waiting on Contact** (tracked obligations on ${contactName})\n- **${numAiSuggs} AI Suggested Action(s)** (review items, not confirmed tasks)\n- **${numOpenQ} Open Question(s)**\n\n**Node 5A — Follow-up Email Draft**: Generated and awaiting human review below. (Meeting preparation and calendar blocks remain pending).`,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        timestamp: getISTTime(new Date()),
         fieldIndex: workflow.fields.length,
       })
 
@@ -3999,7 +4010,7 @@ export default function UniversalWorkflowRunner() {
       console.error('Unhandled Meeting Intelligence execution error:', unhandledMeetingErr)
       setActivePrompt({
         content: `**Pipeline Execution Error**: ${unhandledMeetingErr.message || 'An unexpected error occurred during pipeline execution.'}\n\nYou can retry the execution once resolved.`,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        timestamp: getISTTime(new Date()),
         fieldIndex: workflow.fields.length,
       })
     } finally {
@@ -4027,7 +4038,7 @@ export default function UniversalWorkflowRunner() {
       setPipelineNodes(nodes => nodes.map(n => n.id === 'n1' ? { ...n, status: 'running' } : { ...n, status: 'idle' }))
       setActivePrompt({
         content: `**Executing Pipeline Node 1 of 6: PRODUCT BRIEF**\n\nIngesting verified launch spec parameters for **${productName}**:\n• Launch Date: \`${formatDateReadable(launchDate)}\`\n• Configured Channels: \`${channels.join(', ')}\`\n• Visual Strategy: \`${shouldGenerateAIImages ? 'AI ImageRouter Multi-Model Synthesis' : 'Brand Asset Upload'}\`\n• Schema Status: Brief parsed & payload normalized.`,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        timestamp: getISTTime(new Date()),
         fieldIndex: workflow.fields.length,
       })
       await new Promise(r => setTimeout(r, 600))
@@ -4038,7 +4049,7 @@ export default function UniversalWorkflowRunner() {
       setPipelineNodes(nodes => nodes.map(n => n.id === 'n2' ? { ...n, status: 'running' } : n.id === 'n1' ? { ...n, status: 'completed' } : n))
       setActivePrompt({
         content: `**Executing Pipeline Node 2 of 6: Market & Intel**\n\nQuerying Gemini 1.5 Research & Market Intelligence engine...\n• Analyzing target persona & value hooks for "${shortDesc.slice(0, 90)}..."\n• Extracting viral engagement angles across ${channels.length} channels (${channels.join(', ')})\n• Synthesizing competitive positioning and CTA frameworks.`,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        timestamp: getISTTime(new Date()),
         fieldIndex: workflow.fields.length,
       })
       await new Promise(r => setTimeout(r, 750))
@@ -4049,7 +4060,7 @@ export default function UniversalWorkflowRunner() {
       setPipelineNodes(nodes => nodes.map(n => n.id === 'n3' ? { ...n, status: 'running' } : (n.id === 'n1' || n.id === 'n2') ? { ...n, status: 'completed' } : n))
       setActivePrompt({
         content: `**Executing Pipeline Node 3 of 6: Synthesize Copy**\n\nInvoking Claude 3.5 Sonnet via LLMRouter...\n• Generating platform-tailored copy for: **${channels.join(', ')}**\n• Staging campaign instance & character limit optimization in progress...`,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        timestamp: getISTTime(new Date()),
         fieldIndex: workflow.fields.length,
       })
 
@@ -4154,7 +4165,7 @@ export default function UniversalWorkflowRunner() {
       setPipelineNodes(nodes => nodes.map(n => n.id === 'n4' ? { ...n, status: 'running' } : (n.id === 'n1' || n.id === 'n2' || n.id === 'n3') ? { ...n, status: 'completed' } : n))
       setActivePrompt({
         content: `**Executing Pipeline Node 4 of 6: Visual Generator**\n\nImageRouter Multi-Model Synthesis in progress...\n• Generating ${coreVisuals.length} brand assets (Hero Banner, Action UI, Value Editorial)\n• Multi-tier fallback (Gemini Imagen 3.0 / Pollinations Flux)\n• Applying enhanced negative prompt filters & style consistency.`,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        timestamp: getISTTime(new Date()),
         fieldIndex: workflow.fields.length,
       })
 
@@ -4227,7 +4238,7 @@ export default function UniversalWorkflowRunner() {
       setPipelineNodes(nodes => nodes.map(n => (n.id === 'n5a' || n.id === 'n5b') ? { ...n, status: 'running' } : { ...n, status: 'completed' }))
       setActivePrompt({
         content: `**Executing Pipeline Nodes 5A & 5B (Dual-Branch Routing)**\n\n• **[Top Branch — Social Broadcast]**: ${campaignPosts.length} posts staged for ${channels.join(', ')} with synced visuals.\n• **[Bottom Branch — Calendar Ops]**: Launch schedule queued for ${formatDateReadable(launchDate)} • 9:00 AM UTC. Ready for 1-Click Google Calendar sync.`,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        timestamp: getISTTime(new Date()),
         fieldIndex: workflow.fields.length,
       })
       await new Promise(r => setTimeout(r, 650))
@@ -4268,7 +4279,7 @@ export default function UniversalWorkflowRunner() {
 
       setActivePrompt({
         content: `**Pipeline Execution Complete!**\n\nAll 6 nodes in **Product Launch Sprint** executed cleanly. ${campaignPosts.length} platform posts and ${coreVisuals.length} campaign visuals have been generated and staged below for Action Center review and 1-Click scheduling.`,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        timestamp: getISTTime(new Date()),
         fieldIndex: workflow.fields.length,
       })
 
@@ -4292,7 +4303,7 @@ export default function UniversalWorkflowRunner() {
       setPipelineNodes(nodes => nodes.map((n, idx) => idx === i ? { ...n, status: 'running' } : idx < i ? { ...n, status: 'completed' } : n))
       setActivePrompt({
         content: `**Executing Pipeline Node ${i + 1} of ${workflow.nodes.length}: ${workflow.nodes[i].title}**\n\n${execSteps[i] || 'Processing autonomous pipeline step...'}`,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        timestamp: getISTTime(new Date()),
         fieldIndex: workflow.fields.length,
       })
       await new Promise(r => setTimeout(r, 450))
@@ -4345,7 +4356,7 @@ export default function UniversalWorkflowRunner() {
         setSynthesizing(false)
         setActivePrompt({
           content: `**Inbox Triage Sync Complete!**\n\nScanned 6 inbound emails across connected accounts. 2 urgent escalations flagged and 2 Claude 3.5 Sonnet draft replies are prepared for your review.`,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          timestamp: getISTTime(new Date()),
         })
         try {
           const historyKey = `smbflow_runs_history_${workflow.key}`
@@ -4414,7 +4425,7 @@ export default function UniversalWorkflowRunner() {
 
       setActivePrompt({
         content: `**Dynamic Pipeline Execution Complete!**\n\nAll ${workflow.nodes.length} nodes in **${workflow.displayTitle || workflow.title}** executed cleanly. Processed records, decision gate status, and operational audit trail have been recorded below.`,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        timestamp: getISTTime(new Date()),
         fieldIndex: workflow.fields.length,
       })
 
@@ -4625,7 +4636,7 @@ export default function UniversalWorkflowRunner() {
 
     setActivePrompt({
       content: `**Pipeline Execution Complete!**\n\nAll ${workflow.nodes.length} nodes in **${workflow.displayTitle || workflow.title}** executed cleanly. Multi-platform posts and campaign visuals have been generated and staged below for Action Center review.`,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      timestamp: getISTTime(new Date()),
       fieldIndex: workflow.fields.length,
     })
 
@@ -4699,7 +4710,7 @@ export default function UniversalWorkflowRunner() {
 
       setActivePrompt({
         content: `**${isMeetingIntelligence ? 'Meeting inputs ready!' : `All ${totalFieldsCount} workflow parameters configured in the form below!`}**\n\n${summaryItems}\n\nClick **${isMeetingIntelligence ? 'Summarize meeting' : 'Start Workflow'}** to run this workflow.`,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        timestamp: getISTTime(new Date()),
         fieldIndex: workflow.fields.length,
       })
     } else if (firstUnfilledIndex !== -1) {
@@ -4716,7 +4727,7 @@ export default function UniversalWorkflowRunner() {
       const prevNote = firstUnfilledIndex > 0 ? `**${workflow.fields[firstUnfilledIndex - 1]?.label}** saved to form.\n\n` : ''
       setActivePrompt({
         content: `${prevNote}**${currentF.prompt}**`,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        timestamp: getISTTime(new Date()),
         fieldIndex: firstUnfilledIndex,
       })
     }
@@ -6471,15 +6482,15 @@ export default function UniversalWorkflowRunner() {
                   <Sliders className="w-3.5 h-3.5" />
                   <span>Edit Parameters & Re-run</span>
                 </button>
-                <button
-                  type="button"
+                <GlowExpandButton
                   onClick={() => executeActivePipeline()}
                   disabled={synthesizing}
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                  icon={RotateCcw}
+                  accentColor="bg-blue-600"
+                  className="py-1.5 px-4 text-xs"
                 >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  <span>Re-run Workflow</span>
-                </button>
+                  Re-run Workflow
+                </GlowExpandButton>
               </div>
             </div>
           )}
@@ -6561,7 +6572,7 @@ export default function UniversalWorkflowRunner() {
                     >
                       {runsHistory.map((r, rIdx) => (
                         <option key={r.runId} value={r.runId}>
-                          Run {rIdx + 1}: {r.objective || r.runId.slice(0, 8)} ({new Date(r.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})
+                          Run {rIdx + 1}: {r.objective || r.runId.slice(0, 8)} ({getISTTime(r.timestamp)})
                         </option>
                       ))}
                     </select>
@@ -8302,7 +8313,7 @@ export default function UniversalWorkflowRunner() {
                     >
                       {runsHistory.map((r, rIdx) => (
                         <option key={r.runId} value={r.runId}>
-                          Run {rIdx + 1}: {r.objective || r.runId.slice(0, 8)} ({new Date(r.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})
+                          Run {rIdx + 1}: {r.objective || r.runId.slice(0, 8)} ({getISTTime(r.timestamp)})
                         </option>
                       ))}
                     </select>
@@ -8536,6 +8547,12 @@ export default function UniversalWorkflowRunner() {
                     <Copy className="w-3.5 h-3.5" />
                     <span>Export JSON Payload</span>
                   </button>
+
+                  {/* Quality & Deliverable Satisfaction Rating */}
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-[#1e2a3f] text-xs">
+                    <span className="text-slate-500 dark:text-slate-400 font-medium">Rate Output:</span>
+                    <InteractiveRating size="w-4 h-4" name="deliverable-rating" />
+                  </div>
                 </div>
               </div>
 
@@ -8599,7 +8616,7 @@ export default function UniversalWorkflowRunner() {
                     {runsHistory.map((r, rIdx) => {
                       const rId = r.runId || r.instance_id
                       const rName = r.product_name || r.outputs?.name || r.brief?.productName || rId?.slice(0, 8) || 'Campaign'
-                      const rTime = new Date(r.timestamp || r.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                      const rTime = getISTTime(r.timestamp || r.created_at || Date.now())
                       return (
                         <option key={rId} value={rId}>
                           Run {rIdx + 1}: {rName} ({rTime})

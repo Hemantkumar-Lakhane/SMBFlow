@@ -9,8 +9,9 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAuth }  from '../../contexts/AuthContext'
 import {
   Card, Button, Input, Select, Modal, Alert, Spinner,
-  EmptyState, TabGroup, Toggle
+  EmptyState, TabGroup, Toggle, GlowExpandButton
 } from '../../components/ui'
+import SquircleDock from '../../components/common/SquircleDock'
 import { timeAgo } from '../../utils/helpers'
 
 const TOOL_TYPES = [
@@ -347,10 +348,20 @@ export default function ToolsPage() {
           <h1 className="text-xl font-bold text-white">🔧 Tools & API Keys</h1>
           <p className="text-gray-400 text-xs mt-0.5">Manage integrations, credentials, and available tools for your workflows</p>
         </div>
-        <div className="flex gap-2">
-          <Button size="sm" variant="ghost"   onClick={() => setShowAddTool(true)}>+ Custom Tool</Button>
-          <Button size="sm" variant="success" onClick={() => setShowAddCred(true)}>🔑 Add Credentials</Button>
+        <div className="flex items-center gap-3">
+          <Button size="sm" variant="ghost" onClick={() => setShowAddTool(true)}>+ Custom Tool</Button>
+          <GlowExpandButton onClick={() => setShowAddCred(true)} accentColor="bg-blue-600">
+            Add Credentials
+          </GlowExpandButton>
         </div>
+      </div>
+
+      {/* ── Quick Integration Launchpad (Squircle Dock) ──────────────────── */}
+      <div className="flex flex-col items-center justify-center py-4 px-6 bg-slate-900/30 rounded-2xl border border-slate-700/50 backdrop-blur-sm shadow-md">
+        <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
+          Integrated Tool Launchpad
+        </p>
+        <SquircleDock onSelect={() => setShowAddCred(true)} />
       </div>
 
       {error && <Alert type="error" onClose={() => setError('')}>{error}</Alert>}

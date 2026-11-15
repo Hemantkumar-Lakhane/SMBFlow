@@ -17,6 +17,7 @@ import {
   Server, GitBranch, ArrowUpRight, Play, ExternalLink
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
+import { formatISTTime } from '../../utils/helpers'
 
 const ADMIN_QUICK_ACTIONS = [
   {
@@ -255,7 +256,7 @@ I am connected to the **Isolate Platform Core Engine**, PostgreSQL telemetry sto
 - **Fleet Analytics**: Monitor token usage, compute budgets, and plan quota thresholds.
 - **Workflow Pipeline Synthesis**: Generate multi-agent DAG architectures and push directly to the Visual Builder.
 - **Provider Routing**: Verify Anthropic / OpenAI / Gemini failover routes and verify credentials.`,
-      timestamp: new Date().toLocaleTimeString(),
+      timestamp: formatISTTime(new Date()),
     }
   ])
   const [loading, setLoading] = useState(false)
@@ -307,7 +308,7 @@ I am connected to the **Isolate Platform Core Engine**, PostgreSQL telemetry sto
       id: String(Date.now()),
       role: 'user',
       content: text.trim(),
-      timestamp: new Date().toLocaleTimeString(),
+      timestamp: formatISTTime(new Date()),
     }
 
     setMessages(prev => [...prev, userMsg])
@@ -390,7 +391,7 @@ Everything is running normally. You can ask about available workflows (e.g. Meet
           id: String(Date.now() + 1),
           role: 'assistant',
           content: replyContent,
-          timestamp: new Date().toLocaleTimeString(),
+          timestamp: formatISTTime(new Date()),
         }
       ])
     } catch (err) {
@@ -400,7 +401,7 @@ Everything is running normally. You can ask about available workflows (e.g. Meet
           id: String(Date.now() + 1),
           role: 'assistant',
           content: `**Diagnostic query failed**: ${err?.response?.data?.detail || err.message}`,
-          timestamp: new Date().toLocaleTimeString(),
+          timestamp: formatISTTime(new Date()),
         }
       ])
     } finally {

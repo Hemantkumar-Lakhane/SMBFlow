@@ -389,7 +389,7 @@ export default function UsersPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3.5 text-slate-400 font-mono text-[11px]">
-                      {u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'}
+                      {u.created_at ? new Date(u.created_at).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' }) : '—'}
                     </td>
                     <td className="px-4 py-3.5">
                       <UserRowActions user={u} api={api} orgs={orgs} onRefresh={load} />

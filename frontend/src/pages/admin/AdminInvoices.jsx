@@ -28,7 +28,7 @@ function StatusBadge({ status }) {
 
 function fmt(iso) {
   if (!iso) return '—'
-  return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+  return new Date(iso).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', year: 'numeric', month: 'short', day: 'numeric' })
 }
 
 function fmtUSD(v) {

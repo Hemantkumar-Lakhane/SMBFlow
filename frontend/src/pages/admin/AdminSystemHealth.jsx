@@ -5,6 +5,7 @@ import {
   CheckCircle2, XCircle, AlertTriangle, HelpCircle, Minus, Activity,
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
+import { formatISTTime } from '../../utils/helpers'
 
 // ── Status helpers ─────────────────────────────────────────────────────────────
 const STATUS_META = {
@@ -53,7 +54,7 @@ function OverallBanner({ overall, checkedAt }) {
           <p className="text-sm font-bold">Platform Services: {m.label}</p>
           {checkedAt && (
             <p className="text-xs opacity-75 mt-0.5">
-              Heartbeat verified at {new Date(checkedAt).toLocaleTimeString()}
+              Heartbeat verified at {formatISTTime(checkedAt)}
             </p>
           )}
         </div>

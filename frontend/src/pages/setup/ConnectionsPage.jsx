@@ -15,8 +15,9 @@ import {
   Trash2, ArrowRight
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
-
 import ToolLogo from '../../components/common/ToolLogo'
+import SquircleDock from '../../components/common/SquircleDock'
+import { GlowExpandButton } from '../../components/ui'
 
 export default function ConnectionsPage() {
   const { user, api } = useAuth()
@@ -229,6 +230,17 @@ export default function ConnectionsPage() {
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-blue-500' : ''}`} />
             <span>Refresh</span>
           </button>
+        </div>
+
+        {/* ── Quick Integration Launchpad (Squircle Dock) ──────────────────── */}
+        <div className="flex flex-col items-center justify-center py-4 px-6 bg-slate-900/5 dark:bg-black/25 rounded-2xl border border-slate-200/60 dark:border-white/5 backdrop-blur-sm">
+          <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+            Connected App Dock
+          </p>
+          <SquircleDock onSelect={(item) => {
+            const tool = available.find(t => t.tool_name?.toLowerCase().includes(item.id))
+            if (tool) openConnectModal(tool)
+          }} />
         </div>
 
         {/* ── Categories Filter ───────────────────────────────────────────── */}

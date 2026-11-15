@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useWebSocket } from '../../contexts/WSContext'
+import { formatISTDateTime } from '../../utils/helpers'
 import { timeAgo, truncate } from '../../utils/helpers'
 
 const POLL_MS = 45000
@@ -779,7 +780,7 @@ export default function EscalationsPage() {
                             <span>•</span>
                             <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-medium">
                               <Clock className="w-3 h-3 text-amber-500" />
-                              <span>Retained until {new Date(item.expiresAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}, {new Date(item.expiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                              <span>Retained until {formatISTDateTime(item.expiresAt)}</span>
                             </span>
                           </>
                         )}
