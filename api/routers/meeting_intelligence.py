@@ -31,7 +31,7 @@ import structlog
 from urllib.parse import urlparse
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Query, Request
 from pydantic import BaseModel, Field, field_validator
-from sqlalchemy import select
+from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.auth import TokenData, require_any_auth
@@ -6735,7 +6735,7 @@ async def capture_google_meet(
             ConversationIngestionRecord.organization_id == org_uuid,
             ConversationIngestionRecord.recording_data["meeting_url"].astext == normalized_url,
         )
-        .order_by(desc(ConversationIngestionRecord.received_at))
+        .order_by(ConversationIngestionRecord.received_at.desc())
     )
     res_existing = await db.execute(stmt_existing)
     existing_rec = res_existing.scalars().first()
