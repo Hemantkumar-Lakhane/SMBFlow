@@ -2216,36 +2216,6 @@ export default function UniversalWorkflowRunner() {
     }
   }
 
-  // Handle Google OAuth return callback code for ALL workflows (Gmail & Workspace)
-  useEffect(() => {
-    const code = searchParams.get('code')
-    if (code) {
-      async function exchangeCode() {
-        try {
-          const redirectUri = window.location.origin + window.location.pathname
-          const res = await api.post('/connections/oauth/google/exchange', {
-            code,
-            redirect_uri: redirectUri,
-          })
-          setConnectionSuccessToast(`Connected Google Account (${res?.connected_email || 'Verified'})!`)
-          setTimeout(() => setConnectionSuccessToast(null), 5000)
-          window.history.replaceState({}, document.title, window.location.pathname)
-          if (typeof loadConnections === 'function') loadConnections()
-        } catch (err) {
-          try {
-            await api.post('/workflows/meeting-intelligence/google/exchange-code', {
-              code,
-              redirect_uri: window.location.origin + window.location.pathname,
-            })
-          } catch (_) {}
-          console.warn('OAuth code exchange notice:', err)
-          window.history.replaceState({}, document.title, window.location.pathname)
-        }
-      }
-      exchangeCode()
-    }
-  }, [searchParams, api, loadConnections])
-
   // Pre-flight authorization state
   const [accessChecking, setAccessChecking] = useState(true)
   const [accessDenied, setAccessDenied] = useState(null)
@@ -2275,6 +2245,36 @@ export default function UniversalWorkflowRunner() {
   useEffect(() => {
     loadConnections()
   }, [loadConnections, targetKey])
+
+  // Handle Google OAuth return callback code for ALL workflows (Gmail & Workspace)
+  useEffect(() => {
+    const code = searchParams.get('code')
+    if (code) {
+      async function exchangeCode() {
+        try {
+          const redirectUri = window.location.origin + window.location.pathname
+          const res = await api.post('/connections/oauth/google/exchange', {
+            code,
+            redirect_uri: redirectUri,
+          })
+          setConnectionSuccessToast(`Connected Google Account (${res?.connected_email || 'Verified'})!`)
+          setTimeout(() => setConnectionSuccessToast(null), 5000)
+          window.history.replaceState({}, document.title, window.location.pathname)
+          if (typeof loadConnections === 'function') loadConnections()
+        } catch (err) {
+          try {
+            await api.post('/workflows/meeting-intelligence/google/exchange-code', {
+              code,
+              redirect_uri: window.location.origin + window.location.pathname,
+            })
+          } catch (_) {}
+          console.warn('OAuth code exchange notice:', err)
+          window.history.replaceState({}, document.title, window.location.pathname)
+        }
+      }
+      exchangeCode()
+    }
+  }, [searchParams, api, loadConnections])
 
   const BUILTIN_SYSTEM_TOOLS = useMemo(() => new Set([
     'claude', 'openai', 'gemini', 'postgres', 'webhook', 'switch', 'spec', 'imagerouter', 'multichannel', 'lead_ingest'
