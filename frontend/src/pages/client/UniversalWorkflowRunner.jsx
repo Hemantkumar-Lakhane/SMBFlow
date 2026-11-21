@@ -683,10 +683,11 @@ function MeetingIntelligenceInputModes({ formData, onChange, api, synthesizing, 
         conversation_title: formData.conversation_title || 'Google Meet Capture Session',
         contact_name: formData.contact_name || 'Meeting Attendees',
       })
-      if (res && res.bot_id) {
+      if (res && (res.bot_id || res.ingestion_id || res.instance_id)) {
+        const bId = res.bot_id || res.ingestion_id || ''
         setBotState({
           isDispatching: false,
-          botId: res.bot_id,
+          botId: bId,
           status: res.status || 'waiting_for_bot',
           message: res.message || 'Bot dispatched! Please click "Admit" in your Google Meet window.',
         })
@@ -3572,15 +3573,16 @@ export default function UniversalWorkflowRunner() {
               contact_name: effectiveContact,
             })
             setSynthesizing(false)
-            if (botRes && botRes.bot_id) {
+            if (botRes && (botRes.bot_id || botRes.instance_id)) {
               if (botRes.status === 'completed' && botRes.instance_id) {
                 const synced = await syncMeetingRun(botRes.instance_id)
                 if (synced) applyMeetingRunState(synced)
                 setShowFormWhenDone(false)
                 return
               }
+              const bDisplay = botRes.bot_id ? botRes.bot_id.slice(0, 8) : 'Active'
               setPipelineNodes([
-                { ...workflow.nodes[0], status: 'running', subtitle: `Bot Dispatched (${botRes.bot_id.slice(0, 8)})` },
+                { ...workflow.nodes[0], status: 'running', subtitle: `Bot Dispatched (${bDisplay})` },
                 { ...workflow.nodes[1], status: 'pending', subtitle: 'Awaiting Call End & Audio Ingest' },
                 { ...workflow.nodes[2], status: 'pending', subtitle: 'Central Memory Store' },
                 { ...workflow.nodes[3], status: 'pending', subtitle: 'Action Item Extraction' },

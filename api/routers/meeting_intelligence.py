@@ -31,7 +31,7 @@ import structlog
 from urllib.parse import urlparse
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Query, Request
 from pydantic import BaseModel, Field, field_validator
-from sqlalchemy import select, desc
+from sqlalchemy import select, desc, or_, case
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.auth import TokenData, require_any_auth
@@ -6078,7 +6078,9 @@ async def ingest_conversation_core(
         db.add(audit_evt)
 
         record.instance_id = instance_id
-        record.recording_data = recording_dict
+        record.recording_data = {**(record.recording_data or {}), **recording_dict}
+        if req.metadata:
+            record.metadata_ = {**(record.metadata_ or {}), **req.metadata}
         await db.commit()
         await db.refresh(record)
 
@@ -6729,13 +6731,20 @@ async def capture_google_meet(
     normalized_url = validate_google_meet_url(req.meeting_url)
 
     # 1. Check if a recording session for this Google Meet already exists
+    # Searches both recording_data and metadata_ JSONB stores, prioritizing completed runs with deliverables
     stmt_existing = (
         select(ConversationIngestionRecord)
         .where(
             ConversationIngestionRecord.organization_id == org_uuid,
-            ConversationIngestionRecord.recording_data["meeting_url"].astext == normalized_url,
+            or_(
+                ConversationIngestionRecord.recording_data["meeting_url"].astext == normalized_url,
+                ConversationIngestionRecord.metadata_["meeting_url"].astext == normalized_url,
+            ),
         )
-        .order_by(ConversationIngestionRecord.received_at.desc())
+        .order_by(
+            case((ConversationIngestionRecord.status == "completed", 1), else_=2),
+            ConversationIngestionRecord.received_at.desc(),
+        )
     )
     res_existing = await db.execute(stmt_existing)
     existing_rec = res_existing.scalars().first()
@@ -6768,6 +6777,27 @@ async def capture_google_meet(
                     status="completed",
                     instance_id=proc.get("instance_id") or (str(existing_rec.instance_id) if existing_rec.instance_id else None),
                     message="Meeting completed and deliverables staged successfully!",
+                    meeting_url=normalized_url,
+                    conversation_title=existing_rec.conversation_title,
+                    contact_name=existing_rec.contact_name,
+                )
+            # If the session was started recently (< 2 hours) and is still active/recording/processing,
+            # return the existing bot status to prevent duplicate bot dispatch into the room!
+            if existing_rec.received_at and (datetime.utcnow() - existing_rec.received_at).total_seconds() < 7200:
+                return GoogleMeetCaptureResponse(
+                    success=True,
+                    ingestion_id=str(existing_rec.id),
+                    external_event_id=existing_rec.external_event_id,
+                    bot_id=b_id or "",
+                    status=existing_rec.status,
+                    instance_id=str(existing_rec.instance_id) if existing_rec.instance_id else None,
+                    message=(
+                        "🟢 SMBFlow Notetaker is currently inside the Google Meet recording live audio."
+                        if existing_rec.status == "bot_joined"
+                        else "⏳ Call ended. Transcribing meeting audio with Whisper AI & executing pipeline..."
+                        if existing_rec.status in ("recording_processing", "processing_transcript")
+                        else "Bot dispatched! Please click 'Admit' in your Google Meet window."
+                    ),
                     meeting_url=normalized_url,
                     conversation_title=existing_rec.conversation_title,
                     contact_name=existing_rec.contact_name,
@@ -7069,11 +7099,23 @@ async def get_google_meet_status(
     except (ValueError, TypeError):
         pass
 
-    # 2. Try matching by external_event_id
+    # 2. Try matching by external_event_id or bot_id across JSONB stores
     if not record:
         target_ext_id = identifier if identifier.startswith("recall_") else f"recall_{identifier}"
-        stmt = select(ConversationIngestionRecord).where(
-            ConversationIngestionRecord.external_event_id == target_ext_id
+        stmt = (
+            select(ConversationIngestionRecord)
+            .where(
+                ConversationIngestionRecord.organization_id == org_uuid,
+                or_(
+                    ConversationIngestionRecord.external_event_id == target_ext_id,
+                    ConversationIngestionRecord.recording_data["bot_id"].astext == identifier,
+                    ConversationIngestionRecord.metadata_["bot_id"].astext == identifier,
+                ),
+            )
+            .order_by(
+                case((ConversationIngestionRecord.status == "completed", 1), else_=2),
+                ConversationIngestionRecord.received_at.desc(),
+            )
         )
         r = await db.execute(stmt)
         record = r.scalars().first()
