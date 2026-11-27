@@ -12,14 +12,25 @@ export function normalizeToolKey(name) {
   if (s.includes('gemini') || s.includes('google_ai') || s.includes('google ai') || s === 'google') return 'gemini'
   if (s.includes('claude') || s.includes('anthropic')) return 'claude'
   if (s.includes('openai') || s.includes('gpt') || s.includes('chatgpt') || s.includes('dall-e') || s.includes('dalle')) return 'openai'
+  if (s.includes('groq')) return 'groq'
   if (s.includes('telegram') || s.includes('tg_bot') || s.includes('tgbot')) return 'telegram'
   if (s.includes('postgres') || s.includes('pgvector') || s.includes('postgresql') || s.includes('database') || s.includes('sql')) return 'postgres'
+  if (s.includes('docs') || s === 'google_doc') return 'google_docs'
+  if (s.includes('slides') || s === 'google_slide') return 'google_slides'
+  if (s.includes('drive')) return 'google_drive'
+  if (s.includes('tasks')) return 'google_tasks'
+  if (s.includes('contacts')) return 'google_contacts'
+  if (s.includes('forms')) return 'google_forms'
+  if (s.includes('analytics')) return 'google_analytics'
   if (s.includes('sheet') || s.includes('spreadsheet')) return 'sheet'
   if (s.includes('calendar') || s.includes('booking') || s.includes('appointment')) return 'calendar'
+  if (s.includes('meet') || s.includes('google_meet') || s.includes('google meet')) return 'google_meet'
   if (s.includes('gmail') || s.includes('inbound email') || s.includes('email') || s.includes('mail')) return 'gmail'
   if (s.includes('slack')) return 'slack'
   if (s.includes('hubspot') || s.includes('crm')) return 'hubspot'
   if (s.includes('stripe') || s.includes('billing')) return 'stripe'
+  if (s.includes('recall')) return 'recall_ai'
+  if (s.includes('serper')) return 'serper'
   if (s.includes('linkedin')) return 'linkedin'
   if (s.includes('twitter') || s.includes('tweet') || s === 'x') return 'twitter'
   if (s.includes('instagram')) return 'instagram'
@@ -27,8 +38,7 @@ export function normalizeToolKey(name) {
   if (s.includes('imagerouter') || s.includes('flux') || s.includes('image_gen')) return 'imagerouter'
   if (s.includes('action_center') || s.includes('action center') || s.includes('escalat') || s.includes('hitl') || s.includes('approval')) return 'action_center'
   if (s.includes('switch') || s.includes('filter') || s.includes('classifier') || s.includes('router') || s.includes('branch')) return 'switch'
-  if (s.includes('webhook') || s.includes('api') || s.includes('http') || s.includes('rest')) return 'webhook'
-  if (s.includes('meet') || s.includes('google_meet') || s.includes('google meet')) return 'google_meet'
+  if (s.includes('webhook') || s.includes('rest_api') || s.includes('api') || s.includes('http') || s.includes('rest')) return 'webhook'
   if (s.includes('clearbit')) return 'clearbit'
   if (s.includes('quickbooks')) return 'quickbooks'
 
@@ -206,6 +216,81 @@ export default function ToolLogo({ name, className = 'w-4 h-4' }) {
       <svg className={className} viewBox="0 0 24 24" fill="none" stroke="#3B82F6" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-label="Clearbit">
         <circle cx="12" cy="12" r="8" fill="#3B82F6" fillOpacity="0.15" />
         <path d="M12 8v8M8 12h8" />
+      </svg>
+    ),
+    google_docs: (
+      <svg className={className} viewBox="0 0 24 24" fill="none" aria-label="Google Docs">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z" fill="#4285F4" />
+        <path d="M14 2v6h6l-6-6z" fill="#A1C2FA" />
+        <rect x="7.5" y="11" width="9" height="1.4" rx="0.7" fill="#FFFFFF" />
+        <rect x="7.5" y="14" width="9" height="1.4" rx="0.7" fill="#FFFFFF" />
+        <rect x="7.5" y="17" width="6" height="1.4" rx="0.7" fill="#FFFFFF" />
+      </svg>
+    ),
+    google_slides: (
+      <svg className={className} viewBox="0 0 24 24" fill="none" aria-label="Google Slides">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z" fill="#F4B400" />
+        <path d="M14 2v6h6l-6-6z" fill="#FDE293" />
+        <rect x="7" y="11" width="10" height="7" rx="1" fill="#FFFFFF" fillOpacity="0.95" />
+        <rect x="8.8" y="12.8" width="6.4" height="3.4" rx="0.5" fill="#F4B400" />
+      </svg>
+    ),
+    google_drive: (
+      <svg className={className} viewBox="0 0 24 24" fill="none" aria-label="Google Drive">
+        <path d="M8.5 3.5h7l6.5 11.25-3.5 6.05H15l-6.5-11.25L8.5 3.5z" fill="#FBBC05" />
+        <path d="M15.5 3.5l-7 11.25L5 20.8 2 14.75 8.5 3.5h7z" fill="#34A853" />
+        <path d="M5 20.8h13.5l3.5-6.05H8.5L5 20.8z" fill="#4285F4" />
+      </svg>
+    ),
+    google_tasks: (
+      <svg className={className} viewBox="0 0 24 24" fill="none" aria-label="Google Tasks">
+        <circle cx="12" cy="12" r="10" fill="#4285F4" />
+        <path d="M7.5 12.2l3 3 6-6.2" stroke="#FFFFFF" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+    google_contacts: (
+      <svg className={className} viewBox="0 0 24 24" fill="none" aria-label="Google Contacts">
+        <circle cx="12" cy="12" r="10" fill="#1A73E8" />
+        <circle cx="12" cy="9.2" r="3.2" fill="#FFFFFF" />
+        <path d="M6.5 18.2c1.2-2.6 3.3-3.8 5.5-3.8s4.3 1.2 5.5 3.8" fill="#FFFFFF" />
+      </svg>
+    ),
+    google_forms: (
+      <svg className={className} viewBox="0 0 24 24" fill="none" aria-label="Google Forms">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z" fill="#7248B9" />
+        <path d="M14 2v6h6l-6-6z" fill="#C4B5FD" />
+        <circle cx="8" cy="12" r="1" fill="#FFFFFF" />
+        <rect x="10.5" y="11.3" width="6" height="1.4" rx="0.7" fill="#FFFFFF" />
+        <circle cx="8" cy="15.5" r="1" fill="#FFFFFF" />
+        <rect x="10.5" y="14.8" width="6" height="1.4" rx="0.7" fill="#FFFFFF" />
+      </svg>
+    ),
+    google_analytics: (
+      <svg className={className} viewBox="0 0 24 24" fill="none" aria-label="Google Analytics">
+        <rect x="15.5" y="3" width="4.5" height="18" rx="2.25" fill="#F9AB00" />
+        <rect x="9.75" y="9.5" width="4.5" height="11.5" rx="2.25" fill="#E37400" />
+        <circle cx="6.25" cy="18.75" r="2.25" fill="#E37400" />
+      </svg>
+    ),
+    groq: (
+      <svg className={className} viewBox="0 0 24 24" fill="none" aria-label="Groq">
+        <rect x="2" y="2" width="20" height="20" rx="5" fill="#F55036" />
+        <circle cx="12" cy="12" r="4.5" stroke="#FFFFFF" strokeWidth="2.2" />
+        <path d="M16.5 12v4.5" stroke="#FFFFFF" strokeWidth="2.2" strokeLinecap="round" />
+      </svg>
+    ),
+    recall_ai: (
+      <svg className={className} viewBox="0 0 24 24" fill="none" aria-label="Recall.ai">
+        <rect x="2" y="2" width="20" height="20" rx="5" fill="#6366F1" />
+        <circle cx="12" cy="12" r="4.5" fill="#FFFFFF" />
+        <circle cx="12" cy="12" r="2" fill="#6366F1" />
+      </svg>
+    ),
+    serper: (
+      <svg className={className} viewBox="0 0 24 24" fill="none" aria-label="Serper Search">
+        <rect x="2" y="2" width="20" height="20" rx="5" fill="#0EA5E9" />
+        <circle cx="11" cy="11" r="4.2" stroke="#FFFFFF" strokeWidth="2" />
+        <path d="M14.2 14.2L17.5 17.5" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" />
       </svg>
     ),
     quickbooks: (

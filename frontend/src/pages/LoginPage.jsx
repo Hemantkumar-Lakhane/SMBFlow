@@ -118,15 +118,22 @@ export default function LoginPage() {
 
   async function handleSubmit(e) {
     e.preventDefault()
+    const formEmail = (e.currentTarget?.elements?.['login-email']?.value ?? email).trim()
+    const formPassword = e.currentTarget?.elements?.['login-password']?.value ?? password
+    if (formEmail !== email) setEmail(formEmail)
+    if (formPassword !== password) setPassword(formPassword)
+
+    const isEmailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formEmail)
+    const isPasswordOk = formPassword.length >= 6
     setTouched({ email: true, password: true })
-    if (!canSubmit) return
+    if (!isEmailOk || !isPasswordOk || loading || googleLoading) return
 
     setLoading(true)
     setError('')
     clearSessionExpired()
     try {
       const authApi = createAuthService(createApiClient(null))
-      const { access_token, user } = await authApi.login(email.trim(), password)
+      const { access_token, user } = await authApi.login(formEmail, formPassword)
 
       const bound = createAuthService(createApiClient(access_token))
       const profile = await bound.me().catch(() => user)
@@ -277,8 +284,8 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              disabled={!canSubmit}
-              className="w-full py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+              disabled={loading || googleLoading}
+              className="w-full py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 cursor-pointer"
             >
               {loading ? (
                 <>
